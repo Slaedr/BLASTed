@@ -24,6 +24,10 @@ public:
 	/// Should compute the matrix vector product of this matrix with one vector
 	virtual void apply(const scalar *const x, scalar *const y) const = 0;
 
+	/// Almost the BLAS gemv: computes z := a Ax + by for  scalars a and b
+	virtual void gemv3(const scalar a, const scalar *const x, const scalar b, const scalar *const y,
+			scalar *const z) const = 0;
+
 	/// Meant to compute needed data for applying the Jacobi preconditioner
 	virtual void precJacobiSetup() = 0;
 	
