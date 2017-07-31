@@ -17,6 +17,10 @@ template <typename scalar, typename index>
 class LinearOperator
 {
 public:
+	/// To insert a (contiguous) block of values into the matrix
+	virtual void submitBlock(const index starti, const index startj, 
+			const index bsizei, const index bsizej, const scalar *const buffer) = 0;
+
 	/// Should compute the matrix vector product of this matrix with one vector
 	virtual void apply(const scalar *const x, scalar *const y) const = 0;
 
