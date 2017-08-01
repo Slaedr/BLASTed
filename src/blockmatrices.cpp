@@ -6,9 +6,11 @@
 namespace blasted {
 
 template <typename scalar, typename index, size_t bs>
-BSRMatrixi<scalar,index,bs>::BSRMatrix(const index n_brows,
-		const index *const bcinds, const index *const brptrs)
-	: nbrows(n_brows)
+BSRMatrix<scalar,index,bs>::BSRMatrix(const index n_brows,
+		const index *const bcinds, const index *const brptrs,
+		const unsigned short n_buildsweeps, const unsigned short n_applysweeps)
+	: nbrows{n_brows}, dblocks(nullptr), iludata(nullptr), ytemp(nullptr),
+	  nbuildsweeps{n_buildsweeps}, napplysweeps{n_applysweeps}, thread_chunk_size{500}
 {
 	browptr = new index[nbrows+1];
 	bcolind = new index[brptrs[nbrows]];
@@ -27,8 +29,6 @@ BSRMatrixi<scalar,index,bs>::BSRMatrix(const index n_brows,
 				break;
 			}
 	}
-
-	dblocks = iludata = nullptr;
 }
 
 template <typename scalar, typename index, size_t bs>
@@ -42,7 +42,9 @@ BSRMatrix<scalar, index, bs>::~BSRMatrix()
 		delete [] dblocks;
 	if(iludata)
 		delete [] iludata;
-	data = dblocks = iludata = nullptr;
+	if(ytemp)
+		delete [] ytemp;
+	data = dblocks = iludata = ytemp = nullptr;
 	bcolind = browptr = diagind = nullptr;
 }
 
@@ -122,7 +124,7 @@ void BSRMatrix<scalar,index,bs>::updateBlock(const index starti, const index sta
 template <typename scalar, typename index, size_t bs>
 void BSRMatrix<scalar,index,bs>::apply(const scalar a, const scalar *const x, scalar *const y) const
 {
-	const size_t bs2 = bs*bs;
+	constexpr size_t bs2 = bs*bs;
 
 #pragma omp parallel for default(shared)
 	for(index irow = 0; irow < nbrows; irow++)
@@ -147,7 +149,7 @@ template <typename scalar, typename index, size_t bs>
 void BSRMatrix<scalar,index,bs>::gemv3(const scalar a, const scalar *const x, 
 		const scalar b, const scalar *const y, scalar *const z) const
 {
-	const size_t bs2 = bs*bs;
+	constexpr size_t bs2 = bs*bs;
 
 #pragma omp parallel for default(shared)
 	for(index irow = 0; irow < nbrows; irow++)
@@ -202,4 +204,93 @@ void BSRMatrix<scalar,index,bs>::precJacobiApply(const scalar *const r, scalar *
 	}
 }
 
+template <typename scalar, typename index, size_t bs>
+void BSRMatrix<scalar,index,bs>::allocTempVector()
+{
+	ytemp = new scalar[nbrows*bs];
 }
+
+template <typename scalar, typename index, size_t bs>
+void BSRMatrix<scalar,index,bs>::precSGSApply(const scalar *const r, scalar *const z) const
+{
+	constexpr size_t bs2 = bs*bs;
+
+	for(unsigned short isweep = 0; isweep < napplysweeps; isweep++)
+	{
+		// forward sweep ytemp := D^(-1) (r - L ytemp)
+
+#pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size)
+		for(index irow = 0; irow < nbrows; irow++)
+		{
+			scalar inter[bs];
+			for(size_t i = 0; i < bs; i++)
+				inter[i] = 0;
+
+			for(index jj = browptr[irow]; jj < diagind[irow]; jj++)
+			{
+				for(size_t i = 0; i < bs; i++)
+					for(size_t j = 0; j < bs; j++)
+						inter[i] += data[jj*bs2+i*bs+j]*ytemp[bcolind[jj]*bs+j];
+			}
+
+			for(size_t i = 0; i < bs; i++) {
+				ytemp[irow*bs+i] = 0;
+				for(size_t j = 0; j < bs; j++)
+					ytemp[irow*bs+i] += dblocks[irow*bs2+i*bs+j] * (r[irow*bs+j] - inter[j]);
+			}
+		}
+	}
+
+	for(unsigned short isweep = 0; isweep < napplysweeps; isweep++)
+	{
+		// backward sweep z := D^(-1) (D y - U z)
+
+#pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size)
+		for(index irow = 0; irow < nbrows; irow++)
+		{
+			scalar inter[bs];
+			scalar temp[bs];
+			for(size_t i = 0; i < bs; i++) {
+				inter[i] = 0;
+				temp[i] = 0;
+			}
+			
+			// compute U z
+			for(index jj = diagind[irow]; jj < browptr[irow+1]; jj++)
+			{
+				for(size_t i = 0; i < bs; i++) {
+					for(size_t j = 0; j < bs; j++)
+						inter[i] += data[irow*bs2+i*bs+j]*z[bcolind[jj]*bs+j];
+				}
+			}
+
+			// compute D y
+			for(size_t i = 0; i < bs; i++) {
+				for(size_t j = 0; j < bs; j++)
+					temp[i] += data[diagind[irow]*bs2+i*bs+j]*ytemp[irow*bs+j];
+			}
+
+			// compute z = D^(-1) (D y - U z)
+			for(size_t i = 0; i < bs; i++) {
+				z[irow*bs+i] = 0;
+				for(size_t j = 0; j < bs; j++)
+					z[irow*bs+i] += dblocks[irow*bs2+i*bs+j] * (temp[j] - inter[j]);
+			}
+		}
+	}
+}
+
+template <typename scalar, typename index, size_t bs>
+void BSRMatrix<scalar,index,bs>::precILUSetup()
+{
+	// TODO
+}
+
+template <typename scalar, typename index, size_t bs>
+void BSRMatrix<scalar,index,bs>::precILUApply(const scalar *const r, scalar *const z) const
+{
+	// TODO
+}
+
+}
+

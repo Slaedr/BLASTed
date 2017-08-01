@@ -45,13 +45,26 @@ protected:
 	 */
 	scalar* iludata;
 
+	/// Storage for intermediate results in preconditioning operations
+	scalar* ytemp;
+
+	/// Number of sweeps used to build preconditioners
+	const unsigned short nbuildsweeps;
+
+	/// Number of sweeps used to apply preconditioners
+	const unsigned short napplyweeps;
+
+	/// Thread chunk size for OpenMP parallelism
+	const unsigned int thread_chunk_size;
+
 public:
 	/// Allocates space for the matrix based on the supplied non-zero structure
 	/** \param[in] n_brows Total number of block rows
 	 * \param[in] bcinds Column indices, simply copied over into \ref bcolind
 	 * \param[in] brptrs Row pointers, simply copied into \ref browptr
 	 */
-	BSRMatrix(const index n_brows, const index *const bcinds, const index *const brptrs);
+	BSRMatrix(const index n_brows, const index *const bcinds, const index *const brptrs,
+	         const unsigned short nbuildsweeps, const unsigned short napplysweeps);
 
 	/// De-allocates memory
 	virtual ~BSRMatrix();
@@ -93,6 +106,9 @@ public:
 	
 	/// Applies block-Jacobi preconditioner
 	void precJacobiApply(const scalar *const r, scalar *const z) const;
+
+	/// Allocates storage for a vector \ref ytemp required for both SGS and ILU applications
+	void allocTempVector();
 
 	/// Applies a block symmetric Gauss-Seidel preconditioner ("LU-SGS")
 	void precSGSApply(const scalar *const r, scalar *const z) const;
