@@ -15,7 +15,7 @@ BSRMatrix<scalar,index,bs>::BSRMatrix(const index n_brows,
 	browptr = new index[nbrows+1];
 	bcolind = new index[brptrs[nbrows]];
 	diagind = new index[nbrows];
-	data = new scalar[brptrs[nbrows]*bs*bs];
+	data = new Matrix<scalar,bs,bs,RowMajor>[brptrs[nbrows]];
 	for(index i = 0; i < nbrows+1; i++)
 		browptr[i] = brptrs[i];
 	for(index i = 0; i < brptrs[nbrows]; i++)
@@ -64,7 +64,7 @@ void BSRMatrix<scalar,index,bs>::submitBlock(const index starti, const index sta
 	for(index j = browptr[starti]; j < browptr[starti+1]; j++) {
 		if(bcolind[j] == startj) {
 			for(size_t k = 0; k < bs2; k++)
-				data[j*bs2 + k] = buffer[k];
+				data.data()[j*bs2 + k] = buffer[k];
 			found = true;
 		}
 	}
@@ -91,7 +91,7 @@ void BSRMatrix<scalar,index,bs>::updateDiagBlock(const index starti,
 	const index pos = diagind[starti];
 	for(size_t k = 0; k < bs2; k++)
 #pragma omp atomic update
-		data[pos*bs2 + k] += buffer[k];
+		data.data()[pos*bs2 + k] += buffer[k];
 }
 
 template <typename scalar, typename index, size_t bs>
@@ -112,7 +112,7 @@ void BSRMatrix<scalar,index,bs>::updateBlock(const index starti, const index sta
 			for(size_t k = 0; k < bs2; k++)
 			{
 #pragma omp atomic update
-				data[j*bs2 + k] += buffer[k];
+				data.data()[j*bs2 + k] += buffer[k];
 			}
 			found = true;
 		}
@@ -122,50 +122,46 @@ void BSRMatrix<scalar,index,bs>::updateBlock(const index starti, const index sta
 }
 
 template <typename scalar, typename index, size_t bs>
-void BSRMatrix<scalar,index,bs>::apply(const scalar a, const scalar *const x, scalar *const y) const
+void BSRMatrix<scalar,index,bs>::apply(const scalar a, const Vector<scalar>& x, 
+                                       Vector<scalar>& y) const
 {
 	constexpr size_t bs2 = bs*bs;
 
 #pragma omp parallel for default(shared)
 	for(index irow = 0; irow < nbrows; irow++)
 	{
-		for(size_t j = 0; j < bs; j++)
-			y[irow*bs+j] = 0;
+		y.segment<bs>(irow*bs) = Matrix<scalar,bs,1>::Zero();
 
 		// loop over non-zero blocks of this block-row
 		for(index jj = browptr[irow]; jj < browptr[irow+1]; jj++)
 		{
-			const index jcol = bcolind[jj];
-			
 			// multiply the blocks with corresponding sub-vectors
-			for(size_t i = 0; i < bs; i++)
+			const index jcol = bcolind[jj];
+			y.segment<bs>(irow*bs) += a * data[jj] * x.segment<bs>(jcol*bs);
+			
+			/*for(size_t i = 0; i < bs; i++)
 				for(size_t j = 0; j < bs; j++)
-					y[irow*bs+i] += a * data[jj*bs2 + i*bs+j] * x[jcol*bs+j];
+					y[irow*bs+i] += a * data[jj*bs2 + i*bs+j] * x[jcol*bs+j];*/
 		}
 	}
 }
 
 template <typename scalar, typename index, size_t bs>
-void BSRMatrix<scalar,index,bs>::gemv3(const scalar a, const scalar *const x, 
-		const scalar b, const scalar *const y, scalar *const z) const
+void BSRMatrix<scalar,index,bs>::gemv3(const scalar a, const Vector<scalar>& x, 
+		const scalar b, const Vector<scalar>& y, Vector<scalar>& z) const
 {
 	constexpr size_t bs2 = bs*bs;
 
 #pragma omp parallel for default(shared)
 	for(index irow = 0; irow < nbrows; irow++)
 	{
-		for(size_t j = 0; j < bs; j++)
-			z[irow*bs + j] = 0;
+		z.segment<bs>(irow*bs) = b * y.segment<bs>(irow*bs);
 
 		// loop over non-zero blocks of this block-row
 		for(index jj = browptr[irow]; jj < browptr[irow+1]; jj++)
 		{
 			const index jcol = bcolind[jj];
-			
-			// multiply the blocks with corresponding sub-vectors
-			for(size_t i = 0; i < bs; i++)
-				for(size_t j = 0; j < bs; j++)
-					z[irow*bs+i] += a * data[jj*bs2 + i*bs+j] * x[jcol*bs+j] + b*y[irow*bs+i];
+			z.segment<bs>(irow*bs) += a * data[jj] * x.segment<bs>(jcol*bs);
 		}
 	}
 }
@@ -174,7 +170,7 @@ template <typename scalar, typename index, size_t bs>
 void BSRMatrix<scalar,index,bs>::precJacobiSetup()
 {
 	if(!dblocks) {
-		dblocks = new scalar[nbrows*bs*bs];
+		dblocks = new Matrix<scalar,bs,bs>[nbrows];
 #if DEBUG==1
 		std::cout << " BSRMatrix: precJacobiSetup(): Allocating.\n";
 #endif
@@ -182,36 +178,26 @@ void BSRMatrix<scalar,index,bs>::precJacobiSetup()
 
 #pragma omp parallel for default(shared)
 	for(index irow = 0; irow < nbrows; irow++)
-	{
-		Eigen::Map<Eigen::Matrix<scalar,bs,bs,RowMajor>>  blk(&data[diagind[irow]]);
-		Eigen::Map<Eigen::Matrix<scalar,bs,bs,RowMajor>> iblk(&dblocks[irow*bs*bs]);
-		iblk = blk.inverse();
-	}
+		dblocks[irow] = data[diagind[irow]].inverse();
 }
 
 template <typename scalar, typename index, size_t bs>
-void BSRMatrix<scalar,index,bs>::precJacobiApply(const scalar *const r, scalar *const z) const
+void BSRMatrix<scalar,index,bs>::precJacobiApply(const Vector<scalar>& r, Vector<scalar>& z) const
 {
-	constexpr size_t bs2 = bs*bs;
 #pragma omp parallel for default(shared)
 	for(index irow = 0; irow < nbrows; irow++)
-	{
-		for(size_t i = 0; i < bs; i++)
-			z[irow*bs+i] = 0;
-		for(size_t i = 0; i < bs; i++)
-			for(size_t j = 0; j < bs; j++)
-				z[irow*bs+i] += dblocks[irow*bs2 + i*bs+j] * r[irow*bs+j];
-	}
+		z.segment<bs>(irow*bs) = dblocks[irow] * r.segment<bs>(irow*bs);
 }
 
 template <typename scalar, typename index, size_t bs>
 void BSRMatrix<scalar,index,bs>::allocTempVector()
 {
-	ytemp = new scalar[nbrows*bs];
+	ytemp.resize(nbrows*bs);
 }
 
 template <typename scalar, typename index, size_t bs>
-void BSRMatrix<scalar,index,bs>::precSGSApply(const scalar *const r, scalar *const z) const
+void BSRMatrix<scalar,index,bs>::precSGSApply(const Vector<scalar>& __restrict__ r, 
+                                                 Vector<scalar>& __restrict__ z) const
 {
 	constexpr size_t bs2 = bs*bs;
 
@@ -222,22 +208,12 @@ void BSRMatrix<scalar,index,bs>::precSGSApply(const scalar *const r, scalar *con
 #pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size)
 		for(index irow = 0; irow < nbrows; irow++)
 		{
-			scalar inter[bs];
-			for(size_t i = 0; i < bs; i++)
-				inter[i] = 0;
+			Matrix<scalar,bs,1> inter = Matrix<scalar,bs,1>::Zero();
 
 			for(index jj = browptr[irow]; jj < diagind[irow]; jj++)
-			{
-				for(size_t i = 0; i < bs; i++)
-					for(size_t j = 0; j < bs; j++)
-						inter[i] += data[jj*bs2+i*bs+j]*ytemp[bcolind[jj]*bs+j];
-			}
+				inter += data[jj]*ytemp.segment<bs>(bcolind[jj]);
 
-			for(size_t i = 0; i < bs; i++) {
-				ytemp[irow*bs+i] = 0;
-				for(size_t j = 0; j < bs; j++)
-					ytemp[irow*bs+i] += dblocks[irow*bs2+i*bs+j] * (r[irow*bs+j] - inter[j]);
-			}
+			ytemp.segment<bs>(irow).noalias() = dblocks[irow] * (r.segment<bs>(irow) - inter);
 		}
 	}
 
@@ -248,34 +224,15 @@ void BSRMatrix<scalar,index,bs>::precSGSApply(const scalar *const r, scalar *con
 #pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size)
 		for(index irow = 0; irow < nbrows; irow++)
 		{
-			scalar inter[bs];
-			scalar temp[bs];
-			for(size_t i = 0; i < bs; i++) {
-				inter[i] = 0;
-				temp[i] = 0;
-			}
+			Matrix<scalar,bs,1> inter = Matrix<scalar,bs,1>::Zero();
 			
 			// compute U z
 			for(index jj = diagind[irow]; jj < browptr[irow+1]; jj++)
-			{
-				for(size_t i = 0; i < bs; i++) {
-					for(size_t j = 0; j < bs; j++)
-						inter[i] += data[irow*bs2+i*bs+j]*z[bcolind[jj]*bs+j];
-				}
-			}
+				inter += data[jj] * z.segment<bs>(bcolind[jj]*bs);
 
-			// compute D y
-			for(size_t i = 0; i < bs; i++) {
-				for(size_t j = 0; j < bs; j++)
-					temp[i] += data[diagind[irow]*bs2+i*bs+j]*ytemp[irow*bs+j];
-			}
-
-			// compute z = D^(-1) (D y - U z)
-			for(size_t i = 0; i < bs; i++) {
-				z[irow*bs+i] = 0;
-				for(size_t j = 0; j < bs; j++)
-					z[irow*bs+i] += dblocks[irow*bs2+i*bs+j] * (temp[j] - inter[j]);
-			}
+			// compute z = D^(-1) (D y - U z) for the irow-th block-segment of z
+			z.segment<bs>(irow*bs).noalias() 
+				= dblocks[irow] * ( data[diagind[irow]]*ytemp.segment<bs>(irow*bs) - inter );
 		}
 	}
 }
@@ -287,7 +244,7 @@ void BSRMatrix<scalar,index,bs>::precILUSetup()
 }
 
 template <typename scalar, typename index, size_t bs>
-void BSRMatrix<scalar,index,bs>::precILUApply(const scalar *const r, scalar *const z) const
+void BSRMatrix<scalar,index,bs>::precILUApply(const Vector<scalar>& r, Vector<scalar>& z) const
 {
 	// TODO
 }

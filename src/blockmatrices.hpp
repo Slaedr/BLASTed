@@ -19,7 +19,7 @@ class BSRMatrix : public LinearOperator<scalar, index>
 {
 protected:
 	/// Entries
-	scalar* data;
+	Matrix<scalar,bs,bs,RowMajor>* data;
 	
 	/// Block-column indices of blocks in data
 	index* bcolind;
@@ -37,16 +37,16 @@ protected:
 	index* diagind;
 
 	/// Storage for factored or inverted diagonal blocks
-	scalar* dblocks;
+	Matrix<scalar,bs,bs,RowMajor>* dblocks;
 
 	/// Storage for ILU0 factorization
 	/** Use \ref bcolind and \ref browptr to access the storage,
 	 * as the non-zero structure of this matrix is same as the original matrix.
 	 */
-	scalar* iludata;
+	Matrix<scalar,bs,bs,RowMajor>* iludata;
 
 	/// Storage for intermediate results in preconditioning operations
-	scalar* ytemp;
+	Vector<scalar> ytemp;
 
 	/// Number of sweeps used to build preconditioners
 	const unsigned short nbuildsweeps;
@@ -95,29 +95,30 @@ public:
 			const scalar *const buffer);
 
 	/// Computes the matrix vector product of this matrix with one vector-- y := a Ax
-	virtual void apply(const scalar a, const scalar *const x, scalar *const y) const;
+	virtual void apply(const scalar a, const Vector<scalar>& x, Vector<scalar>& y) const;
 
 	/// Almost the BLAS gemv: computes z := a Ax + by for  scalars a and b
-	virtual void gemv3(const scalar a, const scalar *const x, const scalar b, const scalar *const y,
-			scalar *const z) const;
+	virtual void gemv3(const scalar a, const Vector<scalar>& x, 
+			const scalar b, const Vector<scalar>& y,
+			Vector<scalar>& z) const;
 
 	/// Computes inverse or factorization of diagonal blocks for applying Jacobi preconditioner
 	void precJacobiSetup();
 	
 	/// Applies block-Jacobi preconditioner
-	void precJacobiApply(const scalar *const r, scalar *const z) const;
+	void precJacobiApply(const Vector<scalar>& r, Vector<scalar>& z) const;
 
 	/// Allocates storage for a vector \ref ytemp required for both SGS and ILU applications
 	void allocTempVector();
 
 	/// Applies a block symmetric Gauss-Seidel preconditioner ("LU-SGS")
-	void precSGSApply(const scalar *const r, scalar *const z) const;
+	void precSGSApply(const Vector<scalar>& r, Vector<scalar>& z) const;
 
 	/// Computes an incomplete block lower-upper factorization
 	void precILUSetup();
 
 	/// Applies a block LU factorization
-	void precILUApply(const scalar *const r, scalar *const z) const;
+	void precILUApply(const Vector<scalar>& r, Vector<scalar>& z) const;
 };
 
 }
