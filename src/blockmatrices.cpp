@@ -9,13 +9,14 @@ template <typename scalar, typename index, size_t bs>
 BSRMatrix<scalar,index,bs>::BSRMatrix(const index n_brows,
 		const index *const bcinds, const index *const brptrs,
 		const unsigned short n_buildsweeps, const unsigned short n_applysweeps)
-	: nbrows{n_brows}, dblocks(nullptr), iludata(nullptr), ytemp(nullptr),
+	: nbrows{n_brows}, dblocks(nullptr), iludata(nullptr),
 	  nbuildsweeps{n_buildsweeps}, napplysweeps{n_applysweeps}, thread_chunk_size{500}
 {
+	constexpr size_t bs2 = bs*bs;
 	browptr = new index[nbrows+1];
 	bcolind = new index[brptrs[nbrows]];
 	diagind = new index[nbrows];
-	data = new Matrix<scalar,bs,bs,RowMajor>[brptrs[nbrows]];
+	data.resize(brptrs[nbrows]*bs, bs);
 	for(index i = 0; i < nbrows+1; i++)
 		browptr[i] = brptrs[i];
 	for(index i = 0; i < brptrs[nbrows]; i++)
@@ -34,17 +35,9 @@ BSRMatrix<scalar,index,bs>::BSRMatrix(const index n_brows,
 template <typename scalar, typename index, size_t bs>
 BSRMatrix<scalar, index, bs>::~BSRMatrix()
 {
-	delete [] data;
 	delete [] bcolind;
 	delete [] browptr;
 	delete [] diagind;
-	if(dblocks)
-		delete [] dblocks;
-	if(iludata)
-		delete [] iludata;
-	if(ytemp)
-		delete [] ytemp;
-	data = dblocks = iludata = ytemp = nullptr;
 	bcolind = browptr = diagind = nullptr;
 }
 
@@ -122,10 +115,12 @@ void BSRMatrix<scalar,index,bs>::updateBlock(const index starti, const index sta
 }
 
 template <typename scalar, typename index, size_t bs>
-void BSRMatrix<scalar,index,bs>::apply(const scalar a, const Vector<scalar>& x, 
-                                       Vector<scalar>& y) const
+void BSRMatrix<scalar,index,bs>::apply(const scalar a, const scalar *const xx,
+                                       scalar *const __restrict__ yy) const
 {
 	constexpr size_t bs2 = bs*bs;
+	Eigen::Map<const Vector> x(xx, nbrows*bs);
+	Eigen::Map<Vector> y(yy, nbrows*bs);
 
 #pragma omp parallel for default(shared)
 	for(index irow = 0; irow < nbrows; irow++)
@@ -137,7 +132,8 @@ void BSRMatrix<scalar,index,bs>::apply(const scalar a, const Vector<scalar>& x,
 		{
 			// multiply the blocks with corresponding sub-vectors
 			const index jcol = bcolind[jj];
-			y.segment<bs>(irow*bs) += a * data[jj] * x.segment<bs>(jcol*bs);
+			y.segment<bs>(irow*bs).noalias() 
+				+= a * data.block<bs,bs>(jj*bs,0) * x.segment<bs>(jcol*bs);
 			
 			/*for(size_t i = 0; i < bs; i++)
 				for(size_t j = 0; j < bs; j++)
@@ -147,10 +143,13 @@ void BSRMatrix<scalar,index,bs>::apply(const scalar a, const Vector<scalar>& x,
 }
 
 template <typename scalar, typename index, size_t bs>
-void BSRMatrix<scalar,index,bs>::gemv3(const scalar a, const Vector<scalar>& x, 
-		const scalar b, const Vector<scalar>& y, Vector<scalar>& z) const
+void BSRMatrix<scalar,index,bs>::gemv3(const scalar a, const scalar *const __restrict__ xx, 
+		const scalar b, const scalar *const yy, scalar *const zz) const
 {
 	constexpr size_t bs2 = bs*bs;
+	Eigen::Map<const Vector> x(xx, nbrows*bs);
+	Eigen::Map<const Vector> y(yy, nbrows*bs);
+	Eigen::Map<Vector> z(zz, nbrows*bs);
 
 #pragma omp parallel for default(shared)
 	for(index irow = 0; irow < nbrows; irow++)
@@ -161,7 +160,8 @@ void BSRMatrix<scalar,index,bs>::gemv3(const scalar a, const Vector<scalar>& x,
 		for(index jj = browptr[irow]; jj < browptr[irow+1]; jj++)
 		{
 			const index jcol = bcolind[jj];
-			z.segment<bs>(irow*bs) += a * data[jj] * x.segment<bs>(jcol*bs);
+			z.segment<bs>(irow*bs).noalias() += 
+				a * data.block<bs,bs>(jj*bs,0) * x.segment<bs>(jcol*bs);
 		}
 	}
 }
@@ -169,8 +169,8 @@ void BSRMatrix<scalar,index,bs>::gemv3(const scalar a, const Vector<scalar>& x,
 template <typename scalar, typename index, size_t bs>
 void BSRMatrix<scalar,index,bs>::precJacobiSetup()
 {
-	if(!dblocks) {
-		dblocks = new Matrix<scalar,bs,bs>[nbrows];
+	if(dblocks.size() <= 0) {
+		dblocks.resize(nbrows*bs,bs);
 #if DEBUG==1
 		std::cout << " BSRMatrix: precJacobiSetup(): Allocating.\n";
 #endif
@@ -178,15 +178,20 @@ void BSRMatrix<scalar,index,bs>::precJacobiSetup()
 
 #pragma omp parallel for default(shared)
 	for(index irow = 0; irow < nbrows; irow++)
-		dblocks[irow] = data[diagind[irow]].inverse();
+		dblocks.block<bs,bs>(irow*bs,0) = data.block<bs,bs>(diagind[irow]*bs).inverse();
 }
 
 template <typename scalar, typename index, size_t bs>
-void BSRMatrix<scalar,index,bs>::precJacobiApply(const Vector<scalar>& r, Vector<scalar>& z) const
+void BSRMatrix<scalar,index,bs>::precJacobiApply(const scalar *const rr, 
+                                                 scalar *const __restrict__ zz) const
 {
+	Eigen::Map<const Vector> r(rr, nbrows*bs);
+	Eigen::Map<Vector> z(zz, nbrows*bs);
+	constexpr size_t bs2 = bs*bs;
+
 #pragma omp parallel for default(shared)
 	for(index irow = 0; irow < nbrows; irow++)
-		z.segment<bs>(irow*bs) = dblocks[irow] * r.segment<bs>(irow*bs);
+		z.segment<bs>(irow*bs).noalias() = dblocks.block<bs,bs>(irow*bs,0) * r.segment<bs>(irow*bs);
 }
 
 template <typename scalar, typename index, size_t bs>
@@ -196,9 +201,11 @@ void BSRMatrix<scalar,index,bs>::allocTempVector()
 }
 
 template <typename scalar, typename index, size_t bs>
-void BSRMatrix<scalar,index,bs>::precSGSApply(const Vector<scalar>& __restrict__ r, 
-                                                 Vector<scalar>& __restrict__ z) const
+void BSRMatrix<scalar,index,bs>::precSGSApply(const scalar *const rr, 
+                                              scalar *const __restrict__ zz) const
 {
+	Eigen::Map<const Vector> r(rr, nbrows*bs);
+	Eigen::Map<Vector> z(zz, nbrows*bs);
 	constexpr size_t bs2 = bs*bs;
 
 	for(unsigned short isweep = 0; isweep < napplysweeps; isweep++)
@@ -211,9 +218,10 @@ void BSRMatrix<scalar,index,bs>::precSGSApply(const Vector<scalar>& __restrict__
 			Matrix<scalar,bs,1> inter = Matrix<scalar,bs,1>::Zero();
 
 			for(index jj = browptr[irow]; jj < diagind[irow]; jj++)
-				inter += data[jj]*ytemp.segment<bs>(bcolind[jj]);
+				inter += data.block<bs,bs>(jj*bs,0)*ytemp.segment<bs>(bcolind[jj]);
 
-			ytemp.segment<bs>(irow).noalias() = dblocks[irow] * (r.segment<bs>(irow) - inter);
+			ytemp.segment<bs>(irow) = dblocks.block<bs,bs>(irow*bs,0) 
+			                                          * (r.segment<bs>(irow) - inter);
 		}
 	}
 
@@ -228,11 +236,11 @@ void BSRMatrix<scalar,index,bs>::precSGSApply(const Vector<scalar>& __restrict__
 			
 			// compute U z
 			for(index jj = diagind[irow]; jj < browptr[irow+1]; jj++)
-				inter += data[jj] * z.segment<bs>(bcolind[jj]*bs);
+				inter += data.block<bs,bs>(jj*bs,0) * z.segment<bs>(bcolind[jj]*bs);
 
 			// compute z = D^(-1) (D y - U z) for the irow-th block-segment of z
-			z.segment<bs>(irow*bs).noalias() 
-				= dblocks[irow] * ( data[diagind[irow]]*ytemp.segment<bs>(irow*bs) - inter );
+			z.segment<bs>(irow*bs) = dblocks.block<bs,bs>(irow*bs2,0) 
+				* ( data.block<bs,bs>(diagind[irow]*bs,0)*ytemp.segment<bs>(irow*bs) - inter );
 		}
 	}
 }
@@ -244,7 +252,8 @@ void BSRMatrix<scalar,index,bs>::precILUSetup()
 }
 
 template <typename scalar, typename index, size_t bs>
-void BSRMatrix<scalar,index,bs>::precILUApply(const Vector<scalar>& r, Vector<scalar>& z) const
+void BSRMatrix<scalar,index,bs>::precILUApply(const scalar *const r, 
+                                              scalar *const __restrict__ z) const
 {
 	// TODO
 }

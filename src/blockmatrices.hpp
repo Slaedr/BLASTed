@@ -18,8 +18,11 @@ template <typename scalar, typename index, size_t bsize>
 class BSRMatrix : public LinearOperator<scalar, index>
 {
 protected:
-	/// Entries
-	Matrix<scalar,bs,bs,RowMajor>* data;
+	/// Entries of the matrix
+	/** All the blocks are stored contiguously as one big block-column
+	 * having as many block-rows as the total number of non-zero blocks
+	 */
+	Matrix<scalar,Dynamic,bs,RowMajor> data;
 	
 	/// Block-column indices of blocks in data
 	index* bcolind;
@@ -37,13 +40,13 @@ protected:
 	index* diagind;
 
 	/// Storage for factored or inverted diagonal blocks
-	Matrix<scalar,bs,bs,RowMajor>* dblocks;
+	Matrix<scalar,Dynamic,bs,RowMajor> dblocks;
 
 	/// Storage for ILU0 factorization
 	/** Use \ref bcolind and \ref browptr to access the storage,
 	 * as the non-zero structure of this matrix is same as the original matrix.
 	 */
-	Matrix<scalar,bs,bs,RowMajor>* iludata;
+	Matrix<scalar,Dynamic,bs,RowMajor> iludata;
 
 	/// Storage for intermediate results in preconditioning operations
 	Vector<scalar> ytemp;
@@ -95,30 +98,30 @@ public:
 			const scalar *const buffer);
 
 	/// Computes the matrix vector product of this matrix with one vector-- y := a Ax
-	virtual void apply(const scalar a, const Vector<scalar>& x, Vector<scalar>& y) const;
+	virtual void apply(const scalar a, const scalar *const x, scalar *const __retrict__ y) const;
 
 	/// Almost the BLAS gemv: computes z := a Ax + by for  scalars a and b
-	virtual void gemv3(const scalar a, const Vector<scalar>& x, 
-			const scalar b, const Vector<scalar>& y,
-			Vector<scalar>& z) const;
+	virtual void gemv3(const scalar a, const scalar *const __restrict__ x, 
+			const scalar b, const scalar *const y,
+			scalar *const z) const;
 
 	/// Computes inverse or factorization of diagonal blocks for applying Jacobi preconditioner
 	void precJacobiSetup();
 	
 	/// Applies block-Jacobi preconditioner
-	void precJacobiApply(const Vector<scalar>& r, Vector<scalar>& z) const;
+	void precJacobiApply(const scalar *const r, scalar *const __restrict__ z) const;
 
 	/// Allocates storage for a vector \ref ytemp required for both SGS and ILU applications
 	void allocTempVector();
 
 	/// Applies a block symmetric Gauss-Seidel preconditioner ("LU-SGS")
-	void precSGSApply(const Vector<scalar>& r, Vector<scalar>& z) const;
+	void precSGSApply(const scalar *const r, scalar *const __restrict__ z) const;
 
 	/// Computes an incomplete block lower-upper factorization
 	void precILUSetup();
 
 	/// Applies a block LU factorization
-	void precILUApply(const Vector<scalar>& r, Vector<scalar>& z) const;
+	void precILUApply(const scalar *const r, scalar *const __restrict__ z) const;
 };
 
 }

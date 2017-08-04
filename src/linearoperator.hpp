@@ -9,6 +9,11 @@
 
 #include <Eigen/Core>
 
+#ifdef DEBUG
+#define __restrict__ 
+#define __restrict
+#endif
+
 /// Contains all of the BLASTed functionality
 namespace blasted {
 
@@ -30,30 +35,33 @@ public:
 	virtual void submitBlock(const index starti, const index startj, 
 			const index bsizei, const index bsizej, const scalar *const buffer) = 0;
 
-	/// Should compute the matrix vector product of this matrix with one vector
-	virtual void apply(const Vector<scalar>& __restrict__ x, Vector<scalar>& __restrict__ y) const = 0;
+	/// Should compute the matrix vector product of this matrix with one vector,
+	/// scaled by a constant
+	virtual void apply(const scalar a, const scalar *const x, 
+			scalar *const __restrict__ y) const = 0;
 
 	/// Almost the BLAS gemv: computes z := a Ax + by for  scalars a and b
-	virtual void gemv3(const scalar a, const Vector<scalar>& x, const scalar b, const Vector<scalar>& y,
-			Vector<scalar>& z) const = 0;
+	virtual void gemv3(const scalar a, const scalar *const __restrict__ x, 
+			const scalar b, const scalar *const y,
+			scalar *const z) const = 0;
 
 	/// Meant to compute needed data for applying the Jacobi preconditioner
 	virtual void precJacobiSetup() = 0;
 	
 	/// Applies any of a class of Jacobi-type preconditioners
-	virtual void precJacobiApply(const Vector<scalar>& r, Vector<scalar>& z) const = 0;
+	virtual void precJacobiApply(const scalar *const r, scalar *const __restrict__ z) const = 0;
 
 	/// Should compute data needed for Gauss-Seidel type preconditioners
 	virtual void precSGSSetup() = 0;
 
 	/// Applies a symmetric Gauss-Seidel type preconditioner
-	virtual void precSGSApply(const Vector<scalar>& r, Vector<scalar>& z) const = 0;
+	virtual void precSGSApply(const scalar *const r, scalar *const __restrict__ z) const = 0;
 
 	/// Computes a incomplete lower-upper factorization
 	virtual void precILUSetup() = 0;
 
 	/// Applies an LU factorization
-	virtual void precILUApply(const Vector<scalar>& r, Vector<scalar>& z) const = 0;
+	virtual void precILUApply(const scalar *const r, scalar *const __restrict__ z) const = 0;
 };
 
 }
