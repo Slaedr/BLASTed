@@ -77,25 +77,21 @@ public:
 	 * write to the same location in \ref data at the same time.
 	 */
 	void submitBlock(const index starti, const index startj, 
-			const size_t bsizei, const size_t bsizej, const scalar *const buffer);
+			const scalar *const buffer, const size_t param1, const size_t param2);
 
 	/// Update a (contiguous) block of values into the [matrix](\ref data)
 	/** This is function is thread-safe: each location that needs to be updated is updated
 	 * atomically.
 	 */
 	void updateBlock(const index starti, const index startj, 
-			const size_t bsizei, const size_t bsizej, const scalar *const buffer);
+			const scalar *const buffer, const size_t param1, const size_t param2);
 	
 	/// Updates the diagonal block of the specified block-row
 	/** This function is thread-safe.
 	 * \param[in] starti The block-row whose diagonal block is to be updated
-	 * \param[in] bsizei Number of rows in the block - must be equal to 
-	 * the template parameter bs in debug builds
-	 * \param[in] bsizej Number of columns in the block - must be equal to bs in debug builds
 	 * \param[in] buffer The values making up the block to be added
 	 */
-	void updateDiagBlock(const index starti, const size_t bsizei, const size_t bsizej, 
-			const scalar *const buffer);
+	void updateDiagBlock(const index starti, const scalar *const buffer);
 
 	/// Computes the matrix vector product of this matrix with one vector-- y := a Ax
 	virtual void apply(const scalar a, const scalar *const x, scalar *const __retrict__ y) const;

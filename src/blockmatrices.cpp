@@ -43,19 +43,13 @@ BSRMatrix<scalar, index, bs>::~BSRMatrix()
 
 template <typename scalar, typename index, size_t bs>
 void BSRMatrix<scalar,index,bs>::submitBlock(const index starti, const index startj,
-		const size_t bsizei, const size_t bsizej, const scalar *const buffer)
+		const scalar *const buffer, const size_t param1, const size_t param2) 
 {
-#ifdef DEBUG
-	if(bsizei != bs || bsizej != bs) {
-		std::cout << "! BSRMatrix: submitBlock: The block must be " << bs " x " << bs << "!!\n";
-		return;
-	}
-#endif
-	
 	bool found = false;
+	const index startr = starti/bs, startc = startj/bs;
 	constexpr size_t bs2 = bs*bs;
-	for(index j = browptr[starti]; j < browptr[starti+1]; j++) {
-		if(bcolind[j] == startj) {
+	for(index j = browptr[startr]; j < browptr[startr+1]; j++) {
+		if(bcolind[j] == startc) {
 			for(size_t k = 0; k < bs2; k++)
 				data.data()[j*bs2 + k] = buffer[k];
 			found = true;
@@ -67,21 +61,11 @@ void BSRMatrix<scalar,index,bs>::submitBlock(const index starti, const index sta
 
 template <typename scalar, typename index, size_t bs>
 void BSRMatrix<scalar,index,bs>::updateDiagBlock(const index starti,
-		const size_t bsizei, const size_t bsizej, const scalar *const buffer)
+		const scalar *const buffer)
 {
-#ifdef DEBUG
-	if(bsizei != bs || bsizej != bs) {
-		std::cout << "! BSRMatrix: submitDiagBlock: The block must be " << bs " x " << bs << "!!\n";
-		return;
-	}
-	if(bsizei != bsizej) {
-		std::cout << "! BSRMatrix: submitDiagBlock: The block must be square!!\n";
-		return;
-	}
-#endif
-	
 	constexpr size_t bs2 = bs*bs;
-	const index pos = diagind[starti];
+	const index startr = starti/bs;
+	const index pos = diagind[startr];
 	for(size_t k = 0; k < bs2; k++)
 #pragma omp atomic update
 		data.data()[pos*bs2 + k] += buffer[k];
@@ -89,7 +73,7 @@ void BSRMatrix<scalar,index,bs>::updateDiagBlock(const index starti,
 
 template <typename scalar, typename index, size_t bs>
 void BSRMatrix<scalar,index,bs>::updateBlock(const index starti, const index startj,
-		const size_t bsizei, const size_t bsizej, const scalar *const buffer)
+		const scalar *const buffer, const size_t param1, const size_t param2)
 {
 #ifdef DEBUG
 	if(bsizei != bs || bsizej != bs) {
@@ -99,9 +83,10 @@ void BSRMatrix<scalar,index,bs>::updateBlock(const index starti, const index sta
 #endif
 	
 	bool found = false;
+	const index startr = starti/bs, startc = startj/bs;
 	constexpr size_t bs2 = bs*bs;
-	for(index j = browptr[starti]; j < browptr[starti+1]; j++) {
-		if(bcolind[j] == startj) {
+	for(index j = browptr[startr]; j < browptr[startr+1]; j++) {
+		if(bcolind[j] == startc) {
 			for(size_t k = 0; k < bs2; k++)
 			{
 #pragma omp atomic update
