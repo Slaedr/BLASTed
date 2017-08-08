@@ -7,12 +7,5 @@ Currently, the [Eigen](http://eigen.tuxfamily.org/index.php?title=Main_Page) lib
 
 Building
 --------
-Please set the environment variable EIGEN_DIR to the top-level Eigen directory before using cmake. Eg., in Bash, assuming you are currently inside the BLASTed top-level directory,
-
-    export EIGEN_DIR=/path/to/Eigen
-    mkdir build && cd build
-    cmake ../src -DCMAKE_BUILD_TYPE=Debug -DOMP=1
-    make
-    
-to build the debug multi-threaded version.
+The library is currently header-only, mostly to make template instantiations possible. Just include the appropriate header in your code.
 

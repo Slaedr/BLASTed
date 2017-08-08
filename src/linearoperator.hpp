@@ -7,8 +7,6 @@
 #ifndef __LINEAROPERATOR_H
 #define __LINEAROPERATOR_H
 
-#include <Eigen/Core>
-
 #ifdef DEBUG
 #define __restrict__ 
 #define __restrict
@@ -16,10 +14,6 @@
 
 /// Contains all of the BLASTed functionality
 namespace blasted {
-
-using Eigen::Dynamic;
-using Eigen::RowMajor;
-using Eigen::Matrix;
 
 /// Abstract interface for a matrix
 /** This is the base class for all matrix implementations in the library.

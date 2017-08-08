@@ -32,6 +32,9 @@ elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel")
 	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -qopt-report=2")
 endif()
 
+# Eigen
+include_directories($ENV{EIGEN_DIR})
+
 if(MICKNC)
 	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mmic")
 	message(STATUS "Compiling for KNC")
@@ -46,7 +49,7 @@ if(MICKNC)
 	endif()
 else()
 
-	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -m64")
+	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m64")
 	
 	if(NOAVX)
 		set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse4.2")
@@ -61,6 +64,8 @@ else()
 		message(STATUS "Linking MKL.")
 	endif()
 endif()
+
+#set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC)
 
 # ---------------------------------------------------------------------------- #
 
@@ -77,6 +82,6 @@ endif()
 #set(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)
 
 # libraries to be compiled
-add_library(blasted blockmatrices.cpp)
+#add_library(blasted STATIC blockmatrices.cpp)
 
 
