@@ -92,6 +92,9 @@ public:
 
 	/// Allocates storage for a vector \ref ytemp required for both SGS and ILU applications
 	virtual void allocTempVector() = 0;
+
+	/// Print parts of the matrix for diagnostics
+	virtual void printDiagnostic(const char choice) const { }
 };
 
 }

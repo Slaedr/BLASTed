@@ -5,14 +5,14 @@
 
 namespace blasted {
 
-template <typename scalar, typename index, size_t bs>
+template <typename scalar, typename index, int bs>
 BSRMatrix<scalar,index,bs>::BSRMatrix(const index n_brows,
 		const index *const bcinds, const index *const brptrs,
 		const unsigned short n_buildsweeps, const unsigned short n_applysweeps)
 	: nbrows{n_brows}, dblocks(nullptr), iludata(nullptr),
 	  nbuildsweeps{n_buildsweeps}, napplysweeps{n_applysweeps}, thread_chunk_size{500}
 {
-	constexpr size_t bs2 = bs*bs;
+	constexpr int bs2 = bs*bs;
 	browptr = new index[nbrows+1];
 	bcolind = new index[brptrs[nbrows]];
 	diagind = new index[nbrows];
@@ -32,7 +32,7 @@ BSRMatrix<scalar,index,bs>::BSRMatrix(const index n_brows,
 	}
 }
 
-template <typename scalar, typename index, size_t bs>
+template <typename scalar, typename index, int bs>
 BSRMatrix<scalar, index, bs>::~BSRMatrix()
 {
 	delete [] bcolind;
@@ -41,16 +41,16 @@ BSRMatrix<scalar, index, bs>::~BSRMatrix()
 	bcolind = browptr = diagind = nullptr;
 }
 
-template <typename scalar, typename index, size_t bs>
+template <typename scalar, typename index, int bs>
 void BSRMatrix<scalar,index,bs>::submitBlock(const index starti, const index startj,
-		const scalar *const buffer, const size_t param1, const size_t param2) 
+		const scalar *const buffer, const long param1, const long param2) 
 {
 	bool found = false;
 	const index startr = starti/bs, startc = startj/bs;
-	constexpr size_t bs2 = bs*bs;
+	constexpr int bs2 = bs*bs;
 	for(index j = browptr[startr]; j < browptr[startr+1]; j++) {
 		if(bcolind[j] == startc) {
-			for(size_t k = 0; k < bs2; k++)
+			for(int k = 0; k < bs2; k++)
 				data.data()[j*bs2 + k] = buffer[k];
 			found = true;
 		}
@@ -59,21 +59,21 @@ void BSRMatrix<scalar,index,bs>::submitBlock(const index starti, const index sta
 		std::cout << "! BSRMatrix: submitBlock: Block not found!!\n";
 }
 
-template <typename scalar, typename index, size_t bs>
+template <typename scalar, typename index, int bs>
 void BSRMatrix<scalar,index,bs>::updateDiagBlock(const index starti,
 		const scalar *const buffer)
 {
-	constexpr size_t bs2 = bs*bs;
+	constexpr int bs2 = bs*bs;
 	const index startr = starti/bs;
 	const index pos = diagind[startr];
-	for(size_t k = 0; k < bs2; k++)
+	for(int k = 0; k < bs2; k++)
 #pragma omp atomic update
 		data.data()[pos*bs2 + k] += buffer[k];
 }
 
-template <typename scalar, typename index, size_t bs>
+template <typename scalar, typename index, int bs>
 void BSRMatrix<scalar,index,bs>::updateBlock(const index starti, const index startj,
-		const scalar *const buffer, const size_t param1, const size_t param2)
+		const scalar *const buffer, const long param1, const long param2)
 {
 #ifdef DEBUG
 	if(bsizei != bs || bsizej != bs) {
@@ -84,10 +84,10 @@ void BSRMatrix<scalar,index,bs>::updateBlock(const index starti, const index sta
 	
 	bool found = false;
 	const index startr = starti/bs, startc = startj/bs;
-	constexpr size_t bs2 = bs*bs;
+	constexpr int bs2 = bs*bs;
 	for(index j = browptr[startr]; j < browptr[startr+1]; j++) {
 		if(bcolind[j] == startc) {
-			for(size_t k = 0; k < bs2; k++)
+			for(int k = 0; k < bs2; k++)
 			{
 #pragma omp atomic update
 				data.data()[j*bs2 + k] += buffer[k];
@@ -99,11 +99,11 @@ void BSRMatrix<scalar,index,bs>::updateBlock(const index starti, const index sta
 		std::cout << "! BSRMatrix: submitBlock: Block not found!!\n";
 }
 
-template <typename scalar, typename index, size_t bs>
+template <typename scalar, typename index, int bs>
 void BSRMatrix<scalar,index,bs>::apply(const scalar a, const scalar *const xx,
                                        scalar *const __restrict__ yy) const
 {
-	constexpr size_t bs2 = bs*bs;
+	constexpr int bs2 = bs*bs;
 	Eigen::Map<const Vector> x(xx, nbrows*bs);
 	Eigen::Map<Vector> y(yy, nbrows*bs);
 
@@ -120,18 +120,18 @@ void BSRMatrix<scalar,index,bs>::apply(const scalar a, const scalar *const xx,
 			y.segment<bs>(irow*bs).noalias() 
 				+= a * data.block<bs,bs>(jj*bs,0) * x.segment<bs>(jcol*bs);
 			
-			/*for(size_t i = 0; i < bs; i++)
-				for(size_t j = 0; j < bs; j++)
+			/*for(int i = 0; i < bs; i++)
+				for(int j = 0; j < bs; j++)
 					y[irow*bs+i] += a * data[jj*bs2 + i*bs+j] * x[jcol*bs+j];*/
 		}
 	}
 }
 
-template <typename scalar, typename index, size_t bs>
+template <typename scalar, typename index, int bs>
 void BSRMatrix<scalar,index,bs>::gemv3(const scalar a, const scalar *const __restrict__ xx, 
 		const scalar b, const scalar *const yy, scalar *const zz) const
 {
-	constexpr size_t bs2 = bs*bs;
+	constexpr int bs2 = bs*bs;
 	Eigen::Map<const Vector> x(xx, nbrows*bs);
 	Eigen::Map<const Vector> y(yy, nbrows*bs);
 	Eigen::Map<Vector> z(zz, nbrows*bs);
@@ -151,7 +151,7 @@ void BSRMatrix<scalar,index,bs>::gemv3(const scalar a, const scalar *const __res
 	}
 }
 
-template <typename scalar, typename index, size_t bs>
+template <typename scalar, typename index, int bs>
 void BSRMatrix<scalar,index,bs>::precJacobiSetup()
 {
 	if(dblocks.size() <= 0) {
@@ -166,32 +166,32 @@ void BSRMatrix<scalar,index,bs>::precJacobiSetup()
 		dblocks.block<bs,bs>(irow*bs,0) = data.block<bs,bs>(diagind[irow]*bs).inverse();
 }
 
-template <typename scalar, typename index, size_t bs>
+template <typename scalar, typename index, int bs>
 void BSRMatrix<scalar,index,bs>::precJacobiApply(const scalar *const rr, 
                                                  scalar *const __restrict__ zz) const
 {
 	Eigen::Map<const Vector> r(rr, nbrows*bs);
 	Eigen::Map<Vector> z(zz, nbrows*bs);
-	constexpr size_t bs2 = bs*bs;
+	constexpr int bs2 = bs*bs;
 
 #pragma omp parallel for default(shared)
 	for(index irow = 0; irow < nbrows; irow++)
 		z.segment<bs>(irow*bs).noalias() = dblocks.block<bs,bs>(irow*bs,0) * r.segment<bs>(irow*bs);
 }
 
-template <typename scalar, typename index, size_t bs>
+template <typename scalar, typename index, int bs>
 void BSRMatrix<scalar,index,bs>::allocTempVector()
 {
 	ytemp.resize(nbrows*bs);
 }
 
-template <typename scalar, typename index, size_t bs>
+template <typename scalar, typename index, int bs>
 void BSRMatrix<scalar,index,bs>::precSGSApply(const scalar *const rr, 
                                               scalar *const __restrict__ zz) const
 {
 	Eigen::Map<const Vector> r(rr, nbrows*bs);
 	Eigen::Map<Vector> z(zz, nbrows*bs);
-	constexpr size_t bs2 = bs*bs;
+	constexpr int bs2 = bs*bs;
 
 	for(unsigned short isweep = 0; isweep < napplysweeps; isweep++)
 	{
@@ -230,13 +230,13 @@ void BSRMatrix<scalar,index,bs>::precSGSApply(const scalar *const rr,
 	}
 }
 
-template <typename scalar, typename index, size_t bs>
+template <typename scalar, typename index, int bs>
 void BSRMatrix<scalar,index,bs>::precILUSetup()
 {
 	// TODO
 }
 
-template <typename scalar, typename index, size_t bs>
+template <typename scalar, typename index, int bs>
 void BSRMatrix<scalar,index,bs>::precILUApply(const scalar *const r, 
                                               scalar *const __restrict__ z) const
 {

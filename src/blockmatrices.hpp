@@ -14,7 +14,7 @@ namespace blasted {
 /// Block sparse row matrix
 /** Dense blocks stored in a (block-) row-major storage order.
  */
-template <typename scalar, typename index, size_t bsize>
+template <typename scalar, typename index, int bsize>
 class BSRMatrix : public LinearOperator<scalar, index>
 {
 protected:
@@ -52,13 +52,13 @@ protected:
 	Vector<scalar> ytemp;
 
 	/// Number of sweeps used to build preconditioners
-	const unsigned short nbuildsweeps;
+	const short nbuildsweeps;
 
 	/// Number of sweeps used to apply preconditioners
-	const unsigned short napplyweeps;
+	const short napplyweeps;
 
 	/// Thread chunk size for OpenMP parallelism
-	const unsigned int thread_chunk_size;
+	const int thread_chunk_size;
 
 public:
 	/// Allocates space for the matrix based on the supplied non-zero structure
@@ -67,7 +67,7 @@ public:
 	 * \param[in] brptrs Row pointers, simply copied into \ref browptr
 	 */
 	BSRMatrix(const index n_brows, const index *const bcinds, const index *const brptrs,
-	         const unsigned short nbuildsweeps, const unsigned short napplysweeps);
+	         const short nbuildsweeps, const short napplysweeps);
 
 	/// De-allocates memory
 	virtual ~BSRMatrix();
@@ -77,14 +77,14 @@ public:
 	 * write to the same location in \ref data at the same time.
 	 */
 	void submitBlock(const index starti, const index startj, 
-			const scalar *const buffer, const size_t param1, const size_t param2);
+			const scalar *const buffer, const long param1, const long param2);
 
 	/// Update a (contiguous) block of values into the [matrix](\ref data)
 	/** This is function is thread-safe: each location that needs to be updated is updated
 	 * atomically.
 	 */
 	void updateBlock(const index starti, const index startj, 
-			const scalar *const buffer, const size_t param1, const size_t param2);
+			const scalar *const buffer, const long param1, const long param2);
 	
 	/// Updates the diagonal block of the specified block-row
 	/** This function is thread-safe.
