@@ -56,8 +56,10 @@ public:
 	/**
 	 * \param[in] starti The row index at which the block starts;
 	 *              Note that this must not be the block-row index for any matrix type.
+	 * \param[in] Any parameter needed by implementations
 	 */
-	virtual void updateDiagBlock(const index starti, const scalar *const buffer) = 0;
+	virtual void updateDiagBlock(const index starti, const scalar *const buffer,
+			const long param1) = 0;
 
 	/// Should compute the matrix vector product of this matrix with one vector,
 	/// scaled by a constant
