@@ -21,9 +21,17 @@ namespace blasted {
 template <typename scalar, typename index>
 class LinearOperator
 {
+protected:
+	/// Encodes some indication of what kind of storage is used
+	char _type;
+
 public:
+	LinearOperator(const char storagetype) : _type{storagetype}
+	{ }
 
 	virtual ~LinearOperator() { }
+
+	char type() { return _type; }
 
 	/// Sets all non-zero entries to explicitly stored zeros
 	virtual void setAllZero() = 0;

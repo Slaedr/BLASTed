@@ -25,12 +25,13 @@ using Vector = Matrix<scalar,Dynamic,1>;
 
 /// Block sparse row matrix
 /** Dense blocks stored in a (block-) row-major storage order.
+ * \warning Do NOT use unsigned types as index; that will cause SGS and ILU preconditioners to fail.
  */
 template <typename scalar, typename index, int bs>
 class BSRMatrix : public LinearOperator<scalar, index>
 {
 protected:
-
+	
 	/// Entries of the matrix
 	/** All the blocks are stored contiguously as one big block-column
 	 * having as many block-rows as the total number of non-zero blocks
@@ -147,7 +148,7 @@ template <typename scalar, typename index>
 class BSRMatrix<scalar,index,1> : public LinearOperator<scalar, index>
 {
 protected:
-
+	
 	/// Entries of the matrix
 	/** All the blocks are stored contiguously as one big block-column
 	 * having as many block-rows as the total number of non-zero blocks
