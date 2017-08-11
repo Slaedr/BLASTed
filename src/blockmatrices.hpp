@@ -181,6 +181,9 @@ protected:
 	 * as the non-zero structure of this matrix is same as the original matrix.
 	 */
 	scalar* iludata;
+	
+	/// Stores scaling vector for async ILU factorization
+	scalar* scale;
 
 	/// Storage for intermediate results in preconditioning operations
 	mutable scalar* ytemp;

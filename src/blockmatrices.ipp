@@ -333,8 +333,11 @@ BSRMatrix<scalar,index,1>::~BSRMatrix()
 		delete [] iludata;
 	if(ytemp)
 		delete [] ytemp;
+	if(scale)
+		delete [] scale;
+
 	bcolind = browptr = diagind = nullptr;
-	vals = dblocks = iludata = ytemp = nullptr;
+	vals = dblocks = iludata = ytemp = scale = nullptr;
 }
 
 template <typename scalar, typename index>
@@ -372,7 +375,7 @@ void BSRMatrix<scalar,index,1>::submitBlock(const index starti, const index star
 				break;
 #ifdef DEBUG
 			if(bcolind[jj] != startj+k)
-				std::cout << "!  BSRMatrix<1>: updateBlock: Invalid block!!\n";
+				std::cout << "!  BSRMatrix<1>: submitBlock: Invalid block!!\n";
 #endif
 			vals[jj] = buffer[locrow*bsi+k];
 			k++;
@@ -499,7 +502,7 @@ void BSRMatrix<scalar,index,1>::allocTempVector()
 	if(ytemp)
 		std::cout << "!  BSRMatrix<1>: allocTempVector(): temp vector is already allocated!\n";
 	else
-		ytemp = new scalar[browptr[nbrows]];
+		ytemp = new scalar[nbrows];
 }
 
 template <typename scalar, typename index>
@@ -541,16 +544,173 @@ void BSRMatrix<scalar,index,1>::precSGSApply(const scalar *const rr,
 	}
 }
 
-template <typename scalar, typename index>
-void BSRMatrix<scalar,index,1>::precILUSetup()
+/// Search through inner indices
+/** Finds the position in the index arary that has value indtofind
+ * Searches between positions
+ * \param[in] start, and
+ * \param[in] end
+ */
+template <typename index>
+static inline void inner_search(const index *const aind, 
+		const index start, const index end, 
+		const index indtofind, index *const pos)
 {
-	// TODO
+	for(index j = start; j < end; j++) {
+		if(aind[j] == indtofind) {
+			*pos = j;
+			break;
+		}
+	}
 }
 
 template <typename scalar, typename index>
-void BSRMatrix<scalar,index,1>::precILUApply(const scalar *const r, 
-                                              scalar *const __restrict z) const
+void BSRMatrix<scalar,index,1>::precILUSetup()
 {
-	// TODO
+	if(!iludata)
+	{
+		//printf("BSRMatrix<1>: precILUSetup(): First-time setup\n");
+
+		// Allocate lu
+		iludata = new scalar[browptr[nbrows]];
+		for(int j = 0; j < browptr[nbrows]; j++) {
+			iludata[j] = vals[j];
+		}
+
+		// intermediate array for the solve part
+		if(!ytemp)
+			ytemp = new scalar[nbrows];
+		else
+			std::cout << "! BSRMatrix<1>: precILUSetup(): Temp vector is already allocated!\n";
+		/*for(int i = 0; i < nbrows; i++)
+			y[i] = 0;*/
+		
+		if(!scale)
+			scale = new scalar[nbrows];	
+		else
+			std::cout << "! BSRMatrix<1>: precILUSetup(): Scale vector is already allocated!\n";
+	}
+
+	// get the diagonal scaling matrix
+	
+#pragma omp parallel for simd default(shared)
+	for(index i = 0; i < nbrows; i++)
+		scale[i] = 1.0/std::sqrt(vals[diagind[i]]);
+
+	// compute L and U
+	/** Note that in the factorization loop, the variable pos is initially set negative.
+	 * If index is an unsigned type, that might be a problem. However,
+	 * it should usually be okay as we are only comparing equality later.
+	 */
+	
+	//printf("BSRMatrix<1>: precILUSetup: Factorizing. %d build sweeps, chunk size is %d.\n", 
+	//		nbuildsweeps, thread_chunk_size);
+	
+	for(short isweep = 0; isweep < nbuildsweeps; isweep++)
+	{
+#pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size)
+		for(index irow = 0; irow < nbrows; irow++)
+		{
+			for(index j = browptr[irow]; j < browptr[irow+1]; j++)
+			{
+				if(irow > bcolind[j])
+				{
+					scalar sum = scale[irow] * vals[j] * scale[bcolind[j]];
+
+					for(index k = browptr[irow]; 
+					    (k < browptr[irow+1]) && (bcolind[k] < bcolind[j]); 
+					    k++  ) 
+					{
+						index pos = -1;
+						inner_search<index> ( bcolind, 
+							diagind[bcolind[k]], browptr[bcolind[k]+1], bcolind[j], &pos );
+
+						if(pos == -1) {
+							continue;
+						}
+
+						sum -= iludata[k]*iludata[pos];
+					}
+
+					sum = sum / iludata[diagind[bcolind[j]]];
+					iludata[j] = sum;
+				}
+				else
+				{
+					// compute u_ij
+					scalar sum = 0;
+
+					for(index k = browptr[irow]; (k < browptr[irow+1]) && (bcolind[k] < irow); k++) 
+					{
+						index pos = -1;
+
+						/* search for column index bcolind[j], 
+						 * between the diagonal index of row bcolind[k] 
+						 * and the last index of row bcolind[k]
+						 */
+						inner_search(bcolind, 
+							diagind[bcolind[k]], browptr[bcolind[k]+1], bcolind[j], &pos);
+
+						if(pos == -1) {
+							continue;
+						}
+
+						sum += iludata[k]*iludata[pos];
+					}
+
+					iludata[j] = scale[irow] * vals[j] * scale[bcolind[j]] - sum;
+				}
+			}
+		}
+	}
+}
+
+template <typename scalar, typename index>
+void BSRMatrix<scalar,index,1>::precILUApply(const scalar *const __restrict ra, 
+                                              scalar *const __restrict za) const
+{
+	// initially, z := Sr
+#pragma omp parallel for simd default(shared)
+	for(index i = 0; i < nbrows; i++) {
+		za[i] = scale[i]*ra[i];
+	}
+	
+	/** solves Ly = Sr by asynchronous Jacobi iterations.
+	 * Note that if done serially, this is a forward-substitution.
+	 */
+	for(short isweep = 0; isweep < napplysweeps; isweep++)
+	{
+#pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size)
+		for(index i = 0; i < nbrows; i++)
+		{
+			scalar sum = 0;
+			for(index j = browptr[i]; j < diagind[i]; j++)
+			{
+				sum += iludata[j] * ytemp[bcolind[j]];
+			}
+			ytemp[i] = za[i] - sum;
+		}
+	}
+
+	/* Solves Uz = y by asynchronous Jacobi iteration.
+	 * If done serially, this is a back-substitution.
+	 */
+	for(short isweep = 0; isweep < napplysweeps; isweep++)
+	{
+#pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size)
+		for(index i = nbrows-1; i >= 0; i--)
+		{
+			scalar sum = 0;
+			for(index j = diagind[i]+1; j < browptr[i+1]; j++)
+			{
+				sum += iludata[j] * za[bcolind[j]];
+			}
+			za[i] = 1.0/iludata[diagind[i]] * (ytemp[i] - sum);
+		}
+	}
+
+	// correct z
+#pragma omp parallel for simd default(shared)
+	for(int i = 0; i < nbrows; i++)
+		za[i] = za[i]*scale[i];
 }
 
