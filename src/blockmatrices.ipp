@@ -296,6 +296,16 @@ BSRMatrix<scalar,index,1>::BSRMatrix(const index n_brows,
 				break;
 			}
 	}
+
+	/*for(index irow = 0; irow < nbrows; irow++) {
+		std::cout << " Row " << irow << ": ";
+		for(index j = browptr[irow]; j < browptr[irow+1]; j++)
+			std::cout << bcolind[j] << " ";
+		std::cout << std::endl;
+	}*/
+	
+	std::cout << "BSRMatrix: Set up CSR matrix with " << nbrows << " rows,\n    "
+		<< nbuildsweeps << " build- and " << napplysweeps << " apply- async sweep(s)\n";
 }
 
 template <typename scalar, typename index>
@@ -377,7 +387,7 @@ void BSRMatrix<scalar,index,1>::submitBlock(const index starti, const index star
 			if(bcolind[jj] != startj+k)
 				std::cout << "!  BSRMatrix<1>: submitBlock: Invalid block!!\n";
 #endif
-			vals[jj] = buffer[locrow*bsi+k];
+			vals[jj] = buffer[locrow*bsj+k];
 			k++;
 		}
 	}
@@ -395,18 +405,11 @@ void BSRMatrix<scalar,index,1>::updateDiagBlock(const index starti,
 	{
 		long k = 0;
 		index locrow = irow-starti;
-		for(index jj = browptr[irow]; jj < browptr[irow+1]; jj++)
+		for(index jj = diagind[irow]-locrow; jj < diagind[irow]-locrow+bs; jj++)
 		{
-			if(bcolind[jj] < starti) 
-				continue;
-			if(k == bs) 
-				break;
-#ifdef DEBUG
-			if(bcolind[jj] != starti+k)
-				std::cout << "!  BSRMatrix<1>: updateDiagBlock: Invalid block!!\n";
-#endif
+			index loccol = jj-diagind[irow]+locrow;
 #pragma omp atomic update
-			vals[jj] += buffer[locrow*bs+k];
+			vals[jj] += buffer[locrow*bs+loccol];
 			k++;
 		}
 	}

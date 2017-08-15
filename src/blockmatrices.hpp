@@ -141,6 +141,8 @@ public:
 
 	/// Applies a block LU factorization
 	void precILUApply(const scalar *const r, scalar *const __restrict z) const;
+	
+	index dim() const { return nbrows*bs; }
 };
 
 /// The limiting case of BSR matrix when block size is 1
@@ -157,15 +159,6 @@ protected:
 
 	/// Has space for non-zero values \ref vals been allocated by this class?
 	const bool isAllocVals;
-	
-	/// Block-column indices of blocks in data
-	index* bcolind;
-	
-	/// Stores indices into bcolind where block-rows start
-	/** Has size (number of rows + 1). 
-	 * The last entry stores the total number of non-zero blocks.
-	 */
-	index* browptr;
 
 	/// Number of block-rows
 	const index nbrows;
@@ -198,6 +191,15 @@ protected:
 	const int thread_chunk_size;
 
 public:
+	
+	/// Block-column indices of blocks in data
+	index* bcolind;
+	
+	/// Stores indices into bcolind where block-rows start
+	/** Has size (number of rows + 1). 
+	 * The last entry stores the total number of non-zero blocks.
+	 */
+	index* browptr;
 	/// Allocates space for the matrix based on the supplied non-zero structure
 	/** \param[in] n_brows Total number of rows
 	 * \param[in] bcinds Column indices, simply copied over into \ref bcolind
@@ -277,6 +279,8 @@ public:
 
 	/// Applies a block LU factorization
 	void precILUApply(const scalar *const r, scalar *const __restrict z) const;
+	
+	index dim() const { return nbrows; }
 };
 
 #include "blockmatrices.ipp"
