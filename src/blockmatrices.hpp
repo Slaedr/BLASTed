@@ -100,21 +100,21 @@ public:
 	 * write to the same location of the matrix at the same time.
 	 */
 	void submitBlock(const index starti, const index startj, 
-			const scalar *const buffer, const long param1, const long param2);
+			const scalar *const buffer, const index param1, const index param2);
 
 	/// Update a (contiguous) block of values into the [matrix](\ref vals)
 	/** This is function is thread-safe: each location that needs to be updated is updated
 	 * atomically.
 	 */
 	void updateBlock(const index starti, const index startj, 
-			const scalar *const buffer, const long param1, const long param2);
+			const scalar *const buffer, const index param1, const index param2);
 	
 	/// Updates the diagonal block of the specified block-row
 	/** This function is thread-safe.
 	 * \param[in] starti The block-row whose diagonal block is to be updated
 	 * \param[in] buffer The values making up the block to be added
 	 */
-	void updateDiagBlock(const index starti, const scalar *const buffer, const long param);
+	void updateDiagBlock(const index starti, const scalar *const buffer, const index param);
 
 	/// Computes the matrix vector product of this matrix with one vector-- y := a Ax
 	virtual void apply(const scalar a, const scalar *const x, scalar *const __restrict y) const;
@@ -143,6 +143,8 @@ public:
 	void precILUApply(const scalar *const r, scalar *const __restrict z) const;
 	
 	index dim() const { return nbrows*bs; }
+	
+	void printDiagnostic(const char choice) const;
 };
 
 /// The limiting case of BSR matrix when block size is 1
@@ -156,9 +158,18 @@ protected:
 	 * having as many block-rows as the total number of non-zero blocks
 	 */
 	scalar* vals;
-
+	
 	/// Has space for non-zero values \ref vals been allocated by this class?
 	const bool isAllocVals;
+
+	/// Block-column indices of blocks in data
+	index* bcolind;
+	
+	/// Stores indices into bcolind where block-rows start
+	/** Has size (number of rows + 1). 
+	 * The last entry stores the total number of non-zero blocks.
+	 */
+	index* browptr;
 
 	/// Number of block-rows
 	const index nbrows;
@@ -192,14 +203,6 @@ protected:
 
 public:
 	
-	/// Block-column indices of blocks in data
-	index* bcolind;
-	
-	/// Stores indices into bcolind where block-rows start
-	/** Has size (number of rows + 1). 
-	 * The last entry stores the total number of non-zero blocks.
-	 */
-	index* browptr;
 	/// Allocates space for the matrix based on the supplied non-zero structure
 	/** \param[in] n_brows Total number of rows
 	 * \param[in] bcinds Column indices, simply copied over into \ref bcolind
@@ -233,7 +236,7 @@ public:
 	 * \param[in] bsj The number of columns in the block being inserted
 	 */
 	void submitBlock(const index starti, const index startj, 
-			const scalar *const buffer, const long bsi, const long bsj);
+			const scalar *const buffer, const index bsi, const index bsj);
 
 	/// Update a (contiguous) block of values into the [matrix](\ref vals)
 	/** This is function is thread-safe: each location that needs to be updated is updated
@@ -244,7 +247,7 @@ public:
 	 * \param[in] bsj The number of columns in the block being inserted
 	 */
 	void updateBlock(const index starti, const index startj, 
-			const scalar *const buffer, const long bsi, const long bsj);
+			const scalar *const buffer, const index bsi, const index bsj);
 	
 	/// Updates the diagonal block of the specified block-row
 	/** This function is thread-safe.
@@ -252,7 +255,7 @@ public:
 	 * \param[in] buffer The values making up the block to be added
 	 * \param[in] bs Size of the square block to be updated
 	 */
-	void updateDiagBlock(const index starti, const scalar *const buffer, const long bs);
+	void updateDiagBlock(const index starti, const scalar *const buffer, const index bs);
 
 	/// Computes the matrix vector product of this matrix with one vector-- y := a Ax
 	virtual void apply(const scalar a, const scalar *const x, scalar *const __restrict y) const;
@@ -281,6 +284,8 @@ public:
 	void precILUApply(const scalar *const r, scalar *const __restrict z) const;
 	
 	index dim() const { return nbrows; }
+	
+	void printDiagnostic(const char choice) const;
 };
 
 #include "blockmatrices.ipp"

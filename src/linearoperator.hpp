@@ -47,7 +47,7 @@ public:
 	 *              Note that this must not be the block-column index for any matrix type.
 	 */
 	virtual void submitBlock(const index starti, const index startj, 
-		const scalar *const buffer, const long param1, const long param2) = 0;
+		const scalar *const buffer, const index param1, const index param2) = 0;
 	
 	/// Supposed to add to a contiguous block of the matrix in a thread-safe manner
 	/**
@@ -57,7 +57,7 @@ public:
 	 *              Note that this must not be the block-column index for any matrix type.
 	 */
 	virtual void updateBlock(const index starti, const index startj, 
-		const scalar *const buffer, const long param1, const long param2) = 0;
+		const scalar *const buffer, const index param1, const index param2) = 0;
 	
 	/// Supposed to update diagonal entries for point matrices 
 	/// and diagonal blocks for block matrices
@@ -67,7 +67,7 @@ public:
 	 * \param[in] Any parameter needed by implementations
 	 */
 	virtual void updateDiagBlock(const index starti, const scalar *const buffer,
-			const long param1) = 0;
+			const index param1) = 0;
 
 	/// Should compute the matrix vector product of this matrix with one vector,
 	/// scaled by a constant

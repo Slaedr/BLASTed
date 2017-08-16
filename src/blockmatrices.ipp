@@ -52,8 +52,9 @@ BSRMatrix<scalar, index, bs>::~BSRMatrix()
 template <typename scalar, typename index, int bs>
 void BSRMatrix<scalar,index,bs>::setAllZero()
 {
+	const index nnz = browptr[nbrows]*bs*bs;
 #pragma omp parallel for simd default(shared)
-	for(index i = 0; i < browptr[nbrows]; i++)
+	for(index i = 0; i < nnz; i++)
 		vals[i] = 0;
 }
 
@@ -71,7 +72,7 @@ void BSRMatrix<scalar,index,bs>::setDiagZero()
 
 template <typename scalar, typename index, int bs>
 void BSRMatrix<scalar,index,bs>::submitBlock(const index starti, const index startj,
-		const scalar *const buffer, const long param1, const long param2) 
+		const scalar *const buffer, const index param1, const index param2) 
 {
 	bool found = false;
 	const index startr = starti/bs, startc = startj/bs;
@@ -90,7 +91,7 @@ void BSRMatrix<scalar,index,bs>::submitBlock(const index starti, const index sta
 
 template <typename scalar, typename index, int bs>
 void BSRMatrix<scalar,index,bs>::updateDiagBlock(const index starti,
-		const scalar *const buffer, const long param)
+		const scalar *const buffer, const index param)
 {
 	constexpr int bs2 = bs*bs;
 	const index startr = starti/bs;
@@ -102,7 +103,7 @@ void BSRMatrix<scalar,index,bs>::updateDiagBlock(const index starti,
 
 template <typename scalar, typename index, int bs>
 void BSRMatrix<scalar,index,bs>::updateBlock(const index starti, const index startj,
-		const scalar *const buffer, const long param1, const long param2)
+		const scalar *const buffer, const index param1, const index param2)
 {
 	bool found = false;
 	const index startr = starti/bs, startc = startj/bs;
@@ -269,13 +270,40 @@ void BSRMatrix<scalar,index,bs>::precILUApply(const scalar *const r,
 	// TODO
 }
 
+template <typename scalar, typename index, int bs>
+void BSRMatrix<scalar,index,bs>::printDiagnostic(const char choice) const
+{
+	std::ofstream fout("blockmatrix.txt");
+	for(index i = 0; i < nbrows*bs; i++)
+	{
+		for(index j = 0; j < nbrows*bs; j++)
+		{
+			index brow = i/bs; index bcol = j/bs;
+			int lcol = j%bs;
+			bool found = false;
+			for(index jj = browptr[brow]; jj < browptr[brow+1]; jj++)
+				if(bcolind[jj] == bcol)
+				{
+					//fout << " " << vals[jj + lrow*bs + lcol];
+					fout << " " << bcolind[jj]*bs+lcol+1;
+					found = true;
+					break;
+				}
+			if(!found)
+				fout << " 0";
+		}
+		fout << '\n';
+	}
+	fout.close();
+}
+
 
 
 template <typename scalar, typename index>
 BSRMatrix<scalar,index,1>::BSRMatrix(const index n_brows,
 		const index *const bcinds, const index *const brptrs,
 		const short n_buildsweeps, const short n_applysweeps)
-	: LinearOperator<scalar,index>('p'),vals(nullptr), isAllocVals(true), nbrows{n_brows}, 
+	: LinearOperator<scalar,index>('c'),vals(nullptr), isAllocVals(true), nbrows{n_brows}, 
 	  dblocks(nullptr), iludata(nullptr), ytemp(nullptr),
 	  nbuildsweeps{n_buildsweeps}, napplysweeps{n_applysweeps}, thread_chunk_size{800}
 {
@@ -296,15 +324,8 @@ BSRMatrix<scalar,index,1>::BSRMatrix(const index n_brows,
 				break;
 			}
 	}
-
-	/*for(index irow = 0; irow < nbrows; irow++) {
-		std::cout << " Row " << irow << ": ";
-		for(index j = browptr[irow]; j < browptr[irow+1]; j++)
-			std::cout << bcolind[j] << " ";
-		std::cout << std::endl;
-	}*/
 	
-	std::cout << "BSRMatrix: Set up CSR matrix with " << nbrows << " rows,\n    "
+	std::cout << "BSRMatrix<1>: Set up CSR matrix with " << nbrows << " rows,\n    "
 		<< nbuildsweeps << " build- and " << napplysweeps << " apply- async sweep(s)\n";
 }
 
@@ -312,7 +333,8 @@ template <typename scalar, typename index>
 BSRMatrix<scalar,index,1>::BSRMatrix(const index nrows, const index *const brptrs,
 		const index *const bcinds, const scalar *const values,
 		const short n_buildsweeps, const short n_applysweeps)
-	: vals(values), isAllocVals(false), bcolind(bcinds), browptr(brptrs), nbrows{nrows},
+	: LinearOperator<scalar,index>('c'),
+	  vals(values), isAllocVals(false), bcolind(bcinds), browptr(brptrs), nbrows{nrows},
 	  dblocks(nullptr), iludata(nullptr), ytemp(nullptr),
 	  nbuildsweeps{n_buildsweeps}, napplysweeps{n_applysweeps}, thread_chunk_size{800}
 {
@@ -371,11 +393,11 @@ void BSRMatrix<scalar,index,1>::setDiagZero()
  */
 template <typename scalar, typename index>
 void BSRMatrix<scalar,index,1>::submitBlock(const index starti, const index startj,
-		const scalar *const buffer, const long bsi, const long bsj)
+		const scalar *const buffer, const index bsi, const index bsj)
 {
 	for(index irow = starti; irow < starti+bsi; irow++)
 	{
-		long k = 0;
+		index k = 0;
 		index locrow = irow-starti;
 		for(index jj = browptr[irow]; jj < browptr[irow+1]; jj++)
 		{
@@ -398,12 +420,12 @@ void BSRMatrix<scalar,index,1>::submitBlock(const index starti, const index star
  */
 template <typename scalar, typename index>
 void BSRMatrix<scalar,index,1>::updateDiagBlock(const index starti,
-		const scalar *const buffer, const long bs)
+		const scalar *const buffer, const index bs)
 {
 	// update the block, row-wise
 	for(index irow = starti; irow < starti+bs; irow++)
 	{
-		long k = 0;
+		index k = 0;
 		index locrow = irow-starti;
 		for(index jj = diagind[irow]-locrow; jj < diagind[irow]-locrow+bs; jj++)
 		{
@@ -420,11 +442,11 @@ void BSRMatrix<scalar,index,1>::updateDiagBlock(const index starti,
  */
 template <typename scalar, typename index>
 void BSRMatrix<scalar,index,1>::updateBlock(const index starti, const index startj,
-		const scalar *const buffer, const long bsi, const long bsj)
+		const scalar *const buffer, const index bsi, const index bsj)
 {
 	for(index irow = starti; irow < starti+bsi; irow++)
 	{
-		long k = 0;
+		index k = 0;
 		index locrow = irow-starti;
 		for(index jj = browptr[irow]; jj < browptr[irow+1]; jj++)
 		{
@@ -480,9 +502,7 @@ void BSRMatrix<scalar,index,1>::precJacobiSetup()
 {
 	if(!dblocks) {
 		dblocks = new scalar[browptr[nbrows]];
-#if DEBUG==1
-		std::cout << " BSRMatrix<1>: precJacobiSetup(): Allocating.\n";
-#endif
+		std::cout << " CSR Matrix: precJacobiSetup(): Allocating.\n";
 	}
 
 #pragma omp parallel for simd default(shared)
@@ -571,7 +591,7 @@ void BSRMatrix<scalar,index,1>::precILUSetup()
 {
 	if(!iludata)
 	{
-		//printf("BSRMatrix<1>: precILUSetup(): First-time setup\n");
+		std::printf(" CSR Matrix: precILUSetup(): First-time setup\n");
 
 		// Allocate lu
 		iludata = new scalar[browptr[nbrows]];
@@ -579,13 +599,11 @@ void BSRMatrix<scalar,index,1>::precILUSetup()
 			iludata[j] = vals[j];
 		}
 
-		// intermediate array for the solve part
+		// intermediate array for the solve part; NOT ZEROED
 		if(!ytemp)
 			ytemp = new scalar[nbrows];
 		else
 			std::cout << "! BSRMatrix<1>: precILUSetup(): Temp vector is already allocated!\n";
-		/*for(int i = 0; i < nbrows; i++)
-			y[i] = 0;*/
 		
 		if(!scale)
 			scale = new scalar[nbrows];	
@@ -715,5 +733,29 @@ void BSRMatrix<scalar,index,1>::precILUApply(const scalar *const __restrict ra,
 #pragma omp parallel for simd default(shared)
 	for(int i = 0; i < nbrows; i++)
 		za[i] = za[i]*scale[i];
+}
+
+template <typename scalar, typename index>
+void BSRMatrix<scalar,index,1>::printDiagnostic(const char choice) const
+{
+	std::ofstream fout("pointmatrix.txt");
+	for(index i = 0; i < nbrows; i++)
+	{
+		for(index j = 0; j < nbrows; j++)
+		{
+			bool found = false;
+			for(index jj = browptr[i]; jj < browptr[i+1]; jj++)
+				if(bcolind[jj] == j)
+				{
+					fout << " " << bcolind[jj]+1;
+					found = true;
+					break;
+				}
+			if(!found)
+				fout << " 0";
+		}
+		fout << '\n';
+	}
+	fout.close();
 }
 
