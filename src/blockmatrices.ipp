@@ -451,7 +451,7 @@ BSRMatrix<scalar,index,1>::BSRMatrix(const index n_brows,
 		const index *const bcinds, const index *const brptrs,
 		const short n_buildsweeps, const short n_applysweeps)
 	: LinearOperator<scalar,index>('c'),vals(nullptr), isAllocVals(true), nbrows{n_brows}, 
-	  dblocks(nullptr), iluvals(nullptr), ytemp(nullptr),
+	  dblocks(nullptr), iluvals(nullptr), scale(nullptr), ytemp(nullptr),
 	  nbuildsweeps{n_buildsweeps}, napplysweeps{n_applysweeps}, thread_chunk_size{800}
 {
 	browptr = new index[nbrows+1];
@@ -482,7 +482,7 @@ BSRMatrix<scalar,index,1>::BSRMatrix(const index nrows, const index *const brptr
 		const short n_buildsweeps, const short n_applysweeps)
 	: LinearOperator<scalar,index>('c'),
 	  vals(values), isAllocVals(false), bcolind(bcinds), browptr(brptrs), nbrows{nrows},
-	  dblocks(nullptr), iluvals(nullptr), ytemp(nullptr),
+	  dblocks(nullptr), iluvals(nullptr), scale(nullptr), ytemp(nullptr),
 	  nbuildsweeps{n_buildsweeps}, napplysweeps{n_applysweeps}, thread_chunk_size{800}
 {
 	// set diagonal blocks' locations
