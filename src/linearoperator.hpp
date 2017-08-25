@@ -94,7 +94,7 @@ public:
 	/// Applies an LU factorization
 	virtual void precILUApply(const scalar *const r, scalar *const __restrict__ z) const = 0;
 
-	/// Allocates storage for a vector \ref ytemp required for both SGS and ILU applications
+	/// Allocates storage for a vector required for both SGS and ILU applications
 	virtual void allocTempVector() = 0;
 	
 	/// Returns the dimension (number of rows) of the operator
