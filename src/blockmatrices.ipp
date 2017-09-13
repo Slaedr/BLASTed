@@ -368,7 +368,7 @@ void BSRMatrix<scalar,index,bs>::precILUSetup()
 	// invert diagonal blocks
 #pragma omp parallel for default(shared)
 	for(index irow = 0; irow < nbrows; irow++)
-		iluvals.BLK<bs,bs>(diagind[irow]*bs,0) = iluvals.BLK<bs,bs>(diagind[irow]*bs,0).inverse();
+		iluvals.BLK<bs,bs>(diagind[irow]*bs,0) = iluvals.BLK<bs,bs>(diagind[irow]*bs,0).inverse().eval();
 }
 
 template <typename scalar, typename index, int bs>
