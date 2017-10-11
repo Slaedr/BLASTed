@@ -4,8 +4,8 @@
  * \date 2017-07-28
  */
 
-#ifndef __LINEAROPERATOR_H
-#define __LINEAROPERATOR_H
+#ifndef LINEAROPERATOR_H
+#define LINEAROPERATOR_H
 
 #ifdef DEBUG
 #define __restrict__ 
@@ -32,6 +32,12 @@ public:
 	virtual ~LinearOperator() { }
 
 	char type() { return _type; }
+
+	/// Sets the structure of the matrix using supplied vectors
+	/** See the documentation for the subclasses for requirements on the inputs.
+	 */
+	virtual void setStructure(const index n, 
+			const index *const vec1, const index *const vec2) = 0;
 
 	/// Sets all non-zero entries to explicitly stored zeros
 	virtual void setAllZero() = 0;

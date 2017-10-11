@@ -4,8 +4,8 @@
  * \date 2017-07-29
  */
 
-#ifndef __BLOCKMATRICES_H
-#define __BLOCKMATRICES_H
+#ifndef BLOCKMATRICES_H
+#define BLOCKMATRICES_H
 
 // get around dependent templates for Eigen
 #define SEG template segment
@@ -13,6 +13,7 @@
 
 #include "linearoperator.hpp"
 #include <iostream>
+#include <fstream>
 #include <Eigen/LU>
 
 namespace blasted {
@@ -31,10 +32,13 @@ template <typename scalar, typename index, int bs>
 class BSRMatrix : public LinearOperator<scalar, index>
 {
 public:
+	/// Initialization without pre-allocation of any storage
+	BSRMatrix(const short nbuildsweeps, const short napplysweeps);
+
 	/// Allocates space for the matrix based on the supplied non-zero structure
 	/** \param[in] n_brows Total number of block rows
-	 * \param[in] bcinds Column indices, simply copied over into \ref bcolind
-	 * \param[in] brptrs Row pointers, simply copied into \ref browptr
+	 * \param[in] bcinds Column indices, simply (deep) copied over into \ref bcolind
+	 * \param[in] brptrs Row pointers, simply (deep) copied into \ref browptr
 	 */
 	BSRMatrix(const index n_brows, const index *const bcinds, const index *const brptrs,
 	         const short nbuildsweeps, const short napplysweeps);
@@ -42,13 +46,22 @@ public:
 	/// De-allocates memory
 	virtual ~BSRMatrix();
 
+	/// Set the storage structure of the matrix
+	/** \param[in] nbrows Number of block-rows
+	 * \param[in] bcinds Array of block-column indices for all non-zero blocks
+	 * \param[in] brptrs Array of indices into bcinds pointing to where each block-row starts
+	 *
+	 * \waring Deletes pre-existing contents!
+	 */
+	void setStructure(const index nbrows, const index *const bcinds, const index *const brptrs);
+
 	/// Sets all stored entries of the matrix to zero
 	void setAllZero();
 
 	/// Sets diagonal blocks to zero
 	void setDiagZero();
 	
-	/// Insert a block of values into the [matrix](\ref data); not thread-safe
+	/// Insert a block of values into the [matrix](\ref vals); not thread-safe
 	/** \warning NOT thread safe! The caller is responsible for ensuring that no two threads
 	 * write to the same location of the matrix at the same time.
 	 * \param[in] starti The *row index* (not block-row index) at which the block to be added starts
@@ -120,7 +133,7 @@ public:
 	/// Returns the dimension (number of rows) of the square matrix
 	index dim() const { return nbrows*bs; }
 
-	/// Prints the matrix out to a file in dense format
+	// Prints the matrix out to a file in dense format
 	void printDiagnostic(const char choice) const;
 
 protected:
@@ -130,9 +143,6 @@ protected:
 	 * having as many block-rows as the total number of non-zero blocks
 	 */
 	scalar* vals;
-
-	/// Has space for non-zero values \ref vals been allocated by this class?
-	const bool isAllocVals;
 	
 	/// Block-column indices of blocks in data
 	index* bcolind;
@@ -144,7 +154,7 @@ protected:
 	index* browptr;
 
 	/// Number of block-rows
-	const index nbrows;
+	index nbrows;
 	
 	/// Stores indices into bcolind if diagonal blocks
 	index* diagind;
@@ -177,6 +187,9 @@ class BSRMatrix<scalar,index,1> : public LinearOperator<scalar, index>
 {
 public:
 	
+	/// Minimal initialzation; just sets number of async sweeps	
+	BSRMatrix(const short n_buildsweeps, const short n_applysweeps);
+
 	/// Allocates space for the matrix based on the supplied non-zero structure
 	/** \param[in] n_brows Total number of rows
 	 * \param[in] bcinds Column indices, simply copied over into \ref bcolind
@@ -194,6 +207,15 @@ public:
 
 	/// De-allocates memory
 	virtual ~BSRMatrix();
+
+	/// Set the storage structure of the matrix
+	/** \param[in] nbrows Number of rows
+	 * \param[in] bcinds Array of column indices for all non-zero entries
+	 * \param[in] brptrs Array of indices into bcinds pointing to where each row starts
+	 *
+	 * \waring Deletes pre-existing contents!
+	 */
+	void setStructure(const index nbrows, const index *const bcinds, const index *const brptrs);
 
 	/// Sets all stored entries of the matrix to zero
 	void setAllZero();
@@ -270,9 +292,6 @@ protected:
 	 * having as many block-rows as the total number of non-zero blocks
 	 */
 	scalar* vals;
-	
-	/// Has space for non-zero values \ref vals been allocated by this class?
-	const bool isAllocVals;
 
 	/// Block-column indices of blocks in data
 	index* bcolind;
@@ -284,7 +303,7 @@ protected:
 	index* browptr;
 
 	/// Number of block-rows
-	const index nbrows;
+	index nbrows;
 	
 	/// Stores indices into bcolind if diagonal blocks
 	index* diagind;

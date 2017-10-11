@@ -6,10 +6,24 @@
  */
 
 template <typename scalar, typename index, int bs>
+BSRMatrix<scalar,index,bs>::BSRMatrix(const short n_buildsweeps, const short n_applysweeps)
+	: LinearOperator<scalar,index>('b'), vals{nullptr}, bcolind{nullptr}, browptr{nullptr}, 
+	  nbrows{0}, diagind{nullptr},
+	  nbuildsweeps{n_buildsweeps}, napplysweeps{n_applysweeps}, thread_chunk_size{500}
+{
+	// compile-time filter for unsigned index types
+	index check_var{-1};
+	if(check_var != -1) std::cout << "! BSRMatrix: Invalid index type!\n";
+	
+	std::cout << "BSRMatrix: Initialized with matrix without allocation, with\n    "
+		<< nbuildsweeps << " build- and " << napplysweeps << " apply- async sweep(s)\n";
+}
+
+template <typename scalar, typename index, int bs>
 BSRMatrix<scalar,index,bs>::BSRMatrix(const index n_brows,
 		const index *const bcinds, const index *const brptrs,
 		const short n_buildsweeps, const short n_applysweeps)
-	: LinearOperator<scalar,index>('b'), vals(nullptr), isAllocVals(true), nbrows{n_brows},
+	: LinearOperator<scalar,index>('b'), vals{nullptr}, nbrows{n_brows},
 	  nbuildsweeps{n_buildsweeps}, napplysweeps{n_applysweeps}, thread_chunk_size{500}
 {
 	// compile-time filter for unsigned index types
@@ -42,7 +56,7 @@ BSRMatrix<scalar,index,bs>::BSRMatrix(const index n_brows,
 template <typename scalar, typename index, int bs>
 BSRMatrix<scalar, index, bs>::~BSRMatrix()
 {
-	if(isAllocVals)
+	if(vals)
 		delete [] vals;
 	if(bcolind)
 		delete [] bcolind;
@@ -50,7 +64,39 @@ BSRMatrix<scalar, index, bs>::~BSRMatrix()
 		delete [] browptr;
 	if(diagind)
 		delete [] diagind;
-	bcolind = browptr = diagind = nullptr;
+	bcolind = browptr = diagind = nullptr; vals = nullptr;
+}
+
+template <typename scalar, typename index, int bs>
+void BSRMatrix<scalar,index,bs>::setStructure(const index n_brows,
+		const index *const bcinds, const index *const brptrs)
+{
+	delete [] vals;
+	delete [] bcolind;
+	delete [] browptr;
+	delete [] diagind;
+
+	nbrows = n_brows;
+	constexpr int bs2 = bs*bs;
+	browptr = new index[nbrows+1];
+	bcolind = new index[brptrs[nbrows]];
+	diagind = new index[nbrows];
+	vals = new scalar[brptrs[nbrows]*bs2];
+	for(index i = 0; i < nbrows+1; i++)
+		browptr[i] = brptrs[i];
+	for(index i = 0; i < brptrs[nbrows]; i++)
+		bcolind[i] = bcinds[i];
+
+	// set diagonal blocks' locations
+	for(index irow = 0; irow < nbrows; irow++) 
+	{
+		for(index j = browptr[irow]; j < browptr[irow+1]; j++)
+			if(bcolind[j] == irow) {
+				diagind[irow] = j;
+				break;
+			}
+	}
+	std::cout << "BSRMatrix:  Allocated storage for matrix with " << nbrows << " block-rows.\n";
 }
 
 template <typename scalar, typename index, int bs>
@@ -156,7 +202,7 @@ void BSRMatrix<scalar,index,bs>::apply(const scalar a, const scalar *const xx,
 }
 
 template <typename scalar, typename index, int bs>
-void BSRMatrix<scalar,index,bs>::gemv3(const scalar a, const scalar *const __restrict__ xx, 
+void BSRMatrix<scalar,index,bs>::gemv3(const scalar a, const scalar *const __restrict xx, 
 		const scalar b, const scalar *const yy, scalar *const zz) const
 {
 	Eigen::Map<const Vector<scalar>> x(xx, nbrows*bs);
@@ -368,7 +414,8 @@ void BSRMatrix<scalar,index,bs>::precILUSetup()
 	// invert diagonal blocks
 #pragma omp parallel for default(shared)
 	for(index irow = 0; irow < nbrows; irow++)
-		iluvals.BLK<bs,bs>(diagind[irow]*bs,0) = iluvals.BLK<bs,bs>(diagind[irow]*bs,0).inverse().eval();
+		iluvals.BLK<bs,bs>(diagind[irow]*bs,0) 
+			= iluvals.BLK<bs,bs>(diagind[irow]*bs,0).inverse().eval();
 }
 
 template <typename scalar, typename index, int bs>
@@ -447,10 +494,20 @@ void BSRMatrix<scalar,index,bs>::printDiagnostic(const char choice) const
 
 
 template <typename scalar, typename index>
+BSRMatrix<scalar,index,1>::BSRMatrix(const short n_buildsweeps, const short n_applysweeps)
+	: LinearOperator<scalar,index>('c'),vals{nullptr}, nbrows{0}, 
+	  dblocks{nullptr}, iluvals{nullptr}, scale{nullptr}, ytemp{nullptr},
+	  nbuildsweeps{n_buildsweeps}, napplysweeps{n_applysweeps}, thread_chunk_size{800}
+{
+	std::cout << "BSRMatrix<1>: Initialized CSR matrix with "
+		<< nbuildsweeps << " build- and " << napplysweeps << " apply- async sweep(s)\n";
+}
+
+template <typename scalar, typename index>
 BSRMatrix<scalar,index,1>::BSRMatrix(const index n_brows,
 		const index *const bcinds, const index *const brptrs,
 		const short n_buildsweeps, const short n_applysweeps)
-	: LinearOperator<scalar,index>('c'),vals(nullptr), isAllocVals(true), nbrows{n_brows}, 
+	: LinearOperator<scalar,index>('c'),vals(nullptr), nbrows{n_brows}, 
 	  dblocks(nullptr), iluvals(nullptr), scale(nullptr), ytemp(nullptr),
 	  nbuildsweeps{n_buildsweeps}, napplysweeps{n_applysweeps}, thread_chunk_size{800}
 {
@@ -481,14 +538,16 @@ BSRMatrix<scalar,index,1>::BSRMatrix(const index nrows, const index *const brptr
 		const index *const bcinds, const scalar *const values,
 		const short n_buildsweeps, const short n_applysweeps)
 	: LinearOperator<scalar,index>('c'),
-	  vals(values), isAllocVals(false), bcolind(bcinds), browptr(brptrs), nbrows{nrows},
+	  vals{values}, bcolind{bcinds}, browptr{brptrs}, nbrows{nrows},
 	  dblocks(nullptr), iluvals(nullptr), scale(nullptr), ytemp(nullptr),
 	  nbuildsweeps{n_buildsweeps}, napplysweeps{n_applysweeps}, thread_chunk_size{800}
 {
 	// set diagonal blocks' locations
-	for(index irow = 0; irow < nbrows; irow++) {
+	for(index irow = 0; irow < nbrows; irow++) 
+	{
 		for(index j = browptr[irow]; j < browptr[irow+1]; j++)
-			if(bcolind[j] == irow) {
+			if(bcolind[j] == irow) 
+			{
 				diagind[irow] = j;
 				break;
 			}
@@ -498,7 +557,7 @@ BSRMatrix<scalar,index,1>::BSRMatrix(const index nrows, const index *const brptr
 template <typename scalar, typename index>
 BSRMatrix<scalar,index,1>::~BSRMatrix()
 {
-	if(isAllocVals)
+	if(vals)
 		delete [] vals;
 	if(bcolind)
 		delete [] bcolind;
@@ -517,6 +576,37 @@ BSRMatrix<scalar,index,1>::~BSRMatrix()
 
 	bcolind = browptr = diagind = nullptr;
 	vals = dblocks = iluvals = ytemp = scale = nullptr;
+}
+
+template <typename scalar, typename index>
+void BSRMatrix<scalar,index,1>::setStructure(const index n_brows,
+		const index *const bcinds, const index *const brptrs)
+{
+	delete [] vals;
+	delete [] bcolind;
+	delete [] browptr;
+	delete [] diagind;
+
+	nbrows = n_brows;
+	browptr = new index[nbrows+1];
+	bcolind = new index[brptrs[nbrows]];
+	diagind = new index[nbrows];
+	vals = new scalar[brptrs[nbrows]];
+	for(index i = 0; i < nbrows+1; i++)
+		browptr[i] = brptrs[i];
+	for(index i = 0; i < brptrs[nbrows]; i++)
+		bcolind[i] = bcinds[i];
+
+	// set diagonal blocks' locations
+	for(index irow = 0; irow < nbrows; irow++) {
+		for(index j = browptr[irow]; j < browptr[irow+1]; j++)
+			if(bcolind[j] == irow) {
+				diagind[irow] = j;
+				break;
+			}
+	}
+	
+	std::cout << "BSRMatrix<1>: Set up CSR matrix with " << nbrows << " rows.\n";
 }
 
 template <typename scalar, typename index>
