@@ -75,6 +75,9 @@ public:
 	virtual void updateDiagBlock(const index starti, const scalar *const buffer,
 			const index param1) = 0;
 
+	/// Scales all entries of the matrix by scalar
+	virtual void scaleAll(const scalar factor) = 0;
+
 	/// Should compute the matrix vector product of this matrix with one vector,
 	/// scaled by a constant
 	virtual void apply(const scalar a, const scalar *const x, 

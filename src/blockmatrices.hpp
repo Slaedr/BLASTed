@@ -94,10 +94,15 @@ public:
 	 */
 	void updateDiagBlock(const index starti, const scalar *const buffer, const index param);
 
+	/// Scales the matrix by a scalar
+	void scaleAll(const scalar factor);
+
 	/// Computes the matrix vector product of this matrix with one vector-- y := a Ax
 	virtual void apply(const scalar a, const scalar *const x, scalar *const __restrict y) const;
 
 	/// Almost the BLAS gemv: computes z := a Ax + by for  scalars a and b
+	/** \warning x must not alias z.
+	 */
 	virtual void gemv3(const scalar a, const scalar *const __restrict x, 
 			const scalar b, const scalar *const y,
 			scalar *const z) const;
@@ -252,6 +257,9 @@ public:
 	 * \param[in] bs Size of the square block to be updated
 	 */
 	void updateDiagBlock(const index starti, const scalar *const buffer, const index bs);
+
+	/// Scales the matrix by a scalar
+	void scaleAll(const scalar factor);
 
 	/// Computes the matrix vector product of this matrix with one vector-- y := a Ax
 	virtual void apply(const scalar a, const scalar *const x, scalar *const __restrict y) const;

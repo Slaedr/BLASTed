@@ -174,6 +174,18 @@ void BSRMatrix<scalar,index,bs>::updateBlock(const index starti, const index sta
 }
 
 template <typename scalar, typename index, int bs>
+void BSRMatrix<scalar,index,bs>::scaleAll(const scalar factor)
+{
+#pragma omp parallel for default(shared)
+	for(index iz = 0; iz < browptr[nbrows]; iz++)
+	{
+#pragma omp simd
+		for(index k = 0; k < bs*bs; k++)
+			vals[iz*bs*bs + k] *= factor;
+	}
+}
+
+template <typename scalar, typename index, int bs>
 void BSRMatrix<scalar,index,bs>::apply(const scalar a, const scalar *const xx,
                                        scalar *const __restrict yy) const
 {
@@ -699,6 +711,16 @@ void BSRMatrix<scalar,index,1>::updateBlock(const index starti, const index star
 			vals[jj] += buffer[locrow*bsi+k];
 			k++;
 		}
+	}
+}
+
+template <typename scalar, typename index>
+void BSRMatrix<scalar,index,1>::scaleAll(const scalar factor)
+{
+#pragma omp parallel for simd default(shared)
+	for(index iz = 0; iz < browptr[nbrows]; iz++)
+	{
+		vals[iz] *= factor;
 	}
 }
 
