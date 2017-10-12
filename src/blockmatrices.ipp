@@ -15,7 +15,7 @@ BSRMatrix<scalar,index,bs>::BSRMatrix(const short n_buildsweeps, const short n_a
 	index check_var{-1};
 	if(check_var != -1) std::cout << "! BSRMatrix: Invalid index type!\n";
 	
-	std::cout << "BSRMatrix: Initialized with matrix without allocation, with\n    "
+	std::cout << "BSRMatrix: Initialized matrix without allocation, with\n    "
 		<< nbuildsweeps << " build- and " << napplysweeps << " apply- async sweep(s)\n";
 }
 
