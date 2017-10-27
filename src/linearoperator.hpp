@@ -21,10 +21,6 @@ namespace blasted {
 template <typename scalar, typename index>
 class LinearOperator
 {
-protected:
-	/// Encodes some indication of what kind of storage is used
-	char _type;
-
 public:
 	LinearOperator(const char storagetype) : _type{storagetype}
 	{ }
@@ -78,8 +74,7 @@ public:
 	/// Scales all entries of the matrix by scalar
 	virtual void scaleAll(const scalar factor) = 0;
 
-	/// Should compute the matrix vector product of this matrix with one vector,
-	/// scaled by a constant
+	/// To compute the matrix vector product of this matrix with one vector, scaled by a constant
 	virtual void apply(const scalar a, const scalar *const x, 
 			scalar *const __restrict y) const = 0;
 
@@ -111,6 +106,10 @@ public:
 
 	/// Print parts of the matrix for diagnostics
 	virtual void printDiagnostic(const char choice) const { }
+
+protected:
+	/// Encodes some indication of what kind of storage is used
+	char _type;
 };
 
 }
