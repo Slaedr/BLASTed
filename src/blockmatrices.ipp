@@ -507,8 +507,9 @@ void BSRMatrix<scalar,index,bs>::printDiagnostic(const char choice) const
 
 template <typename scalar, typename index>
 BSRMatrix<scalar,index,1>::BSRMatrix(const short n_buildsweeps, const short n_applysweeps)
-	: LinearOperator<scalar,index>('c'),vals{nullptr}, nbrows{0}, 
-	  dblocks{nullptr}, iluvals{nullptr}, scale{nullptr}, ytemp{nullptr},
+	: LinearOperator<scalar,index>('c'),vals{nullptr}, bcolind{nullptr}, browptr{nullptr}, 
+	  nbrows{0}, diagind{nullptr}, dblocks{nullptr}, iluvals{nullptr}, scale{nullptr}, 
+	  ytemp{nullptr},
 	  nbuildsweeps{n_buildsweeps}, napplysweeps{n_applysweeps}, thread_chunk_size{800}
 {
 	std::cout << "BSRMatrix<1>: Initialized CSR matrix with "
@@ -781,10 +782,13 @@ void BSRMatrix<scalar,index,1>::precJacobiApply(const scalar *const rr,
 template <typename scalar, typename index>
 void BSRMatrix<scalar,index,1>::allocTempVector()
 {
-	if(ytemp)
-		std::cout << "!  BSRMatrix<1>: allocTempVector(): temp vector is already allocated!\n";
-	else
-		ytemp = new scalar[nbrows];
+	if(ytemp) {
+		std::cout << "BSRMatrix<1>: allocTempVector(): temp vector is already allocated, " 
+			<< "reallocating.\n";
+		delete [] ytemp;
+	}
+	
+	ytemp = new scalar[nbrows];
 }
 
 template <typename scalar, typename index>
