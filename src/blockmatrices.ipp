@@ -348,7 +348,9 @@ void BSRMatrix<scalar,index,bs>::precILUSetup()
 
 	if(iluvals.size() < browptr[nbrows]*bs*bs)
 	{
+#if DEBUG==1
 		std::printf(" BSRMatrix: precILUSetup(): First-time setup\n");
+#endif
 
 		// Allocate lu
 		iluvals.resize(browptr[nbrows]*bs,bs);
