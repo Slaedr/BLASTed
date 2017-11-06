@@ -15,25 +15,48 @@
 /// Contains all of the BLASTed functionality
 namespace blasted {
 
-/// Abstract interface for a matrix
-/** This is the base class for all matrix implementations in the library.
- */
 template <typename scalar, typename index>
-class LinearOperator
+class AbstractMatrix
 {
 public:
-	LinearOperator(const char storagetype) : _type{storagetype}
+	AbstractMatrix(const char storagetype) : _type{storagetype}
 	{ }
 
-	virtual ~LinearOperator() { }
+	virtual ~AbstractMatrix() { }
 
+	/// Returns a character indicating the type of storage
 	char type() { return _type; }
+	
+	/// Returns the dimension (number of rows) of the operator
+	virtual index dim() const = 0;
+
+	/// Print parts of the matrix for diagnostics
+	virtual void printDiagnostic(const char choice) const { }
 
 	/// Sets the structure of the matrix using supplied vectors
 	/** See the documentation for the subclasses for requirements on the inputs.
 	 */
 	virtual void setStructure(const index n, 
 			const index *const vec1, const index *const vec2) = 0;
+
+	/// To compute the matrix vector product of this matrix with one vector, scaled by a constant
+	virtual void apply(const scalar a, const scalar *const x, 
+			scalar *const __restrict y) const = 0;
+
+protected:
+	/// Encodes some indication of what kind of storage is used
+	char _type;
+};
+	
+/// Abstract interface for a linear operator
+template <typename scalar, typename index>
+class LinearOperator : public AbstractMatrix<scalar,index>
+{
+public:
+	LinearOperator(const char storagetype) : AbstractMatrix<scalar,index>(storagetype)
+	{ }
+
+	virtual ~LinearOperator() { }
 
 	/// Sets all non-zero entries to explicitly stored zeros
 	virtual void setAllZero() = 0;
@@ -74,10 +97,6 @@ public:
 	/// Scales all entries of the matrix by scalar
 	virtual void scaleAll(const scalar factor) = 0;
 
-	/// To compute the matrix vector product of this matrix with one vector, scaled by a constant
-	virtual void apply(const scalar a, const scalar *const x, 
-			scalar *const __restrict y) const = 0;
-
 	/// Almost the BLAS gemv: computes z := a Ax + by for  scalars a and b
 	virtual void gemv3(const scalar a, const scalar *const __restrict x, 
 			const scalar b, const scalar *const y,
@@ -100,16 +119,6 @@ public:
 
 	/// Allocates storage for a vector required for both SGS and ILU applications
 	virtual void allocTempVector() = 0;
-	
-	/// Returns the dimension (number of rows) of the operator
-	virtual index dim() const = 0;
-
-	/// Print parts of the matrix for diagnostics
-	virtual void printDiagnostic(const char choice) const { }
-
-protected:
-	/// Encodes some indication of what kind of storage is used
-	char _type;
 };
 
 }
