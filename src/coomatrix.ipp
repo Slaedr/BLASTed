@@ -18,10 +18,16 @@
  */
 
 template <typename scalar, typename index>
+COOMatrix<scalar,index>::COOMatrix()
+{ 
+	index make_sure_index_is_signed{-1};
+}
+
+template <typename scalar, typename index>
 MMDescription COOMatrix<scalar,index>::getMMDescription(std::ifstream& fin)
 {
 	std::string line;
-	std::getline(std::fin, line);
+	std::getline(fin, line);
 	std::vector<std::string> typeofmatrix;
 	boost::split(typeofmatrix, line, boost::is_any_of(" "));
 
@@ -73,6 +79,50 @@ MMDescription COOMatrix<scalar,index>::getMMDescription(std::ifstream& fin)
 }
 
 template <typename scalar, typename index>
+std::vector<index> COOMatrix<scalar,index>::getSizeFromMatrixMarket(std::ifstream& fin, 
+		const MMDescription& descr)
+{
+	// read and discard lines until the first line that does not begin with '%'
+	std::string line = "%";
+	while(line[0] == '%')
+		std::getline(fin, line);
+
+	// parse matrix size line
+	std::vector<std::string> sizesstr;
+	boost::split(sizesstr, line, boost::is_any_of(" "));
+
+	if(descr.storagetype == COORDINATE) {
+		if(sizestr.size() < 3) {
+			std::cout << "! getSizeFromMatrixMarket: Not enough size information!\n";
+			std::abort();
+		}
+	}
+	else {
+		if(sizestr.size() < 2) {
+			std::cout << "! getSizeFromMatrixMarket: Not enough size information!\n";
+			std::abort();
+		}
+	}
+
+	std::vector<index> sizes(sizestr.size());
+	for(int i = 0; i < static_cast<int>(sizes.size()); i++)
+	{
+		try
+			sizes[i] = std::stoi(sizestr[i]);
+		catch(const std::invalid_argument& e) {
+			std::cout << "! getSizeFromMatrixMarket: Invalid size!!\n";
+			std::abort();
+		}
+		catch(const std::out_of_range& e) {
+			std::cout << "! getSizeFromMatrixMarket: Size is too large for the type of index!!\n";
+			std::abort();
+		}
+	}
+
+	return sizes;
+}
+
+template <typename scalar, typename index>
 void COOMatrix<scalar,index>::readMatrixMarket(const std::string file)
 {
 	std::ifstream fin(file);
@@ -81,22 +131,31 @@ void COOMatrix<scalar,index>::readMatrixMarket(const std::string file)
 		std::abort();
 	}
 
-	MMDescription descr = getMMDescription(fin);
+	const MMDescription descr = getMMDescription(fin);
+	std::vector sizes = getSizeFromMatrixMarket(fin,descr);
+
+	nnz = sizes[2];
+	nrows = sizes[0];
+	ncols = sizes[1];
+	entries.resize(nnz);
+
+	// read the entries
+	for(index i = 0; i < nnz; i++) {
+		fin >> entries[i].rowind >> entries[i].colind >> entries[i].value;
+	}
 
 	fin.close();
-}
 
-template <typename scalar, typename index>
-void COOMatrix<scalar,index>::setStructure(const index n, const index *const vec1, 
-		const index *const vec2)
-{
-}
+	// sort by row
+	std::sort(entries.begin(), entries.end(), [](Entry a, Entry b) { return a.rowind < b.rowind; } );
 
-template <typename scalar, typename index>
-void COOMatrix<scalar,index>::apply(const scalar a, const scalar *const x, 
-		scalar *const __restrict y) const
-{
-	// TODO
+	// TODO: get row pointers
+	rowptr.resize(nrows+1);
+	std::vector<std::vector<Entry<scalar,index>>::iterator> rowits(nrows+1);
+	rowptr[0] = 0;
+	rowits[0] = entries.begin();
+
+	// TODO: Sort each row by columns
 }
 
 template <typename scalar, typename index>

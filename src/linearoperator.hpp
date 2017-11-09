@@ -7,14 +7,10 @@
 #ifndef LINEAROPERATOR_H
 #define LINEAROPERATOR_H
 
-#ifdef DEBUG
-#define __restrict__ 
-#define __restrict
-#endif
-
 /// Contains all of the BLASTed functionality
 namespace blasted {
 
+/// A generic abstract matrix that is not only required to have matrix-vector multiplication
 template <typename scalar, typename index>
 class AbstractMatrix
 {
