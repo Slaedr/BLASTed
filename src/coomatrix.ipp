@@ -149,13 +149,34 @@ void COOMatrix<scalar,index>::readMatrixMarket(const std::string file)
 	// sort by row
 	std::sort(entries.begin(), entries.end(), [](Entry a, Entry b) { return a.rowind < b.rowind; } );
 
-	// TODO: get row pointers
+	// get row pointers- note that we assume there's at least one element in each row
 	rowptr.resize(nrows+1);
 	std::vector<std::vector<Entry<scalar,index>>::iterator> rowits(nrows+1);
 	rowptr[0] = 0;
 	rowits[0] = entries.begin();
+	
+	index k = 1;                 //< Keeps track of current entry
+	index nextrow = 1;           //< Keeps track of the number of rows detected
+	for(std::vector<Entry<scalar,index>>::iterator it = entries.begin()+1; it != entries.end(); ++it)
+	{
+		if( (*it).rowind != (*(it-1)).rowind ) {
+			rowits[nextrow] = it;
+			rowptr[nextrow] = k;
+			nextrow++;
+		}
 
-	// TODO: Sort each row by columns
+		k++;
+	}
+	
+	assert(nextrow == nrows);       //< The previous row should have been the last - nrows-1
+	rowits[nrows] = entries.end();
+	rowptr[nrows] = nnz;
+
+	// Sort each row by columns
+	for(index i = 0; i < nrows; i++)
+	{
+		std::sort(rowits[i],rowits[i+1], [](Entry a, Entry b) { return a.colind < b.colind; } );
+	}
 }
 
 template <typename scalar, typename index>

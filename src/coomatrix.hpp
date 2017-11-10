@@ -24,6 +24,7 @@
 #include <vector>
 #include <string>
 #include <algorithm>
+#include <fstream>
 #include <boost/algorithm/string/split.hpp>
 #include "blockmatrices.hpp"
 
@@ -84,16 +85,16 @@ protected:
 
 	/// Returns a vector containing size information of a matrix in a Matrix Market file
 	std::vector<index> getSizeFromMatrixMarket(
-			std::ifstream& fin,                    ///< Opened file stream to read from
-			const MMDescription& descr             ///< Matrix description
+			std::ifstream& fin,                   ///< Opened file stream to read from
+			const MMDescription& descr            ///< Matrix description
 		);
 
-	std::vector<Entry<scalar,index>> entries;  ///< Stored entries of the matrix
-	index nnz;                                 ///< Number of nonzeros
-	index nrows;                               ///< Number of rows
-	index ncols;                               ///< Number of columns
+	std::vector<Entry<scalar,index>> entries;     ///< Stored entries of the matrix
+	index nnz;                                    ///< Number of nonzeros
+	index nrows;                                  ///< Number of rows
+	index ncols;                                  ///< Number of columns
 
-	std::vector<index> rowptr;                 ///< Vector of row pointers into \ref entries
+	std::vector<index> rowptr;                    ///< Vector of row pointers into \ref entries
 };
 
 #include "coomatrix.ipp"
