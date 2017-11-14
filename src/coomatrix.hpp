@@ -25,7 +25,7 @@
 #include <string>
 #include <algorithm>
 #include <fstream>
-#include <boost/algorithm/string/split.hpp>
+#include <boost/algorithm/string.hpp>
 #include "blockmatrices.hpp"
 
 namespace blasted {
@@ -61,7 +61,7 @@ class COOMatrix
 public:
 	COOMatrix();
 
-	~COOMatrix();
+	virtual ~COOMatrix();
 
 	/// Reads a matrix from a file in Matrix Market format
 	void readMatrixMarket(const std::string file);

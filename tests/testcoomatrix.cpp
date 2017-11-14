@@ -14,10 +14,10 @@ TestCOOMatrix::TestCOOMatrix() : COOMatrix<double,int>()
 { }
 
 int TestCOOMatrix::readCoordinateMatrix(const std::string matfile, 
-		const std::string sortedfile) const
+		const std::string sortedfile)
 {
 	std::ifstream matfin(matfile);
-	if(!fin) {
+	if(!matfin) {
 		std::cout << " COOMatrix: File could not be opened to read!\n";
 		std::abort();
 	}
@@ -25,13 +25,15 @@ int TestCOOMatrix::readCoordinateMatrix(const std::string matfile,
 	readMatrixMarket(matfile);
 	
 	std::ifstream sortedfin(sortedfile);
-	if(!fin) {
+	if(!sortedfin) {
 		std::cout << " COOMatrix: File could not be opened to read!\n";
 		std::abort();
 	}
 
 	int snnz, snrows, sncols;
 	sortedfin >> snrows >> sncols >> snnz;
+
+	//std::cout << "True rows, cols nnz: " << snrows << " " << sncols << " " << snnz << '\n';
 
 	assert(snnz == nnz);
 	assert(snrows == nrows);
@@ -40,7 +42,7 @@ int TestCOOMatrix::readCoordinateMatrix(const std::string matfile,
 	std::vector<int> srowinds(snnz);
 	std::vector<int> srowptr(snrows+1);
 	std::vector<int> scolinds(snnz);
-	std::vector<int> svals(snnz);
+	std::vector<double> svals(snnz);
 
 	for(int i = 0; i < snrows+1; i++)
 		sortedfin >> srowptr[i];
@@ -54,17 +56,28 @@ int TestCOOMatrix::readCoordinateMatrix(const std::string matfile,
 	for(int i = 0; i < snnz; i++)
 		sortedfin >> svals[i];
 
+	/*std::cout << "Computed values: ";
+	for(int i = 0; i < nnz; i++) {
+		std::cout << entries[i].value << " ";
+	}
+	std::cout << '\n';
+
+	std::cout << "True values:     ";
+	for(int i = 0; i < nnz; i++) {
+		std::cout << svals[i] << " ";
+	}*/
+
 	// test
 	for(int i = 0; i < nnz; i++)
 	{
-		assert(srowinds[i] == entries[i].rowind);
-		assert(scolinds[i] == entries[i].colind);
+		assert(srowinds[i]-1 == entries[i].rowind);
+		assert(scolinds[i]-1 == entries[i].colind);
 		assert(svals[i] == entries[i].value);
 	}
 	for(int i = 0; i < nrows+1; i++)
 		assert(srowptr[i] == rowptr[i]);
 
-	matfine.close();
+	matfin.close();
 	sortedfin.close();
 	return 0;
 }

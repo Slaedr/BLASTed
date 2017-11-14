@@ -21,7 +21,13 @@ template <typename scalar, typename index>
 COOMatrix<scalar,index>::COOMatrix()
 { 
 	index make_sure_index_is_signed{-1};
+	if(!make_sure_index_is_signed)
+		std::cout << "Invalid index type!\n";
 }
+
+template <typename scalar, typename index>
+COOMatrix<scalar,index>::~COOMatrix()
+{ }
 
 template <typename scalar, typename index>
 MMDescription COOMatrix<scalar,index>::getMMDescription(std::ifstream& fin)
@@ -88,8 +94,8 @@ std::vector<index> COOMatrix<scalar,index>::getSizeFromMatrixMarket(std::ifstrea
 		std::getline(fin, line);
 
 	// parse matrix size line
-	std::vector<std::string> sizesstr;
-	boost::split(sizesstr, line, boost::is_any_of(" "));
+	std::vector<std::string> sizestr;
+	boost::split(sizestr, line, boost::is_any_of(" "));
 
 	if(descr.storagetype == COORDINATE) {
 		if(sizestr.size() < 3) {
@@ -107,8 +113,9 @@ std::vector<index> COOMatrix<scalar,index>::getSizeFromMatrixMarket(std::ifstrea
 	std::vector<index> sizes(sizestr.size());
 	for(int i = 0; i < static_cast<int>(sizes.size()); i++)
 	{
-		try
+		try {
 			sizes[i] = std::stoi(sizestr[i]);
+		}
 		catch(const std::invalid_argument& e) {
 			std::cout << "! getSizeFromMatrixMarket: Invalid size!!\n";
 			std::abort();
@@ -122,6 +129,8 @@ std::vector<index> COOMatrix<scalar,index>::getSizeFromMatrixMarket(std::ifstrea
 	return sizes;
 }
 
+/** Currently reads only general mtx matrices, not symmetric or skew-symmetric.
+ */
 template <typename scalar, typename index>
 void COOMatrix<scalar,index>::readMatrixMarket(const std::string file)
 {
@@ -132,7 +141,17 @@ void COOMatrix<scalar,index>::readMatrixMarket(const std::string file)
 	}
 
 	const MMDescription descr = getMMDescription(fin);
-	std::vector sizes = getSizeFromMatrixMarket(fin,descr);
+	if(descr.storagetype != COORDINATE) {
+		std::cout << "! COOMatrix: readMatrixMarket: Can only read coordinate storage.\n";
+	}
+	if(descr.scalartype == PATTERN) {
+		std::cout << "! COOMatrix: readMatrixMarket: Cannot read pattern matrices.\n";
+	}
+	if(descr.matrixtype != GENERAL) {
+		std::cout << "! COOMatrix: readMatrixMarket: Can only read general matrices.\n";
+	}
+
+	std::vector<index> sizes = getSizeFromMatrixMarket(fin,descr);
 
 	nnz = sizes[2];
 	nrows = sizes[0];
@@ -141,23 +160,27 @@ void COOMatrix<scalar,index>::readMatrixMarket(const std::string file)
 
 	// read the entries
 	for(index i = 0; i < nnz; i++) {
-		fin >> entries[i].rowind >> entries[i].colind >> entries[i].value;
+		index ri, ci;
+		fin >> ri >> ci >> entries[i].value;
+ 		entries[i].rowind = ri-1;
+		entries[i].colind = ci-1;
 	}
 
 	fin.close();
 
 	// sort by row
-	std::sort(entries.begin(), entries.end(), [](Entry a, Entry b) { return a.rowind < b.rowind; } );
+	std::sort(entries.begin(), entries.end(), 
+			[](Entry<scalar,index> a, Entry<scalar,index> b) { return a.rowind < b.rowind; } );
 
 	// get row pointers- note that we assume there's at least one element in each row
 	rowptr.resize(nrows+1);
-	std::vector<std::vector<Entry<scalar,index>>::iterator> rowits(nrows+1);
+	std::vector <typename std::vector<Entry<scalar,index>>::iterator > rowits(nrows+1);
 	rowptr[0] = 0;
 	rowits[0] = entries.begin();
 	
 	index k = 1;                 //< Keeps track of current entry
 	index nextrow = 1;           //< Keeps track of the number of rows detected
-	for(std::vector<Entry<scalar,index>>::iterator it = entries.begin()+1; it != entries.end(); ++it)
+	for(auto it = entries.begin()+1; it != entries.end(); ++it)
 	{
 		if( (*it).rowind != (*(it-1)).rowind ) {
 			rowits[nextrow] = it;
@@ -168,21 +191,31 @@ void COOMatrix<scalar,index>::readMatrixMarket(const std::string file)
 		k++;
 	}
 	
-	assert(nextrow == nrows);       //< The previous row should have been the last - nrows-1
+	assert(nextrow == nrows);       //< The previous row should have been the last, ie. nrows-1
 	rowits[nrows] = entries.end();
 	rowptr[nrows] = nnz;
 
 	// Sort each row by columns
 	for(index i = 0; i < nrows; i++)
 	{
-		std::sort(rowits[i],rowits[i+1], [](Entry a, Entry b) { return a.colind < b.colind; } );
+		std::sort(rowits[i],rowits[i+1], 
+				[](Entry<scalar,index> a, Entry<scalar,index> b) { return a.colind < b.colind; } );
 	}
 }
 
 template <typename scalar, typename index>
 void COOMatrix<scalar,index>::convertToCSR(BSRMatrix<scalar,index,1> *const cmat) const
 { 
-	// TODO
+	std::vector<index> cinds(nnz);
+	for(index i = 0; i < nnz; i++)
+		cinds[i] = entries[i].colind;
+	
+	cmat->setStructure(nrows, cinds, rowptr.data());
+
+	for(index i=0; i < nnz; i++)
+	{
+		cmat->submitBlock(entries[i].rowind, entries[i].colind, &entries[i].value, 1, 1);
+	}
 }
 
 template <typename scalar, typename index>

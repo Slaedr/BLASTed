@@ -42,6 +42,21 @@ public:
 	 */
 	BSRMatrix(const index n_brows, const index *const bcinds, const index *const brptrs,
 	         const short nbuildsweeps, const short napplysweeps);
+	
+	/// A constructor which just wraps a BSR matrix described by 4 arrays
+	/** \param[in] n_brows Number of block-rows
+	 * \param[in] brptrs Array of block-row pointers
+	 * \param[in] bcinds Array of block-column indices
+	 * \param[in] values Non-zero values
+	 * \param[in] dinds Array of diagonal entry pointers
+	 * \param[in] n_buildsweeps Number of asynchronous preconditioner build sweeps
+	 * \param[in] n_applysweeps Number of asynchronous preconditioner apply sweeps
+	 *
+	 * Does not take ownership of the 4 arrays; they are not cleaned up in the destructor either.
+	 */
+	BSRMatrix(const index n_brows, index *const brptrs,
+		index *const bcinds, scalar *const values, index *const dinds,
+		const short n_buildsweeps, const short n_applysweeps);
 
 	/// De-allocates memory
 	virtual ~BSRMatrix();
@@ -142,7 +157,12 @@ public:
 	void printDiagnostic(const char choice) const;
 
 protected:
-	
+
+	/** Indicates whether this objects owns data of \ref vals, \ref bcolind, \ref browptr,
+	 * \ref diagind
+	 */
+	bool owner;
+
 	/// Entries of the matrix
 	/** All the blocks are stored contiguously as one big block-column
 	 * having as many block-rows as the total number of non-zero blocks
@@ -203,11 +223,19 @@ public:
 	BSRMatrix(const index n_brows, const index *const bcinds, const index *const brptrs,
 	         const short nbuildsweeps, const short napplysweeps);
 	
-	/// A constructor which just wraps a CSR matrix described by its 3 pointers
-	/** Does not copy data.
+	/// A constructor which just wraps a CSR matrix described by 4 arrays
+	/** \param[in] nrows Number of rows
+	 * \param[in] rptrs Array of row pointers
+	 * \param[in] cinds Array of column indices
+	 * \param[in] values Non-zero values
+	 * \param[in] dinds Array of diagonal entry pointers
+	 * \param[in] n_buildsweeps Number of asynchronous preconditioner build sweeps
+	 * \param[in] n_applysweeps Number of asynchronous preconditioner apply sweeps
+	 *
+	 * Does not take ownership of the 4 arrays; they are not cleaned up in the destructor either.
 	 */
-	BSRMatrix(const index nrows, const index *const brptrs,
-		const index *const bcinds, const scalar *const values,
+	BSRMatrix(const index nrows, index *const rptrs,
+		index *const cinds, scalar *const values, index *const dinds,
 		const short n_buildsweeps, const short n_applysweeps);
 
 	/// De-allocates memory
@@ -228,7 +256,7 @@ public:
 	/// Sets diagonal blocks to zero
 	void setDiagZero();
 	
-	/// Insert a block of values into the [matrix](\ref data); not thread-safe
+	/// Insert a block of values into the [matrix](\ref vals); not thread-safe
 	/** \warning NOT thread safe! The caller is responsible for ensuring that no two threads
 	 * write to the same location of the matrix at the same time.
 	 * \param[in] starti The (global) row index of the first row of the block to be inserted
@@ -295,6 +323,11 @@ public:
 
 protected:
 	
+	/** Indicates whether the data (\ref vals, \ref bcolind, \ref browptr, \ref diagind)
+	 * is owned by this object
+	 */
+	bool owner;
+
 	/// Entries of the matrix
 	/** All the blocks are stored contiguously as one big block-column
 	 * having as many block-rows as the total number of non-zero blocks

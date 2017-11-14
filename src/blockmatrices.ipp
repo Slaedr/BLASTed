@@ -23,7 +23,7 @@ template <typename scalar, typename index, int bs>
 BSRMatrix<scalar,index,bs>::BSRMatrix(const index n_brows,
 		const index *const bcinds, const index *const brptrs,
 		const short n_buildsweeps, const short n_applysweeps)
-	: LinearOperator<scalar,index>('b'), vals{nullptr}, nbrows{n_brows},
+	: LinearOperator<scalar,index>('b'), owner{true}, vals{nullptr}, nbrows{n_brows},
 	  nbuildsweeps{n_buildsweeps}, napplysweeps{n_applysweeps}, thread_chunk_size{500}
 {
 	// compile-time filter for unsigned index types
@@ -54,16 +54,31 @@ BSRMatrix<scalar,index,bs>::BSRMatrix(const index n_brows,
 }
 
 template <typename scalar, typename index, int bs>
+BSRMatrix<scalar,index,bs>::BSRMatrix(const index nrows, index *const brptrs,
+		index *const bcinds, scalar *const values, index *const diaginds,
+		const short n_buildsweeps, const short n_applysweeps)
+	: LinearOperator<scalar,index>('b'), owner{false},
+	  vals{values}, bcolind{bcinds}, browptr{brptrs}, nbrows{nrows}, diagind{diaginds},
+	  nbuildsweeps{n_buildsweeps}, napplysweeps{n_applysweeps}, thread_chunk_size{500}
+{
+	// compile-time filter for unsigned index types
+	index check_var{-1};
+	if(check_var != -1) std::cout << "! BSRMatrix: Invalid index type!\n";
+}
+
+template <typename scalar, typename index, int bs>
 BSRMatrix<scalar, index, bs>::~BSRMatrix()
 {
-	if(vals)
-		delete [] vals;
-	if(bcolind)
-		delete [] bcolind;
-	if(browptr)
-		delete [] browptr;
-	if(diagind)
-		delete [] diagind;
+	if(owner) {
+		if(vals)
+			delete [] vals;
+		if(bcolind)
+			delete [] bcolind;
+		if(browptr)
+			delete [] browptr;
+		if(diagind)
+			delete [] diagind;
+	}
 	bcolind = browptr = diagind = nullptr; vals = nullptr;
 }
 
@@ -82,6 +97,7 @@ void BSRMatrix<scalar,index,bs>::setStructure(const index n_brows,
 	bcolind = new index[brptrs[nbrows]];
 	diagind = new index[nbrows];
 	vals = new scalar[brptrs[nbrows]*bs2];
+	owner = true;
 	for(index i = 0; i < nbrows+1; i++)
 		browptr[i] = brptrs[i];
 	for(index i = 0; i < brptrs[nbrows]; i++)
@@ -516,16 +532,24 @@ BSRMatrix<scalar,index,1>::BSRMatrix(const short n_buildsweeps, const short n_ap
 {
 	std::cout << "BSRMatrix<1>: Initialized CSR matrix with "
 		<< nbuildsweeps << " build- and " << napplysweeps << " apply- async sweep(s)\n";
+	
+	// compile-time filter for unsigned index types
+	index check_var{-1};
+	if(check_var != -1) std::cout << "! BSRMatrix<1>: Invalid index type!\n";
 }
 
 template <typename scalar, typename index>
 BSRMatrix<scalar,index,1>::BSRMatrix(const index n_brows,
 		const index *const bcinds, const index *const brptrs,
 		const short n_buildsweeps, const short n_applysweeps)
-	: LinearOperator<scalar,index>('c'),vals(nullptr), nbrows{n_brows}, 
+	: LinearOperator<scalar,index>('c'), owner{true}, vals(nullptr), nbrows{n_brows}, 
 	  dblocks(nullptr), iluvals(nullptr), scale(nullptr), ytemp(nullptr),
 	  nbuildsweeps{n_buildsweeps}, napplysweeps{n_applysweeps}, thread_chunk_size{800}
 {
+	// compile-time filter for unsigned index types
+	index check_var{-1};
+	if(check_var != -1) std::cout << "! BSRMatrix<1>: Invalid index type!\n";
+
 	browptr = new index[nbrows+1];
 	bcolind = new index[brptrs[nbrows]];
 	diagind = new index[nbrows];
@@ -549,37 +573,33 @@ BSRMatrix<scalar,index,1>::BSRMatrix(const index n_brows,
 }
 
 template <typename scalar, typename index>
-BSRMatrix<scalar,index,1>::BSRMatrix(const index nrows, const index *const brptrs,
-		const index *const bcinds, const scalar *const values,
+BSRMatrix<scalar,index,1>::BSRMatrix(const index nrows, index *const brptrs,
+		index *const bcinds, scalar *const values, index *const diaginds,
 		const short n_buildsweeps, const short n_applysweeps)
-	: LinearOperator<scalar,index>('c'),
-	  vals{values}, bcolind{bcinds}, browptr{brptrs}, nbrows{nrows},
+	: LinearOperator<scalar,index>('c'), owner{false},
+	  vals{values}, bcolind{bcinds}, browptr{brptrs}, nbrows{nrows}, diagind{diaginds},
 	  dblocks(nullptr), iluvals(nullptr), scale(nullptr), ytemp(nullptr),
 	  nbuildsweeps{n_buildsweeps}, napplysweeps{n_applysweeps}, thread_chunk_size{800}
 {
-	// set diagonal blocks' locations
-	for(index irow = 0; irow < nbrows; irow++) 
-	{
-		for(index j = browptr[irow]; j < browptr[irow+1]; j++)
-			if(bcolind[j] == irow) 
-			{
-				diagind[irow] = j;
-				break;
-			}
-	}
+	// compile-time filter for unsigned index types
+	index check_var{-1};
+	if(check_var != -1) std::cout << "! BSRMatrix<1>: Invalid index type!\n";
 }
 
 template <typename scalar, typename index>
 BSRMatrix<scalar,index,1>::~BSRMatrix()
 {
-	if(vals)
-		delete [] vals;
-	if(bcolind)
-		delete [] bcolind;
-	if(browptr)
-		delete [] browptr;
-	if(diagind)
-		delete [] diagind;
+	if(owner) {
+		if(vals)
+			delete [] vals;
+		if(bcolind)
+			delete [] bcolind;
+		if(browptr)
+			delete [] browptr;
+		if(diagind)
+			delete [] diagind;
+	}
+
 	if(dblocks)
 		delete [] dblocks;
 	if(iluvals)
@@ -607,6 +627,7 @@ void BSRMatrix<scalar,index,1>::setStructure(const index n_brows,
 	bcolind = new index[brptrs[nbrows]];
 	diagind = new index[nbrows];
 	vals = new scalar[brptrs[nbrows]];
+	owner = true;
 	for(index i = 0; i < nbrows+1; i++)
 		browptr[i] = brptrs[i];
 	for(index i = 0; i < brptrs[nbrows]; i++)

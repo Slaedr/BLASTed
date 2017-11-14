@@ -8,6 +8,8 @@
 
 #include "../src/coomatrix.hpp"
 
+using namespace blasted;
+
 class TestCOOMatrix : public COOMatrix<double,int>
 {
 public:
@@ -22,14 +24,14 @@ public:
 	 *   - <column indices sorted by column index within each row; the latter sorted by row>
 	 *   - <Non-zero values sorted by row index and within each row by column index>
 	 */
-	int readCoordinateMatrix(const std::string matfile, const std::string sortedfile) const;
+	int readCoordinateMatrix(const std::string matfile, const std::string sortedfile);
 
 protected:
-	using COOMatrix<scalar,index>::nnz;
-	using COOMatrix<scalar,index>::nrows;
-	using COOMatrix<scalar,index>::ncols;
-	using COOMatrix<scalar,index>::entries;
-	using COOMatrix<scalar,index>::rowptr;
+	using COOMatrix<double,int>::nnz;
+	using COOMatrix<double,int>::nrows;
+	using COOMatrix<double,int>::ncols;
+	using COOMatrix<double,int>::entries;
+	using COOMatrix<double,int>::rowptr;
 };
 
 #endif

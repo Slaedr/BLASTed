@@ -1,5 +1,5 @@
-/** \file bsrmatmul.cpp
- * \brief Tests block matrix multiplication
+/** \file bsrmatrix.cpp
+ * \brief Tests block matrix operations
  * \author Aditya Kashi
  * 
  * This file is part of BLASTed.
@@ -17,13 +17,32 @@
  *   along with BLASTed.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../src/blockmatrices.hpp"
+#include <iostream>
+#include "testbsrmatrix.hpp"
 
-int test_bsr_matmul(const std::string matfile)
+int main(const int argc, const char *const argv[])
 {
-	int ierr = 0;
+	if(argc < 2) {
+		std::cout << "! Please specify the test. Options:\n";
+		std::cout << " apply\n gemv \n";
+		std::abort();
+	}
+	std::string teststr = argv[1];
 
-	// TODO: Test matrix multiplication
+	int err = 0;
 
-	return ierr;
+	if(teststr == "apply")
+	{
+		std::cout << "Not implemented yet..\n";
+	}
+	else if(teststr == "gemv")
+	{
+		std::cout << "Not implemented yet..\n";
+	}
+	else {
+		std::cout << "! The requested test is not available.\n";
+		std::abort();
+	}
+
+	return err;
 }
