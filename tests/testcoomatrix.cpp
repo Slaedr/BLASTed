@@ -33,8 +33,6 @@ int TestCOOMatrix::readCoordinateMatrix(const std::string matfile,
 	int snnz, snrows, sncols;
 	sortedfin >> snrows >> sncols >> snnz;
 
-	//std::cout << "True rows, cols nnz: " << snrows << " " << sncols << " " << snnz << '\n';
-
 	assert(snnz == nnz);
 	assert(snrows == nrows);
 	assert(sncols == ncols);
@@ -56,17 +54,6 @@ int TestCOOMatrix::readCoordinateMatrix(const std::string matfile,
 	for(int i = 0; i < snnz; i++)
 		sortedfin >> svals[i];
 
-	/*std::cout << "Computed values: ";
-	for(int i = 0; i < nnz; i++) {
-		std::cout << entries[i].value << " ";
-	}
-	std::cout << '\n';
-
-	std::cout << "True values:     ";
-	for(int i = 0; i < nnz; i++) {
-		std::cout << svals[i] << " ";
-	}*/
-
 	// test
 	for(int i = 0; i < nnz; i++)
 	{
@@ -81,3 +68,4 @@ int TestCOOMatrix::readCoordinateMatrix(const std::string matfile,
 	sortedfin.close();
 	return 0;
 }
+

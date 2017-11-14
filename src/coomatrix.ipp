@@ -19,11 +19,7 @@
 
 template <typename scalar, typename index>
 COOMatrix<scalar,index>::COOMatrix()
-{ 
-	index make_sure_index_is_signed{-1};
-	if(!make_sure_index_is_signed)
-		std::cout << "Invalid index type!\n";
-}
+{ }
 
 template <typename scalar, typename index>
 COOMatrix<scalar,index>::~COOMatrix()
@@ -210,7 +206,7 @@ void COOMatrix<scalar,index>::convertToCSR(BSRMatrix<scalar,index,1> *const cmat
 	for(index i = 0; i < nnz; i++)
 		cinds[i] = entries[i].colind;
 	
-	cmat->setStructure(nrows, cinds, rowptr.data());
+	cmat->setStructure(nrows, cinds.data(), rowptr.data());
 
 	for(index i=0; i < nnz; i++)
 	{

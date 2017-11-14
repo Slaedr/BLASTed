@@ -1,9 +1,13 @@
 # test executables
 
-set(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/tests)
+#set(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR})
+add_library(testlibcsrmatrix testcsrmatrix.cpp)
+add_library(testlibbsrmatrix testbsrmatrix.cpp)
 
-add_executable(testbsrmatrix bsrmatrix.cpp testbsrmatrix.cpp)
+add_executable(testcsrmatrix csrmatrix.cpp)
+target_link_libraries(testcsrmatrix testlibcsrmatrix)
 add_executable(testcoomatrix coomatrix.cpp testcoomatrix.cpp)
+target_link_libraries(testcoomatrix testlibcsrmatrix)
 
 #add_executable(testbsr_petsc bsr_petsc.cpp)
 #target_link_libraries(testbsr_petsc bsr_petsc)
@@ -13,4 +17,5 @@ add_executable(testcoomatrix coomatrix.cpp testcoomatrix.cpp)
 enable_testing()
 
 #add_test(NAME BSRMatMul COMMAND testbsrmatrix ${CMAKE_CURRENT_SOURCE_DIR}/input/matrix.dat matmul)
-add_test(NAME COOMatrixMarketRead COMMAND testcoomatrix read ${CMAKE_CURRENT_SOURCE_DIR}/input/small_coo_matrix.mtx ${CMAKE_CURRENT_SOURCE_DIR}/input/small_coo_matrix_sorted.coo)
+add_test(NAME COORead COMMAND testcoomatrix read ${CMAKE_CURRENT_SOURCE_DIR}/input/small_coo_matrix.mtx ${CMAKE_CURRENT_SOURCE_DIR}/input/small_coo_matrix_sorted.coo)
+add_test(NAME COOConvertToCSR COMMAND testcoomatrix convertCSR ${CMAKE_CURRENT_SOURCE_DIR}/input/small_coo_matrix.mtx ${CMAKE_CURRENT_SOURCE_DIR}/input/small_coo_matrix_sorted.coo)

@@ -30,7 +30,21 @@ int main(const int argc, const char *const argv[])
 	}
 	else if(teststr == "convertCSR")
 	{
-		std::cout << "Not implemented yet..\n";
+		if(argc < 4) {
+			std::cout << "! After 'convertCSR', please give \n"
+			<< "the file name containing the matrix in mtx format and\n"
+			<< "the file name containing the sorted arrays that describe the matrix.\n";
+			std::abort();
+		}
+
+		COOMatrix<double,int> tmat;
+		tmat.readMatrixMarket(argv[2]);
+
+		TestCSRMatrix<double> cmat(1,1);
+		BSRMatrix<double,int,1> * bmat = &cmat;
+		tmat.convertToCSR(bmat);
+		int ierr = cmat.testStorage(argv[3]);
+		err = err || ierr;
 	}
 	else if(teststr == "convertBSR")
 	{

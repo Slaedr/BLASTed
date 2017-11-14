@@ -3,3 +3,4 @@
  * \author Aditya Kashi
  */
 
+#include "../src/blockmatrices.hpp"

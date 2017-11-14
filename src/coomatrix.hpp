@@ -21,6 +21,7 @@
 #define COOMATRIX_H
 
 #include <cassert>
+#include <limits>
 #include <vector>
 #include <string>
 #include <algorithm>
@@ -58,6 +59,8 @@ struct Entry {
 template <typename scalar, typename index>
 class COOMatrix
 {
+	static_assert(std::numeric_limits<index>::is_signed, "Signed index type required!");
+
 public:
 	COOMatrix();
 

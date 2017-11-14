@@ -6,15 +6,11 @@
  */
 
 template <typename scalar, typename index, int bs>
-BSRMatrix<scalar,index,bs>::BSRMatrix(const short n_buildsweeps, const short n_applysweeps)
+BSRMatrix<scalar,index,bs>::BSRMatrix(const int n_buildsweeps, const int n_applysweeps)
 	: LinearOperator<scalar,index>('b'), vals{nullptr}, bcolind{nullptr}, browptr{nullptr}, 
 	  nbrows{0}, diagind{nullptr},
 	  nbuildsweeps{n_buildsweeps}, napplysweeps{n_applysweeps}, thread_chunk_size{500}
 {
-	// compile-time filter for unsigned index types
-	index check_var{-1};
-	if(check_var != -1) std::cout << "! BSRMatrix: Invalid index type!\n";
-	
 	std::cout << "BSRMatrix: Initialized matrix without allocation, with\n    "
 		<< nbuildsweeps << " build- and " << napplysweeps << " apply- async sweep(s)\n";
 }
@@ -22,14 +18,10 @@ BSRMatrix<scalar,index,bs>::BSRMatrix(const short n_buildsweeps, const short n_a
 template <typename scalar, typename index, int bs>
 BSRMatrix<scalar,index,bs>::BSRMatrix(const index n_brows,
 		const index *const bcinds, const index *const brptrs,
-		const short n_buildsweeps, const short n_applysweeps)
+		const int n_buildsweeps, const int n_applysweeps)
 	: LinearOperator<scalar,index>('b'), owner{true}, vals{nullptr}, nbrows{n_brows},
 	  nbuildsweeps{n_buildsweeps}, napplysweeps{n_applysweeps}, thread_chunk_size{500}
 {
-	// compile-time filter for unsigned index types
-	index check_var{-1};
-	if(check_var != -1) std::cout << "! BSRMatrix: Invalid index type!\n";
-
 	constexpr int bs2 = bs*bs;
 	browptr = new index[nbrows+1];
 	bcolind = new index[brptrs[nbrows]];
@@ -56,15 +48,11 @@ BSRMatrix<scalar,index,bs>::BSRMatrix(const index n_brows,
 template <typename scalar, typename index, int bs>
 BSRMatrix<scalar,index,bs>::BSRMatrix(const index nrows, index *const brptrs,
 		index *const bcinds, scalar *const values, index *const diaginds,
-		const short n_buildsweeps, const short n_applysweeps)
+		const int n_buildsweeps, const int n_applysweeps)
 	: LinearOperator<scalar,index>('b'), owner{false},
 	  vals{values}, bcolind{bcinds}, browptr{brptrs}, nbrows{nrows}, diagind{diaginds},
 	  nbuildsweeps{n_buildsweeps}, napplysweeps{n_applysweeps}, thread_chunk_size{500}
-{
-	// compile-time filter for unsigned index types
-	index check_var{-1};
-	if(check_var != -1) std::cout << "! BSRMatrix: Invalid index type!\n";
-}
+{ }
 
 template <typename scalar, typename index, int bs>
 BSRMatrix<scalar, index, bs>::~BSRMatrix()
@@ -297,7 +285,7 @@ void BSRMatrix<scalar,index,bs>::precSGSApply(const scalar *const rr,
 	Eigen::Map<Vector<scalar>> z(zz, nbrows*bs);
 	Eigen::Map<const Matrix<scalar,Dynamic,bs,RowMajor>> data(vals, browptr[nbrows]*bs, bs);
 
-	for(short isweep = 0; isweep < napplysweeps; isweep++)
+	for(int isweep = 0; isweep < napplysweeps; isweep++)
 	{
 		// forward sweep ytemp := D^(-1) (r - L ytemp)
 
@@ -314,7 +302,7 @@ void BSRMatrix<scalar,index,bs>::precSGSApply(const scalar *const rr,
 		}
 	}
 
-	for(short isweep = 0; isweep < napplysweeps; isweep++)
+	for(int isweep = 0; isweep < napplysweeps; isweep++)
 	{
 		// backward sweep z := D^(-1) (D y - U z)
 
@@ -371,7 +359,7 @@ void BSRMatrix<scalar,index,bs>::precILUSetup()
 		// Allocate lu
 		iluvals.resize(browptr[nbrows]*bs,bs);
 #pragma omp parallel for simd default(shared)
-		for(int j = 0; j < browptr[nbrows]*bs*bs; j++) {
+		for(index j = 0; j < browptr[nbrows]*bs*bs; j++) {
 			iluvals.data()[j] = vals[j];
 		}
 
@@ -388,7 +376,7 @@ void BSRMatrix<scalar,index,bs>::precILUSetup()
 	 * it should usually be okay as we are only comparing equality later.
 	 */
 	
-	for(short isweep = 0; isweep < nbuildsweeps; isweep++)
+	for(int isweep = 0; isweep < nbuildsweeps; isweep++)
 	{
 #pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size)
 		for(index irow = 0; irow < nbrows; irow++)
@@ -460,7 +448,7 @@ void BSRMatrix<scalar,index,bs>::precILUApply(const scalar *const r,
 	/** solves Ly = Sr by asynchronous Jacobi iterations.
 	 * Note that if done serially, this is a forward-substitution.
 	 */
-	for(short isweep = 0; isweep < napplysweeps; isweep++)
+	for(int isweep = 0; isweep < napplysweeps; isweep++)
 	{
 #pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size)
 		for(index i = 0; i < nbrows; i++)
@@ -477,7 +465,7 @@ void BSRMatrix<scalar,index,bs>::precILUApply(const scalar *const r,
 	/* Solves Uz = y by asynchronous Jacobi iteration.
 	 * If done serially, this is a back-substitution.
 	 */
-	for(short isweep = 0; isweep < napplysweeps; isweep++)
+	for(int isweep = 0; isweep < napplysweeps; isweep++)
 	{
 #pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size)
 		for(index i = nbrows-1; i >= 0; i--)
@@ -524,7 +512,7 @@ void BSRMatrix<scalar,index,bs>::printDiagnostic(const char choice) const
 
 
 template <typename scalar, typename index>
-BSRMatrix<scalar,index,1>::BSRMatrix(const short n_buildsweeps, const short n_applysweeps)
+BSRMatrix<scalar,index,1>::BSRMatrix(const int n_buildsweeps, const int n_applysweeps)
 	: LinearOperator<scalar,index>('c'),vals{nullptr}, bcolind{nullptr}, browptr{nullptr}, 
 	  nbrows{0}, diagind{nullptr}, dblocks{nullptr}, iluvals{nullptr}, scale{nullptr}, 
 	  ytemp{nullptr},
@@ -532,24 +520,16 @@ BSRMatrix<scalar,index,1>::BSRMatrix(const short n_buildsweeps, const short n_ap
 {
 	std::cout << "BSRMatrix<1>: Initialized CSR matrix with "
 		<< nbuildsweeps << " build- and " << napplysweeps << " apply- async sweep(s)\n";
-	
-	// compile-time filter for unsigned index types
-	index check_var{-1};
-	if(check_var != -1) std::cout << "! BSRMatrix<1>: Invalid index type!\n";
 }
 
 template <typename scalar, typename index>
 BSRMatrix<scalar,index,1>::BSRMatrix(const index n_brows,
 		const index *const bcinds, const index *const brptrs,
-		const short n_buildsweeps, const short n_applysweeps)
+		const int n_buildsweeps, const int n_applysweeps)
 	: LinearOperator<scalar,index>('c'), owner{true}, vals(nullptr), nbrows{n_brows}, 
 	  dblocks(nullptr), iluvals(nullptr), scale(nullptr), ytemp(nullptr),
 	  nbuildsweeps{n_buildsweeps}, napplysweeps{n_applysweeps}, thread_chunk_size{800}
 {
-	// compile-time filter for unsigned index types
-	index check_var{-1};
-	if(check_var != -1) std::cout << "! BSRMatrix<1>: Invalid index type!\n";
-
 	browptr = new index[nbrows+1];
 	bcolind = new index[brptrs[nbrows]];
 	diagind = new index[nbrows];
@@ -575,16 +555,12 @@ BSRMatrix<scalar,index,1>::BSRMatrix(const index n_brows,
 template <typename scalar, typename index>
 BSRMatrix<scalar,index,1>::BSRMatrix(const index nrows, index *const brptrs,
 		index *const bcinds, scalar *const values, index *const diaginds,
-		const short n_buildsweeps, const short n_applysweeps)
+		const int n_buildsweeps, const int n_applysweeps)
 	: LinearOperator<scalar,index>('c'), owner{false},
 	  vals{values}, bcolind{bcinds}, browptr{brptrs}, nbrows{nrows}, diagind{diaginds},
 	  dblocks(nullptr), iluvals(nullptr), scale(nullptr), ytemp(nullptr),
 	  nbuildsweeps{n_buildsweeps}, napplysweeps{n_applysweeps}, thread_chunk_size{800}
-{
-	// compile-time filter for unsigned index types
-	index check_var{-1};
-	if(check_var != -1) std::cout << "! BSRMatrix<1>: Invalid index type!\n";
-}
+{ }
 
 template <typename scalar, typename index>
 BSRMatrix<scalar,index,1>::~BSRMatrix()
@@ -818,7 +794,7 @@ template <typename scalar, typename index>
 void BSRMatrix<scalar,index,1>::precSGSApply(const scalar *const rr, 
                                               scalar *const __restrict zz) const
 {
-	for(short isweep = 0; isweep < napplysweeps; isweep++)
+	for(int isweep = 0; isweep < napplysweeps; isweep++)
 	{
 		// forward sweep ytemp := D^(-1) (r - L ytemp)
 
@@ -834,7 +810,7 @@ void BSRMatrix<scalar,index,1>::precSGSApply(const scalar *const rr,
 		}
 	}
 
-	for(short isweep = 0; isweep < napplysweeps; isweep++)
+	for(int isweep = 0; isweep < napplysweeps; isweep++)
 	{
 		// backward sweep z := D^(-1) (D y - U z)
 
@@ -894,7 +870,7 @@ void BSRMatrix<scalar,index,1>::precILUSetup()
 	//printf("BSRMatrix<1>: precILUSetup: Factorizing. %d build sweeps, chunk size is %d.\n", 
 	//		nbuildsweeps, thread_chunk_size);
 	
-	for(short isweep = 0; isweep < nbuildsweeps; isweep++)
+	for(int isweep = 0; isweep < nbuildsweeps; isweep++)
 	{
 #pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size)
 		for(index irow = 0; irow < nbrows; irow++)
@@ -961,7 +937,7 @@ void BSRMatrix<scalar,index,1>::precILUApply(const scalar *const __restrict ra,
 	/** solves Ly = Sr by asynchronous Jacobi iterations.
 	 * Note that if done serially, this is a forward-substitution.
 	 */
-	for(short isweep = 0; isweep < napplysweeps; isweep++)
+	for(int isweep = 0; isweep < napplysweeps; isweep++)
 	{
 #pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size)
 		for(index i = 0; i < nbrows; i++)
@@ -978,7 +954,7 @@ void BSRMatrix<scalar,index,1>::precILUApply(const scalar *const __restrict ra,
 	/* Solves Uz = y by asynchronous Jacobi iteration.
 	 * If done serially, this is a back-substitution.
 	 */
-	for(short isweep = 0; isweep < napplysweeps; isweep++)
+	for(int isweep = 0; isweep < napplysweeps; isweep++)
 	{
 #pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size)
 		for(index i = nbrows-1; i >= 0; i--)

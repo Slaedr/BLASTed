@@ -14,6 +14,7 @@
 #include "linearoperator.hpp"
 #include <iostream>
 #include <fstream>
+#include <limits>
 #include <Eigen/LU>
 
 namespace blasted {
@@ -31,9 +32,12 @@ using Vector = Matrix<scalar,Dynamic,1>;
 template <typename scalar, typename index, int bs>
 class BSRMatrix : public LinearOperator<scalar, index>
 {
+	static_assert(std::numeric_limits<index>::is_signed, "Signed index type required!");
+	static_assert(bs > 0, "Block size must be positive!");
+
 public:
 	/// Initialization without pre-allocation of any storage
-	BSRMatrix(const short nbuildsweeps, const short napplysweeps);
+	BSRMatrix(const int nbuildsweeps, const int napplysweeps);
 
 	/// Allocates space for the matrix based on the supplied non-zero structure
 	/** \param[in] n_brows Total number of block rows
@@ -41,7 +45,7 @@ public:
 	 * \param[in] brptrs Row pointers, simply (deep) copied into \ref browptr
 	 */
 	BSRMatrix(const index n_brows, const index *const bcinds, const index *const brptrs,
-	         const short nbuildsweeps, const short napplysweeps);
+	         const int nbuildsweeps, const int napplysweeps);
 	
 	/// A constructor which just wraps a BSR matrix described by 4 arrays
 	/** \param[in] n_brows Number of block-rows
@@ -56,7 +60,7 @@ public:
 	 */
 	BSRMatrix(const index n_brows, index *const brptrs,
 		index *const bcinds, scalar *const values, index *const dinds,
-		const short n_buildsweeps, const short n_applysweeps);
+		const int n_buildsweeps, const int n_applysweeps);
 
 	/// De-allocates memory
 	virtual ~BSRMatrix();
@@ -66,7 +70,7 @@ public:
 	 * \param[in] bcinds Array of block-column indices for all non-zero blocks
 	 * \param[in] brptrs Array of indices into bcinds pointing to where each block-row starts
 	 *
-	 * \waring Deletes pre-existing contents!
+	 * \warning Deletes pre-existing contents!
 	 */
 	void setStructure(const index nbrows, const index *const bcinds, const index *const brptrs);
 
@@ -197,23 +201,25 @@ protected:
 	mutable Vector<scalar> ytemp;
 
 	/// Number of sweeps used to build preconditioners
-	const short nbuildsweeps;
+	const int nbuildsweeps;
 
 	/// Number of sweeps used to apply preconditioners
-	const short napplysweeps;
+	const int napplysweeps;
 
 	/// Thread chunk size for OpenMP parallelism
 	const int thread_chunk_size;
 };
 
-/// The limiting case of BSR matrix when block size is 1
+/// The limiting case of BSR matrix when block size is 1, ie., CSR matrix
 template <typename scalar, typename index>
 class BSRMatrix<scalar,index,1> : public LinearOperator<scalar, index>
 {
+	static_assert(std::numeric_limits<index>::is_signed, "Signed index type required!");
+
 public:
 	
 	/// Minimal initialzation; just sets number of async sweeps	
-	BSRMatrix(const short n_buildsweeps, const short n_applysweeps);
+	BSRMatrix(const int n_buildsweeps, const int n_applysweeps);
 
 	/// Allocates space for the matrix based on the supplied non-zero structure
 	/** \param[in] n_brows Total number of rows
@@ -221,7 +227,7 @@ public:
 	 * \param[in] brptrs Row pointers, simply copied into \ref browptr
 	 */
 	BSRMatrix(const index n_brows, const index *const bcinds, const index *const brptrs,
-	         const short nbuildsweeps, const short napplysweeps);
+	         const int nbuildsweeps, const int napplysweeps);
 	
 	/// A constructor which just wraps a CSR matrix described by 4 arrays
 	/** \param[in] nrows Number of rows
@@ -236,7 +242,7 @@ public:
 	 */
 	BSRMatrix(const index nrows, index *const rptrs,
 		index *const cinds, scalar *const values, index *const dinds,
-		const short n_buildsweeps, const short n_applysweeps);
+		const int n_buildsweeps, const int n_applysweeps);
 
 	/// De-allocates memory
 	virtual ~BSRMatrix();
@@ -365,10 +371,10 @@ protected:
 	mutable scalar* ytemp;
 
 	/// Number of sweeps used to build preconditioners
-	const short nbuildsweeps;
+	const int nbuildsweeps;
 
 	/// Number of sweeps used to apply preconditioners
-	const short napplysweeps;
+	const int napplysweeps;
 
 	/// Thread chunk size for OpenMP parallelism
 	const int thread_chunk_size;
