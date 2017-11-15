@@ -3,6 +3,20 @@
  * including the specialized set of methods for block size 1.
  * \author Aditya Kashi
  * \date 2017-08
+ * 
+ * This file is part of BLASTed.
+ *   BLASTed is free software: you can redistribute it and/or modify
+ *   it under the terms of the GNU General Public License as published by
+ *   the Free Software Foundation, either version 3 of the License, or
+ *   (at your option) any later version.
+ *
+ *   BLASTed is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with BLASTed.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 template <typename scalar, typename index, int bs>
@@ -58,14 +72,10 @@ template <typename scalar, typename index, int bs>
 BSRMatrix<scalar, index, bs>::~BSRMatrix()
 {
 	if(owner) {
-		if(vals)
-			delete [] vals;
-		if(bcolind)
-			delete [] bcolind;
-		if(browptr)
-			delete [] browptr;
-		if(diagind)
-			delete [] diagind;
+		delete [] vals;
+		delete [] bcolind;
+		delete [] browptr;
+		delete [] diagind;
 	}
 	bcolind = browptr = diagind = nullptr; vals = nullptr;
 }
@@ -209,10 +219,6 @@ void BSRMatrix<scalar,index,bs>::apply(const scalar a, const scalar *const xx,
 			const index jcol = bcolind[jj];
 			y.SEG<bs>(irow*bs).noalias() 
 				+= a * data.BLK<bs,bs>(jj*bs,0) * x.SEG<bs>(jcol*bs);
-			
-			/*for(int i = 0; i < bs; i++)
-				for(int j = 0; j < bs; j++)
-					y[irow*bs+i] += a * data[jj*bs2 + i*bs+j] * x[jcol*bs+j];*/
 		}
 	}
 }
@@ -275,6 +281,18 @@ template <typename scalar, typename index, int bs>
 void BSRMatrix<scalar,index,bs>::allocTempVector()
 {
 	ytemp.resize(nbrows*bs,1);
+}
+
+template <typename scalar, typename index, int bs>
+void BSRMatrix<scalar,index,bs>::precSGSSetup()
+{
+	precJacobiSetup();
+	ytemp.resize(nbrows*bs,1);
+#pragma omp parallel for simd default(shared)
+	for(index i = 0; i < nbrows*bs; i++)
+	{
+		ytemp.data()[i] = 0;
+	}
 }
 
 template <typename scalar, typename index, int bs>
@@ -363,9 +381,15 @@ void BSRMatrix<scalar,index,bs>::precILUSetup()
 			iluvals.data()[j] = vals[j];
 		}
 
-		// intermediate array for the solve part; NOT ZEROED
-		if(ytemp.size() < nbrows*bs)
+		// intermediate array for the solve part
+		if(ytemp.size() < nbrows*bs) {
 			ytemp.resize(nbrows*bs);
+#pragma omp parallel for simd default(shared)
+			for(index i = 0; i < nbrows*bs; i++)
+			{
+				ytemp.data()[i] = 0;
+			}
+		}
 		else
 			std::cout << "! BSRMatrix: precILUSetup(): Temp vector is already allocated!\n";
 	}
@@ -566,24 +590,16 @@ template <typename scalar, typename index>
 BSRMatrix<scalar,index,1>::~BSRMatrix()
 {
 	if(owner) {
-		if(vals)
-			delete [] vals;
-		if(bcolind)
-			delete [] bcolind;
-		if(browptr)
-			delete [] browptr;
-		if(diagind)
-			delete [] diagind;
+		delete [] vals;
+		delete [] bcolind;
+		delete [] browptr;
+		delete [] diagind;
 	}
 
-	if(dblocks)
-		delete [] dblocks;
-	if(iluvals)
-		delete [] iluvals;
-	if(ytemp)
-		delete [] ytemp;
-	if(scale)
-		delete [] scale;
+	delete [] dblocks;
+	delete [] iluvals;
+	delete [] ytemp;
+	delete [] scale;
 
 	bcolind = browptr = diagind = nullptr;
 	vals = dblocks = iluvals = ytemp = scale = nullptr;
@@ -791,6 +807,19 @@ void BSRMatrix<scalar,index,1>::allocTempVector()
 }
 
 template <typename scalar, typename index>
+void BSRMatrix<scalar,index,1>::precSGSSetup()
+{
+	precJacobiSetup();
+	delete [] ytemp;
+	ytemp = new scalar[nbrows];
+#pragma omp parallel for simd default(shared)
+	for(index i = 0; i < nbrows; i++)
+	{
+		ytemp[i] = 0;
+	}
+}
+
+template <typename scalar, typename index>
 void BSRMatrix<scalar,index,1>::precSGSApply(const scalar *const rr, 
                                               scalar *const __restrict zz) const
 {
@@ -844,8 +873,14 @@ void BSRMatrix<scalar,index,1>::precILUSetup()
 		}
 
 		// intermediate array for the solve part; NOT ZEROED
-		if(!ytemp)
+		if(!ytemp) {
 			ytemp = new scalar[nbrows];
+#pragma omp parallel for simd default(shared)
+			for(index i = 0; i < nbrows; i++)
+			{
+				ytemp[i] = 0;
+			}
+		}
 		else
 			std::cout << "! BSRMatrix<1>: precILUSetup(): Temp vector is already allocated!\n";
 		

@@ -104,6 +104,9 @@ public:
 	/// Applies any of a class of Jacobi-type preconditioners
 	virtual void precJacobiApply(const scalar *const r, scalar *const __restrict z) const = 0;
 
+	/// Inverts diagonal blocks and allocates temporary array needed for Gauss-Seidel
+	virtual void precSGSSetup() = 0;
+
 	/// Applies a symmetric Gauss-Seidel type preconditioner
 	virtual void precSGSApply(const scalar *const r, scalar *const __restrict z) const = 0;
 

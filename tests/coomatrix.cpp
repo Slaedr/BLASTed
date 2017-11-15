@@ -42,7 +42,9 @@ int main(const int argc, const char *const argv[])
 
 		TestCSRMatrix<double> cmat(1,1);
 		BSRMatrix<double,int,1> * bmat = &cmat;
+
 		tmat.convertToCSR(bmat);
+
 		int ierr = cmat.testStorage(argv[3]);
 		err = err || ierr;
 	}

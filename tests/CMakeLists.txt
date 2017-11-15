@@ -9,8 +9,7 @@ target_link_libraries(testcsrmatrix testlibcsrmatrix)
 add_executable(testcoomatrix coomatrix.cpp testcoomatrix.cpp)
 target_link_libraries(testcoomatrix testlibcsrmatrix)
 
-#add_executable(testbsr_petsc bsr_petsc.cpp)
-#target_link_libraries(testbsr_petsc bsr_petsc)
+#add_subdirectory(petsctest)
 
 # Tests
 

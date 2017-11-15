@@ -137,9 +137,14 @@ public:
 	/// Allocates storage for a vector \ref ytemp required for both SGS and ILU applications
 	void allocTempVector();
 
+	/// Inverts diagonal blocks and allocates temporary array needed for Gauss-Seidel
+	void precSGSSetup();
+
 	/// Applies a block symmetric Gauss-Seidel preconditioner ("LU-SGS")
 	/** Approximately solves (D+L) D^(-1) (D+U) z = r
-	 * where D, L and U are the diagonal, upper and lower parts of the matrix respectively.
+	 * where D, L and U are the diagonal, upper and lower parts of the matrix respectively,
+	 * by applying asynchronous Jacobi sweeps.
+	 * This block version is adapted from the scalar version in \cite async:anzt_triangular
 	 */
 	void precSGSApply(const scalar *const r, scalar *const __restrict z) const;
 
@@ -148,6 +153,7 @@ public:
 	 * \f[ \tilde{L} \tilde{U} = A \f]
 	 * is approximately satisifed, with \f$ \tilde{L} \f$ unit lower triangular.
 	 * The sparsity if A is preserved, so this is ILU(0).
+	 * This block version is adapted from the scalar version in \cite ilu:chowpatel . 
 	 */
 	void precILUSetup();
 
@@ -311,6 +317,9 @@ public:
 
 	/// Allocates storage for a vector \ref ytemp required for both SGS and ILU applications
 	void allocTempVector();
+
+	/// Inverts diagonal blocks and allocates temporary array needed for Gauss-Seidel
+	void precSGSSetup();
 
 	/// Applies a block symmetric Gauss-Seidel preconditioner ("LU-SGS")
 	void precSGSApply(const scalar *const r, scalar *const __restrict z) const;

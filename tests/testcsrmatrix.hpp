@@ -21,6 +21,7 @@
 #define TESTCSRMATRIX_H
 
 #include "../src/blockmatrices.hpp"
+#include <vector>
 
 using namespace blasted;
 

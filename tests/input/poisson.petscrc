@@ -1,0 +1,8 @@
+-ksp_type richardson
+-ksp_rtol 1e-6
+-ksp_max_it 1000
+-ksp_final_residual
+
+-pc_type shell
+-blasted_pc_type sgs
+-blasted_async_sweeps 1,1
