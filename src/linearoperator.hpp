@@ -41,16 +41,16 @@ protected:
 	StorageType _type;
 };
 
-/// Abstract interface for a linear operator; provides assembly and BLAS operations
+/// Abstract interface for a matrix; provides assembly and BLAS operations
 template <typename scalar, typename index>
-class LinearOperator : public AbstractLinearOperator<scalar,index>
+class AbstractMatrix : public AbstractLinearOperator<scalar,index>
 {
 public:
-	LinearOperator(const StorageType storagetype) 
+	AbstractMatrix(const StorageType storagetype) 
 		: AbstractLinearOperator<scalar,index>(storagetype)
 	{ }
 
-	virtual ~LinearOperator() { }
+	virtual ~AbstractMatrix() { }
 
 	/// Sets the structure of the matrix using supplied vectors
 	/** See the documentation of the subclasses for requirements on the inputs.
@@ -132,7 +132,7 @@ public:
 /** Specifies an interface for an object that does not own the matrix data,
  * which is accessed as read-only. In that sense, it is a "view" of the matrix.
  * Provides BLAS operations but not assembly operations. For a class family that offers
- * assembly operations, see LinearOperator.
+ * assembly operations, see AbstractMatrix.
  */
 template <typename scalar, typename index>
 class MatrixView : public AbstractLinearOperator<scalar,index>

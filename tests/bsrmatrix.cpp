@@ -35,7 +35,7 @@ int main(const int argc, const char *const argv[])
 	{
 		int rowptr[3] = {0, 1, 2}, colind[2] = {0,1}, diagind[2]={0,1};
 		double data[8] = {1,0,0,1,2,0,0,2};
-		LinearOperator<double,int>* testmat = nullptr;
+		AbstractMatrix<double,int>* testmat = nullptr;
 		testmat = new BSRMatrix<double,int,2>(2,rowptr,colind,data,diagind,1,1);
 		double avec[4] = {1,2,3,4}, bvec[4];
 		testmat->apply(1.0, avec, bvec);

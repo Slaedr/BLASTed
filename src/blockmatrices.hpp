@@ -53,7 +53,7 @@ struct RawBSRMatrix
  * Unsigned types cannot be used as index; that will cause SGS and ILU preconditioners to fail.
  */
 template <typename scalar, typename index, int bs>
-class BSRMatrix : public LinearOperator<scalar, index>
+class BSRMatrix : public AbstractMatrix<scalar, index>
 {
 	static_assert(std::numeric_limits<index>::is_signed, "Signed index type required!");
 	static_assert(bs > 0, "Block size must be positive!");
@@ -222,7 +222,7 @@ protected:
 /** The limiting case of BSR matrix when block size is 1
  */
 template <typename scalar, typename index>
-class BSRMatrix<scalar,index,1> : public LinearOperator<scalar, index>
+class BSRMatrix<scalar,index,1> : public AbstractMatrix<scalar, index>
 {
 	static_assert(std::numeric_limits<index>::is_signed, "Signed index type required!");
 

@@ -386,7 +386,7 @@ void block_ilu0_apply( const ConstRawBSRMatrix<scalar,index> *const mat,
 
 template <typename scalar, typename index, int bs>
 BSRMatrix<scalar,index,bs>::BSRMatrix(const int n_buildsweeps, const int n_applysweeps)
-	: LinearOperator<scalar,index>(BSR), 
+	: AbstractMatrix<scalar,index>(BSR), 
 	  mat{nullptr, nullptr, nullptr, nullptr, 0},
 	  nbuildsweeps{n_buildsweeps}, napplysweeps{n_applysweeps}, thread_chunk_size{500}
 {
@@ -398,7 +398,7 @@ template <typename scalar, typename index, int bs>
 BSRMatrix<scalar,index,bs>::BSRMatrix(const index n_brows,
 		const index *const bcinds, const index *const brptrs,
 		const int n_buildsweeps, const int n_applysweeps)
-	: LinearOperator<scalar,index>(BSR), owner{true}, 
+	: AbstractMatrix<scalar,index>(BSR), owner{true}, 
 	mat{nullptr, nullptr, nullptr, nullptr, n_brows},
 	nbuildsweeps{n_buildsweeps}, napplysweeps{n_applysweeps}, thread_chunk_size{500}
 {
@@ -429,7 +429,7 @@ template <typename scalar, typename index, int bs>
 BSRMatrix<scalar,index,bs>::BSRMatrix(const index n_brows, index *const brptrs,
 		index *const bcinds, scalar *const values, index *const diaginds,
 		const int n_buildsweeps, const int n_applysweeps)
-	: LinearOperator<scalar,index>(BSR), owner{false},
+	: AbstractMatrix<scalar,index>(BSR), owner{false},
 	  mat{brptrs, bcinds, values, diaginds, n_brows},
 	  nbuildsweeps{n_buildsweeps}, napplysweeps{n_applysweeps}, thread_chunk_size{500}
 { }
@@ -918,7 +918,7 @@ void scalar_ilu0_apply(const ConstRawBSRMatrix<scalar,index> *const mat,
 template <typename scalar, typename index>
 inline
 BSRMatrix<scalar,index,1>::BSRMatrix(const int n_buildsweeps, const int n_applysweeps)
-	: LinearOperator<scalar,index>(CSR), mat{nullptr,nullptr,nullptr,nullptr,0},
+	: AbstractMatrix<scalar,index>(CSR), mat{nullptr,nullptr,nullptr,nullptr,0},
 	dblocks{nullptr}, iluvals{nullptr}, scale{nullptr}, ytemp{nullptr},
 	nbuildsweeps{n_buildsweeps}, napplysweeps{n_applysweeps}, thread_chunk_size{800}
 {
@@ -931,7 +931,7 @@ inline
 BSRMatrix<scalar,index,1>::BSRMatrix(const index n_brows,
 		const index *const bcinds, const index *const brptrs,
 		const int n_buildsweeps, const int n_applysweeps)
-	: LinearOperator<scalar,index>(CSR), owner{true},
+	: AbstractMatrix<scalar,index>(CSR), owner{true},
 	mat{nullptr,nullptr,nullptr,nullptr,n_brows},
 	dblocks(nullptr), iluvals(nullptr), scale(nullptr), ytemp(nullptr),
 	nbuildsweeps{n_buildsweeps}, napplysweeps{n_applysweeps}, thread_chunk_size{800}
@@ -962,7 +962,7 @@ template <typename scalar, typename index>
 BSRMatrix<scalar,index,1>::BSRMatrix(const index nrows, index *const brptrs,
 		index *const bcinds, scalar *const values, index *const diaginds,
 		const int n_buildsweeps, const int n_applysweeps)
-	: LinearOperator<scalar,index>(CSR), owner{false},
+	: AbstractMatrix<scalar,index>(CSR), owner{false},
 	mat{brptrs,bcinds,values,diaginds,nrows},
 	dblocks(nullptr), iluvals(nullptr), scale(nullptr), ytemp(nullptr),
 	nbuildsweeps{n_buildsweeps}, napplysweeps{n_applysweeps}, thread_chunk_size{800}
