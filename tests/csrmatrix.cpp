@@ -22,12 +22,16 @@
 
 int main(const int argc, const char *const argv[])
 {
-	if(argc < 2) {
-		std::cout << "! Please specify the test. Options:\n";
-		std::cout << " apply\n gemv \n";
+	if(argc < 3) {
+		std::cout << "! Please specify the test (options:  apply , gemv) \n";
+		std::cout << " and whether a matrix or a matrix view is to be tested.\n";
 		std::abort();
 	}
+
+	// The test to execute
 	std::string teststr = argv[1];
+	// Whether to do it on a matrix or a matrix view
+	std::string typestr = argv[2];
 
 	int err = 0;
 
@@ -35,8 +39,11 @@ int main(const int argc, const char *const argv[])
 	{
 		int rowptr[3] = {0, 1, 2}, colind[2] = {0,1}, diagind[2]={0,1};
 		double data[2] = {1,2};
-		AbstractMatrix<double,int>* testmat = nullptr;
-		testmat = new BSRMatrix<double,int,1>(2,rowptr,colind,data,diagind,1,1);
+		AbstractLinearOperator<double,int>* testmat = nullptr;
+		if(typestr == "view")
+			testmat = new BSRMatrixView<double,int,1>(2,rowptr,colind,data,diagind,1,1);
+		else
+			testmat = new BSRMatrix<double,int,1>(2,rowptr,colind,data,diagind,1,1);
 		double avec[2] = {1,2}, bvec[2];
 		testmat->apply(1.0, avec, bvec);
 

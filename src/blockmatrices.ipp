@@ -1247,3 +1247,183 @@ void BSRMatrix<scalar,index,1>::printDiagnostic(const char choice) const
 	fout.close();
 }
 
+
+template <typename scalar, typename index, int bs>
+BSRMatrixView<scalar,index,bs>::BSRMatrixView(const index n_brows, index *const brptrs,
+		index *const bcinds, scalar *const values, index *const diaginds,
+		const int n_buildsweeps, const int n_applysweeps)
+	: MatrixView<scalar,index>(BSR),
+	  mat{brptrs, bcinds, values, diaginds, n_brows},
+	  nbuildsweeps{n_buildsweeps}, napplysweeps{n_applysweeps}, thread_chunk_size{500}
+{ }
+
+template <typename scalar, typename index, int bs>
+BSRMatrixView<scalar, index, bs>::~BSRMatrixView()
+{
+}
+
+template <typename scalar, typename index, int bs>
+void BSRMatrixView<scalar,index,bs>::apply(const scalar a, const scalar *const xx,
+                                       scalar *const __restrict yy) const
+{
+	block_matrix_apply<scalar,index,bs>(&mat, a, xx, yy);
+}
+
+template <typename scalar, typename index, int bs>
+void BSRMatrixView<scalar,index,bs>::gemv3(const scalar a, const scalar *const __restrict xx, 
+		const scalar b, const scalar *const yy, scalar *const zz) const
+{
+	block_gemv3<scalar,index,bs>(&mat, a, xx, b, yy, zz);
+}
+
+template <typename scalar, typename index, int bs>
+void BSRMatrixView<scalar,index,bs>::precJacobiSetup()
+{
+	block_jacobi_setup(&mat, dblocks);
+}
+
+template <typename scalar, typename index, int bs>
+void BSRMatrixView<scalar,index,bs>::precJacobiApply(const scalar *const rr, 
+                                                 scalar *const __restrict zz) const
+{
+	block_jacobi_apply( &mat, dblocks, rr, zz);
+}
+
+template <typename scalar, typename index, int bs>
+void BSRMatrixView<scalar,index,bs>::precSGSSetup()
+{
+	block_sgs_setup(&mat, dblocks,ytemp);
+}
+
+template <typename scalar, typename index, int bs>
+void BSRMatrixView<scalar,index,bs>::precSGSApply(const scalar *const rr, 
+                                              scalar *const __restrict zz) const
+{
+	block_sgs_apply(&mat, dblocks,ytemp, napplysweeps,thread_chunk_size, rr, zz);
+}
+
+/** There is currently no pre-scaling of the original matrix A, unlike the point ILU0.
+ * It will probably be too expensive to carry out a row-column scaling like in the point case.
+ * However, we could try a row scaling.
+ */
+template <typename scalar, typename index, int bs>
+void BSRMatrixView<scalar,index,bs>::precILUSetup()
+{
+	block_ilu0_setup(&mat, nbuildsweeps, thread_chunk_size, iluvals, ytemp);
+}
+
+template <typename scalar, typename index, int bs>
+void BSRMatrixView<scalar,index,bs>::precILUApply(const scalar *const r, 
+                                              scalar *const __restrict z) const
+{
+	block_ilu0_apply(&mat, iluvals, ytemp, napplysweeps, thread_chunk_size, r, z);
+}
+
+
+template <typename scalar, typename index>
+BSRMatrixView<scalar,index,1>::BSRMatrixView(const index nrows, index *const brptrs,
+		index *const bcinds, scalar *const values, index *const diaginds,
+		const int n_buildsweeps, const int n_applysweeps)
+	: MatrixView<scalar,index>(CSR),
+	mat{brptrs,bcinds,values,diaginds,nrows},
+	dblocks(nullptr), iluvals(nullptr), scale(nullptr), ytemp(nullptr),
+	nbuildsweeps{n_buildsweeps}, napplysweeps{n_applysweeps}, thread_chunk_size{800}
+{ }
+
+template <typename scalar, typename index>
+BSRMatrixView<scalar,index,1>::~BSRMatrixView()
+{ }
+
+template <typename scalar, typename index>
+void BSRMatrixView<scalar,index,1>::apply(const scalar a, const scalar *const xx,
+                                       scalar *const __restrict yy) const
+{
+	matrix_apply(&mat, a, xx, yy);
+}
+
+template <typename scalar, typename index>
+void BSRMatrixView<scalar,index,1>::gemv3(const scalar a, const scalar *const __restrict__ xx, 
+		const scalar b, const scalar *const yy, scalar *const zz) const
+{
+	scalar_gemv3(&mat, a, xx, b, yy, zz);
+}
+
+template <typename scalar, typename index>
+void BSRMatrixView<scalar,index,1>::precJacobiSetup()
+{
+	if(!dblocks) {
+		dblocks = new scalar[mat.browptr[mat.nbrows]];
+		std::cout << " CSR MatrixView: precJacobiSetup(): Initial setup.\n";
+	}
+
+	scalar_jacobi_setup(&mat, dblocks);
+}
+
+template <typename scalar, typename index>
+void BSRMatrixView<scalar,index,1>::precJacobiApply(const scalar *const rr, 
+                                                 scalar *const __restrict zz) const
+{
+	scalar_jacobi_apply(&mat, dblocks, rr, zz);
+}
+
+template <typename scalar, typename index>
+void BSRMatrixView<scalar,index,1>::precSGSSetup()
+{
+	if(!dblocks) {
+		dblocks = new scalar[mat.browptr[mat.nbrows]];
+		delete [] ytemp;
+		ytemp = new scalar[mat.nbrows];
+		std::cout << " CSR MatrixView: precSGSSetup(): Initial setup.\n";
+	}
+	
+	scalar_sgs_setup(&mat, dblocks, ytemp);
+}
+
+template <typename scalar, typename index>
+void BSRMatrixView<scalar,index,1>::precSGSApply(const scalar *const rr, 
+                                              scalar *const __restrict zz) const
+{
+	scalar_sgs_apply(&mat, dblocks, ytemp, napplysweeps, thread_chunk_size, rr, zz);
+}
+
+template <typename scalar, typename index>
+void BSRMatrixView<scalar,index,1>::precILUSetup()
+{
+	if(!iluvals)
+	{
+		std::printf(" CSR MatrixView: precILUSetup(): First-time setup\n");
+
+		// Allocate lu
+		iluvals = new scalar[mat.browptr[mat.nbrows]];
+#pragma omp parallel for simd default(shared)
+		for(int j = 0; j < mat.browptr[mat.nbrows]; j++) {
+			iluvals[j] = mat.vals[j];
+		}
+
+		// intermediate array for the solve part; NOT ZEROED
+		if(!ytemp) {
+			ytemp = new scalar[mat.nbrows];
+#pragma omp parallel for simd default(shared)
+			for(index i = 0; i < mat.nbrows; i++)
+			{
+				ytemp[i] = 0;
+			}
+		}
+		else
+			std::cout << "! BSRMatrixView<1>: precILUSetup(): Temp vector is already allocated!\n";
+		
+		if(!scale)
+			scale = new scalar[mat.nbrows];	
+		else
+			std::cout << "! BSRMatrixView<1>: precILUSetup(): Scale vector is already allocated!\n";
+	}
+
+	scalar_ilu0_setup(&mat, nbuildsweeps, thread_chunk_size, iluvals, scale);
+}
+
+template <typename scalar, typename index>
+void BSRMatrixView<scalar,index,1>::precILUApply(const scalar *const __restrict ra, 
+                                              scalar *const __restrict za) const
+{
+	scalar_ilu0_apply(&mat, iluvals, scale, ytemp, napplysweeps, thread_chunk_size, ra, za);
+}

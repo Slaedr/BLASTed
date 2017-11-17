@@ -372,6 +372,7 @@ protected:
 	const int thread_chunk_size;
 };
 
+/// A BSR matrix that is formed by wrapping a pre-existing read-only matrix
 template <typename scalar, typename index, int bs>
 class BSRMatrixView : public MatrixView<scalar, index>
 {
@@ -443,8 +444,8 @@ public:
 
 protected:
 
-	/// The BSR matrix storage
-	RawBSRMatrix<scalar,index> mat;
+	/// The BSR matrix wrapper
+	ConstRawBSRMatrix<scalar,index> mat;
 
 	/// Storage for factored or inverted diagonal blocks
 	Matrix<scalar,Dynamic,bs,RowMajor> dblocks;
@@ -457,6 +458,93 @@ protected:
 
 	/// Storage for intermediate results in preconditioning operations
 	mutable Vector<scalar> ytemp;
+
+	/// Number of sweeps used to build preconditioners
+	const int nbuildsweeps;
+
+	/// Number of sweeps used to apply preconditioners
+	const int napplysweeps;
+
+	/// Thread chunk size for OpenMP parallelism
+	const int thread_chunk_size;
+};
+
+/// A CSR matrix formed by wrapping a read-only matrix
+/** The limiting case of BSR matrix when block size is 1
+ */
+template <typename scalar, typename index>
+class BSRMatrixView<scalar,index,1> : public MatrixView<scalar, index>
+{
+	static_assert(std::numeric_limits<index>::is_signed, "Signed index type required!");
+
+public:
+	
+	/// A constructor which just wraps a CSR matrix described by 4 arrays
+	/** \param[in] nrows Number of rows
+	 * \param[in] rptrs Array of row pointers
+	 * \param[in] cinds Array of column indices
+	 * \param[in] values Non-zero values
+	 * \param[in] dinds Array of diagonal entry pointers
+	 * \param[in] n_buildsweeps Number of asynchronous preconditioner build sweeps
+	 * \param[in] n_applysweeps Number of asynchronous preconditioner apply sweeps
+	 *
+	 * Does not take ownership of the 4 arrays; they are not cleaned up in the destructor either.
+	 */
+	BSRMatrixView(const index nrows, index *const rptrs,
+		index *const cinds, scalar *const values, index *const dinds,
+		const int n_buildsweeps, const int n_applysweeps);
+
+	/// De-allocates memory
+	virtual ~BSRMatrixView();
+
+	/// Computes the matrix vector product of this matrix with one vector-- y := a Ax
+	virtual void apply(const scalar a, const scalar *const x, scalar *const __restrict y) const;
+
+	/// Almost the BLAS gemv: computes z := a Ax + by for  scalars a and b
+	virtual void gemv3(const scalar a, const scalar *const __restrict x, 
+			const scalar b, const scalar *const y,
+			scalar *const z) const;
+
+	/// Computes inverse or factorization of diagonal blocks for the Jacobi preconditioner
+	void precJacobiSetup();
+	
+	/// Applies Jacobi preconditioner
+	void precJacobiApply(const scalar *const r, scalar *const __restrict z) const;
+
+	/// Inverts diagonal blocks and allocates a temporary array needed for Gauss-Seidel
+	void precSGSSetup();
+
+	/// Applies a block symmetric Gauss-Seidel preconditioner
+	void precSGSApply(const scalar *const r, scalar *const __restrict z) const;
+
+	/// Computes an incomplete block lower-upper factorization
+	void precILUSetup();
+
+	/// Applies a block LU factorization
+	void precILUApply(const scalar *const r, scalar *const __restrict z) const;
+	
+	/// Returns the number of rows in the matrix
+	index dim() const { return mat.nbrows; }
+
+protected:
+	
+	/// The CSR matrix data	
+	ConstRawBSRMatrix<scalar,index> mat;
+
+	/// Storage for factored or inverted diagonal blocks
+	scalar* dblocks;
+
+	/// Storage for ILU0 factorization
+	/** Use \ref bcolind and \ref browptr to access the storage,
+	 * as the non-zero structure of this matrix is same as the original matrix.
+	 */
+	scalar* iluvals;
+	
+	/// Stores scaling vector for async ILU factorization
+	scalar* scale;
+
+	/// Storage for intermediate results in preconditioning operations
+	mutable scalar* ytemp;
 
 	/// Number of sweeps used to build preconditioners
 	const int nbuildsweeps;

@@ -1,7 +1,7 @@
 BLASTed
 =======
 
-Basic Linear Algebra Subprograms Threaded: A collection of sparse matrix containers and manipulators, along with certain linear algebra operations for use in solving partial differential equations. The main focus is on providing low-level kernels required to implement solvers for large sparse linear systems of algebraic equations, in an object-oriented framework.
+Basic Linear Algebra Subprograms Threaded: A collection of sparse matrix containers and manipulators, along with certain linear algebra operations. The main focus is on providing thread-parallel low-level kernels required to implement solvers for large sparse linear systems of algebraic equations, in an object-oriented framework.
 
 Building
 --------
@@ -9,7 +9,7 @@ The library is currently header-only, mostly to make template instantiations pos
 - [Eigen](http://eigen.tuxfamily.org) version 3.3.4 or later
 - [Boost](http://www.boost.org/)
 - [CMake](https://cmake.org/) version 3.0 or later
-Optionally, [PETSc](http://www.mcs.anl.gov/petsc/) version 3.8 or later is required to build the PETSc interface.
+Optionally, [PETSc](http://www.mcs.anl.gov/petsc/) version 3.8 is required to build the PETSc interface.
 
 Assuming that you are in the top-level BLASTed directory, type
 
@@ -28,7 +28,7 @@ and to run the tests,
 	cd tests
 	ctest
 
-A C++ compiler with C++ 11 support is required; the build is known to work with GCC 5.4, GCC 6.4 and Intel 2017 in a GNU/Linux environment. To build in other enviroments, tweaking the CMakeLists.txt file will be required.
+A C++ compiler with C++ 14 support is required; the build is known to work with GCC 5.4, GCC 6.4 and Intel 2017 in a GNU/Linux environment. To build in other enviroments, tweaking the CMakeLists.txt file will be required.
 
 To build the [Doxygen](http://www.stack.nl/~dimitri/doxygen/) documentation,
 
