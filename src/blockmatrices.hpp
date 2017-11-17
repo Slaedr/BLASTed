@@ -391,8 +391,8 @@ public:
 	 *
 	 * Does not take ownership of the 4 arrays; they are not cleaned up in the destructor either.
 	 */
-	BSRMatrixView(const index n_brows, index *const brptrs,
-		index *const bcinds, scalar *const values, index *const dinds,
+	BSRMatrixView(const index n_brows, const index *const brptrs,
+		const index *const bcinds, const scalar *const values, const index *const dinds,
 		const int n_buildsweeps, const int n_applysweeps);
 
 	/// Does nothing
@@ -470,7 +470,8 @@ protected:
 };
 
 /// A CSR matrix formed by wrapping a read-only matrix
-/** The limiting case of BSR matrix when block size is 1
+/** The limiting case of BSR matrix when block size is 1.
+ * On destruct, cleans up only its own data that are needed for preconditioning operations.
  */
 template <typename scalar, typename index>
 class BSRMatrixView<scalar,index,1> : public MatrixView<scalar, index>
@@ -479,7 +480,7 @@ class BSRMatrixView<scalar,index,1> : public MatrixView<scalar, index>
 
 public:
 	
-	/// A constructor which just wraps a CSR matrix described by 4 arrays
+	/// A constructor which wraps a CSR matrix described by 4 arrays
 	/** \param[in] nrows Number of rows
 	 * \param[in] rptrs Array of row pointers
 	 * \param[in] cinds Array of column indices
@@ -490,8 +491,8 @@ public:
 	 *
 	 * Does not take ownership of the 4 arrays; they are not cleaned up in the destructor either.
 	 */
-	BSRMatrixView(const index nrows, index *const rptrs,
-		index *const cinds, scalar *const values, index *const dinds,
+	BSRMatrixView(const index nrows, const index *const rptrs,
+		const index *const cinds, const scalar *const values, const index *const dinds,
 		const int n_buildsweeps, const int n_applysweeps);
 
 	/// De-allocates memory

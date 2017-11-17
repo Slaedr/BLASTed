@@ -19,6 +19,7 @@
  *   along with BLASTed.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+/// Matrix-vector product for BSR matrices
 template <typename scalar, typename index, int bs>
 inline
 void block_matrix_apply(const ConstRawBSRMatrix<scalar,index> *const mat,
@@ -46,6 +47,11 @@ void block_matrix_apply(const ConstRawBSRMatrix<scalar,index> *const mat,
 	}
 }
 
+/// Computes z := a Ax + by for  scalars a and b and vectors x and y
+/** 
+ * \param[in] mat The BSR matrix
+ * \warning xx must not alias zz.
+ */
 template <typename scalar, typename index, int bs>
 inline
 void block_gemv3(const ConstRawBSRMatrix<scalar,index> *const mat,
@@ -73,6 +79,9 @@ void block_gemv3(const ConstRawBSRMatrix<scalar,index> *const mat,
 	}
 }
 
+/// Computes and stores the inverses of diagonal blocks
+/** Allocates the storage if necessary.
+ */
 template <typename scalar, typename index, int bs>
 inline
 void block_jacobi_setup(const ConstRawBSRMatrix<scalar,index> *const mat,
@@ -94,6 +103,7 @@ void block_jacobi_setup(const ConstRawBSRMatrix<scalar,index> *const mat,
 		dblocks.BLK<bs,bs>(irow*bs,0) = data.BLK<bs,bs>(mat->diagind[irow]*bs,0).inverse();
 }
 
+/// Applies the block-Jacobi preconditioner assuming inverses of diagonal blocks have been computed 
 template <typename scalar, typename index, int bs>
 void block_jacobi_apply(const ConstRawBSRMatrix<scalar,index> *const mat,
 		const Matrix<scalar,Dynamic,bs,RowMajor>& dblocks,
@@ -131,6 +141,18 @@ void block_sgs_setup(const ConstRawBSRMatrix<scalar,index> *const mat,
 	}
 }
 
+/// Applies the block SGS preconditioner
+/** If multiple threads are used, the iteration is asynchronous \cite async:anzt_triangular .
+ * Assumes inverses of diagonal blocks have been computed and stored, 
+ * and that \ref ytemp, a temporary storage space, has been allocated.
+ * \param[in] mat The BSR matrix
+ * \param[in] dblocks An array holding the inverse of diagonal blocks
+ * \param ytemp A pre-allocated temporary vector needed for SGS
+ * \param[in] napplysweeps Number of sweeps to use for asynchronous block-SGS application
+ * \param[in] thread_chunk_size Batch size of allocation of work-items to thread contexts
+ * \param[in] rr The input vector to apply the preconditioner to
+ * \param[in,out] zz The output vector
+ */
 template <typename scalar, typename index, int bs>
 inline
 void block_sgs_apply(const ConstRawBSRMatrix<scalar,index> *const mat,
@@ -1249,8 +1271,8 @@ void BSRMatrix<scalar,index,1>::printDiagnostic(const char choice) const
 
 
 template <typename scalar, typename index, int bs>
-BSRMatrixView<scalar,index,bs>::BSRMatrixView(const index n_brows, index *const brptrs,
-		index *const bcinds, scalar *const values, index *const diaginds,
+BSRMatrixView<scalar,index,bs>::BSRMatrixView(const index n_brows, const index *const brptrs,
+		const index *const bcinds, const scalar *const values, const index *const diaginds,
 		const int n_buildsweeps, const int n_applysweeps)
 	: MatrixView<scalar,index>(BSR),
 	  mat{brptrs, bcinds, values, diaginds, n_brows},
@@ -1321,8 +1343,8 @@ void BSRMatrixView<scalar,index,bs>::precILUApply(const scalar *const r,
 
 
 template <typename scalar, typename index>
-BSRMatrixView<scalar,index,1>::BSRMatrixView(const index nrows, index *const brptrs,
-		index *const bcinds, scalar *const values, index *const diaginds,
+BSRMatrixView<scalar,index,1>::BSRMatrixView(const index nrows, const index *const brptrs,
+		const index *const bcinds, const scalar *const values, const index *const diaginds,
 		const int n_buildsweeps, const int n_applysweeps)
 	: MatrixView<scalar,index>(CSR),
 	mat{brptrs,bcinds,values,diaginds,nrows},
@@ -1332,7 +1354,13 @@ BSRMatrixView<scalar,index,1>::BSRMatrixView(const index nrows, index *const brp
 
 template <typename scalar, typename index>
 BSRMatrixView<scalar,index,1>::~BSRMatrixView()
-{ }
+{ 
+	delete [] dblocks;
+	delete [] iluvals;
+	delete [] scale;
+	delete [] ytemp;
+	dblocks = iluvals = scale = ytemp = nullptr;
+}
 
 template <typename scalar, typename index>
 void BSRMatrixView<scalar,index,1>::apply(const scalar a, const scalar *const xx,

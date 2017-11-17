@@ -17,7 +17,7 @@
 
 using namespace blasted;
 
-typedef LinearOperator<PetscReal, PetscInt> BlastedPetscMat;
+typedef MatrixView<PetscReal, PetscInt> BlastedPetscMat;
 
 #define PETSCOPTION_STR_LEN 10
 
@@ -56,27 +56,28 @@ static Blasted_data* newDataFromOptions(const int bsize)
 	}
 	
 	PetscInt sweeps[2];
-	PetscOptionsHasName(NULL, NULL, "blasted_async_sweeps", &set);
-	if(set == PETSC_FALSE) {
-		printf("BLASTed: Number of async sweeps not set!\n");
-		abort();
-	}
-	else {
-		PetscBool flag = PETSC_FALSE;
-		PetscInt nmax;
-		PetscOptionsGetIntArray(NULL, NULL, "blasted_async_sweeps", sweeps, &nmax, &flag);
-		
-		if(flag == PETSC_FALSE || nmax < 2) {
-			printf("BLASTed: Number of async sweeps not set properly!\n");
+	if(ptype == SGS || ptype == ILU0)
+	{
+		PetscOptionsHasName(NULL, NULL, "blasted_async_sweeps", &set);
+		if(set == PETSC_FALSE) {
+			printf("BLASTed: Number of async sweeps not set!\n");
 			abort();
 		}
+		else {
+			PetscBool flag = PETSC_FALSE;
+			PetscInt nmax;
+			PetscOptionsGetIntArray(NULL, NULL, "blasted_async_sweeps", sweeps, &nmax, &flag);
+			
+			if(flag == PETSC_FALSE || nmax < 2) {
+				printf("BLASTed: Number of async sweeps not set properly!\n");
+				abort();
+			}
+		}
+	}
+	else {
+		sweeps[0] = 1; sweeps[1] = 1;
 	}
 
-	/*Blasted_data* ctx = new Blasted_data {bmat=NULL; bs = bsize; prectype = ptype;
-		nbuildsweeps = sweeps[0]; napplysweeps = sweeps[1];
-		cputime = 0; walltime = 0; factorcputime = 0; factorwalltime = 0;
-		applycputime = 0; applywalltime = 0;
-	}*/
 	Blasted_data* ctx = new Blasted_data {nullptr, bsize, ptype,
 		sweeps[0], sweeps[1],
 		0, 0, 0, 0, 0, 0
@@ -85,11 +86,11 @@ static Blasted_data* newDataFromOptions(const int bsize)
 	return ctx;
 }
 
-/** \brief Generates a new native matrix from the preconditioning operator in a PC
+/** \brief Generates a matrix view from the preconditioning operator in a PC
  *
  * \param[in,out] pc PETSc preconditioner context
  */
-void createNewBlockMatrix(PC pc)
+void createNewBlockMatrixView(PC pc)
 {
 	PetscInt firstrow, lastrow, localrows, localcols, globalrows, globalcols, numprocs;
 	MPI_Comm_size(PETSC_COMM_WORLD,&numprocs);
@@ -99,7 +100,7 @@ void createNewBlockMatrix(PC pc)
 	PCShellGetContext(pc, (void**)&ctx);
 
 	// delete old matrix
-	const BlastedPetscMat* op = (const BlastedPetscMat*)ctx->bmat;
+	BlastedPetscMat* op = reinterpret_cast<BlastedPetscMat*>(ctx->bmat);
 	delete op;
 
 	/* get the local preconditioning matrix
@@ -134,9 +135,10 @@ void createNewBlockMatrix(PC pc)
 	const PetscInt* Adcols = Adiag->j;
 	const PetscInt* Addiagind = Adiag->diag;
 	const PetscReal* Advals = Adiag->a;
-	const PetscInt Adnnz = Adiag->nz;
 
 #ifdef DEBUG
+	const PetscInt Adnnz = Adiag->nz;
+
 	printf("BLASTed: createNewBlockMatrix(): firstrow = %d, lastrow = %d, \
 			localrows = %d, localcols = %d, globalrows = %d, globalcols = %d\n", 
 			firstrow, lastrow, localrows, localcols, globalrows, globalcols);
@@ -161,7 +163,7 @@ void createNewBlockMatrix(PC pc)
 			abort();
 			break;
 		case 1:
-			op = new BSRMatrix<PetscReal, PetscInt,1>(localrows, 
+			op = new BSRMatrixView<PetscReal, PetscInt,1>(localrows, 
 					Adrowp, Adcols, Advals, Addiagind,
 					ctx->nbuildsweeps,ctx->napplysweeps);
 			break;
@@ -186,7 +188,7 @@ void createNewBlockMatrix(PC pc)
 			abort();
 	}
 
-	ctx->bmat = (void*)op;
+	ctx->bmat = reinterpret_cast<void*>(op);
 }
 
 extern "C" {
@@ -204,7 +206,7 @@ PetscErrorCode cleanup_blasted(PC pc)
 	Blasted_data* ctx;
 	ierr = PCShellGetContext(pc, (void**)&ctx); CHKERRQ(ierr);
 	
-	BlastedPetscMat* mat = (BlastedPetscMat*)ctx->bmat;
+	BlastedPetscMat* mat = reinterpret_cast<BlastedPetscMat*>(ctx->bmat);
 	delete mat;
 	delete ctx;
 
@@ -215,12 +217,12 @@ PetscErrorCode compute_preconditioner(PC pc)
 {
 	PetscErrorCode ierr = 0;
 
-	createNewBlockMatrix(pc);
+	createNewBlockMatrixView(pc);
 	
 	// get control structure
 	Blasted_data* ctx;
 	PCShellGetContext(pc, (void**)&ctx);
-	BlastedPetscMat *const op = (BlastedPetscMat *const)ctx->bmat;
+	BlastedPetscMat *const op = reinterpret_cast<BlastedPetscMat*>(ctx->bmat);
 
 	struct timeval time1, time2;
 	gettimeofday(&time1, NULL);
@@ -240,8 +242,8 @@ PetscErrorCode compute_preconditioner(PC pc)
 			break;
 		default:
 			printf("BLASTed: compute_preconditioner: Preconditioner not available!\n");
+			ierr = -1;
 	}
-	
 	
 	gettimeofday(&time2, NULL);
 	double finalwtime = (double)time2.tv_sec + (double)time2.tv_usec * 1.0e-6;
@@ -254,6 +256,7 @@ PetscErrorCode compute_preconditioner(PC pc)
 
 PetscErrorCode apply_local(PC pc, Vec r, Vec z)
 {
+	PetscErrorCode ierr = 0;
 	const PetscReal *ra;
 	PetscReal *za;
 	PetscInt start, end;
@@ -261,13 +264,13 @@ PetscErrorCode apply_local(PC pc, Vec r, Vec z)
 
 	Blasted_data* ctx;
 	PCShellGetContext(pc, (void**)&ctx);
-	const BlastedPetscMat *const mat = (const BlastedPetscMat *const)ctx->bmat;
+	const BlastedPetscMat *const mat = reinterpret_cast<const BlastedPetscMat *>(ctx->bmat);
 
 #ifdef DEBUG
 	if(mat->dim() != end-start) {
-		printf("! apply_fgpilu_jacobi_local: Dimension of the input vector r\n");
+		printf("! apply_local: Dimension of the input vector r\n");
 		printf("     does not match dimension of the preconditioning matrix!\n");
-		return -1;
+		ierr = -1;
 	}
 #endif
 	
@@ -291,6 +294,7 @@ PetscErrorCode apply_local(PC pc, Vec r, Vec z)
 			break;
 		default:
 			printf("BLASTed: apply_local: Preconditioner not available!\n");
+			ierr = -1;
 	}
 
 	gettimeofday(&time2, NULL);
@@ -302,7 +306,7 @@ PetscErrorCode apply_local(PC pc, Vec r, Vec z)
 	VecRestoreArrayRead(r, &ra);
 	VecRestoreArray(z, &za);
 	
-	return 0;
+	return ierr;
 }
 
 }

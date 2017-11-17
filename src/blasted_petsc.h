@@ -19,7 +19,7 @@ typedef enum {JACOBI, SGS, ILU0} Prec_type;
 /// State necessary for preconditioners
 typedef struct
 {
-	const void* bmat;               ///< BLASTed matrix
+	void* bmat;                     ///< BLASTed matrix
 	
 	const int bs;                   ///< Block size of dense blocks
 	const Prec_type prectype;       ///< The preconditioner to use
