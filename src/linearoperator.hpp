@@ -10,49 +10,53 @@
 /// Contains all of the BLASTed functionality
 namespace blasted {
 
-/// A generic abstract matrix that is not only required to have matrix-vector multiplication
+/// Encodes the type of storage of matrix data
+enum StorageType { CSR, BSR, COO, VIEWCSR, VIEWBSR, MATRIXFREE, OTHER };
+
+/// A generic abstract (finite-dimensional) linear operator
+/** It is only required to have a dimension and
+ * provide matrix-vector multiplication
+ */
 template <typename scalar, typename index>
-class AbstractMatrix
+class AbstractLinearOperator
 {
 public:
-	AbstractMatrix(const char storagetype) : _type{storagetype}
+	AbstractLinearOperator(const StorageType storagetype) : _type{storagetype}
 	{ }
 
-	virtual ~AbstractMatrix() { }
+	virtual ~AbstractLinearOperator() { }
 
-	/// Returns a character indicating the type of storage
-	char type() { return _type; }
+	/// Returns [type of storage](\ref StorageType)
+	StorageType type() { return _type; }
 	
 	/// Returns the dimension (number of rows) of the operator
 	virtual index dim() const = 0;
-
-	/// Print parts of the matrix for diagnostics
-	virtual void printDiagnostic(const char choice) const { }
-
-	/// Sets the structure of the matrix using supplied vectors
-	/** See the documentation for the subclasses for requirements on the inputs.
-	 */
-	virtual void setStructure(const index n, 
-			const index *const vec1, const index *const vec2) = 0;
 
 	/// To compute the matrix vector product of this matrix with one vector, scaled by a constant
 	virtual void apply(const scalar a, const scalar *const x, 
 			scalar *const __restrict y) const = 0;
 
 protected:
-	/// Encodes some indication of what kind of storage is used
-	char _type;
+	/// Kind of storage that is used
+	StorageType _type;
 };
-	
-/// Abstract interface for a linear operator
+
+/// Abstract interface for a linear operator; provides assembly and BLAS operations
 template <typename scalar, typename index>
-class LinearOperator : public AbstractMatrix<scalar,index>
+class LinearOperator : public AbstractLinearOperator<scalar,index>
 {
 public:
-	LinearOperator(const char storagetype) : AbstractMatrix<scalar,index>(storagetype)
+	LinearOperator(const StorageType storagetype) 
+		: AbstractLinearOperator<scalar,index>(storagetype)
 	{ }
 
 	virtual ~LinearOperator() { }
+
+	/// Sets the structure of the matrix using supplied vectors
+	/** See the documentation of the subclasses for requirements on the inputs.
+	 */
+	virtual void setStructure(const index n, 
+			const index *const vec1, const index *const vec2) = 0;
 
 	/// Sets all non-zero entries to explicitly stored zeros
 	virtual void setAllZero() = 0;
@@ -93,6 +97,10 @@ public:
 	/// Scales all entries of the matrix by scalar
 	virtual void scaleAll(const scalar factor) = 0;
 
+	/// Computes the matrix vector product of this matrix with one vector-- y := a Ax
+	virtual void apply(const scalar a, const scalar *const x, 
+			scalar *const __restrict y) const = 0;
+
 	/// Almost the BLAS gemv: computes z := a Ax + by for  scalars a and b
 	virtual void gemv3(const scalar a, const scalar *const __restrict x, 
 			const scalar b, const scalar *const y,
@@ -116,8 +124,52 @@ public:
 	/// Applies an LU factorization
 	virtual void precILUApply(const scalar *const r, scalar *const __restrict__ z) const = 0;
 
-	/// Allocates storage for a vector required for both SGS and ILU applications
-	virtual void allocTempVector() = 0;
+	/// Print parts of the matrix for diagnostics
+	virtual void printDiagnostic(const char choice) const { }
+};
+	
+/// Interface for a view of a matrix
+/** Specifies an interface for an object that does not own the matrix data,
+ * which is accessed as read-only. In that sense, it is a "view" of the matrix.
+ * Provides BLAS operations but not assembly operations. For a class family that offers
+ * assembly operations, see LinearOperator.
+ */
+template <typename scalar, typename index>
+class MatrixView : public AbstractLinearOperator<scalar,index>
+{
+public:
+	MatrixView(const StorageType storagetype) 
+		: AbstractLinearOperator<scalar,index>(storagetype)
+	{ }
+
+	virtual ~MatrixView() { }
+
+	/// Computes the matrix vector product of this matrix with one vector-- y := a Ax
+	virtual void apply(const scalar a, const scalar *const x, 
+			scalar *const __restrict y) const = 0;
+
+	/// Almost the BLAS gemv: computes z := a Ax + by for  scalars a and b
+	virtual void gemv3(const scalar a, const scalar *const __restrict x, 
+			const scalar b, const scalar *const y,
+			scalar *const z) const = 0;
+
+	/// Meant to compute needed data for applying the Jacobi preconditioner
+	virtual void precJacobiSetup() = 0;
+	
+	/// Applies any of a class of Jacobi-type preconditioners
+	virtual void precJacobiApply(const scalar *const r, scalar *const __restrict z) const = 0;
+
+	/// Inverts diagonal blocks and allocates temporary array needed for Gauss-Seidel
+	virtual void precSGSSetup() = 0;
+
+	/// Applies a symmetric Gauss-Seidel type preconditioner
+	virtual void precSGSApply(const scalar *const r, scalar *const __restrict z) const = 0;
+
+	/// Computes a incomplete lower-upper factorization
+	virtual void precILUSetup() = 0;
+
+	/// Applies an LU factorization
+	virtual void precILUApply(const scalar *const r, scalar *const __restrict__ z) const = 0;
 };
 
 }

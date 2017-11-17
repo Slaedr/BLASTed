@@ -1,12 +1,16 @@
 cmake_minimum_required(VERSION 2.8)
 
-# The environment variable EIGEN_DIR needs to be set to the path of the Eigen top-level directory.
-
-# Pass -DNOOMP=1 to compile without OpenMP
-# Pass -DMICKNC=1 to compile for Xeon Phi Knights Corner.
-# Pass -DSSE=1 to compile with SSE 4.2 instructions; ignored when compiling for KNC.
-# Pass -DAVX=1 to compile with AVX instructions.
-# Pass -DPROFILE=1 for profiling.
+# Variables that can/must be passed to the cmake command:
+#
+# - The environment variable EIGEN_DIR needs to be set to the path of the Eigen top-level directory.
+# - -DNOOMP=1 to compile without OpenMP
+# - -DMICKNC=1 to compile for Xeon Phi Knights Corner.
+# - -DSSE=1 to compile with SSE 4.2 instructions; ignored when compiling for KNC.
+# - -DAVX=1 to compile with AVX instructions.
+# - -DWITH_PETSC=1 to compile with PETSc support; in which case
+#     make sure PETSC_LIB and PETSC_ARCH envonment variables have been set.
+#     Note that in this case, MPI is required.
+# - -DPROFILE=1 for profiling.
 
 project (blasted)
 
@@ -116,7 +120,7 @@ set(LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR}/lib)
 
 # libraries to be compiled
 
-#add_subdirectory(src)
+add_subdirectory(src)
 
 # Tests
 

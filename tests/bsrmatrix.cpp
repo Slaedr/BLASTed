@@ -33,7 +33,19 @@ int main(const int argc, const char *const argv[])
 
 	if(teststr == "apply")
 	{
-		std::cout << "Not implemented yet..\n";
+		int rowptr[3] = {0, 1, 2}, colind[2] = {0,1}, diagind[2]={0,1};
+		double data[8] = {1,0,0,1,2,0,0,2};
+		LinearOperator<double,int>* testmat = nullptr;
+		testmat = new BSRMatrix<double,int,2>(2,rowptr,colind,data,diagind,1,1);
+		double avec[4] = {1,2,3,4}, bvec[4];
+		testmat->apply(1.0, avec, bvec);
+
+		assert(bvec[0]==1);
+		assert(bvec[1]==2);
+		assert(bvec[2]==6);
+		assert(bvec[3]==8);
+	
+		delete testmat;
 	}
 	else if(teststr == "gemv")
 	{

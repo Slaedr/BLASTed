@@ -35,5 +35,11 @@ To build the [Doxygen](http://www.stack.nl/~dimitri/doxygen/) documentation,
     cd path/to/BLASTed/doc
     doxygen blasted_doxygen.cfg
 
-This will build HTML documentation in the current directory.
+This will build HTML documentation in a subdirectory called html in the current directory.
+
+Finally, from the build directory, one can issue
+
+   make tags
+   
+to generate a tags file for [easier navigation of the source code in Vim]((http://vim.wikia.com/wiki/Browsing_programs_with_tags).
 

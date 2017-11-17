@@ -31,8 +31,8 @@ int TestCSRMatrix<scalar>::testStorage(const std::string compare_file)
 	int snnz, snrows, sncols;
 	sortedfin >> snrows >> sncols >> snnz;
 
-	assert(snnz == browptr[nbrows]);
-	assert(snrows == nbrows);
+	assert(snnz == mat.browptr[mat.nbrows]);
+	assert(snrows == mat.nbrows);
 
 	std::vector<int> srowinds(snnz);
 	std::vector<int> srowptr(snrows+1);
@@ -56,13 +56,13 @@ int TestCSRMatrix<scalar>::testStorage(const std::string compare_file)
 	
 	for(int i = 0; i < snnz; i++)
 	{
-		assert(scolinds[i]-1 == bcolind[i]);
-		assert(svals[i] == vals[i]);
+		assert(scolinds[i]-1 == mat.bcolind[i]);
+		assert(svals[i] == mat.vals[i]);
 	}
-	for(int i = 0; i < nbrows+1; i++)
-		assert(srowptr[i] == browptr[i]);
-	for(int i = 0; i < nbrows; i++)
-		assert(sdinds[i] == diagind[i]);
+	for(int i = 0; i < mat.nbrows+1; i++)
+		assert(srowptr[i] == mat.browptr[i]);
+	for(int i = 0; i < mat.nbrows; i++)
+		assert(sdinds[i] == mat.diagind[i]);
 
 	sortedfin.close();
 	return 0;

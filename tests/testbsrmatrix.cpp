@@ -3,3 +3,9 @@
  * \author Aditya Kashi
  */
 
+#include "testbsrmatrix.hpp"
+
+template <int bs>
+TestBSRMatrix<bs>::TestBSRMatrix(const int nb, const int na)
+	: BSRMatrix<double,int,bs>(nb,na)
+{ }

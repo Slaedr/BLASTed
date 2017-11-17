@@ -1,8 +1,9 @@
-
-add_library(cblasted cblasted.cpp)
-
 if(WITH_PETSC)
-	target_link_libraries(cblasted ${PETSC_LIB})
+	find_package(MPI REQUIRED)
+
+	add_library(blasted_petsc blasted_petsc.cpp)
+	target_link_libraries(blasted_petsc ${PETSC_LIB})
+	target_include_directories(blasted_petsc PRIVATE ${MPI_C_INCLUDE_PATH})
 endif()
 
 # Tags
@@ -16,7 +17,6 @@ add_custom_target ( tags
 find_program(CTAGS_PATH ctags)
 if(CTAGS_PATH)
     message(STATUS "Found ctags: ${CTAGS_PATH}")
-    add_dependencies (cblasted tags)
 else()
 	message(STATUS "ctags not found! Tags will not be generated.")
 endif(CTAGS_PATH)

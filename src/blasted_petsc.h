@@ -19,12 +19,12 @@ typedef enum {JACOBI, SGS, ILU0} Prec_type;
 /// State necessary for preconditioners
 typedef struct
 {
-	void* bmat;               ///< BLASTed matrix
+	const void* bmat;               ///< BLASTed matrix
 	
-	int bs;                   ///< Block size of dense blocks
-	Prec_type prectype;       ///< The preconditioner to use
-	int nbuildsweeps;         ///< Number of async build sweeps
-	int napplysweeps;         ///< Number of async apply sweeps
+	const int bs;                   ///< Block size of dense blocks
+	const Prec_type prectype;       ///< The preconditioner to use
+	const int nbuildsweeps;         ///< Number of async build sweeps
+	const int napplysweeps;         ///< Number of async apply sweeps
 	
 	double cputime;           ///< Total CPU time taken by FGPILU
 	double walltime;          ///< Total wall-clock time taken by FGPILU

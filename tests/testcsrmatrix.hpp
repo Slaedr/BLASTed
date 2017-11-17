@@ -35,11 +35,7 @@ public:
 	int testStorage(const std::string compare_file);
 
 protected:
-	using BSRMatrix<scalar,int,1>::vals;
-	using BSRMatrix<scalar,int,1>::bcolind;
-	using BSRMatrix<scalar,int,1>::browptr;
-	using BSRMatrix<scalar,int,1>::diagind;
-	using BSRMatrix<scalar,int,1>::nbrows;
+	using BSRMatrix<scalar,int,1>::mat;
 };
 
 #endif

@@ -13,25 +13,30 @@
 
 #include "blockmatrices.hpp"
 
+#include "blasted_petsc.h"
+
 using namespace blasted;
+
+typedef LinearOperator<PetscReal, PetscInt> BlastedPetscMat;
 
 #define PETSCOPTION_STR_LEN 10
 
-static PetscErrorCode getDataFromOptions(Blasted_data *const ctx)
+/// Returns a dynamically allocated Blasted_data object after setting options from PETSc options
+static Blasted_data* newDataFromOptions(const int bsize)
 {
-	PetscErrorCode ierr=0;
+	Prec_type ptype;
+
 	PetscBool set = PETSC_FALSE;
-	ierr = PetscOptionsHasName(NULL, NULL, "blasted_pc_type", &set); CHKERRQ(ierr);
+	PetscOptionsHasName(NULL, NULL, "blasted_pc_type", &set);
 	if(set == PETSC_FALSE) {
 		printf("BLASTed: Preconditioner type not set! Setting to Jacobi.\n");
-		ctx->prectype = JACOBI;
+		ptype = JACOBI;
 	}
 	else {
 		char precstr[PETSCOPTION_STR_LEN];
 		PetscBool flag = PETSC_FALSE;
-		ierr = PetscOptionsGetString(NULL, NULL, "blasted_pc_type", 
+		PetscOptionsGetString(NULL, NULL, "blasted_pc_type", 
 				precstr, PETSCOPTION_STR_LEN, &flag);
-		CHKERRQ(ierr);
 		if(flag == PETSC_FALSE) {
 			printf("BLASTed: Preconditioner type not set!\n");
 			abort();
@@ -39,41 +44,51 @@ static PetscErrorCode getDataFromOptions(Blasted_data *const ctx)
 
 		std::string precstr2 = precstr;
 		if(precstr2 == "jacobi")
-			ctx->prectype = JACOBI;
+			ptype = JACOBI;
 		else if(precstr2 == "sgs")
-			ctx->prectype = SGS;
+			ptype = SGS;
 		else if(precstr2 == "ilu0")
-			ctx->prectype = ILU0;
+			ptype = ILU0;
 		else {
 			printf("BLASTed: Preconditioner type not available!\n");
 			abort();
 		}
 	}
 	
-	ierr = PetscOptionsHasName(NULL, NULL, "blasted_async_sweeps", &set); CHKERRQ(ierr);
+	PetscInt sweeps[2];
+	PetscOptionsHasName(NULL, NULL, "blasted_async_sweeps", &set);
 	if(set == PETSC_FALSE) {
 		printf("BLASTed: Number of async sweeps not set!\n");
 		abort();
 	}
 	else {
 		PetscBool flag = PETSC_FALSE;
-		PetscInt sweeps[2];
 		PetscInt nmax;
-		ierr = PetscOptionsGetIntArray(NULL, NULL, "blasted_async_sweeps", sweeps, &nmax, &flag);
-		CHKERRQ(ierr);
+		PetscOptionsGetIntArray(NULL, NULL, "blasted_async_sweeps", sweeps, &nmax, &flag);
 		
-		if(flag == PETSC_FALSE) {
-			printf("BLASTed: Number of async sweeps not set!\n");
+		if(flag == PETSC_FALSE || nmax < 2) {
+			printf("BLASTed: Number of async sweeps not set properly!\n");
 			abort();
 		}
-
-		ctx->nbuildsweeps = sweeps[0];
-		ctx->napplysweeps = sweeps[1];
 	}
 
-	return ierr;
+	/*Blasted_data* ctx = new Blasted_data {bmat=NULL; bs = bsize; prectype = ptype;
+		nbuildsweeps = sweeps[0]; napplysweeps = sweeps[1];
+		cputime = 0; walltime = 0; factorcputime = 0; factorwalltime = 0;
+		applycputime = 0; applywalltime = 0;
+	}*/
+	Blasted_data* ctx = new Blasted_data {nullptr, bsize, ptype,
+		sweeps[0], sweeps[1],
+		0, 0, 0, 0, 0, 0
+	};
+
+	return ctx;
 }
 
+/** \brief Generates a new native matrix from the preconditioning operator in a PC
+ *
+ * \param[in,out] pc PETSc preconditioner context
+ */
 void createNewBlockMatrix(PC pc)
 {
 	PetscInt firstrow, lastrow, localrows, localcols, globalrows, globalcols, numprocs;
@@ -84,7 +99,7 @@ void createNewBlockMatrix(PC pc)
 	PCShellGetContext(pc, (void**)&ctx);
 
 	// delete old matrix
-	LinearOperator<PetscReal,PetscInt>* op = (LinearOperator<PetscReal,PetscInt>*)ctx->bmat;
+	const BlastedPetscMat* op = (const BlastedPetscMat*)ctx->bmat;
 	delete op;
 
 	/* get the local preconditioning matrix
@@ -122,7 +137,7 @@ void createNewBlockMatrix(PC pc)
 	const PetscInt Adnnz = Adiag->nz;
 
 #ifdef DEBUG
-	printf("BLASTed: createNewBlockMatrix(): firstrow = %d, lastrow = %d, 
+	printf("BLASTed: createNewBlockMatrix(): firstrow = %d, lastrow = %d, \
 			localrows = %d, localcols = %d, globalrows = %d, globalcols = %d\n", 
 			firstrow, lastrow, localrows, localcols, globalrows, globalcols);
 	
@@ -131,8 +146,8 @@ void createNewBlockMatrix(PC pc)
 				localrows, localcols);
 	
 	if(localrows != (lastrow-firstrow))
-		printf("! BLASTed: createNewBlockMatrix(): Ownership range %d and local rows %d are not 
-				consistent with each other!", 
+		printf("! BLASTed: createNewBlockMatrix(): \
+				Ownership range %d and local rows %d are not consistent with each other!", 
 				lastrow-firstrow, localrows);
 	
 	if(Adnnz != Adrowp[localrows])
@@ -146,7 +161,8 @@ void createNewBlockMatrix(PC pc)
 			abort();
 			break;
 		case 1:
-			op = new BSRMatrix<PetscReal,PetscInt,1>(localrows, Adrowp, Adcols, Advals, Addiagind,
+			op = new BSRMatrix<PetscReal, PetscInt,1>(localrows, 
+					Adrowp, Adcols, Advals, Addiagind,
 					ctx->nbuildsweeps,ctx->napplysweeps);
 			break;
 		/*case 2:
@@ -177,17 +193,9 @@ extern "C" {
 
 PetscErrorCode setup_blasted(PC pc, const int bs)
 {
-	Blasted_data* ctx;
-	ctx = new Blasted_data;
-	ctx->bmat = nullptr;
+	Blasted_data* ctx = newDataFromOptions(bs);
 	PetscErrorCode ierr = PCShellSetContext(pc, (void*)ctx); CHKERRQ(ierr);
-
-	ctx->bs = bs;
-	ctx->cputime = ctx->walltime = ctx->factorcputime = ctx->factorwalltime = 0;
-	ctx->applycputime = ctx->applywalltime = 0;
-	
-	// read options
-	ierr = getDataFromOptions(ctx);
+	return ierr;
 }
 
 PetscErrorCode cleanup_blasted(PC pc)
@@ -196,10 +204,11 @@ PetscErrorCode cleanup_blasted(PC pc)
 	Blasted_data* ctx;
 	ierr = PCShellGetContext(pc, (void**)&ctx); CHKERRQ(ierr);
 	
-	LinearOperator<PetscReal,PetscInt>* mat = (LinearOperator<PetscReal,PetscInt>*)ctx->bmat;
+	BlastedPetscMat* mat = (BlastedPetscMat*)ctx->bmat;
 	delete mat;
-
 	delete ctx;
+
+	return ierr;
 }
 
 PetscErrorCode compute_preconditioner(PC pc)
@@ -211,6 +220,7 @@ PetscErrorCode compute_preconditioner(PC pc)
 	// get control structure
 	Blasted_data* ctx;
 	PCShellGetContext(pc, (void**)&ctx);
+	BlastedPetscMat *const op = (BlastedPetscMat *const)ctx->bmat;
 
 	struct timeval time1, time2;
 	gettimeofday(&time1, NULL);
@@ -242,19 +252,21 @@ PetscErrorCode compute_preconditioner(PC pc)
 	return ierr;
 }
 
-PetscErrorCode apply_fgpilu_jacobi_local(PC pc, Vec r, Vec z)
+PetscErrorCode apply_local(PC pc, Vec r, Vec z)
 {
-	// get local arrays
 	const PetscReal *ra;
 	PetscReal *za;
 	PetscInt start, end;
 	VecGetOwnershipRange(r, &start, &end);
+
 	Blasted_data* ctx;
 	PCShellGetContext(pc, (void**)&ctx);
+	const BlastedPetscMat *const mat = (const BlastedPetscMat *const)ctx->bmat;
+
 #ifdef DEBUG
-	if(ctx->nrows != end-start) {
-		printf("! apply_fgpilu_jacobi_local: Dimension of the input vector r 
-				does not match dimension of the preconditioning matrix!");
+	if(mat->dim() != end-start) {
+		printf("! apply_fgpilu_jacobi_local: Dimension of the input vector r\n");
+		printf("     does not match dimension of the preconditioning matrix!\n");
 		return -1;
 	}
 #endif
@@ -267,7 +279,19 @@ PetscErrorCode apply_fgpilu_jacobi_local(PC pc, Vec r, Vec z)
 	double initialwtime = (double)time1.tv_sec + (double)time1.tv_usec * 1.0e-6;
 	double initialctime = (double)clock() / (double)CLOCKS_PER_SEC;
 
-	// TODO: Call prec application here
+	switch(ctx->prectype) {
+		case JACOBI:
+			mat->precJacobiApply(ra, za);
+			break;
+		case SGS:
+			mat->precSGSApply(ra, za);
+			break;
+		case ILU0:
+			mat->precILUApply(ra, za);
+			break;
+		default:
+			printf("BLASTed: apply_local: Preconditioner not available!\n");
+	}
 
 	gettimeofday(&time2, NULL);
 	double finalwtime = (double)time2.tv_sec + (double)time2.tv_usec * 1.0e-6;
@@ -275,7 +299,6 @@ PetscErrorCode apply_fgpilu_jacobi_local(PC pc, Vec r, Vec z)
 	double finalctime = (double)clock() / (double)CLOCKS_PER_SEC;
 	ctx->applycputime += (finalctime - initialctime);
 
-	// Restore arrays
 	VecRestoreArrayRead(r, &ra);
 	VecRestoreArray(z, &za);
 	

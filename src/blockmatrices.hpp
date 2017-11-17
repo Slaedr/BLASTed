@@ -7,8 +7,9 @@
 #ifndef BLOCKMATRICES_H
 #define BLOCKMATRICES_H
 
-// get around dependent templates for Eigen
+/// Shorthand for dependent templates for Eigen segment function for vectors
 #define SEG template segment
+/// Shorthand for dependent templates for Eigen block function for matrices
 #define BLK template block
 
 #include "linearoperator.hpp"
@@ -24,6 +25,28 @@ using Eigen::RowMajor;
 using Eigen::Matrix;
 template <typename scalar>
 using Vector = Matrix<scalar,Dynamic,1>;
+
+/// A collection of data that represents an immutable compressed sparse block-row matrix
+template <typename scalar, typename index>
+struct ConstRawBSRMatrix
+{
+	const index *const browptr;
+	const index *const bcolind;
+	const scalar *const vals;
+	const index *const diagind;
+	const index nbrows;
+};
+
+/// A collection of data that represents a compressed sparse block-row matrix
+template <typename scalar, typename index>
+struct RawBSRMatrix
+{
+	index * browptr;
+	index * bcolind;
+	scalar * vals;
+	index * diagind;
+	index nbrows;
+};
 
 /// Block sparse row matrix
 /** Dense blocks stored in a (block-) row-major storage order.
@@ -134,9 +157,6 @@ public:
 	 */
 	void precJacobiApply(const scalar *const r, scalar *const __restrict z) const;
 
-	/// Allocates storage for a vector \ref ytemp required for both SGS and ILU applications
-	void allocTempVector();
-
 	/// Inverts diagonal blocks and allocates temporary array needed for Gauss-Seidel
 	void precSGSSetup();
 
@@ -161,7 +181,7 @@ public:
 	void precILUApply(const scalar *const r, scalar *const __restrict z) const;
 	
 	/// Returns the dimension (number of rows) of the square matrix
-	index dim() const { return nbrows*bs; }
+	index dim() const { return mat.nbrows*bs; }
 
 	// Prints the matrix out to a file in dense format
 	void printDiagnostic(const char choice) const;
@@ -173,26 +193,8 @@ protected:
 	 */
 	bool owner;
 
-	/// Entries of the matrix
-	/** All the blocks are stored contiguously as one big block-column
-	 * having as many block-rows as the total number of non-zero blocks
-	 */
-	scalar* vals;
-	
-	/// Block-column indices of blocks in data
-	index* bcolind;
-	
-	/// Stores indices into bcolind where block-rows start
-	/** Has size (number of rows + 1). 
-	 * The last entry stores the total number of non-zero blocks.
-	 */
-	index* browptr;
-
-	/// Number of block-rows
-	index nbrows;
-	
-	/// Stores indices into bcolind if diagonal blocks
-	index* diagind;
+	/// The BSR matrix storage
+	RawBSRMatrix<scalar,index> mat;
 
 	/// Storage for factored or inverted diagonal blocks
 	Matrix<scalar,Dynamic,bs,RowMajor> dblocks;
@@ -216,7 +218,9 @@ protected:
 	const int thread_chunk_size;
 };
 
-/// The limiting case of BSR matrix when block size is 1, ie., CSR matrix
+/// Compressed sparse row (CSR) matrix
+/** The limiting case of BSR matrix when block size is 1
+ */
 template <typename scalar, typename index>
 class BSRMatrix<scalar,index,1> : public LinearOperator<scalar, index>
 {
@@ -309,19 +313,16 @@ public:
 			const scalar b, const scalar *const y,
 			scalar *const z) const;
 
-	/// Computes inverse or factorization of diagonal blocks for applying Jacobi preconditioner
+	/// Computes inverse or factorization of diagonal blocks for the Jacobi preconditioner
 	void precJacobiSetup();
 	
-	/// Applies block-Jacobi preconditioner
+	/// Applies Jacobi preconditioner
 	void precJacobiApply(const scalar *const r, scalar *const __restrict z) const;
 
-	/// Allocates storage for a vector \ref ytemp required for both SGS and ILU applications
-	void allocTempVector();
-
-	/// Inverts diagonal blocks and allocates temporary array needed for Gauss-Seidel
+	/// Inverts diagonal blocks and allocates a temporary array needed for Gauss-Seidel
 	void precSGSSetup();
 
-	/// Applies a block symmetric Gauss-Seidel preconditioner ("LU-SGS")
+	/// Applies a block symmetric Gauss-Seidel preconditioner
 	void precSGSApply(const scalar *const r, scalar *const __restrict z) const;
 
 	/// Computes an incomplete block lower-upper factorization
@@ -331,7 +332,7 @@ public:
 	void precILUApply(const scalar *const r, scalar *const __restrict z) const;
 	
 	/// Returns the number of rows in the matrix
-	index dim() const { return nbrows; }
+	index dim() const { return mat.nbrows; }
 	
 	/// Prints out the matrix to a file in dense format
 	void printDiagnostic(const char choice) const;
@@ -342,27 +343,9 @@ protected:
 	 * is owned by this object
 	 */
 	bool owner;
-
-	/// Entries of the matrix
-	/** All the blocks are stored contiguously as one big block-column
-	 * having as many block-rows as the total number of non-zero blocks
-	 */
-	scalar* vals;
-
-	/// Block-column indices of blocks in data
-	index* bcolind;
 	
-	/// Stores indices into bcolind where block-rows start
-	/** Has size (number of rows + 1). 
-	 * The last entry stores the total number of non-zero blocks.
-	 */
-	index* browptr;
-
-	/// Number of block-rows
-	index nbrows;
-	
-	/// Stores indices into bcolind if diagonal blocks
-	index* diagind;
+	/// The CSR matrix data	
+	RawBSRMatrix<scalar,index> mat;
 
 	/// Storage for factored or inverted diagonal blocks
 	scalar* dblocks;
@@ -388,6 +371,103 @@ protected:
 	/// Thread chunk size for OpenMP parallelism
 	const int thread_chunk_size;
 };
+
+template <typename scalar, typename index, int bs>
+class BSRMatrixView : public MatrixView<scalar, index>
+{
+	static_assert(std::numeric_limits<index>::is_signed, "Signed index type required!");
+	static_assert(bs > 0, "Block size must be positive!");
+
+public:
+	/// A constructor which just wraps a BSR matrix described by 4 arrays
+	/** \param[in] n_brows Number of block-rows
+	 * \param[in] brptrs Array of block-row pointers
+	 * \param[in] bcinds Array of block-column indices
+	 * \param[in] values Non-zero values
+	 * \param[in] dinds Array of diagonal entry pointers
+	 * \param[in] n_buildsweeps Number of asynchronous preconditioner build sweeps
+	 * \param[in] n_applysweeps Number of asynchronous preconditioner apply sweeps
+	 *
+	 * Does not take ownership of the 4 arrays; they are not cleaned up in the destructor either.
+	 */
+	BSRMatrixView(const index n_brows, index *const brptrs,
+		index *const bcinds, scalar *const values, index *const dinds,
+		const int n_buildsweeps, const int n_applysweeps);
+
+	/// Does nothing
+	virtual ~BSRMatrixView();
+
+	/// Computes the matrix vector product of this matrix with one vector-- y := a Ax
+	virtual void apply(const scalar a, const scalar *const x, scalar *const __restrict y) const;
+
+	/// Almost the BLAS gemv: computes z := a Ax + by for  scalars a and b
+	/** \warning x must not alias z.
+	 */
+	virtual void gemv3(const scalar a, const scalar *const __restrict x, 
+			const scalar b, const scalar *const y,
+			scalar *const z) const;
+
+	/// Computes inverse or factorization of diagonal blocks for applying Jacobi preconditioner
+	void precJacobiSetup();
+	
+	/// Applies block-Jacobi preconditioner. 
+	/** Approximately solves D z = r
+	 */
+	void precJacobiApply(const scalar *const r, scalar *const __restrict z) const;
+
+	/// Inverts diagonal blocks and allocates temporary array needed for Gauss-Seidel
+	void precSGSSetup();
+
+	/// Applies a block symmetric Gauss-Seidel preconditioner ("LU-SGS")
+	/** Approximately solves (D+L) D^(-1) (D+U) z = r
+	 * where D, L and U are the diagonal, upper and lower parts of the matrix respectively,
+	 * by applying asynchronous Jacobi sweeps.
+	 * This block version is adapted from the scalar version in \cite async:anzt_triangular
+	 */
+	void precSGSApply(const scalar *const r, scalar *const __restrict z) const;
+
+	/// Computes an incomplete block lower-upper factorization
+	/** Finds \f$ \tilde{L} \f$ and \f$ \tilde{U} \f$ such that
+	 * \f[ \tilde{L} \tilde{U} = A \f]
+	 * is approximately satisifed, with \f$ \tilde{L} \f$ unit lower triangular.
+	 * The sparsity if A is preserved, so this is ILU(0).
+	 * This block version is adapted from the scalar version in \cite ilu:chowpatel . 
+	 */
+	void precILUSetup();
+
+	/// Applies a block LU factorization L U z = r
+	void precILUApply(const scalar *const r, scalar *const __restrict z) const;
+	
+	/// Returns the dimension (number of rows) of the square matrix
+	index dim() const { return mat.nbrows*bs; }
+
+protected:
+
+	/// The BSR matrix storage
+	RawBSRMatrix<scalar,index> mat;
+
+	/// Storage for factored or inverted diagonal blocks
+	Matrix<scalar,Dynamic,bs,RowMajor> dblocks;
+
+	/// Storage for ILU0 factorization
+	/** Use \ref bcolind and \ref browptr to access the storage,
+	 * as the non-zero structure of this matrix is same as the original matrix.
+	 */
+	Matrix<scalar,Dynamic,bs,RowMajor> iluvals;
+
+	/// Storage for intermediate results in preconditioning operations
+	mutable Vector<scalar> ytemp;
+
+	/// Number of sweeps used to build preconditioners
+	const int nbuildsweeps;
+
+	/// Number of sweeps used to apply preconditioners
+	const int napplysweeps;
+
+	/// Thread chunk size for OpenMP parallelism
+	const int thread_chunk_size;
+};
+
 
 #include "blockmatrices.ipp"
 
