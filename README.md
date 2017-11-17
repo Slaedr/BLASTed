@@ -41,5 +41,5 @@ Finally, from the build directory, one can issue
 
    make tags
    
-to generate a tags file for [easier navigation of the source code in Vim]((http://vim.wikia.com/wiki/Browsing_programs_with_tags).
+to generate a tags file for [easier navigation of the source code in Vim](http://vim.wikia.com/wiki/Browsing_programs_with_tags).
 
