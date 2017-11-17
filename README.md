@@ -39,7 +39,7 @@ This will build HTML documentation in a subdirectory called html in the current 
 
 Finally, from the build directory, one can issue
 
-   make tags
+    make tags
    
 to generate a tags file for [easier navigation of the source code in Vim](http://vim.wikia.com/wiki/Browsing_programs_with_tags).
 
