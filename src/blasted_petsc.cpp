@@ -90,14 +90,15 @@ static Blasted_data* newDataFromOptions(const int bsize)
  *
  * \param[in,out] pc PETSc preconditioner context
  */
-void createNewBlockMatrixView(PC pc)
+PetscErrorCode createNewBlockMatrixView(PC pc)
 {
 	PetscInt firstrow, lastrow, localrows, localcols, globalrows, globalcols, numprocs;
+	PetscErrorCode ierr = 0;
 	MPI_Comm_size(PETSC_COMM_WORLD,&numprocs);
 	
 	// get control structure
 	Blasted_data* ctx;
-	PCShellGetContext(pc, (void**)&ctx);
+	ierr = PCShellGetContext(pc, (void**)&ctx); CHKERRQ(ierr);
 
 	// delete old matrix
 	BlastedPetscMat* op = reinterpret_cast<BlastedPetscMat*>(ctx->bmat);
@@ -107,11 +108,11 @@ void createNewBlockMatrixView(PC pc)
 	 * we operate on the diagonal matrix block corresponding to this process
 	 */
 	Mat A;
-	PCGetOperators(pc, NULL, &A);
+	ierr = PCGetOperators(pc, NULL, &A); CHKERRQ(ierr);
 	// Petsc distributes matrices by row
-	MatGetOwnershipRange(A, &firstrow, &lastrow);		
-	MatGetLocalSize(A, &localrows, &localcols);
-	MatGetSize(A, &globalrows, &globalcols);
+	ierr = MatGetOwnershipRange(A, &firstrow, &lastrow); CHKERRQ(ierr);	
+	ierr = MatGetLocalSize(A, &localrows, &localcols); CHKERRQ(ierr);
+	ierr = MatGetSize(A, &globalrows, &globalcols); CHKERRQ(ierr);
 	const Mat_SeqAIJ *Adiag;
 	//const Mat_SeqAIJ *Aoffdiag;
 
@@ -130,11 +131,6 @@ void createNewBlockMatrixView(PC pc)
 		Adiag = (const Mat_SeqAIJ*)A->data;
 		//Aoffdiag = NULL;
 	}
-
-	const PetscInt* Adrowp = Adiag->i;
-	const PetscInt* Adcols = Adiag->j;
-	const PetscInt* Addiagind = Adiag->diag;
-	const PetscReal* Advals = Adiag->a;
 
 #ifdef DEBUG
 	const PetscInt Adnnz = Adiag->nz;
@@ -164,7 +160,7 @@ void createNewBlockMatrixView(PC pc)
 			break;
 		case 1:
 			op = new BSRMatrixView<PetscReal, PetscInt,1>(localrows, 
-					Adrowp, Adcols, Advals, Addiagind,
+					Adiag->i, Adiag->j, Adiag->a, Adiag->diag,
 					ctx->nbuildsweeps,ctx->napplysweeps);
 			break;
 		/*case 2:
@@ -189,6 +185,7 @@ void createNewBlockMatrixView(PC pc)
 	}
 
 	ctx->bmat = reinterpret_cast<void*>(op);
+	return ierr;
 }
 
 extern "C" {
@@ -197,6 +194,14 @@ PetscErrorCode setup_blasted(PC pc, const int bs)
 {
 	Blasted_data* ctx = newDataFromOptions(bs);
 	PetscErrorCode ierr = PCShellSetContext(pc, (void*)ctx); CHKERRQ(ierr);
+	if(ctx->prectype == JACOBI)
+		ierr = PCShellSetName(pc, "Blasted-Jacobi");
+	else if(ctx->prectype == SGS)
+		ierr = PCShellSetName(pc, "Blasted-SGS");
+	else
+		ierr = PCShellSetName(pc, "Blasted-ILU0");
+ 	
+	CHKERRQ(ierr);
 	return ierr;
 }
 
@@ -213,15 +218,15 @@ PetscErrorCode cleanup_blasted(PC pc)
 	return ierr;
 }
 
-PetscErrorCode compute_preconditioner(PC pc)
+PetscErrorCode compute_preconditioner_blasted(PC pc)
 {
 	PetscErrorCode ierr = 0;
 
-	createNewBlockMatrixView(pc);
+	ierr = createNewBlockMatrixView(pc); CHKERRQ(ierr);
 	
 	// get control structure
 	Blasted_data* ctx;
-	PCShellGetContext(pc, (void**)&ctx);
+	ierr = PCShellGetContext(pc, (void**)&ctx); CHKERRQ(ierr);
 	BlastedPetscMat *const op = reinterpret_cast<BlastedPetscMat*>(ctx->bmat);
 
 	struct timeval time1, time2;
@@ -254,7 +259,7 @@ PetscErrorCode compute_preconditioner(PC pc)
 	return ierr;
 }
 
-PetscErrorCode apply_local(PC pc, Vec r, Vec z)
+PetscErrorCode apply_local_blasted(PC pc, Vec r, Vec z)
 {
 	PetscErrorCode ierr = 0;
 	const PetscReal *ra;
@@ -306,6 +311,18 @@ PetscErrorCode apply_local(PC pc, Vec r, Vec z)
 	VecRestoreArrayRead(r, &ra);
 	VecRestoreArray(z, &za);
 	
+	return ierr;
+}
+
+PetscErrorCode get_blasted_timing_data(PC pc, double *const factorcputime, 
+		double *const factorwalltime, double *const applycputime, double *const applywalltime)
+{
+	Blasted_data* ctx;
+	PetscErrorCode ierr = PCShellGetContext(pc, (void**)&ctx); CHKERRQ(ierr);
+	*factorcputime = ctx->factorcputime;
+	*factorwalltime = ctx->factorwalltime;
+	*applycputime = ctx->applycputime;
+	*applywalltime = ctx->applywalltime;
 	return ierr;
 }
 

@@ -2,7 +2,7 @@ if(WITH_PETSC)
 	find_package(MPI REQUIRED)
 
 	add_library(blasted_petsc blasted_petsc.cpp)
-	target_link_libraries(blasted_petsc ${PETSC_LIB})
+	target_link_libraries(blasted_petsc ${PETSC_LIB} ${MPI_CXX})
 	target_include_directories(blasted_petsc PRIVATE ${MPI_C_INCLUDE_PATH})
 endif()
 

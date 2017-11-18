@@ -46,7 +46,7 @@ PetscErrorCode setup_blasted(PC pc, const int blocksize);
 PetscErrorCode cleanup_blasted(PC pc);
 
 /// Update the preconditioner for a new matrix, if required
-PetscErrorCode compute_preconditioner(PC pc);
+PetscErrorCode compute_preconditioner_blasted(PC pc);
 
 /// Applies the preconditioner by Jacobi iterations in parallel
 /** \param pc is the PETSc preconditioner context
@@ -55,7 +55,11 @@ PetscErrorCode compute_preconditioner(PC pc);
  *
  * NOTE: It is assumed that the length of r and z on the local process is the same.
  */
-PetscErrorCode apply_local(PC pc, Vec r, Vec z);
+PetscErrorCode apply_local_blasted(PC pc, Vec r, Vec z);
+
+/// Get timing data
+PetscErrorCode get_blasted_timing_data(PC pc, double *const factorcputime, 
+		double *const factorwalltime, double *const applycputime, double *const applywalltime);
 
 #ifdef __cplusplus
 }

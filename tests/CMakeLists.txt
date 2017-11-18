@@ -11,8 +11,6 @@ target_link_libraries(testcsrmatrix testlibcsrmatrix)
 add_executable(testcoomatrix coomatrix.cpp testcoomatrix.cpp)
 target_link_libraries(testcoomatrix testlibcsrmatrix)
 
-#add_subdirectory(petsctest)
-
 # Tests
 
 enable_testing()
@@ -26,3 +24,4 @@ add_test(NAME CSRViewMatMul COMMAND testcsrmatrix apply view ${CMAKE_CURRENT_SOU
 add_test(NAME BSRMatMul COMMAND testbsrmatrix apply matrix ${CMAKE_CURRENT_SOURCE_DIR}/input/matrix.dat)
 add_test(NAME BSRViewMatMul COMMAND testbsrmatrix apply view ${CMAKE_CURRENT_SOURCE_DIR}/input/matrix.dat)
 
+add_subdirectory(petsctest)
