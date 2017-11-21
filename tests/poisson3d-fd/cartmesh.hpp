@@ -53,9 +53,12 @@ protected:
 	void computeMeshSize();
 
 public:
+	CartMesh();
+
 	CartMesh(const PetscInt npdim[NDIM], const PetscInt num_partitions);
 
-	CartMesh(const PetscInt npdim[NDIM], PetscInt ndofpernode, PetscInt stencil_width,
+	PetscErrorCode createMeshAndDMDA(const MPI_Comm comm, const PetscInt npdim[NDIM], 
+		PetscInt ndofpernode, PetscInt stencil_width,
 		DMBoundaryType bx, DMBoundaryType by, DMBoundaryType bz, DMDAStencilType stencil_type, 
 		DM *const dap, PetscMPIInt rank);
 

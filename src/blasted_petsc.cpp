@@ -148,9 +148,9 @@ PetscErrorCode createNewBlockMatrixView(PC pc)
 				Ownership range %d and local rows %d are not consistent with each other!", 
 				lastrow-firstrow, localrows);
 	
-	if(Adnnz != Adrowp[localrows])
+	if(Adnnz != Adiag->i[localrows])
 		printf("! BLASTed: createNewBlockMatrix(): M nnz = %d, last entry of M rowp = %d!\n", 
-				Adnnz, Adrowp[localrows]);
+				Adnnz, Adiag->i[localrows]);
 #endif
 
 	switch(ctx->bs) {

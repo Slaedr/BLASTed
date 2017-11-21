@@ -44,7 +44,12 @@ void CartMesh::computeMeshSize()
 	}
 }
 
+CartMesh::CartMesh()
+	: coords{NULL}
+{ }
+
 CartMesh::CartMesh(const PetscInt npdim[NDIM], const PetscInt num_partitions)
+	: coords{NULL}
 {
 	std::printf("CartMesh: Number of points in each direction: ");
 	for(int i = 0; i < NDIM; i++) {
@@ -64,10 +69,13 @@ CartMesh::CartMesh(const PetscInt npdim[NDIM], const PetscInt num_partitions)
 	std::printf("CartMesh: Total points = %d, interior points = %d\n", npointotal, ninpoin);
 }
 
-CartMesh::CartMesh(const PetscInt npdim[NDIM], PetscInt ndofpernode, PetscInt stencil_width,
+PetscErrorCode CartMesh::createMeshAndDMDA(const MPI_Comm comm, const PetscInt npdim[NDIM], 
+	PetscInt ndofpernode, PetscInt stencil_width,
 	DMBoundaryType bx, DMBoundaryType by, DMBoundaryType bz, DMDAStencilType stencil_type, 
 	DM *const dap, PetscMPIInt rank)
 {
+	PetscErrorCode ierr = 0;
+
 	for(int i = 0; i < NDIM; i++) {
 		npoind[i] = npdim[i];
 	}
@@ -90,21 +98,36 @@ CartMesh::CartMesh(const PetscInt npdim[NDIM], PetscInt ndofpernode, PetscInt st
 
 	if(rank == 0)
 		std::printf("CartMesh: Setting up DMDA\n");
-	DMDACreate3d(PETSC_COMM_WORLD, bx, by, bz, stencil_type, npoind[0]-2, npoind[1]-2, npoind[2]-2, 
+	
+	ierr = DMDACreate3d(comm, bx, by, bz, stencil_type, 
+			npoind[0]-2, npoind[1]-2, npoind[2]-2, 
 			PETSC_DECIDE, PETSC_DECIDE, PETSC_DECIDE, ndofpernode, stencil_width, 
 			NULL, NULL, NULL, dap);
-	DMDAGetInfo(*dap, NULL, NULL, NULL, NULL, &nprocs[0], &nprocs[1], &nprocs[2], 
+	CHKERRQ(ierr);
+	ierr = DMSetUp(*dap); CHKERRQ(ierr);
+
+	PetscInt M,N,P;
+	ierr = DMDAGetInfo(*dap, NULL, &M, &N, &P, &nprocs[0], &nprocs[1], &nprocs[2], 
 			NULL, NULL, NULL, NULL, NULL, NULL);
+	CHKERRQ(ierr);
+
 	ntprocs = nprocs[0]*nprocs[1]*nprocs[2];
 
-	if(rank == 0)	
+	if(rank == 0) {
+		std::printf("CartMesh: Number of points in each direction: %d,%d,%d.\n", 
+				M,N,P);
+		std::printf("CartMesh: Number of procs in each direction: %d,%d,%d.\n", 
+				nprocs[0], nprocs[1], nprocs[2]);
 		std::printf("CartMesh: Total points = %d, interior points = %d, partitions = %d\n", 
 				npointotal, ninpoin, ntprocs);
+	}
 
 	// have each process store coords; hardly costs anything
 	coords = (PetscReal**)std::malloc(NDIM*sizeof(PetscReal*));
 	for(int i = 0; i < NDIM; i++)
 		coords[i] = (PetscReal*)std::malloc(npoind[i]*sizeof(PetscReal));
+
+	return ierr;
 }
 
 CartMesh::~CartMesh()
