@@ -1205,7 +1205,9 @@ void BSRMatrix<scalar,index,1>::precILUSetup()
 {
 	if(!iluvals)
 	{
+#ifdef DEBUG
 		std::printf(" CSR Matrix: precILUSetup(): First-time setup\n");
+#endif
 
 		// Allocate lu
 		iluvals = new scalar[mat.browptr[mat.nbrows]];

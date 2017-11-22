@@ -1,5 +1,11 @@
 /** \file blockmatrices.hpp
  * \brief Classes for sparse matrices consisting of square dense blocks of static size
+ *
+ * There are two kinds of sparse matrix classes. One kind, consisting of \refBSRMatrix,
+ * implements a matrix which provides assembling operations and allocates and handles its own data.
+ * The other kind, \ref BSRMatrixView, only provides BLAS 2 operations while wrapping an
+ * external matrix. It does not allocate or delete storage for the matrix itself.
+ *
  * \author Aditya Kashi
  * \date 2017-07-29
  */
@@ -385,7 +391,7 @@ public:
 	 * \param[in] brptrs Array of block-row pointers
 	 * \param[in] bcinds Array of block-column indices
 	 * \param[in] values Non-zero values
-	 * \param[in] dinds Array of diagonal entry pointers
+	 * \param[in] dinds Array of pointers to diagonal blocks
 	 * \param[in] n_buildsweeps Number of asynchronous preconditioner build sweeps
 	 * \param[in] n_applysweeps Number of asynchronous preconditioner apply sweeps
 	 *
@@ -395,7 +401,7 @@ public:
 		const index *const bcinds, const scalar *const values, const index *const dinds,
 		const int n_buildsweeps, const int n_applysweeps);
 
-	/// Does nothing
+	/// Cleans up temporary data needed for preconditioning operations
 	virtual ~BSRMatrixView();
 
 	/// Computes the matrix vector product of this matrix with one vector-- y := a Ax
@@ -495,7 +501,7 @@ public:
 		const index *const cinds, const scalar *const values, const index *const dinds,
 		const int n_buildsweeps, const int n_applysweeps);
 
-	/// De-allocates memory
+	/// De-allocates temporary storage only, not the matrix storage itself
 	virtual ~BSRMatrixView();
 
 	/// Computes the matrix vector product of this matrix with one vector-- y := a Ax

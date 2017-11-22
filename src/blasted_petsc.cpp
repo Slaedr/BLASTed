@@ -24,10 +24,6 @@ typedef MatrixView<PetscReal, PetscInt> BlastedPetscMat;
 /// Sets options from PETSc options
 static PetscErrorCode setupDataFromOptions(PC pc)
 {
-#ifdef DEBUG
-	printf("BLASTed for PETSc: First time setup..\n");
-#endif
-	
 	PetscErrorCode ierr=0;
 	Blasted_data* ctx;
 	ierr = PCShellGetContext(pc, (void**)&ctx); CHKERRQ(ierr);
@@ -107,15 +103,19 @@ static PetscErrorCode setupDataFromOptions(PC pc)
 	return ierr;
 }
 
-/** \brief Generates a matrix view from the preconditioning operator in a PC
+/** \brief Generates a matrix view from the preconditioning operator in a sub PC
  *
+ * \warning We assume that the pc passed here is a subpc, ie, a local preconditioner.
+ * \todo TODO: Implement this for block preconditioners as well
  * \param[in,out] pc PETSc preconditioner context
  */
 PetscErrorCode createNewBlockMatrixView(PC pc)
 {
-	PetscInt firstrow, lastrow, localrows, localcols, globalrows, globalcols, numprocs;
 	PetscErrorCode ierr = 0;
-	MPI_Comm_size(PETSC_COMM_WORLD,&numprocs);
+
+	PetscInt firstrow, lastrow, localrows, localcols, globalrows, globalcols;
+	/*PetscInt numprocs;
+	MPI_Comm_size(PETSC_COMM_WORLD,&numprocs);*/
 	
 	// get control structure
 	Blasted_data* ctx;
@@ -139,7 +139,7 @@ PetscErrorCode createNewBlockMatrixView(PC pc)
 
 	// get access to local matrix entries
 
-	if(numprocs > 1) {	
+	/*if(numprocs > 1) {
 		const Mat_MPIAIJ *Atemp = (const Mat_MPIAIJ*)A->data;
 		
 		// Square diagonal portion of the local part of the matrix
@@ -148,12 +148,12 @@ PetscErrorCode createNewBlockMatrixView(PC pc)
 		// Off-diagonal portion of the local part of the matrix
 		//Aoffdiag = (const Mat_SeqAIJ*)Atemp->B->data;
 	}
-	else {
+	else {*/
 		Adiag = (const Mat_SeqAIJ*)A->data;
 		//Aoffdiag = NULL;
-	}
+	//}
 
-#ifdef DEBUG
+#if 0
 	const PetscInt Adnnz = Adiag->nz;
 
 	printf("BLASTed: createNewBlockMatrix(): firstrow = %d, lastrow = %d,\n",

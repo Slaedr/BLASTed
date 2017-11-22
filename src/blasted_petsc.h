@@ -1,5 +1,10 @@
 /** \file blasted_petsc.h
- * \brief C header for the PETSc interface of preconditioning operations
+ * \brief C header for the PETSc interface of local preconditioning operations
+ *
+ * We only deal with local preconditioning operations, that is,
+ * either single-process solves or the subdomain solves for a global solver such as
+ * additive Schwarz.
+ *
  * \author Aditya Kashi
  */
 
@@ -16,7 +21,7 @@ extern "C" {
 /// The types of preconditioners that BLASTed provides
 typedef enum {JACOBI, SGS, ILU0} Prec_type;
 
-/// State necessary for preconditioners
+/// State necessary for local preconditioners
 /** The user must create a variable of this type,
  * set \ref first_setup_done to false and \ref bs to the required block size,
  * and then pass it to PCShellSetContext.
@@ -44,13 +49,17 @@ typedef struct
 } Blasted_data;
 
 /// Free arrays in the context struct
+/** \param pc A PETSc subdomain preconditioner context
+ */
 PetscErrorCode cleanup_blasted(PC pc);
 
-/// Update the preconditioner for a new matrix, if required
+/// Update the local preconditioner for a new matrix
+/** \param pc A PETSc subdomain preconditioner context
+ */
 PetscErrorCode compute_preconditioner_blasted(PC pc);
 
-/// Applies the preconditioner by Jacobi iterations in parallel
-/** \param pc is the PETSc preconditioner context
+/// Applies the local preconditioner by Jacobi iterations in parallel
+/** \param pc is the PETSc local preconditioner context
  * \param r is the residual vector, ie, the RHS
  * \param z is the unknown vector to be computed.
  *
@@ -59,6 +68,8 @@ PetscErrorCode compute_preconditioner_blasted(PC pc);
 PetscErrorCode apply_local_blasted(PC pc, Vec r, Vec z);
 
 /// Get timing data
+/** \param pc A PETSc subdomain preconditioner context
+ */
 PetscErrorCode get_blasted_timing_data(PC pc, double *const factorcputime, 
 		double *const factorwalltime, double *const applycputime, double *const applywalltime);
 

@@ -1,7 +1,7 @@
 BLASTed
 =======
 
-Basic Linear Algebra Subprograms Threaded: A collection of sparse matrix containers and manipulators, along with certain linear algebra operations. The main focus is on providing thread-parallel low-level kernels required to implement solvers for large sparse linear systems of algebraic equations, in an object-oriented framework.
+Basic Linear Algebra Subprograms Threaded: A collection of sparse matrix containers and manipulators, along with certain linear algebra operations. The main focus is on providing thread-parallel low-level kernels required to implement solvers for large sparse linear systems of algebraic equations, in an object-oriented framework. In case of a distributed-nemory parallel solver, the operations implemented here are meant to be used in the subdomains' local preconditioners.
 
 Building
 --------
@@ -9,7 +9,7 @@ The library is currently header-only, mostly to make template instantiations pos
 - [CMake](https://cmake.org/) version 3.0 or later
 - [Eigen](http://eigen.tuxfamily.org) version 3.3.4 or later
 - [Boost](http://www.boost.org/)
-- [PETSc](http://www.mcs.anl.gov/petsc/) version 3.8 is required to build the PETSc interface.
+- [PETSc](http://www.mcs.anl.gov/petsc/) and MPI are required to build the PETSc interface. PETSc 3.8 is required to run the tests.
 
 Assuming that you are in the top-level BLASTed directory, type
 
@@ -45,4 +45,8 @@ to generate a tags file for [easier navigation of the source code in Vim](http:/
 Usage
 -----
 For C++ codes, the library can be used header-only, if necessary. But for the most part, one would want to use it as a plugin for PETSc. For an example of that, please see the finite difference Poisson example in `tests/poisson3d-fd`.
+
+Known issues
+------------
+The PETSc interface currently supports only scalar matrix storage in CSR format, ie., BSR matrices with block size 1.
 
