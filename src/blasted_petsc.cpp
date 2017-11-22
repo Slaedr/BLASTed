@@ -3,10 +3,10 @@
  * \author Aditya Kashi
  */
 
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <time.h>
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
+#include <ctime>
 #include <sys/time.h>
 
 #include <../src/mat/impls/aij/mpi/mpiaij.h>
@@ -21,13 +21,21 @@ typedef MatrixView<PetscReal, PetscInt> BlastedPetscMat;
 
 #define PETSCOPTION_STR_LEN 10
 
-/// Returns a dynamically allocated Blasted_data object after setting options from PETSc options
-static Blasted_data* newDataFromOptions(const int bsize)
+/// Sets options from PETSc options
+static PetscErrorCode setupDataFromOptions(PC pc)
 {
+#ifdef DEBUG
+	printf("BLASTed for PETSc: First time setup..\n");
+#endif
+	
+	PetscErrorCode ierr=0;
+	Blasted_data* ctx;
+	ierr = PCShellGetContext(pc, (void**)&ctx); CHKERRQ(ierr);
+
 	Prec_type ptype;
 
 	PetscBool set = PETSC_FALSE;
-	PetscOptionsHasName(NULL, NULL, "blasted_pc_type", &set);
+	PetscOptionsHasName(NULL, NULL, "-blasted_pc_type", &set);
 	if(set == PETSC_FALSE) {
 		printf("BLASTed: Preconditioner type not set! Setting to Jacobi.\n");
 		ptype = JACOBI;
@@ -35,7 +43,7 @@ static Blasted_data* newDataFromOptions(const int bsize)
 	else {
 		char precstr[PETSCOPTION_STR_LEN];
 		PetscBool flag = PETSC_FALSE;
-		PetscOptionsGetString(NULL, NULL, "blasted_pc_type", 
+		PetscOptionsGetString(NULL, NULL, "-blasted_pc_type", 
 				precstr, PETSCOPTION_STR_LEN, &flag);
 		if(flag == PETSC_FALSE) {
 			printf("BLASTed: Preconditioner type not set!\n");
@@ -58,7 +66,7 @@ static Blasted_data* newDataFromOptions(const int bsize)
 	PetscInt sweeps[2];
 	if(ptype == SGS || ptype == ILU0)
 	{
-		PetscOptionsHasName(NULL, NULL, "blasted_async_sweeps", &set);
+		PetscOptionsHasName(NULL, NULL, "-blasted_async_sweeps", &set);
 		if(set == PETSC_FALSE) {
 			printf("BLASTed: Number of async sweeps not set!\n");
 			abort();
@@ -66,7 +74,7 @@ static Blasted_data* newDataFromOptions(const int bsize)
 		else {
 			PetscBool flag = PETSC_FALSE;
 			PetscInt nmax;
-			PetscOptionsGetIntArray(NULL, NULL, "blasted_async_sweeps", sweeps, &nmax, &flag);
+			PetscOptionsGetIntArray(NULL, NULL, "-blasted_async_sweeps", sweeps, &nmax, &flag);
 			
 			if(flag == PETSC_FALSE || nmax < 2) {
 				printf("BLASTed: Number of async sweeps not set properly!\n");
@@ -78,12 +86,25 @@ static Blasted_data* newDataFromOptions(const int bsize)
 		sweeps[0] = 1; sweeps[1] = 1;
 	}
 
-	Blasted_data* ctx = new Blasted_data {nullptr, bsize, ptype,
-		sweeps[0], sweeps[1],
-		0, 0, 0, 0, 0, 0
-	};
+	//std::printf("BLASTed: newDataFromOptions: Setting up preconditioner with\n");
+	//std::printf("ptype = %d and sweeps = %d,%d.\n", ptype, sweeps[0], sweeps[1]);
 
-	return ctx;
+	ctx->bmat = nullptr; 
+	ctx->prectype = ptype;
+	ctx->nbuildsweeps = sweeps[0]; 
+	ctx->napplysweeps = sweeps[1];
+	ctx->first_setup_done = true;
+	ctx->cputime = ctx->walltime = ctx->factorcputime = ctx->factorwalltime =
+		ctx->applycputime = ctx->applywalltime = 0;
+	
+	if(ctx->prectype == JACOBI)
+		ierr = PCShellSetName(pc, "Blasted-Jacobi");
+	else if(ctx->prectype == SGS)
+		ierr = PCShellSetName(pc, "Blasted-SGS");
+	else
+		ierr = PCShellSetName(pc, "Blasted-ILU0");
+
+	return ierr;
 }
 
 /** \brief Generates a matrix view from the preconditioning operator in a PC
@@ -135,9 +156,10 @@ PetscErrorCode createNewBlockMatrixView(PC pc)
 #ifdef DEBUG
 	const PetscInt Adnnz = Adiag->nz;
 
-	printf("BLASTed: createNewBlockMatrix(): firstrow = %d, lastrow = %d, \
-			localrows = %d, localcols = %d, globalrows = %d, globalcols = %d\n", 
-			firstrow, lastrow, localrows, localcols, globalrows, globalcols);
+	printf("BLASTed: createNewBlockMatrix(): firstrow = %d, lastrow = %d,\n",
+			firstrow, lastrow);
+	printf("     localrows = %d, localcols = %d, globalrows = %d, globalcols = %d\n", 
+			localrows, localcols, globalrows, globalcols);
 	
 	if(localrows != localcols)
 		printf("! BLASTed: createNewBlockMatrix(): Local matrix is not square! Size is %dx%d.\n", 
@@ -190,21 +212,6 @@ PetscErrorCode createNewBlockMatrixView(PC pc)
 
 extern "C" {
 
-PetscErrorCode setup_blasted(PC pc, const int bs)
-{
-	Blasted_data* ctx = newDataFromOptions(bs);
-	PetscErrorCode ierr = PCShellSetContext(pc, (void*)ctx); CHKERRQ(ierr);
-	if(ctx->prectype == JACOBI)
-		ierr = PCShellSetName(pc, "Blasted-Jacobi");
-	else if(ctx->prectype == SGS)
-		ierr = PCShellSetName(pc, "Blasted-SGS");
-	else
-		ierr = PCShellSetName(pc, "Blasted-ILU0");
- 	
-	CHKERRQ(ierr);
-	return ierr;
-}
-
 PetscErrorCode cleanup_blasted(PC pc)
 {
 	PetscErrorCode ierr = 0;
@@ -213,7 +220,6 @@ PetscErrorCode cleanup_blasted(PC pc)
 	
 	BlastedPetscMat* mat = reinterpret_cast<BlastedPetscMat*>(ctx->bmat);
 	delete mat;
-	delete ctx;
 
 	return ierr;
 }
@@ -221,12 +227,17 @@ PetscErrorCode cleanup_blasted(PC pc)
 PetscErrorCode compute_preconditioner_blasted(PC pc)
 {
 	PetscErrorCode ierr = 0;
-
-	ierr = createNewBlockMatrixView(pc); CHKERRQ(ierr);
 	
 	// get control structure
 	Blasted_data* ctx;
 	ierr = PCShellGetContext(pc, (void**)&ctx); CHKERRQ(ierr);
+
+	if(!ctx->first_setup_done) {
+		ierr = setupDataFromOptions(pc);
+		CHKERRQ(ierr);
+	}
+
+	ierr = createNewBlockMatrixView(pc); CHKERRQ(ierr);
 	BlastedPetscMat *const op = reinterpret_cast<BlastedPetscMat*>(ctx->bmat);
 
 	struct timeval time1, time2;

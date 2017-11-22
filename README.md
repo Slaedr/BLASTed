@@ -5,11 +5,11 @@ Basic Linear Algebra Subprograms Threaded: A collection of sparse matrix contain
 
 Building
 --------
-The library is currently header-only, mostly to make template instantiations possible. Just include the appropriate header in your code. However, the PETSc interface and tests need to be built. The following programs and libraries are required:
+The library is currently header-only, mostly to make template instantiations possible. However, the PETSc interface and tests need to be built. The following programs and libraries are required:
+- [CMake](https://cmake.org/) version 3.0 or later
 - [Eigen](http://eigen.tuxfamily.org) version 3.3.4 or later
 - [Boost](http://www.boost.org/)
-- [CMake](https://cmake.org/) version 3.0 or later
-Optionally, [PETSc](http://www.mcs.anl.gov/petsc/) version 3.8 is required to build the PETSc interface.
+- [PETSc](http://www.mcs.anl.gov/petsc/) version 3.8 is required to build the PETSc interface.
 
 Assuming that you are in the top-level BLASTed directory, type
 
@@ -25,8 +25,7 @@ To build without the PETSc interface, `-DWITH_PETSC` should be removed. See the 
 
 and to run the tests,
 
-	cd tests
-	ctest
+	make test
 
 A C++ compiler with C++ 14 support is required; the build is known to work with GCC 5.4, GCC 6.4 and Intel 2017 in a GNU/Linux environment. To build in other enviroments, tweaking the CMakeLists.txt file will be required.
 
@@ -42,4 +41,8 @@ Finally, from the build directory, one can issue
     make tags
    
 to generate a tags file for [easier navigation of the source code in Vim](http://vim.wikia.com/wiki/Browsing_programs_with_tags).
+
+Usage
+-----
+For C++ codes, the library can be used header-only, if necessary. But for the most part, one would want to use it as a plugin for PETSc. For an example of that, please see the finite difference Poisson example in `tests/poisson3d-fd`.
 

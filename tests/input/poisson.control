@@ -1,7 +1,7 @@
 Type-of-grid('chebyshev'-or-'uniform')
 chebyshev
 Number-of-points-in-x-y-and-z
-10 10 10
+12 12 12
 Coords-of-first-point-in-x-y-and-z
 -1.0 -1.0 -1.0
 Coords-of-last-point-in-x-y-and-z

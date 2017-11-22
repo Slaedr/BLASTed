@@ -17,15 +17,24 @@ extern "C" {
 typedef enum {JACOBI, SGS, ILU0} Prec_type;
 
 /// State necessary for preconditioners
+/** The user must create a variable of this type,
+ * set \ref first_setup_done to false and \ref bs to the required block size,
+ * and then pass it to PCShellSetContext.
+ */
 typedef struct
 {
-	void* bmat;                     ///< BLASTed matrix
+	void* bmat;               ///< BLASTed matrix
 	
-	const int bs;                   ///< Block size of dense blocks
-	const Prec_type prectype;       ///< The preconditioner to use
-	const int nbuildsweeps;         ///< Number of async build sweeps
-	const int napplysweeps;         ///< Number of async apply sweeps
-	
+	int bs;                   ///< Block size of dense blocks
+	Prec_type prectype;       ///< The preconditioner to use
+	int nbuildsweeps;         ///< Number of async build sweeps
+	int napplysweeps;         ///< Number of async apply sweeps
+
+	/// True if the initial one-time setup has been done
+	/** MUST be set to false initially.
+	 */
+	bool first_setup_done;
+
 	double cputime;           ///< Total CPU time taken by FGPILU
 	double walltime;          ///< Total wall-clock time taken by FGPILU
 	double factorcputime;     ///< CPU time taken for factorization
@@ -33,14 +42,6 @@ typedef struct
 	double applycputime;      ///< CPU time taken for application of the preconditioner
 	double applywalltime;     ///< Wall-clock time for application
 } Blasted_data;
-
-/// Set up the preconditioner
-/** Queries the PETSc options database for the information required.
- *
- * \param[in,out] pc The PETSc preconditioner context
- * \param[in] blocksize The size of small dense blocks that make up the matrix
- */
-PetscErrorCode setup_blasted(PC pc, const int blocksize);
 
 /// Free arrays in the context struct
 PetscErrorCode cleanup_blasted(PC pc);

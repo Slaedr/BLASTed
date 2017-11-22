@@ -1,16 +1,32 @@
 #include <petscksp.h>
 
 #include <sys/time.h>
-#include <time.h>
+#include <ctime>
+#include <cfloat>
+#include <cassert>
 
 #include "../../src/blasted_petsc.h"
 
 #include "poisson3d_fd.hpp"
 
+#define PETSCOPTION_STR_LEN 30
+
 /* For viewing the ILU factors computed by PETSc PCILU
 #include <../src/mat/impls/aij/mpi/mpiaij.h>
 #include <../src/ksp/pc/impls/factor/factor.h>
 #include <../src/ksp/pc/impls/factor/ilu/ilu.h>*/
+
+PetscReal compute_error(const MPI_Comm comm, const CartMesh& m, const DM da,
+		const Vec u, const Vec uexact) {
+	PetscReal errnorm;
+	Vec err;
+	VecDuplicate(u, &err);
+	VecCopy(u,err);
+	VecAXPY(err, -1.0, uexact);
+	errnorm = computeNorm(comm, &m, err, da);
+	VecDestroy(&err);
+	return errnorm;
+}
 
 int main(int argc, char* argv[])
 {
@@ -21,7 +37,8 @@ int main(int argc, char* argv[])
 		return 0;
 	}
 
-	char help[] = "Solves 3D Poisson equation by finite differences. Arguments: (1) Control file (2) Petsc options file\n\n";
+	char help[] = "Solves 3D Poisson equation by finite differences.\
+				   Arguments: (1) Control file (2) Petsc options file\n\n";
 	char * confile = argv[1];
 	char * optfile = argv[2];
 	PetscMPIInt size, rank;
@@ -71,7 +88,7 @@ int main(int argc, char* argv[])
 	//----------------------------------------------------------------------------------
 
 	// set up Petsc variables
-	DM da;					///< Distributed array context for the cart grid
+	DM da;                        ///< Distributed array context for the cart grid
 	PetscInt ndofpernode = 1;
 	PetscInt stencil_width = 1;
 	DMBoundaryType bx = DM_BOUNDARY_GHOSTED;
@@ -79,11 +96,12 @@ int main(int argc, char* argv[])
 	DMBoundaryType bz = DM_BOUNDARY_GHOSTED;
 	DMDAStencilType stencil_type = DMDA_STENCIL_STAR;
 
-	// generate mesh - a copy of the mesh is stored by all processes as the mesh structure is very small
+	// grid structure - a copy of the mesh is stored by all processes as the mesh structure is very small
 	CartMesh m;
 	ierr = m.createMeshAndDMDA(comm, npdim, ndofpernode, stencil_width, bx, by, bz, stencil_type, &da, rank);
 	CHKERRQ(ierr);
-	
+
+	// generate grid
 	if(!strcmp(gridtype, "chebyshev"))
 		m.generateMesh_ChebyshevDistribution(rmin,rmax, rank);
 	else
@@ -91,14 +109,14 @@ int main(int argc, char* argv[])
 
 	Vec u, uexact, b, err;
 	Mat A;
-	KSP ksp; PC pc;
 
+	// create vectors and matrix according to the DMDA's structure
+	
 	ierr = DMCreateGlobalVector(da, &u); CHKERRQ(ierr);
 	ierr = VecDuplicate(u, &b); CHKERRQ(ierr);
 	VecDuplicate(u, &uexact);
 	VecDuplicate(u, &err);
 	VecSet(u, 0.0);
-
 	ierr = DMCreateMatrix(da, &A); CHKERRQ(ierr);
 
 	// compute values of LHS, RHS and exact soln
@@ -110,66 +128,123 @@ int main(int argc, char* argv[])
 
 	ierr = MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
 	ierr = MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
+
+	KSP kspref; 
+
+	// compute reference solution using a preconditioner from PETSc
 	
-	/*Mat B;
-	MatConvert(A, MATSEQDENSE, MAT_INITIAL_MATRIX, &B);
-	MatView(B, PETSC_VIEWER_STDOUT_WORLD);
-	MatDestroy(&B);*/
+	ierr = KSPCreate(comm, &kspref);
+	KSPSetType(kspref, KSPRICHARDSON);
+	KSPRichardsonSetScale(kspref, 1.0);
+	KSPSetOptionsPrefix(kspref, "ref_");
+	KSPSetFromOptions(kspref);
+	/*KSPGetPC(kspref, &pcref);
+	PCSetType(pcref, PCBJACOBI);
+
+	// get subdomain solvers for this rank; we only deal with 1
+	PetscInt nlocalblocks, firstlocalblock;
+	KSPSetUp(kspref);
+	ierr = PCBJacobiGetSubKSP(pcref, &nlocalblocks, &firstlocalblock, &subkspref);
+	CHKERRQ(ierr);
+	assert(nlocalblocks == 1);
+	KSPGetPC(subkspref[0], &subpcref);
+
+	char precstr[PETSCOPTION_STR_LEN];
+	PetscBool flag = PETSC_FALSE;
+	PetscOptionsGetString(NULL, NULL, "-blasted_pc_type", 
+			precstr, PETSCOPTION_STR_LEN, &flag);
+	if(flag == PETSC_FALSE) {
+		printf("BLASTed: Preconditioner type not set!\n");
+		abort();
+	}
+
+	std::string precstr2 = precstr;
+	if(precstr2 == "jacobi") {
+		PCSetType(subpcref, PCJACOBI);
+	}
+	else if(precstr2 == "sgs") {
+		PCSetType(subpcref, PCSOR);
+		PCSORSetOmega(subpcref,1.0);
+		PCSORSetIterations(subpcref, 1, 1);
+		ierr = PCSORSetSymmetric(subpcref, SOR_SYMMETRIC_SWEEP); CHKERRQ(ierr);
+	}
+	else if(precstr2 == "ilu0") {
+		PCSetType(subpcref, PCILU);
+		PCFactorSetLevels(subpcref, 0);
+		PCFactorSetMatOrderingType(subpcref, MATORDERINGNATURAL);
+	}
+	else {
+		printf("Preconditioner type not available!\n");
+		abort();
+	}*/
+		
+	ierr = KSPSetOperators(kspref, A, A); CHKERRQ(ierr);
+	
+	ierr = KSPSolve(kspref, b, u); CHKERRQ(ierr);
+
+	PetscInt refkspiters;
+	ierr = KSPGetIterationNumber(kspref, &refkspiters);
+	PetscReal errnormref = compute_error(comm,m,da,u,uexact);
+
+	if(rank==0) {
+		printf("Ref run: error = %.16f\n", errnormref);
+		printf("         Num KSP iters = %d.\n", refkspiters);
+	}
+
+	KSPDestroy(&kspref);
 	
 	/*struct timeval time1, time2;
 	gettimeofday(&time1, NULL);
 	double initialwtime = (double)time1.tv_sec + (double)time1.tv_usec * 1.0e-6;
 	double initialctime = (double)clock() / (double)CLOCKS_PER_SEC;*/
-	int avgkspiters = 0;
 
-	// set up solver
+	// run the solve to be tested as many times as requested
+	
+	int avgkspiters = 0;
+	PetscReal errnorm = 0;
 	for(int irun = 0; irun < nruns; irun++)
 	{
 		printf("Run %d:\n", irun);
-		ierr = KSPCreate(comm, &ksp);
+		KSP ksp, *subksp;
+		PC pc, subpc;
+
+		ierr = KSPCreate(comm, &ksp); CHKERRQ(ierr);
 		KSPSetType(ksp, KSPRICHARDSON);
 		KSPRichardsonSetScale(ksp, 1.0);
-		KSPSetTolerances(ksp, 1e-6, PETSC_DEFAULT, PETSC_DEFAULT, 100);
-		KSPGetPC(ksp, &pc);
-
-		/*PCSetType(pc, PCSOR);
-		PCSORSetOmega(pc,1.0);
-		PCSORSetIterations(pc, 1, 1);
-		ierr = PCSORSetSymmetric(pc, SOR_SYMMETRIC_SWEEP); CHKERRQ(ierr);
-
-		PCSetType(pc, PCILU);
-		PCFactorSetLevels(pc, 0);
-		PCFactorSetMatOrderingType(pc, MATORDERINGNATURAL);
-		
-		PCSetType(pc, PCNONE);*/
-
-		PCShellSetSetUp(pc, &compute_preconditioner_blasted);
-		PCShellSetApply(pc, &apply_local_blasted);
-		PCShellSetDestroy(pc, &cleanup_blasted);
-		
+	
+		// Options MUST be set before setting shell routines!
 		ierr = KSPSetFromOptions(ksp); CHKERRQ(ierr);
+		ierr = KSPSetOperators(ksp, A, A); CHKERRQ(ierr);
+		
+		KSPGetPC(ksp, &pc);
+		PetscBool isbjacobi;
+		PetscObjectTypeCompare((PetscObject)pc,PCBJACOBI,&isbjacobi);
+		if(isbjacobi)
+		{
+			// extract sub pc
+			PetscInt nlocalblocks, firstlocalblock;
+			KSPSetUp(ksp); PCSetUp(pc);
+			ierr = PCBJacobiGetSubKSP(pc, &nlocalblocks, &firstlocalblock, &subksp);
+			CHKERRQ(ierr);
+			assert(nlocalblocks == 1);
+			KSPGetPC(subksp[0], &subpc);
+		}
+		
+		PetscBool isshell;
+		PetscObjectTypeCompare((PetscObject)pc,PCSHELL,&isshell);
+		if(isshell)
+			subpc = pc;
+
+		// Create BLASTed data structure and setup the PC
+		Blasted_data bctx; bctx.bs = 1; bctx.first_setup_done = false;
+		PCShellSetContext(subpc, (void*)&bctx);
+		PCShellSetSetUp(subpc, &compute_preconditioner_blasted);
+		ierr = PCShellSetApply(subpc, &apply_local_blasted); CHKERRQ(ierr);
+		PCShellSetDestroy(subpc, &cleanup_blasted);
 		
 		ierr = KSPSetOperators(ksp, A, A); CHKERRQ(ierr);
 		
 		ierr = KSPSolve(ksp, b, u); CHKERRQ(ierr);
-		ierr = KSPView(ksp,PETSC_VIEWER_STDOUT_WORLD); CHKERRQ(ierr);
-
-		/*if(precch == 'i') {	
-			// view factors
-			PC_ILU* ilu = (PC_ILU*)pc->data;
-			//PC_Factor* pcfact = (PC_Factor*)pc->data;
-			//Mat fact = pcfact->fact;
-			Mat fact = ((PC_Factor*)ilu)->fact;
-			printf("ILU0 factored matrix:\n");
-
-			Mat_SeqAIJ* fseq = (Mat_SeqAIJ*)fact->data;
-			for(int i = 0; i < fact->rmap->n; i++) {
-				printf("Row %d: ", i);
-				for(int j = fseq->i[i]; j < fseq->i[i+1]; j++)
-					printf("(%d: %f) ", fseq->j[j], fseq->a[j]);
-				printf("\n");
-			}
-		}*/
 
 		// post-process
 		if(rank == 0) {
@@ -181,17 +256,19 @@ int main(int argc, char* argv[])
 			printf(" KSP residual norm = %f\n", rnorm);
 		}
 		
-		PetscReal errnorm;
-		VecCopy(u,err);
-		VecAXPY(err, -1.0, uexact);
-		errnorm = computeNorm(comm, &m, err, da);
+		errnorm = compute_error(comm,m,da,u,uexact);
 		if(rank == 0) {
-			printf(" h and error: %f  %f\n", m.gh(), errnorm);
+			printf("Test run:\n");
+			printf(" h and error: %f  %.16f\n", m.gh(), errnorm);
 			printf(" log h and log error: %f  %f\n", log10(m.gh()), log10(errnorm));
 		}
 
 		ierr = KSPDestroy(&ksp); CHKERRQ(ierr);
 	}
+
+	// the test
+	assert(avgkspiters/nruns == refkspiters);
+	assert(std::fabs(errnorm-errnormref) < 2.0*DBL_EPSILON);
 
 	/*gettimeofday(&time2, NULL);
 	double finalwtime = (double)time2.tv_sec + (double)time2.tv_usec * 1.0e-6;
@@ -213,5 +290,24 @@ int main(int argc, char* argv[])
 	MatDestroy(&A);
 	DMDestroy(&da);
 	PetscFinalize();
+
 	return ierr;
 }
+		
+		/*if(precch == 'i') {	
+			// view factors
+			PC_ILU* ilu = (PC_ILU*)pc->data;
+			//PC_Factor* pcfact = (PC_Factor*)pc->data;
+			//Mat fact = pcfact->fact;
+			Mat fact = ((PC_Factor*)ilu)->fact;
+			printf("ILU0 factored matrix:\n");
+
+			Mat_SeqAIJ* fseq = (Mat_SeqAIJ*)fact->data;
+			for(int i = 0; i < fact->rmap->n; i++) {
+				printf("Row %d: ", i);
+				for(int j = fseq->i[i]; j < fseq->i[i+1]; j++)
+					printf("(%d: %f) ", fseq->j[j], fseq->a[j]);
+				printf("\n");
+			}
+		}*/
+
