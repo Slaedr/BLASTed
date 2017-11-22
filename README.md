@@ -17,7 +17,7 @@ Assuming that you are in the top-level BLASTed directory, type
 
 and then, to build a release version with AVX vectorization and the PETSc interface,
 
-	cmake .. -DCMAKE_BUILD_TYPE=Release -DAVX=1 -DWITH_PETSC=1
+	cmake .. -DCMAKE\_BUILD\_TYPE=Release -DAVX=1 -DWITH\_PETSC=1 -DCMAKE\_CXX\_COMPILER=mpicxx
 
 To build without the PETSc interface, `-DWITH_PETSC` should be removed. See the beginning of the top-level CMakeLists.txt file for all the options. To build,
 
