@@ -181,24 +181,24 @@ PetscErrorCode createNewBlockMatrixView(PC pc)
 			abort();
 			break;
 		case 1:
-			op = new BSRMatrixView<PetscReal, PetscInt,1>(localrows, 
+			op = new CSRMatrixView<PetscReal, PetscInt>(localrows, 
 					Adiag->i, Adiag->j, Adiag->a, Adiag->diag,
 					ctx->nbuildsweeps,ctx->napplysweeps);
 			break;
 		/*case 2:
-			op = new BSRMatrix<PetscReal,PetscInt,2>(localrows, Adrowp, Adcols, Advals, Addiagind,
+			op = new BSRMatrixView<PetscReal,PetscInt,2>(localrows, Adrowp, Adcols, Advals, Addiagind,
 					ctx->nbuildsweeps,ctx->napplysweeps);
 			break;
 		case 3:
-			op = new BSRMatrix<PetscReal,PetscInt,3>(localrows, Adrowp, Adcols, Advals, Addiagind,
+			op = new BSRMatrixView<PetscReal,PetscInt,3>(localrows, Adrowp, Adcols, Advals, Addiagind,
 					ctx->nbuildsweeps,ctx->napplysweeps);
 			break;
 		case 4:
-			op = new BSRMatrix<PetscReal,PetscInt,4>(localrows, Adrowp, Adcols, Advals, Addiagind,
+			op = new BSRMatrixView<PetscReal,PetscInt,4>(localrows, Adrowp, Adcols, Advals, Addiagind,
 					ctx->nbuildsweeps,ctx->napplysweeps);
 			break;
 		case 5:
-			op = new BSRMatrix<PetscReal,PetscInt,5>(localrows, Adrowp, Adcols, Advals, Addiagind,
+			op = new BSRMatrixView<PetscReal,PetscInt,5>(localrows, Adrowp, Adcols, Advals, Addiagind,
 					ctx->nbuildsweeps,ctx->napplysweeps);
 			break;*/
 		default:

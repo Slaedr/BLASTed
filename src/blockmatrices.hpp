@@ -28,6 +28,8 @@ namespace blasted {
 
 using Eigen::Dynamic;
 using Eigen::RowMajor;
+using Eigen::ColMajor;
+using Eigen::StorageOptions;
 using Eigen::Matrix;
 template <typename scalar>
 using Vector = Matrix<scalar,Dynamic,1>;
@@ -379,11 +381,16 @@ protected:
 };
 
 /// A BSR matrix that is formed by wrapping a pre-existing read-only matrix
-template <typename scalar, typename index, int bs>
+/** StorageOptions is an Eigen type describing storage options, which we use here to
+ * specify whether storage within blocks is row-major or column-major.
+ * The blocks are always arranged block-row-wise relative to each other.
+ */
+template <typename scalar, typename index, int bs, StorageOptions stopt>
 class BSRMatrixView : public MatrixView<scalar, index>
 {
 	static_assert(std::numeric_limits<index>::is_signed, "Signed index type required!");
 	static_assert(bs > 0, "Block size must be positive!");
+	static_assert(stopt == RowMajor || stopt == ColMajor, "Invalid storage option!");
 
 public:
 	/// A constructor which just wraps a BSR matrix described by 4 arrays
@@ -476,11 +483,11 @@ protected:
 };
 
 /// A CSR matrix formed by wrapping a read-only matrix
-/** The limiting case of BSR matrix when block size is 1.
+/**
  * On destruct, cleans up only its own data that are needed for preconditioning operations.
  */
 template <typename scalar, typename index>
-class BSRMatrixView<scalar,index,1> : public MatrixView<scalar, index>
+class CSRMatrixView : public MatrixView<scalar, index>
 {
 	static_assert(std::numeric_limits<index>::is_signed, "Signed index type required!");
 
@@ -497,12 +504,12 @@ public:
 	 *
 	 * Does not take ownership of the 4 arrays; they are not cleaned up in the destructor either.
 	 */
-	BSRMatrixView(const index nrows, const index *const rptrs,
+	CSRMatrixView(const index nrows, const index *const rptrs,
 		const index *const cinds, const scalar *const values, const index *const dinds,
 		const int n_buildsweeps, const int n_applysweeps);
 
 	/// De-allocates temporary storage only, not the matrix storage itself
-	virtual ~BSRMatrixView();
+	virtual ~CSRMatrixView();
 
 	/// Computes the matrix vector product of this matrix with one vector-- y := a Ax
 	virtual void apply(const scalar a, const scalar *const x, scalar *const __restrict y) const;

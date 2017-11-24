@@ -37,22 +37,51 @@ int main(const int argc, const char *const argv[])
 
 	if(teststr == "apply")
 	{
-		int rowptr[3] = {0, 1, 2}, colind[2] = {0,1}, diagind[2]={0,1};
-		double data[8] = {1,0,0,1,2,0,0,2};
-		AbstractLinearOperator<double,int>* testmat = nullptr;
-		if(typestr == "view")
-			testmat = new BSRMatrixView<double,int,2>(2,rowptr,colind,data,diagind,1,1);
-		else
-			testmat = new BSRMatrix<double,int,2>(2,rowptr,colind,data,diagind,1,1);
-		double avec[4] = {1,2,3,4}, bvec[4];
-		testmat->apply(1.0, avec, bvec);
+		int rowptr[4] = {0, 2, 3, 4}, colind[4] = {0,2,1,2}, diagind[3]={0,2,3};
+		double rdata[36] = { 1,2,5,3,0,1,2,6,0,
+			3,1,0,2,6,3,1,1,1,
+			0.5,2,-6,1,6,2,2,1,9,
+			10,1,1.5,0,-8,2,1,3,5
+		};
+		double cdata[36] = {1,3,2,2,0,6,5,1,0,
+			3,2,1,1,6,1,0,3,1,
+			0.5,1,2,2,6,1,-6,2,9,
+			10,0,1,1,-8,3,1.5,2,5
+		};
+		double x[9] = {1,2,1,1,3,1,3,2,-1};
+		double ans[9] = {21,19,18,0.5,21,14,30.5,-18,4};
+		double y[9];
 
-		assert(bvec[0]==1);
-		assert(bvec[1]==2);
-		assert(bvec[2]==6);
-		assert(bvec[3]==8);
-	
+		AbstractLinearOperator<double,int>* testmat = nullptr;
+		if(typestr == "view") {
+			testmat = new BSRMatrixView<double,int,3,RowMajor>(3,rowptr,colind,rdata,diagind,1,1);
+		}
+		else
+			testmat = new BSRMatrix<double,int,3>(3,rowptr,colind,rdata,diagind,1,1);
+		
+		testmat->apply(1.0, x, y);
+
+		for(int i = 0; i < 9; i++) {
+			assert(y[i] == ans[i]);
+		}
+
 		delete testmat;
+		
+		if(typestr == "view") 
+		{
+			for(int i = 0; i < 9; i++) {
+				y[i] = 0;
+			}
+
+			testmat = new BSRMatrixView<double,int,3,ColMajor>(3,rowptr,colind,cdata,diagind,1,1);
+			testmat->apply(1.0, x, y);
+
+			for(int i = 0; i < 9; i++) {
+				assert(y[i] == ans[i]);
+			}
+			
+			delete testmat;
+		}
 	}
 	else if(teststr == "gemv")
 	{

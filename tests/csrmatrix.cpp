@@ -41,7 +41,7 @@ int main(const int argc, const char *const argv[])
 		double data[2] = {1,2};
 		AbstractLinearOperator<double,int>* testmat = nullptr;
 		if(typestr == "view")
-			testmat = new BSRMatrixView<double,int,1>(2,rowptr,colind,data,diagind,1,1);
+			testmat = new CSRMatrixView<double,int>(2,rowptr,colind,data,diagind,1,1);
 		else
 			testmat = new BSRMatrix<double,int,1>(2,rowptr,colind,data,diagind,1,1);
 		double avec[2] = {1,2}, bvec[2];

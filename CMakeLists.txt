@@ -36,7 +36,7 @@ endif()
 
 # set compile options
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopt-info-loop-inline-vec-optimized-missed=optimizations.info")
+	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopt-info-inline-vec-optimized-missed=optimizations.info")
 elseif("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
 	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Rpass=inline,vectorize")
 elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel")

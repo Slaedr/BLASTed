@@ -20,7 +20,7 @@
  */
 
 /// Matrix-vector product for BSR matrices
-template <typename scalar, typename index, int bs>
+template <typename scalar, typename index, int bs, StorageOptions stor>
 inline
 void block_matrix_apply(const ConstRawBSRMatrix<scalar,index> *const mat,
 		const scalar a, const scalar *const xx,
@@ -28,21 +28,43 @@ void block_matrix_apply(const ConstRawBSRMatrix<scalar,index> *const mat,
 {
 	Eigen::Map<const Vector<scalar>> x(xx, mat->nbrows*bs);
 	Eigen::Map<Vector<scalar>> y(yy, mat->nbrows*bs);
-	Eigen::Map<const Matrix<scalar,Dynamic,bs,RowMajor>> 
-		data(mat->vals, mat->browptr[mat->nbrows]*bs, bs);
+
+	if(stor == RowMajor) {
+		Eigen::Map<const Matrix<scalar,Dynamic,bs,RowMajor>> 
+			data(mat->vals, mat->browptr[mat->nbrows]*bs, bs);
 
 #pragma omp parallel for default(shared)
-	for(index irow = 0; irow < mat->nbrows; irow++)
-	{
-		y.SEG<bs>(irow*bs) = Vector<scalar>::Zero(bs);
-
-		// loop over non-zero blocks of this block-row
-		for(index jj = mat->browptr[irow]; jj < mat->browptr[irow+1]; jj++)
+		for(index irow = 0; irow < mat->nbrows; irow++)
 		{
-			// multiply the blocks with corresponding sub-vectors
-			const index jcol = mat->bcolind[jj];
-			y.SEG<bs>(irow*bs).noalias() 
-				+= a * data.BLK<bs,bs>(jj*bs,0) * x.SEG<bs>(jcol*bs);
+			y.SEG<bs>(irow*bs) = Vector<scalar>::Zero(bs);
+
+			// loop over non-zero blocks of this block-row
+			for(index jj = mat->browptr[irow]; jj < mat->browptr[irow+1]; jj++)
+			{
+				// multiply the blocks with corresponding sub-vectors
+				const index jcol = mat->bcolind[jj];
+				y.SEG<bs>(irow*bs).noalias() 
+					+= a * data.BLK<bs,bs>(jj*bs,0) * x.SEG<bs>(jcol*bs);
+			}
+		}
+	}
+	else {
+		Eigen::Map<const Matrix<scalar,bs,Dynamic,ColMajor>> 
+			data(mat->vals, bs, mat->browptr[mat->nbrows]*bs);
+
+#pragma omp parallel for default(shared)
+		for(index irow = 0; irow < mat->nbrows; irow++)
+		{
+			y.SEG<bs>(irow*bs) = Vector<scalar>::Zero(bs);
+
+			// loop over non-zero blocks of this block-row
+			for(index jj = mat->browptr[irow]; jj < mat->browptr[irow+1]; jj++)
+			{
+				// multiply the blocks with corresponding sub-vectors
+				const index jcol = mat->bcolind[jj];
+				y.SEG<bs>(irow*bs).noalias() 
+					+= a * data.BLK<bs,bs>(0,jj*bs) * x.SEG<bs>(jcol*bs);
+			}
 		}
 	}
 }
@@ -591,7 +613,7 @@ template <typename scalar, typename index, int bs>
 void BSRMatrix<scalar,index,bs>::apply(const scalar a, const scalar *const xx,
                                        scalar *const __restrict yy) const
 {
-	block_matrix_apply<scalar,index,bs>(
+	block_matrix_apply<scalar,index,bs,RowMajor>(
 			reinterpret_cast<const ConstRawBSRMatrix<scalar,index>*>(&mat), 
 			a, xx, yy);
 }
@@ -1272,8 +1294,8 @@ void BSRMatrix<scalar,index,1>::printDiagnostic(const char choice) const
 }
 
 
-template <typename scalar, typename index, int bs>
-BSRMatrixView<scalar,index,bs>::BSRMatrixView(const index n_brows, const index *const brptrs,
+template <typename scalar, typename index, int bs, StorageOptions stor>
+BSRMatrixView<scalar,index,bs,stor>::BSRMatrixView(const index n_brows, const index *const brptrs,
 		const index *const bcinds, const scalar *const values, const index *const diaginds,
 		const int n_buildsweeps, const int n_applysweeps)
 	: MatrixView<scalar,index>(BSR),
@@ -1281,46 +1303,46 @@ BSRMatrixView<scalar,index,bs>::BSRMatrixView(const index n_brows, const index *
 	  nbuildsweeps{n_buildsweeps}, napplysweeps{n_applysweeps}, thread_chunk_size{500}
 { }
 
-template <typename scalar, typename index, int bs>
-BSRMatrixView<scalar, index, bs>::~BSRMatrixView()
+template <typename scalar, typename index, int bs, StorageOptions stor>
+BSRMatrixView<scalar, index, bs,stor>::~BSRMatrixView()
 {
 }
 
-template <typename scalar, typename index, int bs>
-void BSRMatrixView<scalar,index,bs>::apply(const scalar a, const scalar *const xx,
+template <typename scalar, typename index, int bs, StorageOptions stor>
+void BSRMatrixView<scalar,index,bs,stor>::apply(const scalar a, const scalar *const xx,
                                        scalar *const __restrict yy) const
 {
-	block_matrix_apply<scalar,index,bs>(&mat, a, xx, yy);
+	block_matrix_apply<scalar,index,bs,stor>(&mat, a, xx, yy);
 }
 
-template <typename scalar, typename index, int bs>
-void BSRMatrixView<scalar,index,bs>::gemv3(const scalar a, const scalar *const __restrict xx, 
+template <typename scalar, typename index, int bs, StorageOptions stor>
+void BSRMatrixView<scalar,index,bs,stor>::gemv3(const scalar a, const scalar *const __restrict xx, 
 		const scalar b, const scalar *const yy, scalar *const zz) const
 {
 	block_gemv3<scalar,index,bs>(&mat, a, xx, b, yy, zz);
 }
 
-template <typename scalar, typename index, int bs>
-void BSRMatrixView<scalar,index,bs>::precJacobiSetup()
+template <typename scalar, typename index, int bs, StorageOptions stor>
+void BSRMatrixView<scalar,index,bs,stor>::precJacobiSetup()
 {
 	block_jacobi_setup(&mat, dblocks);
 }
 
-template <typename scalar, typename index, int bs>
-void BSRMatrixView<scalar,index,bs>::precJacobiApply(const scalar *const rr, 
+template <typename scalar, typename index, int bs, StorageOptions stor>
+void BSRMatrixView<scalar,index,bs,stor>::precJacobiApply(const scalar *const rr, 
                                                  scalar *const __restrict zz) const
 {
 	block_jacobi_apply( &mat, dblocks, rr, zz);
 }
 
-template <typename scalar, typename index, int bs>
-void BSRMatrixView<scalar,index,bs>::precSGSSetup()
+template <typename scalar, typename index, int bs, StorageOptions stor>
+void BSRMatrixView<scalar,index,bs,stor>::precSGSSetup()
 {
 	block_sgs_setup(&mat, dblocks,ytemp);
 }
 
-template <typename scalar, typename index, int bs>
-void BSRMatrixView<scalar,index,bs>::precSGSApply(const scalar *const rr, 
+template <typename scalar, typename index, int bs, StorageOptions stor>
+void BSRMatrixView<scalar,index,bs,stor>::precSGSApply(const scalar *const rr, 
                                               scalar *const __restrict zz) const
 {
 	block_sgs_apply(&mat, dblocks,ytemp, napplysweeps,thread_chunk_size, rr, zz);
@@ -1330,14 +1352,14 @@ void BSRMatrixView<scalar,index,bs>::precSGSApply(const scalar *const rr,
  * It will probably be too expensive to carry out a row-column scaling like in the point case.
  * However, we could try a row scaling.
  */
-template <typename scalar, typename index, int bs>
-void BSRMatrixView<scalar,index,bs>::precILUSetup()
+template <typename scalar, typename index, int bs, StorageOptions stor>
+void BSRMatrixView<scalar,index,bs,stor>::precILUSetup()
 {
 	block_ilu0_setup(&mat, nbuildsweeps, thread_chunk_size, iluvals, ytemp);
 }
 
-template <typename scalar, typename index, int bs>
-void BSRMatrixView<scalar,index,bs>::precILUApply(const scalar *const r, 
+template <typename scalar, typename index, int bs, StorageOptions stor>
+void BSRMatrixView<scalar,index,bs,stor>::precILUApply(const scalar *const r, 
                                               scalar *const __restrict z) const
 {
 	block_ilu0_apply(&mat, iluvals, ytemp, napplysweeps, thread_chunk_size, r, z);
@@ -1345,7 +1367,7 @@ void BSRMatrixView<scalar,index,bs>::precILUApply(const scalar *const r,
 
 
 template <typename scalar, typename index>
-BSRMatrixView<scalar,index,1>::BSRMatrixView(const index nrows, const index *const brptrs,
+CSRMatrixView<scalar,index>::CSRMatrixView(const index nrows, const index *const brptrs,
 		const index *const bcinds, const scalar *const values, const index *const diaginds,
 		const int n_buildsweeps, const int n_applysweeps)
 	: MatrixView<scalar,index>(CSR),
@@ -1355,7 +1377,7 @@ BSRMatrixView<scalar,index,1>::BSRMatrixView(const index nrows, const index *con
 { }
 
 template <typename scalar, typename index>
-BSRMatrixView<scalar,index,1>::~BSRMatrixView()
+CSRMatrixView<scalar,index>::~CSRMatrixView()
 { 
 	delete [] dblocks;
 	delete [] iluvals;
@@ -1365,21 +1387,21 @@ BSRMatrixView<scalar,index,1>::~BSRMatrixView()
 }
 
 template <typename scalar, typename index>
-void BSRMatrixView<scalar,index,1>::apply(const scalar a, const scalar *const xx,
+void CSRMatrixView<scalar,index>::apply(const scalar a, const scalar *const xx,
                                        scalar *const __restrict yy) const
 {
 	matrix_apply(&mat, a, xx, yy);
 }
 
 template <typename scalar, typename index>
-void BSRMatrixView<scalar,index,1>::gemv3(const scalar a, const scalar *const __restrict__ xx, 
+void CSRMatrixView<scalar,index>::gemv3(const scalar a, const scalar *const __restrict__ xx, 
 		const scalar b, const scalar *const yy, scalar *const zz) const
 {
 	scalar_gemv3(&mat, a, xx, b, yy, zz);
 }
 
 template <typename scalar, typename index>
-void BSRMatrixView<scalar,index,1>::precJacobiSetup()
+void CSRMatrixView<scalar,index>::precJacobiSetup()
 {
 	if(!dblocks) {
 		dblocks = new scalar[mat.browptr[mat.nbrows]];
@@ -1390,14 +1412,14 @@ void BSRMatrixView<scalar,index,1>::precJacobiSetup()
 }
 
 template <typename scalar, typename index>
-void BSRMatrixView<scalar,index,1>::precJacobiApply(const scalar *const rr, 
+void CSRMatrixView<scalar,index>::precJacobiApply(const scalar *const rr, 
                                                  scalar *const __restrict zz) const
 {
 	scalar_jacobi_apply(&mat, dblocks, rr, zz);
 }
 
 template <typename scalar, typename index>
-void BSRMatrixView<scalar,index,1>::precSGSSetup()
+void CSRMatrixView<scalar,index>::precSGSSetup()
 {
 	if(!dblocks) {
 		dblocks = new scalar[mat.browptr[mat.nbrows]];
@@ -1410,14 +1432,14 @@ void BSRMatrixView<scalar,index,1>::precSGSSetup()
 }
 
 template <typename scalar, typename index>
-void BSRMatrixView<scalar,index,1>::precSGSApply(const scalar *const rr, 
+void CSRMatrixView<scalar,index>::precSGSApply(const scalar *const rr, 
                                               scalar *const __restrict zz) const
 {
 	scalar_sgs_apply(&mat, dblocks, ytemp, napplysweeps, thread_chunk_size, rr, zz);
 }
 
 template <typename scalar, typename index>
-void BSRMatrixView<scalar,index,1>::precILUSetup()
+void CSRMatrixView<scalar,index>::precILUSetup()
 {
 	if(!iluvals)
 	{
@@ -1452,7 +1474,7 @@ void BSRMatrixView<scalar,index,1>::precILUSetup()
 }
 
 template <typename scalar, typename index>
-void BSRMatrixView<scalar,index,1>::precILUApply(const scalar *const __restrict ra, 
+void CSRMatrixView<scalar,index>::precILUApply(const scalar *const __restrict ra, 
                                               scalar *const __restrict za) const
 {
 	scalar_ilu0_apply(&mat, iluvals, scale, ytemp, napplysweeps, thread_chunk_size, ra, za);
