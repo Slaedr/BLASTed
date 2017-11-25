@@ -17,16 +17,8 @@
  *   along with BLASTed.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-template <typename scalar, typename index>
-COOMatrix<scalar,index>::COOMatrix()
-{ }
-
-template <typename scalar, typename index>
-COOMatrix<scalar,index>::~COOMatrix()
-{ }
-
-template <typename scalar, typename index>
-MMDescription COOMatrix<scalar,index>::getMMDescription(std::ifstream& fin)
+inline
+MMDescription getMMDescription(std::ifstream& fin)
 {
 	std::string line;
 	std::getline(fin, line);
@@ -36,9 +28,9 @@ MMDescription COOMatrix<scalar,index>::getMMDescription(std::ifstream& fin)
 	MMDescription descr;
 
 	if(typeofmatrix.size() != 5)
-		std::cout << "! COOMatrix: Not enough terms in the header!\n";
+		std::cout << "! Not enough terms in the header!\n";
 	if(typeofmatrix[0] != "%%MatrixMarket")
-		std::cout << "! COOMatrix: Not a matrix market file!\n";
+		std::cout << "! Not a matrix market file!\n";
 
 	if(typeofmatrix[2] == "coordinate") {
 		descr.storagetype = COORDINATE;
@@ -47,7 +39,7 @@ MMDescription COOMatrix<scalar,index>::getMMDescription(std::ifstream& fin)
 		descr.storagetype = ARRAY;
 	}
 	else {
-		std::cout << "! COOMatrix: Invalid storage type!\n";
+		std::cout << "! Invalid storage type!\n";
 		std::abort();
 	}
 
@@ -60,7 +52,7 @@ MMDescription COOMatrix<scalar,index>::getMMDescription(std::ifstream& fin)
 	else if(typeofmatrix[3] == "patter")
 		descr.scalartype = PATTERN;
 	else {
-		std::cout << "! COOMatrix: Invalid scalar type!\n";
+		std::cout << "! Invalid scalar type!\n";
 		std::abort();
 	}
 
@@ -73,15 +65,15 @@ MMDescription COOMatrix<scalar,index>::getMMDescription(std::ifstream& fin)
 	else if(typeofmatrix[4] == "hermitian")
 		descr.matrixtype = HERMITIAN;
 	else {
-		std::cout << "! COOMatrix: Invalid matrix type!\n";
+		std::cout << "! Invalid matrix type!\n";
 		std::abort();
 	}
 
 	return descr;
 }
 
-template <typename scalar, typename index>
-std::vector<index> COOMatrix<scalar,index>::getSizeFromMatrixMarket(std::ifstream& fin, 
+template <typename index>
+std::vector<index> getSizeFromMatrixMarket(std::ifstream& fin, 
 		const MMDescription& descr)
 {
 	// read and discard lines until the first line that does not begin with '%'
@@ -125,6 +117,14 @@ std::vector<index> COOMatrix<scalar,index>::getSizeFromMatrixMarket(std::ifstrea
 	return sizes;
 }
 
+template <typename scalar, typename index>
+COOMatrix<scalar,index>::COOMatrix()
+{ }
+
+template <typename scalar, typename index>
+COOMatrix<scalar,index>::~COOMatrix()
+{ }
+
 /** Currently reads only general mtx matrices, not symmetric or skew-symmetric.
  */
 template <typename scalar, typename index>
@@ -147,7 +147,7 @@ void COOMatrix<scalar,index>::readMatrixMarket(const std::string file)
 		std::cout << "! COOMatrix: readMatrixMarket: Can only read general matrices.\n";
 	}
 
-	std::vector<index> sizes = getSizeFromMatrixMarket(fin,descr);
+	std::vector<index> sizes = getSizeFromMatrixMarket<index>(fin,descr);
 
 	nnz = sizes[2];
 	nrows = sizes[0];
@@ -170,7 +170,7 @@ void COOMatrix<scalar,index>::readMatrixMarket(const std::string file)
 
 	// get row pointers- note that we assume there's at least one element in each row
 	rowptr.resize(nrows+1);
-	std::vector <typename std::vector<Entry<scalar,index>>::iterator > rowits(nrows+1);
+	std::vector <typename std::vector<Entry<scalar,index>>::iterator> rowits(nrows+1);
 	rowptr[0] = 0;
 	rowits[0] = entries.begin();
 	
@@ -215,9 +215,23 @@ void COOMatrix<scalar,index>::convertToCSR(BSRMatrix<scalar,index,1> *const cmat
 }
 
 template <typename scalar, typename index>
-template<int bs>
-void COOMatrix<scalar,index>::convertToBSR(BSRMatrix<scalar,index,bs> *const bmat) const
+template<int bs, StorageOptions stor>
+void COOMatrix<scalar,index>::convertToBSR(RawBSRMatrix<scalar,index> *const bmat) const
 {
-	// TODO
+	static_assert(bs > 0, "Block size must be positive!");
+	static_assert(stor == RowMajor || stor == ColMajor, "Invalid storage option!");
+	bmat->nbrows = nrows/bs;
+	bmat->browptr = new index[bmat->nbrows+1];
+	bmat->browptr[0] = -1;
+	index bnnz = 0;                             //< Number of nonzero blocks
+
+	for(index irow = 0; irow < nrows; irow++)
+	{
+		for(index j = rowptr[irow]; j < rowptr[irow+1]; j++)
+		{
+			//const index colidx = entries[j].colind;
+		}
+	}
 }
+
 

@@ -47,6 +47,16 @@ struct MMDescription {
 	MMMatrixType matrixtype;
 };
 
+/// Returns a [description](\ref MMDescription) of the matrix if it's in Matrix Market format
+MMDescription getMMDescription(std::ifstream& fin);
+
+/// Returns a vector containing size information of a matrix in a Matrix Market file
+template <typename index>
+std::vector<index> getSizeFromMatrixMarket(
+		std::ifstream& fin,                   ///< Opened file stream to read from
+		const MMDescription& descr            ///< Matrix description
+	);
+
 /// A triplet that encapsulates one entry of a coordinate matrix
 template <typename scalar, typename index>
 struct Entry {
@@ -77,20 +87,13 @@ public:
 
 	/// Converts to a compressed sparse block-row (BSR) matrix 
 	/** The block size is given by the template parameter bs.
+	 * The template parameter stor specifies whether the scalars within a block are stored
+	 * row-major or column-major.
 	 */
-	template<int bs>
-	void convertToBSR(BSRMatrix<scalar,index,bs> *const bmat) const;
+	template<int bs, StorageOptions stor>
+	void convertToBSR(RawBSRMatrix<scalar,index> *const bmat) const;
 
 protected:
-
-	/// Returns a [description](\ref MMDescription) of the matrix if it's in Matrix Market format
-	MMDescription getMMDescription(std::ifstream& fin);
-
-	/// Returns a vector containing size information of a matrix in a Matrix Market file
-	std::vector<index> getSizeFromMatrixMarket(
-			std::ifstream& fin,                   ///< Opened file stream to read from
-			const MMDescription& descr            ///< Matrix description
-		);
 
 	std::vector<Entry<scalar,index>> entries;     ///< Stored entries of the matrix
 	index nnz;                                    ///< Number of nonzeros

@@ -36,8 +36,9 @@ void block_matrix_apply(const ConstRawBSRMatrix<scalar,index> *const mat,
 	Eigen::Map<const Vector<scalar>> x(xx, mat->nbrows*bs);
 	Eigen::Map<Vector<scalar>> y(yy, mat->nbrows*bs);
 
-	static_assert(std::is_same<Mattype,Matrix<scalar,Dynamic,bs,RowMajor>>::value 
-			|| std::is_same<Mattype,Matrix<scalar,bs,Dynamic,ColMajor>>::value);
+	static_assert(std::is_same<Mattype, Matrix<scalar,Dynamic,bs,RowMajor>>::value 
+			|| std::is_same<Mattype, Matrix<scalar,bs,Dynamic,ColMajor>>::value,
+		"Invalid matrix type!");
 
 	Eigen::Map<const Mattype> data(mat->vals, 
 			Mattype::IsRowMajor ? mat->browptr[mat->nbrows]*bs : bs,
@@ -699,7 +700,7 @@ void BSRMatrix<scalar,index,bs>::printDiagnostic(const char choice) const
 	fout.close();
 }
 
-
+////////////////////////////////////////////////////////////////////////////////////////////
 
 template <typename scalar, typename index>
 inline
