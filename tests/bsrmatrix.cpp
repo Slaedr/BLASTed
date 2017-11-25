@@ -66,7 +66,8 @@ int main(const int argc, const char *const argv[])
 		}
 
 		delete testmat;
-		
+	
+		// Test col-major within the blocks as well
 		if(typestr == "view") 
 		{
 			for(int i = 0; i < 9; i++) {

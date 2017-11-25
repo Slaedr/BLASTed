@@ -20,7 +20,14 @@
  */
 
 /// Matrix-vector product for BSR matrices
-template <typename scalar, typename index, int bs, StorageOptions stor>
+/** The template parameter Mattype is the type of the Eigen Matrix that the array of non-zero entries
+ * of the matrix should be mapped to.
+ * The reason this is a template parameter is that this type changes depending on whether
+ * the array of non-zero entries ConstRawBSRMatrix::vals is arragned row-major or column-major within
+ * each block. If it's row-major, the type should be Eigen::Matrix<scalar,Dynamic,bs,RowMajor> but
+ * if it's column-major, Mattype should be Eigen::Matrix<scalar,bs,Dynamic,ColMajor>.
+ */
+template <typename scalar, typename index, int bs, class Mattype>
 inline
 void block_matrix_apply(const ConstRawBSRMatrix<scalar,index> *const mat,
 		const scalar a, const scalar *const xx,
@@ -29,42 +36,30 @@ void block_matrix_apply(const ConstRawBSRMatrix<scalar,index> *const mat,
 	Eigen::Map<const Vector<scalar>> x(xx, mat->nbrows*bs);
 	Eigen::Map<Vector<scalar>> y(yy, mat->nbrows*bs);
 
-	if(stor == RowMajor) {
-		Eigen::Map<const Matrix<scalar,Dynamic,bs,RowMajor>> 
-			data(mat->vals, mat->browptr[mat->nbrows]*bs, bs);
+	static_assert(std::is_same<Mattype,Matrix<scalar,Dynamic,bs,RowMajor>>::value 
+			|| std::is_same<Mattype,Matrix<scalar,bs,Dynamic,ColMajor>>::value);
+
+	Eigen::Map<const Mattype> data(mat->vals, 
+			Mattype::IsRowMajor ? mat->browptr[mat->nbrows]*bs : bs,
+			Mattype::IsRowMajor ? bs : mat->browptr[mat->nbrows]*bs
+		);
 
 #pragma omp parallel for default(shared)
-		for(index irow = 0; irow < mat->nbrows; irow++)
-		{
-			y.SEG<bs>(irow*bs) = Vector<scalar>::Zero(bs);
+	for(index irow = 0; irow < mat->nbrows; irow++)
+	{
+		y.SEG<bs>(irow*bs) = Vector<scalar>::Zero(bs);
 
-			// loop over non-zero blocks of this block-row
-			for(index jj = mat->browptr[irow]; jj < mat->browptr[irow+1]; jj++)
-			{
-				// multiply the blocks with corresponding sub-vectors
-				const index jcol = mat->bcolind[jj];
+		// loop over non-zero blocks of this block-row
+		for(index jj = mat->browptr[irow]; jj < mat->browptr[irow+1]; jj++)
+		{
+			// multiply the blocks with corresponding sub-vectors
+			const index jcol = mat->bcolind[jj];
+			if(Mattype::IsRowMajor)	
 				y.SEG<bs>(irow*bs).noalias() 
 					+= a * data.BLK<bs,bs>(jj*bs,0) * x.SEG<bs>(jcol*bs);
-			}
-		}
-	}
-	else {
-		Eigen::Map<const Matrix<scalar,bs,Dynamic,ColMajor>> 
-			data(mat->vals, bs, mat->browptr[mat->nbrows]*bs);
-
-#pragma omp parallel for default(shared)
-		for(index irow = 0; irow < mat->nbrows; irow++)
-		{
-			y.SEG<bs>(irow*bs) = Vector<scalar>::Zero(bs);
-
-			// loop over non-zero blocks of this block-row
-			for(index jj = mat->browptr[irow]; jj < mat->browptr[irow+1]; jj++)
-			{
-				// multiply the blocks with corresponding sub-vectors
-				const index jcol = mat->bcolind[jj];
+			else
 				y.SEG<bs>(irow*bs).noalias() 
 					+= a * data.BLK<bs,bs>(0,jj*bs) * x.SEG<bs>(jcol*bs);
-			}
 		}
 	}
 }
@@ -83,22 +78,23 @@ void block_gemv3(const ConstRawBSRMatrix<scalar,index> *const mat,
 	Eigen::Map<const Vector<scalar>> x(xx, mat->nbrows*bs);
 	Eigen::Map<const Vector<scalar>> y(yy, mat->nbrows*bs);
 	Eigen::Map<Vector<scalar>> z(zz, mat->nbrows*bs);
+	
 	Eigen::Map<const Matrix<scalar,Dynamic,bs,RowMajor>> 
 		data(mat->vals, mat->browptr[mat->nbrows]*bs, bs);
 
 #pragma omp parallel for default(shared)
-	for(index irow = 0; irow < mat->nbrows; irow++)
-	{
-		z.SEG<bs>(irow*bs) = b * y.SEG<bs>(irow*bs);
-
-		// loop over non-zero blocks of this block-row
-		for(index jj = mat->browptr[irow]; jj < mat->browptr[irow+1]; jj++)
+		for(index irow = 0; irow < mat->nbrows; irow++)
 		{
-			const index jcol = mat->bcolind[jj];
-			z.SEG<bs>(irow*bs).noalias() += 
-				a * data.BLK<bs,bs>(jj*bs,0) * x.SEG<bs>(jcol*bs);
+			z.SEG<bs>(irow*bs) = b * y.SEG<bs>(irow*bs);
+
+			// loop over non-zero blocks of this block-row
+			for(index jj = mat->browptr[irow]; jj < mat->browptr[irow+1]; jj++)
+			{
+				const index jcol = mat->bcolind[jj];
+				z.SEG<bs>(irow*bs).noalias() += 
+					a * data.BLK<bs,bs>(jj*bs,0) * x.SEG<bs>(jcol*bs);
+			}
 		}
-	}
 }
 
 /// Computes and stores the inverses of diagonal blocks
@@ -613,7 +609,7 @@ template <typename scalar, typename index, int bs>
 void BSRMatrix<scalar,index,bs>::apply(const scalar a, const scalar *const xx,
                                        scalar *const __restrict yy) const
 {
-	block_matrix_apply<scalar,index,bs,RowMajor>(
+	block_matrix_apply<scalar,index,bs,Matrix<scalar,Dynamic,bs,RowMajor>>(
 			reinterpret_cast<const ConstRawBSRMatrix<scalar,index>*>(&mat), 
 			a, xx, yy);
 }
@@ -1293,6 +1289,7 @@ void BSRMatrix<scalar,index,1>::printDiagnostic(const char choice) const
 	fout.close();
 }
 
+////////////////////////////////////////////////////////////////////////////////////////
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
 BSRMatrixView<scalar,index,bs,stor>::BSRMatrixView(const index n_brows, const index *const brptrs,
@@ -1312,7 +1309,10 @@ template <typename scalar, typename index, int bs, StorageOptions stor>
 void BSRMatrixView<scalar,index,bs,stor>::apply(const scalar a, const scalar *const xx,
                                        scalar *const __restrict yy) const
 {
-	block_matrix_apply<scalar,index,bs,stor>(&mat, a, xx, yy);
+	if(stor == RowMajor)
+		block_matrix_apply<scalar,index,bs,Matrix<scalar,Dynamic,bs,RowMajor>>(&mat, a, xx, yy);
+	else
+		block_matrix_apply<scalar,index,bs,Matrix<scalar,bs,Dynamic,ColMajor>>(&mat, a, xx, yy);
 }
 
 template <typename scalar, typename index, int bs, StorageOptions stor>

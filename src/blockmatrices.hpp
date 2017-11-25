@@ -22,6 +22,7 @@
 #include <iostream>
 #include <fstream>
 #include <limits>
+#include <type_traits>
 #include <Eigen/LU>
 
 namespace blasted {
@@ -382,7 +383,8 @@ protected:
 
 /// A BSR matrix that is formed by wrapping a pre-existing read-only matrix
 /** StorageOptions is an Eigen type describing storage options, which we use here to
- * specify whether storage within blocks is row-major or column-major.
+ * specify whether storage within blocks is row-major or column-major. If each block is row-major,
+ * stopt should be Eigen::RowMajor else it shoule be Eigen::ColMajor.
  * The blocks are always arranged block-row-wise relative to each other.
  */
 template <typename scalar, typename index, int bs, StorageOptions stopt>
