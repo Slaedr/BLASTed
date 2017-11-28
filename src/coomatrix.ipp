@@ -220,16 +220,92 @@ void COOMatrix<scalar,index>::convertToBSR(RawBSRMatrix<scalar,index> *const bma
 {
 	static_assert(bs > 0, "Block size must be positive!");
 	static_assert(stor == RowMajor || stor == ColMajor, "Invalid storage option!");
+
+	// only for square matrices
+	assert(nrows==ncols);
+
+	// the dimension of the matrix must be a multiple of the block size
+	assert(nrows % bs == 0);
+
 	bmat->nbrows = nrows/bs;
 	bmat->browptr = new index[bmat->nbrows+1];
-	bmat->browptr[0] = -1;
-	index bnnz = 0;                             //< Number of nonzero blocks
+	bmat->diagind = new index[bmat->nbrows];
+	for(index i = 0; i < bmat->nbrows; i++)
+		bmat->diagind[i] = -1;
+	for(index i = 0; i < bmat->nbrows+1; i++)
+		bmat->browptr[i] = 0;
+	index bnnz = 0;                             //< Running count of number of nonzero blocks
+
+	std::vector<index> bcolidxs;
+	bcolidxs.reserve(nnz/bs);
+	std::vector<bool> tallybrows(bmat->nbrows, false);
+
+	/** If rows were sorted by column initially, block-rows would end up sorted by block-column.
+	 */
 
 	for(index irow = 0; irow < nrows; irow++)
 	{
+		const index curbrow = irow/bs;
 		for(index j = rowptr[irow]; j < rowptr[irow+1]; j++)
 		{
-			//const index colidx = entries[j].colind;
+			const index curcol = entries[j].colind;
+			const index curbcol = curcol/bs;
+
+			if(!tallybrows[curbrow]) {
+				bmat->browptr[curbrow] = bnnz;
+				tallybrows[curbrow] = true;
+			}
+
+			// find the current block-column of the current block-row in the array of column indices
+			auto it = std::find(bcolidxs.begin()+bmat->browptr[curbrow], bcolidxs.end(), curbcol);
+			
+			// if it does not exist, add the current block col index
+			if(it == bcolidxs.end()) {
+				bcolidxs.push_back(curbcol);
+				if(curbcol == curbrow)
+					bmat->diagind[curbrow] = bnnz;
+				bnnz++;
+			}
+		}
+	}
+
+	std::cout << "convertToBSR: Number of nonzero blocks = " << bnnz << std::endl;
+	bmat->browptr[nrows] = bnnz;
+
+	// fix browptr for empty block rows
+	for(index i = bmat->nbrows-1; i > 0; i--)
+		if(bmat->browptr[i] == 0)
+			bmat->browptr[i] = bmat->browptr[i+1];
+
+	bmat->bcolind = new index[bnnz];
+	bmat->vals = new scalar[bnnz*bs*bs];
+
+	for(index i = 0; i < bnnz; i++)
+		bmat->bcolind[i] = bcolidxs[i];
+
+	// copy non-zero values
+	for(index irow = 0; irow < nrows; irow++)
+	{
+		const index curbrow = irow/bs;
+		for(index j = rowptr[irow]; j < rowptr[irow+1]; j++)
+		{
+			const index curcol = entries[j].colind;
+			const index curbcol = curcol/bs;
+			const index offset = stor==RowMajor ? 
+				(irow-curbrow*bs)*bs + curcol-curbcol*bs : (curcol-curbcol*bs)*bs + irow-curbrow*bs;
+			
+			index *const bcptr = std::find(
+					bmat->bcolind + bmat->browptr[curbrow], 
+					bmat->bcolind + bmat->browptr[curbrow+1], 
+					curbcol);
+
+			if(bcptr == bmat->bcolind + bmat->browptr[curbrow+1]) {
+				std::cout << "! convertToBSR: Error: Memory not allocated for " << irow << ", " 
+					<< curcol << std::endl;
+				std::abort();
+			}
+
+			*(bmat->vals + (ptrdiff_t)(bcptr-bmat->bcolind) + offset) = entries[j].value;
 		}
 	}
 }

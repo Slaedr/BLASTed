@@ -70,6 +70,7 @@ template <typename scalar, typename index>
 class COOMatrix
 {
 	static_assert(std::numeric_limits<index>::is_signed, "Signed index type required!");
+	static_assert(std::numeric_limits<index>::is_integer, "Integer index type required!");
 
 public:
 	COOMatrix();

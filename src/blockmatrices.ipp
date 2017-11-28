@@ -1,6 +1,6 @@
 /** \file blockmatrices.ipp
  * \brief Implementation of block matrix methods,
- * including the specialized set of methods for block size 1.
+ *   including the specialized set of methods for block size 1.
  * \author Aditya Kashi
  * \date 2017-08
  * 

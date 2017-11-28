@@ -11,6 +11,7 @@
 
 using namespace blasted;
 
+/// A COO matrix class for testing \ref COOMatrix
 class TestCOOMatrix : public COOMatrix<double,int>
 {
 public:
@@ -24,6 +25,7 @@ public:
 	 *   - <row indices sorted by row index>
 	 *   - <column indices sorted by column index within each row; the latter sorted by row>
 	 *   - <Non-zero values sorted by row index and within each row by column index>
+	 *   - <A list of nrows number of indices pointing to th position of diagonal entries of each row>
 	 */
 	int readCoordinateMatrix(const std::string matfile, const std::string sortedfile);
 
@@ -34,5 +36,10 @@ protected:
 	using COOMatrix<double,int>::entries;
 	using COOMatrix<double,int>::rowptr;
 };
+	
+/// Test conversion to BSR
+template <int bs, StorageOptions stor>
+int testConvertCOOToBSR(const std::string matfile, const std::string sortedfile);
+
 
 #endif

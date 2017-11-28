@@ -8,7 +8,7 @@ int main(const int argc, const char *const argv[])
 {
 	if(argc < 2) {
 		std::cout << "! Please specify the test. Options:\n";
-		std::cout << " read\n convertCSR\n convertBSR\n";
+		std::cout << " read\n convertCSR\n convertBSR3\n";
 		std::abort();
 	}
 	std::string teststr = argv[1];
@@ -48,9 +48,17 @@ int main(const int argc, const char *const argv[])
 		int ierr = cmat.testStorage(argv[3]);
 		err = err || ierr;
 	}
-	else if(teststr == "convertBSR")
+	else if(teststr == "convertBSR3")
 	{
-		std::cout << "Not implemented yet..\n";
+		if(argc < 4) {
+			std::cout << "! After 'convertBSR3', please give \n"
+			<< "the file name containing the matrix (of block-size 3) in mtx format and\n"
+			<< "the file name containing the sorted arrays that describe the matrix.\n";
+			std::abort();
+		}
+
+		int ierr = testConvertCOOToBSR<3,Eigen::ColMajor>(argv[2],argv[3]);
+		err = err || ierr;
 	}
 	else {
 		std::cout << "! The requested test is not available.\n";

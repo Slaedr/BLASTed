@@ -1,5 +1,5 @@
 /** \file blockmatrices.hpp
- * \brief Classes for sparse matrices consisting of square dense blocks of static size
+ * \brief Classes for sparse square matrices consisting of square dense blocks of static size
  *
  * There are two kinds of sparse matrix classes. One kind, consisting of \refBSRMatrix,
  * implements a matrix which provides assembling operations and allocates and handles its own data.
@@ -35,7 +35,7 @@ using Eigen::Matrix;
 template <typename scalar>
 using Vector = Matrix<scalar,Dynamic,1>;
 
-/// A collection of data that represents an immutable compressed sparse block-row matrix
+/// A collection of data that represents an immutable compressed sparse block-row square matrix
 template <typename scalar, typename index>
 struct ConstRawBSRMatrix
 {
@@ -46,7 +46,7 @@ struct ConstRawBSRMatrix
 	const index nbrows;
 };
 
-/// A collection of data that represents a compressed sparse block-row matrix
+/// A collection of data that represents a compressed sparse block-row square matrix
 template <typename scalar, typename index>
 struct RawBSRMatrix
 {
@@ -65,6 +65,7 @@ template <typename scalar, typename index, int bs>
 class BSRMatrix : public AbstractMatrix<scalar, index>
 {
 	static_assert(std::numeric_limits<index>::is_signed, "Signed index type required!");
+	static_assert(std::numeric_limits<index>::is_integer, "Integer index type required!");
 	static_assert(bs > 0, "Block size must be positive!");
 
 public:
@@ -234,6 +235,7 @@ template <typename scalar, typename index>
 class BSRMatrix<scalar,index,1> : public AbstractMatrix<scalar, index>
 {
 	static_assert(std::numeric_limits<index>::is_signed, "Signed index type required!");
+	static_assert(std::numeric_limits<index>::is_integer, "Integer index type required!");
 
 public:
 	
@@ -391,6 +393,7 @@ template <typename scalar, typename index, int bs, StorageOptions stopt>
 class BSRMatrixView : public MatrixView<scalar, index>
 {
 	static_assert(std::numeric_limits<index>::is_signed, "Signed index type required!");
+	static_assert(std::numeric_limits<index>::is_integer, "Integer index type required!");
 	static_assert(bs > 0, "Block size must be positive!");
 	static_assert(stopt == RowMajor || stopt == ColMajor, "Invalid storage option!");
 
@@ -492,6 +495,7 @@ template <typename scalar, typename index>
 class CSRMatrixView : public MatrixView<scalar, index>
 {
 	static_assert(std::numeric_limits<index>::is_signed, "Signed index type required!");
+	static_assert(std::numeric_limits<index>::is_integer, "Integer index type required!");
 
 public:
 	
