@@ -78,6 +78,9 @@ public:
 	virtual ~COOMatrix();
 
 	/// Reads a matrix from a file in Matrix Market format
+	/** We store the row and column indices with zero-based indexing, but
+	 * the file contains 1-based indexing.
+	 */
 	void readMatrixMarket(const std::string file);
 	
 	// Multiplies the matrix with a vector

@@ -240,7 +240,8 @@ void COOMatrix<scalar,index>::convertToBSR(RawBSRMatrix<scalar,index> *const bma
 	bcolidxs.reserve(nnz/bs);
 	std::vector<bool> tallybrows(bmat->nbrows, false);
 
-	/** If rows were sorted by column initially, block-rows would end up sorted by block-column.
+	/** If nonzeros in each row were sorted by column initially, 
+	 * blocks in each block-row would end up sorted by block-column.
 	 */
 
 	for(index irow = 0; irow < nrows; irow++)
@@ -270,7 +271,7 @@ void COOMatrix<scalar,index>::convertToBSR(RawBSRMatrix<scalar,index> *const bma
 	}
 
 	std::cout << "convertToBSR: Number of nonzero blocks = " << bnnz << std::endl;
-	bmat->browptr[nrows] = bnnz;
+	bmat->browptr[bmat->nbrows] = bnnz;
 
 	// fix browptr for empty block rows
 	for(index i = bmat->nbrows-1; i > 0; i--)
@@ -279,6 +280,8 @@ void COOMatrix<scalar,index>::convertToBSR(RawBSRMatrix<scalar,index> *const bma
 
 	bmat->bcolind = new index[bnnz];
 	bmat->vals = new scalar[bnnz*bs*bs];
+	for(index i = 0; i < bnnz*bs*bs; i++)
+		bmat->vals[i] = 0;
 
 	for(index i = 0; i < bnnz; i++)
 		bmat->bcolind[i] = bcolidxs[i];
@@ -300,12 +303,12 @@ void COOMatrix<scalar,index>::convertToBSR(RawBSRMatrix<scalar,index> *const bma
 					curbcol);
 
 			if(bcptr == bmat->bcolind + bmat->browptr[curbrow+1]) {
-				std::cout << "! convertToBSR: Error: Memory not allocated for " << irow << ", " 
+				std::cout << "! convertToBSR: Error: Memory not found for " << irow << ", " 
 					<< curcol << std::endl;
 				std::abort();
 			}
 
-			*(bmat->vals + (ptrdiff_t)(bcptr-bmat->bcolind) + offset) = entries[j].value;
+			*(bmat->vals + (ptrdiff_t)(bcptr-bmat->bcolind)*bs*bs + offset) = entries[j].value;
 		}
 	}
 }

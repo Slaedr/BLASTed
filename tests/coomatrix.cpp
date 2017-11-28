@@ -1,7 +1,8 @@
-/** \file coomatrix.coo
+/** \file coomatrix.cpp
  * \brief Execution of unittests for coordinate matrix module
  */
 
+#undef NDEBUG
 #include "testcoomatrix.hpp"
 
 int main(const int argc, const char *const argv[])

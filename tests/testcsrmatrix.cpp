@@ -3,6 +3,8 @@
  * \author Aditya Kashi
  */
 
+#undef NDEBUG
+
 #include "testcsrmatrix.hpp"
 
 template <typename scalar>

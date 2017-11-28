@@ -3,6 +3,8 @@
  * \author Aditya Kashi
  */
 
+#undef NDEBUG
+
 #include "testbsrmatrix.hpp"
 
 template <int bs>

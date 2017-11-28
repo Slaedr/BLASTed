@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.0)
 
 # Variables that can/must be passed to the cmake command:
 #
@@ -10,7 +10,7 @@ cmake_minimum_required(VERSION 2.8)
 # - -DWITH_PETSC=1 to compile with PETSc support; in which case
 #     make sure PETSC_LIB and PETSC_ARCH envonment variables have been set.
 #     Note that in this case, MPI is required.
-# - -DPROFILE=1 for profiling.
+# - -DPROFILE=1 for profiling with gprof.
 
 project (blasted)
 

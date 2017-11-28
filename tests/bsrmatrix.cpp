@@ -17,6 +17,7 @@
  *   along with BLASTed.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#undef NDEBUG
 #include <iostream>
 #include "testbsrmatrix.hpp"
 

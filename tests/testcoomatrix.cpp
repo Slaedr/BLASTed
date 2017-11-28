@@ -3,6 +3,8 @@
  * \author Aditya Kashi
  */
 
+#undef NDEBUG
+
 #ifdef DEBUG
 #define __restrict__ 
 #define __restrict
@@ -94,7 +96,7 @@ int testConvertCOOToBSR(const std::string matfile,
 	std::vector<int> srowinds(snnz);
 	std::vector<int> srowptr(snrows+1);
 	std::vector<int> scolinds(snnz);
-	std::vector<double> svals(snnz*bs);
+	std::vector<double> svals(snnz*bs*bs);
 	std::vector<int> sdiaginds(snrows);
 
 	for(int i = 0; i < snrows+1; i++)
@@ -106,7 +108,7 @@ int testConvertCOOToBSR(const std::string matfile,
 		sortedfin >> srowinds[i];
 	for(int i = 0; i < snnz; i++)
 		sortedfin >> scolinds[i];
-	for(int i = 0; i < snnz*bs; i++)
+	for(int i = 0; i < snnz*bs*bs; i++)
 		sortedfin >> svals[i];
 	for(int i = 0; i < snrows; i++)
 		sortedfin >> sdiaginds[i];
@@ -119,17 +121,24 @@ int testConvertCOOToBSR(const std::string matfile,
 	assert(snrows == bm.nbrows);
 	assert(snnz == bm.browptr[bm.nbrows]);
 
-	for(int i = 0; i < snnz; i++)
-		assert(scolinds[i] == bm.bcolind[i]);
-	for(int i = 0; i < snnz*bs; i++)
-		assert(bm.vals[i] == svals[i]);
+	for(int i = 0; i < snnz; i++) {
+		assert(scolinds[i]-1 == bm.bcolind[i]);
+	}
 	for(int i = 0; i < snrows+1; i++)
 		assert(srowptr[i] == bm.browptr[i]);
+	for(int i = 0; i < snnz*bs*bs; i++) {
+		assert(bm.vals[i] == svals[i]);
+	}
 	for(int i = 0; i < snrows; i++)
 		assert(sdiaginds[i] == bm.diagind[i]);
 
 	matfin.close();
 	sortedfin.close();
+
+	delete [] bm.vals;
+	delete [] bm.browptr;
+	delete [] bm.bcolind;
+	delete [] bm.diagind;
 	return 0;
 }
 
