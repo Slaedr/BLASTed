@@ -21,7 +21,6 @@
 #define TESTCSRMATRIX_H
 
 #include "../src/blockmatrices.hpp"
-#include <vector>
 
 using namespace blasted;
 
@@ -37,5 +36,14 @@ public:
 protected:
 	using BSRMatrix<scalar,int,1>::mat;
 };
+
+/// Tests matrix vector product for CSR matrices and views
+/** \param type "view" or "matrix" depending on what you want to test
+ * \param matfile File name of the mtx file containing the matrix in COO format
+ * \param xvec File name of mtx file containing the vector to be multiplied in dense format
+ * \param prodvec File name of the mtx file containing the solution vector with which to compare
+ */
+int testCSRMatMult(const std::string type, 
+		const std::string matfile, const std::string xvec, const std::string prodvec);
 
 #endif

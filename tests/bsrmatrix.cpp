@@ -23,67 +23,32 @@
 
 int main(const int argc, const char *const argv[])
 {
-	if(argc < 3) {
-		std::cout << "! Please specify the test (options:  apply , gemv) \n";
-		std::cout << " and whether a matrix or a matrix view is to be tested.\n";
+	if(argc < 4) {
+		std::cout << "! Please specify the test (options:  apply , gemv), \n";
+		std::cout << " whether a matrix or a matrix view is to be tested,\n";
+		std::cout << "and whether the entries within blocks should be rowmajor or colmajor.\n";
 		std::abort();
 	}
 
 	// The test to execute
-	std::string teststr = argv[1];
+	const std::string teststr = argv[1];
 	// Whether to do it on a matrix or a matrix view
-	std::string typestr = argv[2];
+	const std::string typestr = argv[2];
+	// Whether the blocks are rowmajor or colmajor
+	const std::string bstorstr = argv[3];
 
 	int err = 0;
 
 	if(teststr == "apply")
 	{
-		int rowptr[4] = {0, 2, 3, 4}, colind[4] = {0,2,1,2}, diagind[3]={0,2,3};
-		double rdata[36] = { 1,2,5,3,0,1,2,6,0,
-			3,1,0,2,6,3,1,1,1,
-			0.5,2,-6,1,6,2,2,1,9,
-			10,1,1.5,0,-8,2,1,3,5
-		};
-		double cdata[36] = {1,3,2,2,0,6,5,1,0,
-			3,2,1,1,6,1,0,3,1,
-			0.5,1,2,2,6,1,-6,2,9,
-			10,0,1,1,-8,3,1.5,2,5
-		};
-		double x[9] = {1,2,1,1,3,1,3,2,-1};
-		double ans[9] = {21,19,18,0.5,21,14,30.5,-18,4};
-		double y[9];
-
-		AbstractLinearOperator<double,int>* testmat = nullptr;
-		if(typestr == "view") {
-			testmat = new BSRMatrixView<double,int,3,RowMajor>(3,rowptr,colind,rdata,diagind,1,1);
+		if(argc < 7) {
+			std::cout<< "! Please give filenames for a block matrix with block size 7,";
+			std::cout << "the vector and the solution vector.\n";
+			std::abort();
 		}
-		else
-			testmat = new BSRMatrix<double,int,3>(3,rowptr,colind,rdata,diagind,1,1);
-		
-		testmat->apply(1.0, x, y);
+		int ierr = testBSRMatMult<7>(typestr, bstorstr, argv[4], argv[5], argv[6]);
+		err = err || ierr;
 
-		for(int i = 0; i < 9; i++) {
-			assert(y[i] == ans[i]);
-		}
-
-		delete testmat;
-	
-		// Test col-major within the blocks as well
-		if(typestr == "view") 
-		{
-			for(int i = 0; i < 9; i++) {
-				y[i] = 0;
-			}
-
-			testmat = new BSRMatrixView<double,int,3,ColMajor>(3,rowptr,colind,cdata,diagind,1,1);
-			testmat->apply(1.0, x, y);
-
-			for(int i = 0; i < 9; i++) {
-				assert(y[i] == ans[i]);
-			}
-			
-			delete testmat;
-		}
 	}
 	else if(teststr == "gemv")
 	{

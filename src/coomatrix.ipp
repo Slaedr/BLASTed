@@ -117,6 +117,39 @@ std::vector<index> getSizeFromMatrixMarket(std::ifstream& fin,
 	return sizes;
 }
 
+template <typename scalar>
+scalar * readDenseMatrixMarket(const std::string file)
+{
+	std::ifstream fin(file);
+	if(!fin) {
+		std::cout << " readDenseMatrixMarket: File could not be opened to read!\n";
+		std::abort();
+	}
+
+	const MMDescription descr = getMMDescription(fin);
+	if(descr.matrixtype != GENERAL) {
+		fin.close();
+		throw "Matrix should be general!";
+	}
+	if(descr.storagetype != ARRAY) {
+		fin.close();
+		throw "Matrix should be stored as dense!";
+	}
+
+	const std::vector<int> sizes = getSizeFromMatrixMarket<int>(fin,descr);
+	if(sizes.size() < 2) {
+		fin.close();
+		throw "Size vector has less than 2 entries!";
+	}
+
+	scalar * vals = new scalar[sizes[0]*sizes[1]];
+	for(int i = 0; i < sizes[0]*sizes[1]; i++)
+		fin >> vals[i];
+
+	fin.close();
+	return vals;
+}
+
 template <typename scalar, typename index>
 COOMatrix<scalar,index>::COOMatrix()
 { }
@@ -211,6 +244,32 @@ void COOMatrix<scalar,index>::convertToCSR(BSRMatrix<scalar,index,1> *const cmat
 	for(index i=0; i < nnz; i++)
 	{
 		cmat->submitBlock(entries[i].rowind, entries[i].colind, &entries[i].value, 1, 1);
+	}
+}
+
+template <typename scalar, typename index>
+void COOMatrix<scalar,index>::convertToCSR(RawBSRMatrix<scalar,index> *const cmat) const
+{ 
+	cmat->nbrows = nrows;
+	cmat->browptr = new index[nrows+1];
+	cmat->bcolind = new index[nnz];
+	cmat->vals = new scalar[nnz];
+	cmat->diagind = new index[nrows];
+
+	for(index i = 0; i < nnz; i++) {
+		cmat->bcolind[i] = entries[i].colind;
+		cmat->vals[i] = entries[i].value;
+	}
+	for(index i = 0; i < nrows+1; i++)
+		cmat->browptr[i] = rowptr[i];
+
+	for(index i=0; i < nrows; i++)
+	{
+		for(index j = rowptr[i]; j < rowptr[i+1]; j++)
+		{
+			if(entries[j].colind == entries[j].rowind)
+				cmat->diagind[i] = j;
+		}
 	}
 }
 

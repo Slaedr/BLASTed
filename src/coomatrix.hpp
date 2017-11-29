@@ -57,6 +57,12 @@ std::vector<index> getSizeFromMatrixMarket(
 		const MMDescription& descr            ///< Matrix description
 	);
 
+/// Reads a dense matrix from a Matrix Market file in row-major format
+/** Allocates the required storage and returns a pointer to it.
+ */
+template <typename scalar>
+scalar * readDenseMatrixMarket(const std::string file);
+
 /// A triplet that encapsulates one entry of a coordinate matrix
 template <typename scalar, typename index>
 struct Entry {
@@ -89,10 +95,14 @@ public:
 	/// Converts to a compressed sparse row matrix
 	void convertToCSR(BSRMatrix<scalar,index,1> *const cmat) const;
 
+	/// Converts to a raw CSR struct \ref RawBSRMatrix
+	void convertToCSR(RawBSRMatrix<scalar,index> *const cmat) const;
+
 	/// Converts to a compressed sparse block-row (BSR) matrix 
 	/** The block size is given by the template parameter bs.
 	 * The template parameter stor specifies whether the scalars within a block are stored
 	 * row-major or column-major.
+	 * The storage required for the matrix is allocated here in the arrays of bmat.
 	 */
 	template<int bs, StorageOptions stor>
 	void convertToBSR(RawBSRMatrix<scalar,index> *const bmat) const;

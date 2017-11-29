@@ -41,5 +41,4 @@ protected:
 template <int bs, StorageOptions stor>
 int testConvertCOOToBSR(const std::string matfile, const std::string sortedfile);
 
-
 #endif

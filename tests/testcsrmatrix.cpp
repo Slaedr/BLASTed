@@ -5,7 +5,10 @@
 
 #undef NDEBUG
 
+#include <vector>
+#include <float.h>
 #include "testcsrmatrix.hpp"
+#include "../src/coomatrix.hpp"
 
 template <typename scalar>
 TestCSRMatrix<scalar>::TestCSRMatrix(const int nbuildsweeps, const int napplysweeps)
@@ -72,3 +75,46 @@ int TestCSRMatrix<scalar>::testStorage(const std::string compare_file)
 
 template class TestCSRMatrix<double>;
 template class TestCSRMatrix<float>;
+
+int testCSRMatMult(const std::string type,
+		const std::string matfile, const std::string xvec, const std::string prodvec)
+{
+	RawBSRMatrix<double,int> rm;
+	COOMatrix<double,int> coom;
+	coom.readMatrixMarket(matfile);
+	coom.convertToCSR(&rm);
+
+	const double *const x = readDenseMatrixMarket<double>(xvec);
+	const double *const ans = readDenseMatrixMarket<double>(prodvec);
+	double *const y = new double[rm.nbrows];
+	
+	AbstractLinearOperator<double,int>* testmat = nullptr;
+	if(type == "view") {
+		testmat = new CSRMatrixView<double,int>(rm.nbrows,
+				rm.browptr,rm.bcolind,rm.vals,rm.diagind,1,1);
+	}
+	else
+		testmat = new BSRMatrix<double,int,1>(rm.nbrows,
+				rm.browptr,rm.bcolind,rm.vals,rm.diagind,1,1);
+	
+
+	testmat->apply(1.0, x, y);
+
+	for(int i = 0; i < rm.nbrows; i++) {
+		assert(std::fabs(y[i]-ans[i]) < 10*DBL_EPSILON);
+	}
+
+	delete testmat;
+
+	delete [] rm.browptr;
+	delete [] rm.bcolind;
+	delete [] rm.vals;
+	delete [] rm.diagind;
+
+	delete [] x;
+	delete [] y;
+	delete [] ans;
+
+	return 0;
+}
+

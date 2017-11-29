@@ -37,20 +37,12 @@ int main(const int argc, const char *const argv[])
 
 	if(teststr == "apply")
 	{
-		int rowptr[3] = {0, 1, 2}, colind[2] = {0,1}, diagind[2]={0,1};
-		double data[2] = {1,2};
-		AbstractLinearOperator<double,int>* testmat = nullptr;
-		if(typestr == "view")
-			testmat = new CSRMatrixView<double,int>(2,rowptr,colind,data,diagind,1,1);
-		else
-			testmat = new BSRMatrix<double,int,1>(2,rowptr,colind,data,diagind,1,1);
-		double avec[2] = {1,2}, bvec[2];
-		testmat->apply(1.0, avec, bvec);
-
-		assert(bvec[0]==1);
-		assert(bvec[1]==4);
-	
-		delete testmat;
+		if(argc < 6) {
+			std::cout << "! Please provide file names of matrix, x vector and product.\n";
+			std::abort();
+		}
+		int ierr = testCSRMatMult(argv[2], argv[3], argv[4], argv[5]);
+		err = ierr || err;
 	}
 	else if(teststr == "gemv")
 	{

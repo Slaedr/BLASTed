@@ -22,11 +22,43 @@ add_test(NAME COOConvertToBSR3 COMMAND ${CMAKE_CURRENT_BINARY_DIR}/testcoomatrix
 ${CMAKE_CURRENT_SOURCE_DIR}/input/small_block3_matrix.mtx 
 ${CMAKE_CURRENT_SOURCE_DIR}/input/small_block3_matrix_sorted_bcolmajor.bcoo)
 
-add_test(NAME CSRMatMul COMMAND testcsrmatrix apply matrix ${CMAKE_CURRENT_SOURCE_DIR}/input/matrix.dat)
-add_test(NAME CSRViewMatMul COMMAND testcsrmatrix apply view ${CMAKE_CURRENT_SOURCE_DIR}/input/matrix.dat)
+add_test(NAME CSRMatMul COMMAND ${CMAKE_CURRENT_BINARY_DIR}/testcsrmatrix apply matrix 
+	${CMAKE_CURRENT_SOURCE_DIR}/input/cfd-matrix-test/DK01R.mtx 
+	${CMAKE_CURRENT_SOURCE_DIR}/input/cfd-matrix-test/DK01R_x.mtx 
+	${CMAKE_CURRENT_SOURCE_DIR}/input/cfd-matrix-test/DK01R_b.mtx
+)
+add_test(NAME CSRViewMatMul COMMAND ${CMAKE_CURRENT_BINARY_DIR}/testcsrmatrix apply view
+	${CMAKE_CURRENT_SOURCE_DIR}/input/cfd-matrix-test/DK01R.mtx 
+	${CMAKE_CURRENT_SOURCE_DIR}/input/cfd-matrix-test/DK01R_x.mtx 
+	${CMAKE_CURRENT_SOURCE_DIR}/input/cfd-matrix-test/DK01R_b.mtx
+)
 
-add_test(NAME BSRMatMul COMMAND testbsrmatrix apply matrix ${CMAKE_CURRENT_SOURCE_DIR}/input/matrix.dat)
-add_test(NAME BSRViewMatMul COMMAND ${CMAKE_CURRENT_BINARY_DIR}/testbsrmatrix 
-	apply view ${CMAKE_CURRENT_SOURCE_DIR}/input/matrix.dat)
+#add_test(NAME BSR3MatMul COMMAND testbsrmatrix apply matrix rowmajor 
+#	${CMAKE_CURRENT_SOURCE_DIR}/input/small_block3_matrix.mtx ${CMAKE_CURRENT_SOURCE_DIR}/input/small_block3_matrix_x.mtx 
+#	${CMAKE_CURRENT_SOURCE_DIR}/input/small_block3_matrix_b.mtx
+#)
+#add_test(NAME BSR3ViewMatMul COMMAND ${CMAKE_CURRENT_BINARY_DIR}/testbsrmatrix apply view rowmajor
+#	${CMAKE_CURRENT_SOURCE_DIR}/input/small_block3_matrix.mtx 
+#	${CMAKE_CURRENT_SOURCE_DIR}/input/small_block3_matrix_x.mtx 
+#	${CMAKE_CURRENT_SOURCE_DIR}/input/small_block3_matrix_b.mtx
+#)
+
+# valgrind --leak-check=full 
+
+add_test(NAME BSR7MatMul COMMAND ${CMAKE_CURRENT_BINARY_DIR}/testbsrmatrix apply matrix rowmajor 
+	${CMAKE_CURRENT_SOURCE_DIR}/input/cfd-matrix-test/DK01R.mtx 
+	${CMAKE_CURRENT_SOURCE_DIR}/input/cfd-matrix-test/DK01R_x.mtx 
+	${CMAKE_CURRENT_SOURCE_DIR}/input/cfd-matrix-test/DK01R_b.mtx
+)
+add_test(NAME BSR7ViewMatMul COMMAND ${CMAKE_CURRENT_BINARY_DIR}/testbsrmatrix apply view rowmajor
+	${CMAKE_CURRENT_SOURCE_DIR}/input/cfd-matrix-test/DK01R.mtx 
+	${CMAKE_CURRENT_SOURCE_DIR}/input/cfd-matrix-test/DK01R_x.mtx 
+	${CMAKE_CURRENT_SOURCE_DIR}/input/cfd-matrix-test/DK01R_b.mtx
+)
+add_test(NAME BSR7ColViewMatMul COMMAND ${CMAKE_CURRENT_BINARY_DIR}/testbsrmatrix apply view colmajor
+	${CMAKE_CURRENT_SOURCE_DIR}/input/cfd-matrix-test/DK01R.mtx 
+	${CMAKE_CURRENT_SOURCE_DIR}/input/cfd-matrix-test/DK01R_x.mtx 
+	${CMAKE_CURRENT_SOURCE_DIR}/input/cfd-matrix-test/DK01R_b.mtx
+)
 
 add_subdirectory(poisson3d-fd)
