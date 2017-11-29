@@ -2,6 +2,7 @@
 
 add_library(testlibcsrmatrix testcsrmatrix.cpp)
 add_library(testlibbsrmatrix testbsrmatrix.cpp)
+add_library(testlibsolve testsolve.cpp)
 
 add_executable(testbsrmatrix bsrmatrix.cpp)
 target_link_libraries(testbsrmatrix testlibbsrmatrix)
@@ -9,6 +10,8 @@ add_executable(testcsrmatrix csrmatrix.cpp)
 target_link_libraries(testcsrmatrix testlibcsrmatrix)
 add_executable(testcoomatrix coomatrix.cpp testcoomatrix.cpp)
 target_link_libraries(testcoomatrix testlibcsrmatrix)
+add_executable(testsolve solve.cpp)
+target_link_libraries(testsolve testlibsolve)
 
 # Tests
 

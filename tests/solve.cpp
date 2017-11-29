@@ -38,7 +38,8 @@ int main(const int argc, const char *const argv[])
 	// Whether the blocks are rowmajor or colmajor
 	const std::string orderstr = argv[3];
 
-	int err = testSolveRichardson(
+	int err = testSolveRichardson<7>(teststr, typestr, orderstr, argv[4], argv[5], argv[6],
+			200, 1e-6, 1, 1);
 
 	return err;
 }
