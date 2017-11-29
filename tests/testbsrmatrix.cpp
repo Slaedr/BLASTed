@@ -65,4 +65,3 @@ template int testBSRMatMult<3>(const std::string type, const std::string storage
 		const std::string matfile, const std::string xvec, const std::string prodvec);
 template int testBSRMatMult<7>(const std::string type, const std::string storageorder,
 		const std::string matfile, const std::string xvec, const std::string prodvec);
-

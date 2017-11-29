@@ -96,6 +96,8 @@ public:
 	void convertToCSR(BSRMatrix<scalar,index,1> *const cmat) const;
 
 	/// Converts to a raw CSR struct \ref RawBSRMatrix
+	/** Member nbrows of RawBSRMatrix is set to the total number of rows.
+	 */
 	void convertToCSR(RawBSRMatrix<scalar,index> *const cmat) const;
 
 	/// Converts to a compressed sparse block-row (BSR) matrix 
