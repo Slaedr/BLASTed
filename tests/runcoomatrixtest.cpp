@@ -38,15 +38,7 @@ int main(const int argc, const char *const argv[])
 			std::abort();
 		}
 
-		COOMatrix<double,int> tmat;
-		tmat.readMatrixMarket(argv[2]);
-
-		TestCSRMatrix<double> cmat(1,1);
-		BSRMatrix<double,int,1> * bmat = &cmat;
-
-		tmat.convertToCSR(bmat);
-
-		int ierr = cmat.testStorage(argv[3]);
+		int ierr = testConvertCOOToCSR(argv[2],argv[3]);
 		err = err || ierr;
 	}
 	else if(teststr == "convertBSR3")

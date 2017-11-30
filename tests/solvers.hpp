@@ -14,43 +14,6 @@ namespace blasted {
 typedef int a_int;
 typedef double a_real;
 
-/// Vector or matrix addition
-/** z <- pz + qx.
- * \param[in] N The length of the vectors
- */
-inline void axpby(const a_int N, const a_real p, a_real *const __restrict z, 
-	const a_real q, const a_real *const x)
-{
-#pragma omp parallel for simd default(shared)
-	for(a_int i = 0; i < N; i++) {
-		z[i] = p*z[i] + q*x[i];
-	}
-}
-
-/** z <- pz + qx + ry for vectors and matrices
- */
-inline void axpbypcz(const a_int N, const a_real p, a_real *const z, 
-	const a_real q, const a_real *const x,
-	const a_real r, const a_real *const y)
-{
-#pragma omp parallel for simd default(shared)
-	for(a_int i = 0; i < N; i++) {
-		z[i] = p*z[i] + q*x[i] + r*y[i];
-	}
-}
-
-/// Dot product of vectors or `double dot' product of matrices
-inline a_real dot(const a_int N, const a_real *const a, 
-	const a_real *const b)
-{
-	a_real sum = 0;
-#pragma omp parallel for simd default(shared) reduction(+:sum)
-	for(a_int i = 0; i < N; i++)
-		sum += a[i]*b[i];
-
-	return sum;
-}
-
 /// Preconditioner, ie, performs one iteration to solve M z = r
 /** Note that subclasses do not directly perform any computation but
  * delegate all computation to the relevant subclass of AbstractMatrix. 
@@ -208,6 +171,24 @@ public:
 	 *
 	 * \warning The two arguments must not alias each other.
 	 */
+	int solve(const a_real *const res, a_real *const __restrict du) const;
+};
+
+/// H.A. Van der Vorst's stabilized biconjugate gradient solver
+/** Uses right-preconditioning only.
+ */
+class BiCGSTAB : public IterativeSolver
+{
+	using IterativeSolver::A;
+	using IterativeSolver::maxiter;
+	using IterativeSolver::tol;
+	using IterativeSolver::walltime;
+	using IterativeSolver::cputime;
+	using IterativeSolver::prec;
+
+public:
+	BiCGSTAB( MatrixView<a_real,a_int>* const mat, Preconditioner *const precond);
+
 	int solve(const a_real *const res, a_real *const __restrict du) const;
 };
 

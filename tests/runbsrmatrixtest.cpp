@@ -23,10 +23,11 @@
 
 int main(const int argc, const char *const argv[])
 {
-	if(argc < 4) {
+	if(argc < 5) {
 		std::cout << "! Please specify the test (options:  apply , gemv), \n";
 		std::cout << " whether a matrix or a matrix view is to be tested,\n";
-		std::cout << "and whether the entries within blocks should be rowmajor or colmajor.\n";
+		std::cout << "whether the entries within blocks should be rowmajor or colmajor,\n"
+			<< "and the block size.\n";
 		std::abort();
 	}
 
@@ -37,16 +38,37 @@ int main(const int argc, const char *const argv[])
 	// Whether the blocks are rowmajor or colmajor
 	const std::string bstorstr = argv[3];
 
+	int bs;
+	try {
+		bs = std::stoi(argv[4]);
+	}
+	catch(const std::invalid_argument& e) {
+		std::cout << "! Invalid block size!!\n";
+		std::abort();
+	}
+	catch(const std::out_of_range& e) {
+		std::cout << "! Block size is too large for the type of index!!\n";
+		std::abort();
+	}
+
 	int err = 0;
 
 	if(teststr == "apply")
 	{
-		if(argc < 7) {
+		if(argc < 8) {
 			std::cout<< "! Please give filenames for a block matrix with block size 7,";
 			std::cout << "the vector and the solution vector.\n";
 			std::abort();
 		}
-		int ierr = testBSRMatMult<7>(typestr, bstorstr, argv[4], argv[5], argv[6]);
+		int ierr = 0;
+		if(bs == 7)
+			ierr = testBSRMatMult<7>(typestr, bstorstr, argv[5], argv[6], argv[7]);
+		else if(bs == 3)
+			ierr = testBSRMatMult<3>(typestr, bstorstr, argv[5], argv[6], argv[7]);
+		else {
+			std::cout << "Block size not supported!\n";
+			std::abort();
+		}
 		err = err || ierr;
 
 	}

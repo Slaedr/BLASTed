@@ -84,18 +84,18 @@ void block_gemv3(const ConstRawBSRMatrix<scalar,index> *const mat,
 		data(mat->vals, mat->browptr[mat->nbrows]*bs, bs);
 
 #pragma omp parallel for default(shared)
-		for(index irow = 0; irow < mat->nbrows; irow++)
-		{
-			z.SEG<bs>(irow*bs) = b * y.SEG<bs>(irow*bs);
+	for(index irow = 0; irow < mat->nbrows; irow++)
+	{
+		z.SEG<bs>(irow*bs) = b * y.SEG<bs>(irow*bs);
 
-			// loop over non-zero blocks of this block-row
-			for(index jj = mat->browptr[irow]; jj < mat->browptr[irow+1]; jj++)
-			{
-				const index jcol = mat->bcolind[jj];
-				z.SEG<bs>(irow*bs).noalias() += 
-					a * data.BLK<bs,bs>(jj*bs,0) * x.SEG<bs>(jcol*bs);
-			}
+		// loop over non-zero blocks of this block-row
+		for(index jj = mat->browptr[irow]; jj < mat->browptr[irow+1]; jj++)
+		{
+			const index jcol = mat->bcolind[jj];
+			z.SEG<bs>(irow*bs).noalias() += 
+				a * data.BLK<bs,bs>(jj*bs,0) * x.SEG<bs>(jcol*bs);
 		}
+	}
 }
 
 /// Computes and stores the inverses of diagonal blocks
@@ -1405,7 +1405,7 @@ template <typename scalar, typename index>
 void CSRMatrixView<scalar,index>::precJacobiSetup()
 {
 	if(!dblocks) {
-		dblocks = new scalar[mat.browptr[mat.nbrows]];
+		dblocks = new scalar[mat.nbrows];
 		std::cout << " CSR MatrixView: precJacobiSetup(): Initial setup.\n";
 	}
 
@@ -1423,7 +1423,7 @@ template <typename scalar, typename index>
 void CSRMatrixView<scalar,index>::precSGSSetup()
 {
 	if(!dblocks) {
-		dblocks = new scalar[mat.browptr[mat.nbrows]];
+		dblocks = new scalar[mat.nbrows];
 		delete [] ytemp;
 		ytemp = new scalar[mat.nbrows];
 		std::cout << " CSR MatrixView: precSGSSetup(): Initial setup.\n";

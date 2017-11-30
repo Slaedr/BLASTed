@@ -232,7 +232,7 @@ void COOMatrix<scalar,index>::readMatrixMarket(const std::string file)
 	}
 }
 
-template <typename scalar, typename index>
+/*template <typename scalar, typename index>
 void COOMatrix<scalar,index>::convertToCSR(BSRMatrix<scalar,index,1> *const cmat) const
 { 
 	std::vector<index> cinds(nnz);
@@ -245,7 +245,7 @@ void COOMatrix<scalar,index>::convertToCSR(BSRMatrix<scalar,index,1> *const cmat
 	{
 		cmat->submitBlock(entries[i].rowind, entries[i].colind, &entries[i].value, 1, 1);
 	}
-}
+}*/
 
 template <typename scalar, typename index>
 void COOMatrix<scalar,index>::convertToCSR(RawBSRMatrix<scalar,index> *const cmat) const

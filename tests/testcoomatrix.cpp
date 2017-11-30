@@ -147,3 +147,72 @@ int testConvertCOOToBSR<3,ColMajor>(const std::string matfile, const std::string
 template
 int testConvertCOOToBSR<3,RowMajor>(const std::string matfile, const std::string sortedfile);
 
+int testConvertCOOToCSR(const std::string matfile, const std::string sortedfile)
+{
+	std::ifstream matfin(matfile);
+	if(!matfin) {
+		std::cout << " TestCOOMatrix: File could not be opened to read!\n";
+		std::abort();
+	}
+
+	COOMatrix<double,int> cmat;
+	cmat.readMatrixMarket(matfile);
+	
+	std::ifstream sortedfin(sortedfile);
+	if(!sortedfin) {
+		std::cout << " TestCOOMatrix: File could not be opened to read!\n";
+		std::abort();
+	}
+
+	int snnz, snrows, sncols;
+	sortedfin >> snrows >> sncols >> snnz;
+
+	std::vector<int> srowinds(snnz);
+	std::vector<int> srowptr(snrows+1);
+	std::vector<int> scolinds(snnz);
+	std::vector<double> svals(snnz);
+	std::vector<int> sdiaginds(snrows);
+
+	for(int i = 0; i < snrows+1; i++)
+		sortedfin >> srowptr[i];
+
+	assert(srowptr[snrows] == snnz);
+
+	for(int i = 0; i < snnz; i++)
+		sortedfin >> srowinds[i];
+	for(int i = 0; i < snnz; i++)
+		sortedfin >> scolinds[i];
+	for(int i = 0; i < snnz; i++)
+		sortedfin >> svals[i];
+	for(int i = 0; i < snrows; i++)
+		sortedfin >> sdiaginds[i];
+
+	RawBSRMatrix<double,int> bm;
+	cmat.convertToCSR(&bm);
+
+	// test
+	
+	assert(snrows == bm.nbrows);
+	assert(snnz == bm.browptr[bm.nbrows]);
+
+	for(int i = 0; i < snnz; i++) {
+		assert(scolinds[i]-1 == bm.bcolind[i]);
+	}
+	for(int i = 0; i < snrows+1; i++)
+		assert(srowptr[i] == bm.browptr[i]);
+	for(int i = 0; i < snnz; i++) {
+		assert(bm.vals[i] == svals[i]);
+	}
+	for(int i = 0; i < snrows; i++)
+		assert(sdiaginds[i] == bm.diagind[i]);
+
+	matfin.close();
+	sortedfin.close();
+
+	delete [] bm.vals;
+	delete [] bm.browptr;
+	delete [] bm.bcolind;
+	delete [] bm.diagind;
+	return 0;
+}
+

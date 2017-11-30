@@ -88,12 +88,6 @@ public:
 	 * the file contains 1-based indexing.
 	 */
 	void readMatrixMarket(const std::string file);
-	
-	// Multiplies the matrix with a vector
-	//void apply(const scalar a, const scalar *const x, scalar *const __restrict y) const;
-
-	/// Converts to a compressed sparse row matrix
-	void convertToCSR(BSRMatrix<scalar,index,1> *const cmat) const;
 
 	/// Converts to a raw CSR struct \ref RawBSRMatrix
 	/** Member nbrows of RawBSRMatrix is set to the total number of rows.

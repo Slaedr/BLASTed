@@ -36,6 +36,9 @@ protected:
 	using COOMatrix<double,int>::entries;
 	using COOMatrix<double,int>::rowptr;
 };
+
+/// Test conversion of COO to CSR
+int testConvertCOOToCSR(const std::string matfile, const std::string sortedfile);
 	
 /// Test conversion to BSR
 template <int bs, StorageOptions stor>

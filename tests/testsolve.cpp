@@ -15,12 +15,13 @@
 using namespace blasted;
 
 template<int bs>
-int testSolveRichardson(const std::string precontype,
+int testSolve(const std::string solvertype, const std::string precontype,
 		const std::string mattype, const std::string storageorder, const double testtol,
 		const std::string matfile, const std::string xfile, const std::string bfile,
 		const double tol, const int maxiter, const int nbuildswps, const int napplyswps)
 {
-	std::cout << "Inputs: Prec = " << precontype << ", mat type = " << mattype
+	std::cout << "Inputs: Solver = " <<solvertype 
+		<< ", Prec = " << precontype << ", mat type = " << mattype
 		<< ", order = " << storageorder << ", test tol = " << testtol 
 		<< ", tolerance = " << tol << " maxiter = " << maxiter
 		<< ",\n  Num build sweeps = " << nbuildswps << ", num apply sweeps = " << napplyswps << '\n';
@@ -61,20 +62,33 @@ int testSolveRichardson(const std::string precontype,
 		prec = new SGS(mat);
 	else if(precontype == "ilu0")
 		prec = new ILU0(mat);
+	else if(precontype == "none")
+		prec = new NoPrec(mat);
 	else {
 		std::cout << " ! Invalid preconditioner option!\n";
 		std::abort();
 	}
 
-	IterativeSolver* solver = new RichardsonSolver(mat,prec);
+	IterativeSolver* solver = nullptr;
+	if(solvertype == "richardson")
+		solver = new RichardsonSolver(mat,prec);
+	else if(solvertype == "bcgs")
+		solver = new BiCGSTAB(mat,prec);
+	else {
+		std::cout << " ! Invalid solver option!\n";
+		std::abort();
+	}
 
 	solver->setupPreconditioner();
 	solver->setParams(tol,maxiter);
 	int iters = solver->solve(b, x);
 	std::cout << " Num iters = " << iters << std::endl;
+	/*for(int i = 0; i < mat->dim(); i++)
+		std::cout << x[i] << " " << ans[i] << ", ";
+	std::cout << std::endl;*/
 
 	double l2norm = 0;
-	for(int i = 0; i < rm.nbrows*bs; i++) {
+	for(int i = 0; i < mat->dim(); i++) {
 		l2norm += (x[i]-ans[i])*(x[i]-ans[i]);
 	}
 	l2norm = std::sqrt(l2norm);
@@ -97,13 +111,13 @@ int testSolveRichardson(const std::string precontype,
 }
 
 template
-int testSolveRichardson<3>(const std::string precontype,
+int testSolve<3>(const std::string solvertype, const std::string precontype,
 		const std::string mattype, const std::string storageorder, const double testtol,
 		const std::string matfile, const std::string xfile, const std::string bfile,
 		const double tol, const int maxiter, const int nbuildswps, const int napplyswps);
 
 template
-int testSolveRichardson<7>(const std::string precontype,
+int testSolve<7>(const std::string solvertype, const std::string precontype,
 		const std::string mattype, const std::string storageorder, const double testtol,
 		const std::string matfile, const std::string xfile, const std::string bfile,
 		const double tol, const int maxiter, const int nbuildswps, const int napplyswps);
