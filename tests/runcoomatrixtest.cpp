@@ -1,4 +1,4 @@
-/** \file coomatrix.cpp
+/** \file runcoomatrixtest.cpp
  * \brief Execution of unittests for coordinate matrix module
  */
 

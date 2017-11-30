@@ -105,6 +105,7 @@ public:
 	 * The template parameter stor specifies whether the scalars within a block are stored
 	 * row-major or column-major.
 	 * The storage required for the matrix is allocated here in the arrays of bmat.
+	 * RawBSRMatrix::nbrows is set to the number of block-rows.
 	 */
 	template<int bs, StorageOptions stor>
 	void convertToBSR(RawBSRMatrix<scalar,index> *const bmat) const;

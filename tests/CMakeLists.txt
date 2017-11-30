@@ -1,17 +1,12 @@
 # test executables
 
-add_library(testlibcsrmatrix testcsrmatrix.cpp)
-add_library(testlibbsrmatrix testbsrmatrix.cpp)
-add_library(testlibsolve testsolve.cpp)
+add_library(solvers solvers.cpp)
 
-add_executable(testbsrmatrix bsrmatrix.cpp)
-target_link_libraries(testbsrmatrix testlibbsrmatrix)
-add_executable(testcsrmatrix csrmatrix.cpp)
-target_link_libraries(testcsrmatrix testlibcsrmatrix)
-add_executable(testcoomatrix coomatrix.cpp testcoomatrix.cpp)
-target_link_libraries(testcoomatrix testlibcsrmatrix)
-add_executable(testsolve solve.cpp)
-target_link_libraries(testsolve testlibsolve)
+add_executable(testbsrmatrix runbsrmatrixtest.cpp testbsrmatrix.cpp)
+add_executable(testcsrmatrix runcsrmatrixtest.cpp testcsrmatrix.cpp)
+add_executable(testcoomatrix runcoomatrixtest.cpp testcoomatrix.cpp testcsrmatrix.cpp)
+add_executable(testsolve runsolvetest.cpp testsolve.cpp)
+target_link_libraries(testsolve solvers)
 
 # Tests
 
@@ -64,7 +59,7 @@ add_test(NAME BSR7ColViewMatMul COMMAND ${CMAKE_CURRENT_BINARY_DIR}/testbsrmatri
 	${CMAKE_CURRENT_SOURCE_DIR}/input/cfd-matrix-test/DK01R_b.mtx
 )
 
-add_test(NAME BSR7ViewSGSRowmajor COMMAND ${CMAKE_CURRENT_BINARY_DIR}/testsolve sgs bsr rowmajor
+add_test(NAME BSR7ViewILU0Rowmajor COMMAND ${CMAKE_CURRENT_BINARY_DIR}/testsolve ilu0 bsr rowmajor
 	${CMAKE_CURRENT_SOURCE_DIR}/input/cfd-matrix-test/DK01R.mtx 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/cfd-matrix-test/DK01R_x.mtx 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/cfd-matrix-test/DK01R_b.mtx

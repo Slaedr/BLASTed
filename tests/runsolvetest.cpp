@@ -1,4 +1,4 @@
-/** \file solve.cpp
+/** \file solvetest.cpp
  * \brief Driver for testing preconditioning operations
  * \author Aditya Kashi
  * 
@@ -40,8 +40,8 @@ int main(const int argc, const char *const argv[])
 	// Whether the blocks are rowmajor or colmajor
 	const std::string orderstr = argv[3];
 
-	int err = testSolveRichardson<7>(teststr, typestr, orderstr, argv[4], argv[5], argv[6],
-			1e-4, 500, 1, 1);
+	int err = testSolveRichardson<7>(teststr, typestr, orderstr, 1e-4, argv[4], argv[5], argv[6],
+			1e-6, 500, 1, 1);
 
 	return err;
 }

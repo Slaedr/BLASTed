@@ -18,7 +18,7 @@
  */
 template<int bs>
 int testSolveRichardson(const std::string precontype,
-		const std::string mattype, const std::string storageorder, 
+		const std::string mattype, const std::string storageorder, const double testtol,
 		const std::string matfile, const std::string xfile, const std::string bfile,
 		const double tol, const int maxiter, const int nbuildswps, const int napplyswps);
 

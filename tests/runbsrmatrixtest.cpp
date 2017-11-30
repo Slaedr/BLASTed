@@ -1,4 +1,4 @@
-/** \file bsrmatrix.cpp
+/** \file runbsrmatrixtest.cpp
  * \brief Tests block matrix operations
  * \author Aditya Kashi
  * 
