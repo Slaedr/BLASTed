@@ -111,7 +111,7 @@ int testSolve(const std::string solvertype, const std::string precontype,
 }
 
 template
-int testSolve<3>(const std::string solvertype, const std::string precontype,
+int testSolve<4>(const std::string solvertype, const std::string precontype,
 		const std::string mattype, const std::string storageorder, const double testtol,
 		const std::string matfile, const std::string xfile, const std::string bfile,
 		const double tol, const int maxiter, const int nbuildswps, const int napplyswps);

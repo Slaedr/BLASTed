@@ -33,6 +33,9 @@ public:
 	/// Tests the matrix storage
 	int testStorage(const std::string compare_file);
 
+	/// Writes to file as COO matrix
+	int writeCOO(const std::string outfile);
+
 protected:
 	using BSRMatrix<scalar,int,1>::mat;
 };

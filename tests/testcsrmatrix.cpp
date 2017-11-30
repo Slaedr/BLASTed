@@ -73,8 +73,26 @@ int TestCSRMatrix<scalar>::testStorage(const std::string compare_file)
 	return 0;
 }
 
+template <typename scalar>
+int TestCSRMatrix<scalar>::writeCOO(const std::string outfile)
+{
+	// write
+	std::ofstream fout(outfile);
+	if(!fout) {
+		return -1;
+	}
+
+	fout << mat.nbrows << " " << mat.nbrows << " " << mat.browptr[mat.nbrows] << '\n';
+	for(int irow = 0; irow < mat.nbrows; irow++)
+	{
+		for(int j = mat.browptr[irow]; j < mat.browptr[irow+1]; j++)
+			fout << irow+1 << " " << mat.bcolind[j]+1 << " " << mat.vals[j] << '\n';
+	}
+	fout.close();
+	return 0;
+}
+
 template class TestCSRMatrix<double>;
-template class TestCSRMatrix<float>;
 
 int testCSRMatMult(const std::string type,
 		const std::string matfile, const std::string xvec, const std::string prodvec)

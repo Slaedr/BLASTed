@@ -78,19 +78,44 @@ add_test(NAME SPDCSRILU0 COMMAND ${CMAKE_CURRENT_BINARY_DIR}/testsolve bcgs ilu0
 	1e-10 1e-10 200
 )
 
-if(NOTOBEADDED)
+add_test(NAME CSRJacobi COMMAND ${CMAKE_CURRENT_BINARY_DIR}/testsolve bcgs jacobi csr rowmajor
+	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.mtx 
+	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.mtx 
+	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.mtx
+	1e-10 1e-8 200
+)
+add_test(NAME CSRSGS COMMAND ${CMAKE_CURRENT_BINARY_DIR}/testsolve bcgs sgs csr rowmajor
+	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.mtx 
+	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.mtx 
+	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.mtx
+	1e-10 1e-8 200
+)
 add_test(NAME CSRILU0 COMMAND ${CMAKE_CURRENT_BINARY_DIR}/testsolve bcgs ilu0 csr rowmajor
-	${CMAKE_CURRENT_SOURCE_DIR}/input/fluorem-dk01r/DK01R.mtx 
-	${CMAKE_CURRENT_SOURCE_DIR}/input/fluorem-dk01r/DK01R_x.mtx 
-	${CMAKE_CURRENT_SOURCE_DIR}/input/fluorem-dk01r/DK01R_b.mtx
-	1e-10 1e-6 200
+	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.mtx 
+	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.mtx 
+	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.mtx
+	1e-10 1e-8 200
 )
 
-add_test(NAME BSR7ILU0Rowmajor COMMAND ${CMAKE_CURRENT_BINARY_DIR}/testsolve bcgs ilu0 bsr rowmajor
-	${CMAKE_CURRENT_SOURCE_DIR}/input/fluorem-dk01r/DK01R.mtx 
-	${CMAKE_CURRENT_SOURCE_DIR}/input/fluorem-dk01r/DK01R_x.mtx 
-	${CMAKE_CURRENT_SOURCE_DIR}/input/fluorem-dk01r/DK01R_b.mtx
+add_test(NAME BSR4JacobiRowmajor COMMAND ${CMAKE_CURRENT_BINARY_DIR}/testsolve bcgs jacobi bsr rowmajor
+	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.mtx 
+	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.mtx 
+	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.mtx
+	1e-10 1e-8 200
 )
-endif()
+
+add_test(NAME BSR4SGSRowmajor COMMAND ${CMAKE_CURRENT_BINARY_DIR}/testsolve bcgs sgs bsr rowmajor
+	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.mtx 
+	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.mtx 
+	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.mtx
+	1e-10 1e-8 200
+)
+
+add_test(NAME BSR4ILU0Rowmajor COMMAND ${CMAKE_CURRENT_BINARY_DIR}/testsolve bcgs ilu0 bsr rowmajor
+	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.mtx 
+	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.mtx 
+	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.mtx
+	1e-10 1e-8 200
+)
 
 add_subdirectory(poisson3d-fd)
