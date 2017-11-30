@@ -64,4 +64,10 @@ add_test(NAME BSR7ColViewMatMul COMMAND ${CMAKE_CURRENT_BINARY_DIR}/testbsrmatri
 	${CMAKE_CURRENT_SOURCE_DIR}/input/cfd-matrix-test/DK01R_b.mtx
 )
 
+add_test(NAME BSR7ViewSGSRowmajor COMMAND ${CMAKE_CURRENT_BINARY_DIR}/testsolve sgs bsr rowmajor
+	${CMAKE_CURRENT_SOURCE_DIR}/input/cfd-matrix-test/DK01R.mtx 
+	${CMAKE_CURRENT_SOURCE_DIR}/input/cfd-matrix-test/DK01R_x.mtx 
+	${CMAKE_CURRENT_SOURCE_DIR}/input/cfd-matrix-test/DK01R_b.mtx
+)
+
 add_subdirectory(poisson3d-fd)

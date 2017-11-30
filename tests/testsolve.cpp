@@ -303,6 +303,7 @@ public:
 		double finalwtime = (double)time2.tv_sec + (double)time2.tv_usec * 1.0e-6;
 		double finalctime = (double)clock() / (double)CLOCKS_PER_SEC;
 		walltime += (finalwtime-initialwtime); cputime += (finalctime-initialctime);
+		std::cout << "  Final rel res norm = " << resnorm/bnorm << std::endl;
 		return step;
 	}
 };
@@ -313,6 +314,10 @@ int testSolveRichardson(const std::string precontype,
 		const std::string matfile, const std::string xfile, const std::string bfile,
 		const double tol, const int maxiter, const int nbuildswps, const int napplyswps)
 {
+	std::cout << "Inputs: Prec = " << precontype << ", mat type = " << mattype
+		<< ", tolerance = " << tol << " maxiter = " << maxiter
+		<< ",\n Num build sweeps = " << nbuildswps << ", num apply sweeps = " << napplyswps << '\n';
+
 	RawBSRMatrix<double,int> rm;
 	COOMatrix<double,int> coom;
 	coom.readMatrixMarket(matfile);
@@ -356,7 +361,8 @@ int testSolveRichardson(const std::string precontype,
 
 	solver->setupPreconditioner();
 	solver->setParams(tol,maxiter);
-	solver->solve(b, x);
+	int iters = solver->solve(b, x);
+	std::cout << " Num iters = " << iters << std::endl;
 
 	for(int i = 0; i < rm.nbrows*bs; i++) {
 		assert(std::fabs(x[i]-ans[i]) < 100*tol);

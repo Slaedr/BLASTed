@@ -23,11 +23,13 @@
 
 int main(const int argc, const char *const argv[])
 {
-	if(argc < 4) {
+	if(argc < 7) {
 		std::cout << "! Please specify the test (options: jacobi, sgs, ilu0), \n";
 		std::cout << " the matrix type to use (options: csr, bsr),\n";
-		std::cout << "and whether the entries within blocks should be rowmajor or colmajor\n";
-		std::cout << "(this last point does not matter for CSR, but it's needed anyway).\n";
+		std::cout << "whether the entries within blocks should be rowmajor or colmajor\n";
+		std::cout << "(this option does not matter for CSR, but it's needed anyway),\n";
+		std::cout << "and three file names of (in order) the matrix, the true solution vector x\
+			 and the RHS vector b.\n";
 		std::abort();
 	}
 
@@ -39,7 +41,7 @@ int main(const int argc, const char *const argv[])
 	const std::string orderstr = argv[3];
 
 	int err = testSolveRichardson<7>(teststr, typestr, orderstr, argv[4], argv[5], argv[6],
-			200, 1e-6, 1, 1);
+			1e-4, 500, 1, 1);
 
 	return err;
 }
