@@ -70,7 +70,7 @@ void block_matrix_apply(const ConstRawBSRMatrix<scalar,index> *const mat,
  * \param[in] mat The BSR matrix
  * \warning xx must not alias zz.
  */
-template <typename scalar, typename index, int bs>
+template <typename scalar, typename index, int bs, class Mattype>
 inline
 void block_gemv3(const ConstRawBSRMatrix<scalar,index> *const mat,
 		const scalar a, const scalar *const __restrict xx, 
@@ -79,9 +79,15 @@ void block_gemv3(const ConstRawBSRMatrix<scalar,index> *const mat,
 	Eigen::Map<const Vector<scalar>> x(xx, mat->nbrows*bs);
 	Eigen::Map<const Vector<scalar>> y(yy, mat->nbrows*bs);
 	Eigen::Map<Vector<scalar>> z(zz, mat->nbrows*bs);
+
+	static_assert(std::is_same<Mattype, Matrix<scalar,Dynamic,bs,RowMajor>>::value 
+			|| std::is_same<Mattype, Matrix<scalar,bs,Dynamic,ColMajor>>::value,
+		"Invalid matrix type!");
 	
-	Eigen::Map<const Matrix<scalar,Dynamic,bs,RowMajor>> 
-		data(mat->vals, mat->browptr[mat->nbrows]*bs, bs);
+	Eigen::Map<const Mattype> data(mat->vals, 
+			Mattype::IsRowMajor ? mat->browptr[mat->nbrows]*bs : bs,
+			Mattype::IsRowMajor ? bs : mat->browptr[mat->nbrows]*bs
+		);
 
 #pragma omp parallel for default(shared)
 	for(index irow = 0; irow < mat->nbrows; irow++)
@@ -92,8 +98,12 @@ void block_gemv3(const ConstRawBSRMatrix<scalar,index> *const mat,
 		for(index jj = mat->browptr[irow]; jj < mat->browptr[irow+1]; jj++)
 		{
 			const index jcol = mat->bcolind[jj];
-			z.SEG<bs>(irow*bs).noalias() += 
-				a * data.BLK<bs,bs>(jj*bs,0) * x.SEG<bs>(jcol*bs);
+			if(Mattype::IsRowMajor)	
+				z.SEG<bs>(irow*bs).noalias() += 
+					a * data.BLK<bs,bs>(jj*bs,0) * x.SEG<bs>(jcol*bs);
+			else
+				z.SEG<bs>(irow*bs).noalias() += 
+					a * data.BLK<bs,bs>(0,jj*bs) * x.SEG<bs>(jcol*bs);
 		}
 	}
 }
@@ -101,56 +111,76 @@ void block_gemv3(const ConstRawBSRMatrix<scalar,index> *const mat,
 /// Computes and stores the inverses of diagonal blocks
 /** Allocates the storage if necessary.
  */
-template <typename scalar, typename index, int bs>
+template <typename scalar, typename index, int bs, class Mattype>
 inline
 void block_jacobi_setup(const ConstRawBSRMatrix<scalar,index> *const mat,
-		Matrix<scalar,Dynamic,bs,RowMajor>& dblocks 
+		scalar *const dblocks 
 	)
 {
-	if(dblocks.size() < mat->nbrows*bs*bs) {
-		dblocks.resize(mat->nbrows*bs,bs);
-#if DEBUG==1
-		std::cout << " block_jacobi_setup(): Allocating.\n";
-#endif
-	}
+	static_assert(std::is_same<Mattype, Matrix<scalar,Dynamic,bs,RowMajor>>::value 
+			|| std::is_same<Mattype, Matrix<scalar,bs,Dynamic,ColMajor>>::value,
+		"Invalid matrix type!");
 	
-	Eigen::Map<const Matrix<scalar,Dynamic,bs,RowMajor>> 
-		data(mat->vals, mat->browptr[mat->nbrows]*bs, bs);
+	Eigen::Map<const Mattype> data(mat->vals, 
+			Mattype::IsRowMajor ? mat->browptr[mat->nbrows]*bs : bs,
+			Mattype::IsRowMajor ? bs : mat->browptr[mat->nbrows]*bs
+		);
+	Eigen::Map<Mattype> dblks(dblocks, 
+			Mattype::IsRowMajor ? mat->nbrows*bs : bs,
+			Mattype::IsRowMajor ? bs : mat->nbrows*bs
+		);
 
 #pragma omp parallel for default(shared)
 	for(index irow = 0; irow < mat->nbrows; irow++)
-		dblocks.BLK<bs,bs>(irow*bs,0) = data.BLK<bs,bs>(mat->diagind[irow]*bs,0).inverse();
+		dblks.BLK<bs,bs>(irow*bs,0) = data.BLK<bs,bs>(mat->diagind[irow]*bs,0).inverse();
 }
 
 /// Applies the block-Jacobi preconditioner assuming inverses of diagonal blocks have been computed 
-template <typename scalar, typename index, int bs>
+template <typename scalar, typename index, int bs, class Mattype>
 void block_jacobi_apply(const ConstRawBSRMatrix<scalar,index> *const mat,
-		const Matrix<scalar,Dynamic,bs,RowMajor>& dblocks,
+		const scalar *const dblocks,
 		const scalar *const rr, scalar *const __restrict zz)
 {
 	Eigen::Map<const Vector<scalar>> r(rr, mat->nbrows*bs);
 	Eigen::Map<Vector<scalar>> z(zz, mat->nbrows*bs);
-	Eigen::Map<const Matrix<scalar,Dynamic,bs,RowMajor>> 
-		data(mat->vals, mat->browptr[mat->nbrows]*bs, bs);
+	
+	static_assert(std::is_same<Mattype, Matrix<scalar,Dynamic,bs,RowMajor>>::value 
+			|| std::is_same<Mattype, Matrix<scalar,bs,Dynamic,ColMajor>>::value,
+		"Invalid matrix type!");
+	
+	Eigen::Map<const Mattype> data(mat->vals, 
+			Mattype::IsRowMajor ? mat->browptr[mat->nbrows]*bs : bs,
+			Mattype::IsRowMajor ? bs : mat->browptr[mat->nbrows]*bs
+		);
+	Eigen::Map<const Mattype> dblks(dblocks, 
+			Mattype::IsRowMajor ? mat->nbrows*bs : bs,
+			Mattype::IsRowMajor ? bs : mat->nbrows*bs
+		);
+	//////////////////
+	//dblks(0,0) = 12;
+	/////////////////
 
 #pragma omp parallel for default(shared)
 	for(index irow = 0; irow < mat->nbrows; irow++)
-		z.SEG<bs>(irow*bs).noalias() = dblocks.BLK<bs,bs>(irow*bs,0) * r.SEG<bs>(irow*bs);
+		if(Mattype::IsRowMajor)
+			z.SEG<bs>(irow*bs).noalias() = dblks.BLK<bs,bs>(irow*bs,0) * r.SEG<bs>(irow*bs);
+		else
+			z.SEG<bs>(irow*bs).noalias() = dblks.BLK<bs,bs>(0,irow*bs) * r.SEG<bs>(irow*bs);
 }
 
 /// Computes inverses of diagonal blocks and allocates and zeros a temporary storage vector
 /** \param[in] mat The BSR matrix
- * \param[in,out] dblocks An array holding the inverse of diagonal blocks
+ * \param[in,out] dblocks An array to hold the inverse of diagonal blocks
  * \param[out] ytemp A temporary vector needed for SGS; allocated and zeroed here
  */
-template <typename scalar, typename index, int bs>
+template <typename scalar, typename index, int bs, class Mattype>
 inline
 void block_sgs_setup(const ConstRawBSRMatrix<scalar,index> *const mat,
-		Matrix<scalar,Dynamic,bs,RowMajor>& dblocks,
+		scalar *const dblocks,
 		Vector<scalar>& ytemp
 	)
 {
-	block_jacobi_setup(mat, dblocks);
+	block_jacobi_setup<scalar,index,bs,Mattype>(mat, dblocks);
 
 	ytemp.resize(mat->nbrows*bs,1);
 #pragma omp parallel for simd default(shared)
@@ -172,10 +202,10 @@ void block_sgs_setup(const ConstRawBSRMatrix<scalar,index> *const mat,
  * \param[in] rr The input vector to apply the preconditioner to
  * \param[in,out] zz The output vector
  */
-template <typename scalar, typename index, int bs>
+template <typename scalar, typename index, int bs, class Mattype>
 inline
 void block_sgs_apply(const ConstRawBSRMatrix<scalar,index> *const mat,
-		const Matrix<scalar,Dynamic,bs,RowMajor>& dblocks,
+		const scalar *const dblocks,
 		Vector<scalar>& ytemp,
 		const int napplysweeps,
 		const int thread_chunk_size,
@@ -183,8 +213,19 @@ void block_sgs_apply(const ConstRawBSRMatrix<scalar,index> *const mat,
 {
 	Eigen::Map<const Vector<scalar>> r(rr, mat->nbrows*bs);
 	Eigen::Map<Vector<scalar>> z(zz, mat->nbrows*bs);
-	Eigen::Map<const Matrix<scalar,Dynamic,bs,RowMajor>> 
-		data(mat->vals, mat->browptr[mat->nbrows]*bs, bs);
+
+	static_assert(std::is_same<Mattype, Matrix<scalar,Dynamic,bs,RowMajor>>::value 
+			|| std::is_same<Mattype, Matrix<scalar,bs,Dynamic,ColMajor>>::value,
+		"Invalid matrix type!");
+	
+	Eigen::Map<const Mattype> data(mat->vals, 
+			Mattype::IsRowMajor ? mat->browptr[mat->nbrows]*bs : bs,
+			Mattype::IsRowMajor ? bs : mat->browptr[mat->nbrows]*bs
+		);
+	Eigen::Map<const Mattype> dblks(dblocks, 
+			Mattype::IsRowMajor ? mat->nbrows*bs : bs,
+			Mattype::IsRowMajor ? bs : mat->nbrows*bs
+		);
 
 	for(int isweep = 0; isweep < napplysweeps; isweep++)
 	{
@@ -196,9 +237,16 @@ void block_sgs_apply(const ConstRawBSRMatrix<scalar,index> *const mat,
 			Matrix<scalar,bs,1> inter = Matrix<scalar,bs,1>::Zero();
 
 			for(index jj = mat->browptr[irow]; jj < mat->diagind[irow]; jj++)
-				inter += data.BLK<bs,bs>(jj*bs,0)*ytemp.SEG<bs>(mat->bcolind[jj]*bs);
+				if(Mattype::IsRowMajor)
+					inter += data.BLK<bs,bs>(jj*bs,0)*ytemp.SEG<bs>(mat->bcolind[jj]*bs);
+				else
+					inter += data.BLK<bs,bs>(0,jj*bs)*ytemp.SEG<bs>(mat->bcolind[jj]*bs);
 
-			ytemp.SEG<bs>(irow*bs) = dblocks.BLK<bs,bs>(irow*bs,0) 
+			if(Mattype::IsRowMajor)
+				ytemp.SEG<bs>(irow*bs) = dblks.BLK<bs,bs>(irow*bs,0) 
+			                                          * (r.SEG<bs>(irow*bs) - inter);
+			else
+				ytemp.SEG<bs>(irow*bs) = dblks.BLK<bs,bs>(0,irow*bs) 
 			                                          * (r.SEG<bs>(irow*bs) - inter);
 		}
 	}
@@ -217,8 +265,12 @@ void block_sgs_apply(const ConstRawBSRMatrix<scalar,index> *const mat,
 				inter += data.BLK<bs,bs>(jj*bs,0) * z.SEG<bs>(mat->bcolind[jj]*bs);
 
 			// compute z = D^(-1) (D y - U z) for the irow-th block-segment of z
-			z.SEG<bs>(irow*bs) = dblocks.BLK<bs,bs>(irow*bs,0) 
-				* ( data.BLK<bs,bs>(mat->diagind[irow]*bs,0)*ytemp.SEG<bs>(irow*bs) - inter );
+			if(Mattype::IsRowMajor)
+				z.SEG<bs>(irow*bs) = dblks.BLK<bs,bs>(irow*bs,0) 
+					* ( data.BLK<bs,bs>(mat->diagind[irow]*bs,0)*ytemp.SEG<bs>(irow*bs) - inter );
+			else
+				z.SEG<bs>(irow*bs) = dblks.BLK<bs,bs>(0,irow*bs) 
+					* ( data.BLK<bs,bs>(0,mat->diagind[irow]*bs)*ytemp.SEG<bs>(irow*bs) - inter );
 		}
 	}
 }
@@ -619,36 +671,40 @@ template <typename scalar, typename index, int bs>
 void BSRMatrix<scalar,index,bs>::gemv3(const scalar a, const scalar *const __restrict xx, 
 		const scalar b, const scalar *const yy, scalar *const zz) const
 {
-	block_gemv3<scalar,index,bs>(reinterpret_cast<const ConstRawBSRMatrix<scalar,index>*>(&mat), 
+	block_gemv3<scalar,index,bs,Matrix<scalar,Dynamic,bs,RowMajor>>(
+			reinterpret_cast<const ConstRawBSRMatrix<scalar,index>*>(&mat), 
 			a, xx, b, yy, zz);
 }
 
 template <typename scalar, typename index, int bs>
 void BSRMatrix<scalar,index,bs>::precJacobiSetup()
 {
-	block_jacobi_setup(reinterpret_cast<const ConstRawBSRMatrix<scalar,index>*>(&mat), dblocks);
+	block_jacobi_setup<scalar,index,bs,Matrix<scalar,Dynamic,bs,RowMajor>>
+		(reinterpret_cast<const ConstRawBSRMatrix<scalar,index>*>(&mat), dblocks.data());
 }
 
 template <typename scalar, typename index, int bs>
 void BSRMatrix<scalar,index,bs>::precJacobiApply(const scalar *const rr, 
                                                  scalar *const __restrict zz) const
 {
-	block_jacobi_apply( reinterpret_cast<const ConstRawBSRMatrix<scalar,index>*>(&mat), 
-			dblocks, 
+	block_jacobi_apply<scalar,index,bs,Matrix<scalar,Dynamic,bs,RowMajor>>
+		( reinterpret_cast<const ConstRawBSRMatrix<scalar,index>*>(&mat), dblocks.data(), 
 			rr, zz);
 }
 
 template <typename scalar, typename index, int bs>
 void BSRMatrix<scalar,index,bs>::precSGSSetup()
 {
-	block_sgs_setup(reinterpret_cast<const ConstRawBSRMatrix<scalar,index>*>(&mat), dblocks,ytemp);
+	block_sgs_setup<scalar,index,bs,Matrix<scalar,Dynamic,bs,RowMajor>>
+		(reinterpret_cast<const ConstRawBSRMatrix<scalar,index>*>(&mat), dblocks.data(),ytemp);
 }
 
 template <typename scalar, typename index, int bs>
 void BSRMatrix<scalar,index,bs>::precSGSApply(const scalar *const rr, 
                                               scalar *const __restrict zz) const
 {
-	block_sgs_apply(reinterpret_cast<const ConstRawBSRMatrix<scalar,index>*>(&mat), dblocks,ytemp,
+	block_sgs_apply<scalar,index,bs,Matrix<scalar,Dynamic,bs,RowMajor>>(
+			reinterpret_cast<const ConstRawBSRMatrix<scalar,index>*>(&mat), dblocks.data(), ytemp,
 			napplysweeps,thread_chunk_size,
 			rr, zz);
 }
@@ -1297,13 +1353,14 @@ BSRMatrixView<scalar,index,bs,stor>::BSRMatrixView(const index n_brows, const in
 		const index *const bcinds, const scalar *const values, const index *const diaginds,
 		const int n_buildsweeps, const int n_applysweeps)
 	: MatrixView<scalar,index>(BSR),
-	  mat{brptrs, bcinds, values, diaginds, n_brows},
+	  mat{brptrs, bcinds, values, diaginds, n_brows}, dblocks{nullptr},
 	  nbuildsweeps{n_buildsweeps}, napplysweeps{n_applysweeps}, thread_chunk_size{500}
 { }
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
 BSRMatrixView<scalar, index, bs,stor>::~BSRMatrixView()
 {
+	delete [] dblocks;
 }
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
@@ -1320,33 +1377,51 @@ template <typename scalar, typename index, int bs, StorageOptions stor>
 void BSRMatrixView<scalar,index,bs,stor>::gemv3(const scalar a, const scalar *const __restrict xx, 
 		const scalar b, const scalar *const yy, scalar *const zz) const
 {
-	block_gemv3<scalar,index,bs>(&mat, a, xx, b, yy, zz);
+	if(stor == RowMajor)
+		block_gemv3<scalar,index,bs,Matrix<scalar,Dynamic,bs,RowMajor>>(&mat, a, xx, b, yy, zz);
+	else
+		block_gemv3<scalar,index,bs,Matrix<scalar,bs,Dynamic,ColMajor>>(&mat, a, xx, b, yy, zz);
 }
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
 void BSRMatrixView<scalar,index,bs,stor>::precJacobiSetup()
 {
-	block_jacobi_setup(&mat, dblocks);
+	if(!dblocks) {
+		dblocks = new scalar[mat.nbrows*bs*bs];
+#if DEBUG==1
+		std::cout << " precJacobiSetup(): Allocating.\n";
+#endif
+	}
+	
+	block_jacobi_setup<scalar,index,bs,Matrix<scalar,Dynamic,bs,RowMajor>>(&mat, dblocks);
 }
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
 void BSRMatrixView<scalar,index,bs,stor>::precJacobiApply(const scalar *const rr, 
                                                  scalar *const __restrict zz) const
 {
-	block_jacobi_apply( &mat, dblocks, rr, zz);
+	block_jacobi_apply<scalar,index,bs,Matrix<scalar,Dynamic,bs,RowMajor>>( &mat, dblocks, rr, zz);
 }
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
 void BSRMatrixView<scalar,index,bs,stor>::precSGSSetup()
 {
-	block_sgs_setup(&mat, dblocks,ytemp);
+	if(!dblocks) {
+		dblocks = new scalar[mat.nbrows*bs*bs];
+#if DEBUG==1
+		std::cout << " precSGSSetup(): Allocating.\n";
+#endif
+	}
+	
+	block_sgs_setup<scalar,index,bs,Matrix<scalar,Dynamic,bs,RowMajor>>(&mat, dblocks, ytemp);
 }
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
 void BSRMatrixView<scalar,index,bs,stor>::precSGSApply(const scalar *const rr, 
                                               scalar *const __restrict zz) const
 {
-	block_sgs_apply(&mat, dblocks,ytemp, napplysweeps,thread_chunk_size, rr, zz);
+	block_sgs_apply<scalar,index,bs,Matrix<scalar,Dynamic,bs,RowMajor>>(
+			&mat, dblocks, ytemp, napplysweeps,thread_chunk_size, rr, zz);
 }
 
 /** There is currently no pre-scaling of the original matrix A, unlike the point ILU0.

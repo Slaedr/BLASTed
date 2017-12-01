@@ -466,7 +466,7 @@ protected:
 	ConstRawBSRMatrix<scalar,index> mat;
 
 	/// Storage for factored or inverted diagonal blocks
-	Matrix<scalar,Dynamic,bs,RowMajor> dblocks;
+	scalar *dblocks;
 
 	/// Storage for ILU0 factorization
 	/** Use \ref bcolind and \ref browptr to access the storage,

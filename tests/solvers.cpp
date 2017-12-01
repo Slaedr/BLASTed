@@ -249,7 +249,7 @@ int BiCGSTAB::solve(const a_real *const res, a_real *const __restrict du) const
 		// t <- A z
 		A->apply(1.0,z.data(), t.data());
 
-		// For the more theoretically sound variant: g <- Minv t
+		// For the left-preconditioned variant: g <- Minv t
 		//prec->apply(t.data(),g.data());
 		//omega = dot(N,g.data(),z.data())/dot(N,g.data(),g.data());
 

@@ -1,0 +1,341 @@
+Start testing: Dec 01 16:20 EST
+----------------------------------------------------------
+1/18 Testing: COORead
+1/18 Test: COORead
+Command: "/home/akashi/Projects/BLASTed/build/tests/testcoomatrix" "read" "/home/akashi/Projects/BLASTed/tests/input/small_block3_matrix.mtx" "/home/akashi/Projects/BLASTed/tests/input/small_block3_matrix_sorted.coo"
+Directory: /home/akashi/Projects/BLASTed/build/tests
+"COORead" start time: Dec 01 16:20 EST
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.00 sec
+----------------------------------------------------------
+Test Passed.
+"COORead" end time: Dec 01 16:20 EST
+"COORead" time elapsed: 00:00:00
+----------------------------------------------------------
+
+2/18 Testing: COOConvertToCSR
+2/18 Test: COOConvertToCSR
+Command: "/home/akashi/Projects/BLASTed/build/tests/testcoomatrix" "convertCSR" "/home/akashi/Projects/BLASTed/tests/input/small_coo_matrix.mtx" "/home/akashi/Projects/BLASTed/tests/input/small_coo_matrix_sorted.coo"
+Directory: /home/akashi/Projects/BLASTed/build/tests
+"COOConvertToCSR" start time: Dec 01 16:20 EST
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.00 sec
+----------------------------------------------------------
+Test Passed.
+"COOConvertToCSR" end time: Dec 01 16:20 EST
+"COOConvertToCSR" time elapsed: 00:00:00
+----------------------------------------------------------
+
+3/18 Testing: COOConvertToBSR3
+3/18 Test: COOConvertToBSR3
+Command: "/home/akashi/Projects/BLASTed/build/tests/testcoomatrix" "convertBSR3" "/home/akashi/Projects/BLASTed/tests/input/small_block3_matrix.mtx" "/home/akashi/Projects/BLASTed/tests/input/small_block3_matrix_sorted_bcolmajor.bcoo"
+Directory: /home/akashi/Projects/BLASTed/build/tests
+"COOConvertToBSR3" start time: Dec 01 16:20 EST
+Output:
+----------------------------------------------------------
+convertToBSR: Number of nonzero blocks = 4
+<end of output>
+Test time =   0.00 sec
+----------------------------------------------------------
+Test Passed.
+"COOConvertToBSR3" end time: Dec 01 16:20 EST
+"COOConvertToBSR3" time elapsed: 00:00:00
+----------------------------------------------------------
+
+4/18 Testing: CSRMatMul
+4/18 Test: CSRMatMul
+Command: "/home/akashi/Projects/BLASTed/build/tests/testcsrmatrix" "apply" "matrix" "/home/akashi/Projects/BLASTed/tests/input/fluorem-dk01r/DK01R.mtx" "/home/akashi/Projects/BLASTed/tests/input/fluorem-dk01r/DK01R_x.mtx" "/home/akashi/Projects/BLASTed/tests/input/fluorem-dk01r/DK01R_b.mtx"
+Directory: /home/akashi/Projects/BLASTed/build/tests
+"CSRMatMul" start time: Dec 01 16:20 EST
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.01 sec
+----------------------------------------------------------
+Test Passed.
+"CSRMatMul" end time: Dec 01 16:20 EST
+"CSRMatMul" time elapsed: 00:00:00
+----------------------------------------------------------
+
+5/18 Testing: CSRViewMatMul
+5/18 Test: CSRViewMatMul
+Command: "/home/akashi/Projects/BLASTed/build/tests/testcsrmatrix" "apply" "view" "/home/akashi/Projects/BLASTed/tests/input/fluorem-dk01r/DK01R.mtx" "/home/akashi/Projects/BLASTed/tests/input/fluorem-dk01r/DK01R_x.mtx" "/home/akashi/Projects/BLASTed/tests/input/fluorem-dk01r/DK01R_b.mtx"
+Directory: /home/akashi/Projects/BLASTed/build/tests
+"CSRViewMatMul" start time: Dec 01 16:20 EST
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.01 sec
+----------------------------------------------------------
+Test Passed.
+"CSRViewMatMul" end time: Dec 01 16:20 EST
+"CSRViewMatMul" time elapsed: 00:00:00
+----------------------------------------------------------
+
+6/18 Testing: BSR3ViewMatMul
+6/18 Test: BSR3ViewMatMul
+Command: "/home/akashi/Projects/BLASTed/build/tests/testbsrmatrix" "apply" "view" "rowmajor" "3" "/home/akashi/Projects/BLASTed/tests/input/small_block3_matrix.mtx" "/home/akashi/Projects/BLASTed/tests/input/small_block3_matrix_x.mtx" "/home/akashi/Projects/BLASTed/tests/input/small_block3_matrix_b.mtx"
+Directory: /home/akashi/Projects/BLASTed/build/tests
+"BSR3ViewMatMul" start time: Dec 01 16:20 EST
+Output:
+----------------------------------------------------------
+convertToBSR: Number of nonzero blocks = 4
+<end of output>
+Test time =   0.00 sec
+----------------------------------------------------------
+Test Passed.
+"BSR3ViewMatMul" end time: Dec 01 16:20 EST
+"BSR3ViewMatMul" time elapsed: 00:00:00
+----------------------------------------------------------
+
+7/18 Testing: BSR7MatMul
+7/18 Test: BSR7MatMul
+Command: "/home/akashi/Projects/BLASTed/build/tests/testbsrmatrix" "apply" "matrix" "rowmajor" "7" "/home/akashi/Projects/BLASTed/tests/input/fluorem-dk01r/DK01R.mtx" "/home/akashi/Projects/BLASTed/tests/input/fluorem-dk01r/DK01R_x.mtx" "/home/akashi/Projects/BLASTed/tests/input/fluorem-dk01r/DK01R_b.mtx"
+Directory: /home/akashi/Projects/BLASTed/build/tests
+"BSR7MatMul" start time: Dec 01 16:20 EST
+Output:
+----------------------------------------------------------
+convertToBSR: Number of nonzero blocks = 639
+<end of output>
+Test time =   0.01 sec
+----------------------------------------------------------
+Test Passed.
+"BSR7MatMul" end time: Dec 01 16:20 EST
+"BSR7MatMul" time elapsed: 00:00:00
+----------------------------------------------------------
+
+8/18 Testing: BSR7ViewMatMul
+8/18 Test: BSR7ViewMatMul
+Command: "/home/akashi/Projects/BLASTed/build/tests/testbsrmatrix" "apply" "view" "rowmajor" "7" "/home/akashi/Projects/BLASTed/tests/input/fluorem-dk01r/DK01R.mtx" "/home/akashi/Projects/BLASTed/tests/input/fluorem-dk01r/DK01R_x.mtx" "/home/akashi/Projects/BLASTed/tests/input/fluorem-dk01r/DK01R_b.mtx"
+Directory: /home/akashi/Projects/BLASTed/build/tests
+"BSR7ViewMatMul" start time: Dec 01 16:20 EST
+Output:
+----------------------------------------------------------
+convertToBSR: Number of nonzero blocks = 639
+<end of output>
+Test time =   0.01 sec
+----------------------------------------------------------
+Test Passed.
+"BSR7ViewMatMul" end time: Dec 01 16:20 EST
+"BSR7ViewMatMul" time elapsed: 00:00:00
+----------------------------------------------------------
+
+9/18 Testing: BSR7ColViewMatMul
+9/18 Test: BSR7ColViewMatMul
+Command: "/home/akashi/Projects/BLASTed/build/tests/testbsrmatrix" "apply" "view" "colmajor" "7" "/home/akashi/Projects/BLASTed/tests/input/fluorem-dk01r/DK01R.mtx" "/home/akashi/Projects/BLASTed/tests/input/fluorem-dk01r/DK01R_x.mtx" "/home/akashi/Projects/BLASTed/tests/input/fluorem-dk01r/DK01R_b.mtx"
+Directory: /home/akashi/Projects/BLASTed/build/tests
+"BSR7ColViewMatMul" start time: Dec 01 16:20 EST
+Output:
+----------------------------------------------------------
+convertToBSR: Number of nonzero blocks = 639
+<end of output>
+Test time =   0.01 sec
+----------------------------------------------------------
+Test Passed.
+"BSR7ColViewMatMul" end time: Dec 01 16:20 EST
+"BSR7ColViewMatMul" time elapsed: 00:00:00
+----------------------------------------------------------
+
+10/18 Testing: SPDCSRJacobi
+10/18 Test: SPDCSRJacobi
+Command: "/home/akashi/Projects/BLASTed/build/tests/testsolve" "bcgs" "jacobi" "csr" "rowmajor" "/home/akashi/Projects/BLASTed/tests/input/boeing-msc00726/msc00726.mtx" "/home/akashi/Projects/BLASTed/tests/input/boeing-msc00726/msc00726_x.mtx" "/home/akashi/Projects/BLASTed/tests/input/boeing-msc00726/msc00726_b.mtx" "1e-10" "1e-9" "200"
+Directory: /home/akashi/Projects/BLASTed/build/tests
+"SPDCSRJacobi" start time: Dec 01 16:20 EST
+Output:
+----------------------------------------------------------
+Inputs: Solver = bcgs, Prec = jacobi, mat type = csr, order = rowmajor, test tol = 1e-09, tolerance = 1e-10 maxiter = 200,
+  Num build sweeps = 1, num apply sweeps = 1
+ CSR MatrixView: precJacobiSetup(): Initial setup.
+   BiCGSTAB: RHS norm = 38459.1
+  Final rel res norm = 6.82921e-11
+ Num iters = 98
+ L2 norm of error = 1.3282e-10
+<end of output>
+Test time =   0.03 sec
+----------------------------------------------------------
+Test Passed.
+"SPDCSRJacobi" end time: Dec 01 16:20 EST
+"SPDCSRJacobi" time elapsed: 00:00:00
+----------------------------------------------------------
+
+11/18 Testing: SPDCSRSGS
+11/18 Test: SPDCSRSGS
+Command: "/home/akashi/Projects/BLASTed/build/tests/testsolve" "bcgs" "sgs" "csr" "rowmajor" "/home/akashi/Projects/BLASTed/tests/input/boeing-msc00726/msc00726.mtx" "/home/akashi/Projects/BLASTed/tests/input/boeing-msc00726/msc00726_x.mtx" "/home/akashi/Projects/BLASTed/tests/input/boeing-msc00726/msc00726_b.mtx" "1e-10" "1e-10" "200"
+Directory: /home/akashi/Projects/BLASTed/build/tests
+"SPDCSRSGS" start time: Dec 01 16:20 EST
+Output:
+----------------------------------------------------------
+Inputs: Solver = bcgs, Prec = sgs, mat type = csr, order = rowmajor, test tol = 1e-10, tolerance = 1e-10 maxiter = 200,
+  Num build sweeps = 1, num apply sweeps = 1
+ CSR MatrixView: precSGSSetup(): Initial setup.
+   BiCGSTAB: RHS norm = 38459.1
+  Final rel res norm = 6.9304e-11
+ Num iters = 44
+ L2 norm of error = 2.58792e-11
+<end of output>
+Test time =   0.03 sec
+----------------------------------------------------------
+Test Passed.
+"SPDCSRSGS" end time: Dec 01 16:20 EST
+"SPDCSRSGS" time elapsed: 00:00:00
+----------------------------------------------------------
+
+12/18 Testing: SPDCSRILU0
+12/18 Test: SPDCSRILU0
+Command: "/home/akashi/Projects/BLASTed/build/tests/testsolve" "bcgs" "ilu0" "csr" "rowmajor" "/home/akashi/Projects/BLASTed/tests/input/boeing-msc00726/msc00726.mtx" "/home/akashi/Projects/BLASTed/tests/input/boeing-msc00726/msc00726_x.mtx" "/home/akashi/Projects/BLASTed/tests/input/boeing-msc00726/msc00726_b.mtx" "1e-10" "1e-10" "200"
+Directory: /home/akashi/Projects/BLASTed/build/tests
+"SPDCSRILU0" start time: Dec 01 16:20 EST
+Output:
+----------------------------------------------------------
+Inputs: Solver = bcgs, Prec = ilu0, mat type = csr, order = rowmajor, test tol = 1e-10, tolerance = 1e-10 maxiter = 200,
+  Num build sweeps = 1, num apply sweeps = 1
+ CSR MatrixView: precILUSetup(): First-time setup
+   BiCGSTAB: RHS norm = 38459.1
+  Final rel res norm = 3.26731e-12
+ Num iters = 35
+ L2 norm of error = 3.1902e-12
+<end of output>
+Test time =   0.05 sec
+----------------------------------------------------------
+Test Passed.
+"SPDCSRILU0" end time: Dec 01 16:20 EST
+"SPDCSRILU0" time elapsed: 00:00:00
+----------------------------------------------------------
+
+13/18 Testing: CSRJacobi
+13/18 Test: CSRJacobi
+Command: "/home/akashi/Projects/BLASTed/build/tests/testsolve" "bcgs" "jacobi" "csr" "rowmajor" "/home/akashi/Projects/BLASTed/tests/input/fvens-2dcyl1/2dcyl1.mtx" "/home/akashi/Projects/BLASTed/tests/input/fvens-2dcyl1/2dcyl1_x.mtx" "/home/akashi/Projects/BLASTed/tests/input/fvens-2dcyl1/2dcyl1_b.mtx" "1e-10" "1e-8" "200"
+Directory: /home/akashi/Projects/BLASTed/build/tests
+"CSRJacobi" start time: Dec 01 16:20 EST
+Output:
+----------------------------------------------------------
+Inputs: Solver = bcgs, Prec = jacobi, mat type = csr, order = rowmajor, test tol = 1e-08, tolerance = 1e-10 maxiter = 200,
+  Num build sweeps = 1, num apply sweeps = 1
+ CSR MatrixView: precJacobiSetup(): Initial setup.
+   BiCGSTAB: RHS norm = 20.6418
+  Final rel res norm = 8.5242e-11
+ Num iters = 179
+ L2 norm of error = 1.76564e-09
+<end of output>
+Test time =   0.03 sec
+----------------------------------------------------------
+Test Passed.
+"CSRJacobi" end time: Dec 01 16:20 EST
+"CSRJacobi" time elapsed: 00:00:00
+----------------------------------------------------------
+
+14/18 Testing: CSRSGS
+14/18 Test: CSRSGS
+Command: "/home/akashi/Projects/BLASTed/build/tests/testsolve" "bcgs" "sgs" "csr" "rowmajor" "/home/akashi/Projects/BLASTed/tests/input/fvens-2dcyl1/2dcyl1.mtx" "/home/akashi/Projects/BLASTed/tests/input/fvens-2dcyl1/2dcyl1_x.mtx" "/home/akashi/Projects/BLASTed/tests/input/fvens-2dcyl1/2dcyl1_b.mtx" "1e-10" "1e-8" "200"
+Directory: /home/akashi/Projects/BLASTed/build/tests
+"CSRSGS" start time: Dec 01 16:20 EST
+Output:
+----------------------------------------------------------
+Inputs: Solver = bcgs, Prec = sgs, mat type = csr, order = rowmajor, test tol = 1e-08, tolerance = 1e-10 maxiter = 200,
+  Num build sweeps = 1, num apply sweeps = 1
+ CSR MatrixView: precSGSSetup(): Initial setup.
+   BiCGSTAB: RHS norm = 20.6418
+  Final rel res norm = 6.78874e-11
+ Num iters = 59
+ L2 norm of error = 1.64732e-09
+<end of output>
+Test time =   0.03 sec
+----------------------------------------------------------
+Test Passed.
+"CSRSGS" end time: Dec 01 16:20 EST
+"CSRSGS" time elapsed: 00:00:00
+----------------------------------------------------------
+
+15/18 Testing: CSRILU0
+15/18 Test: CSRILU0
+Command: "/home/akashi/Projects/BLASTed/build/tests/testsolve" "bcgs" "ilu0" "csr" "rowmajor" "/home/akashi/Projects/BLASTed/tests/input/fvens-2dcyl1/2dcyl1.mtx" "/home/akashi/Projects/BLASTed/tests/input/fvens-2dcyl1/2dcyl1_x.mtx" "/home/akashi/Projects/BLASTed/tests/input/fvens-2dcyl1/2dcyl1_b.mtx" "1e-10" "1e-8" "200"
+Directory: /home/akashi/Projects/BLASTed/build/tests
+"CSRILU0" start time: Dec 01 16:20 EST
+Output:
+----------------------------------------------------------
+Inputs: Solver = bcgs, Prec = ilu0, mat type = csr, order = rowmajor, test tol = 1e-08, tolerance = 1e-10 maxiter = 200,
+  Num build sweeps = 1, num apply sweeps = 1
+ CSR MatrixView: precILUSetup(): First-time setup
+   BiCGSTAB: RHS norm = 20.6418
+  Final rel res norm = 7.57761e-11
+ Num iters = 52
+ L2 norm of error = 1.15783e-09
+<end of output>
+Test time =   0.03 sec
+----------------------------------------------------------
+Test Passed.
+"CSRILU0" end time: Dec 01 16:20 EST
+"CSRILU0" time elapsed: 00:00:00
+----------------------------------------------------------
+
+16/18 Testing: BSR4JacobiRowmajor
+16/18 Test: BSR4JacobiRowmajor
+Command: "/home/akashi/Projects/BLASTed/build/tests/testsolve" "bcgs" "jacobi" "bsr" "rowmajor" "/home/akashi/Projects/BLASTed/tests/input/fvens-2dcyl1/2dcyl1.mtx" "/home/akashi/Projects/BLASTed/tests/input/fvens-2dcyl1/2dcyl1_x.mtx" "/home/akashi/Projects/BLASTed/tests/input/fvens-2dcyl1/2dcyl1_b.mtx" "1e-10" "1e-8" "200"
+Directory: /home/akashi/Projects/BLASTed/build/tests
+"BSR4JacobiRowmajor" start time: Dec 01 16:20 EST
+Output:
+----------------------------------------------------------
+Inputs: Solver = bcgs, Prec = jacobi, mat type = bsr, order = rowmajor, test tol = 1e-08, tolerance = 1e-10 maxiter = 200,
+  Num build sweeps = 1, num apply sweeps = 1
+convertToBSR: Number of nonzero blocks = 2166
+   BiCGSTAB: RHS norm = 20.6418
+  Final rel res norm = 8.8665e-11
+ Num iters = 168
+ L2 norm of error = 1.59187e-09
+<end of output>
+Test time =   0.05 sec
+----------------------------------------------------------
+Test Passed.
+"BSR4JacobiRowmajor" end time: Dec 01 16:20 EST
+"BSR4JacobiRowmajor" time elapsed: 00:00:00
+----------------------------------------------------------
+
+17/18 Testing: BSR4SGSRowmajor
+17/18 Test: BSR4SGSRowmajor
+Command: "/home/akashi/Projects/BLASTed/build/tests/testsolve" "bcgs" "sgs" "bsr" "rowmajor" "/home/akashi/Projects/BLASTed/tests/input/fvens-2dcyl1/2dcyl1.mtx" "/home/akashi/Projects/BLASTed/tests/input/fvens-2dcyl1/2dcyl1_x.mtx" "/home/akashi/Projects/BLASTed/tests/input/fvens-2dcyl1/2dcyl1_b.mtx" "1e-10" "1e-8" "200"
+Directory: /home/akashi/Projects/BLASTed/build/tests
+"BSR4SGSRowmajor" start time: Dec 01 16:20 EST
+Output:
+----------------------------------------------------------
+Inputs: Solver = bcgs, Prec = sgs, mat type = bsr, order = rowmajor, test tol = 1e-08, tolerance = 1e-10 maxiter = 200,
+  Num build sweeps = 1, num apply sweeps = 1
+convertToBSR: Number of nonzero blocks = 2166
+   BiCGSTAB: RHS norm = 20.6418
+  Final rel res norm = 7.15046e-11
+ Num iters = 59
+ L2 norm of error = 2.46268e-09
+<end of output>
+Test time =   0.03 sec
+----------------------------------------------------------
+Test Passed.
+"BSR4SGSRowmajor" end time: Dec 01 16:20 EST
+"BSR4SGSRowmajor" time elapsed: 00:00:00
+----------------------------------------------------------
+
+18/18 Testing: BSR4ILU0Rowmajor
+18/18 Test: BSR4ILU0Rowmajor
+Command: "/home/akashi/Projects/BLASTed/build/tests/testsolve" "bcgs" "ilu0" "bsr" "rowmajor" "/home/akashi/Projects/BLASTed/tests/input/fvens-2dcyl1/2dcyl1.mtx" "/home/akashi/Projects/BLASTed/tests/input/fvens-2dcyl1/2dcyl1_x.mtx" "/home/akashi/Projects/BLASTed/tests/input/fvens-2dcyl1/2dcyl1_b.mtx" "1e-10" "1e-8" "200"
+Directory: /home/akashi/Projects/BLASTed/build/tests
+"BSR4ILU0Rowmajor" start time: Dec 01 16:20 EST
+Output:
+----------------------------------------------------------
+Inputs: Solver = bcgs, Prec = ilu0, mat type = bsr, order = rowmajor, test tol = 1e-08, tolerance = 1e-10 maxiter = 200,
+  Num build sweeps = 1, num apply sweeps = 1
+convertToBSR: Number of nonzero blocks = 2166
+   BiCGSTAB: RHS norm = 20.6418
+  Final rel res norm = 7.50751e-11
+ Num iters = 52
+ L2 norm of error = 1.10256e-09
+<end of output>
+Test time =   0.04 sec
+----------------------------------------------------------
+Test Passed.
+"BSR4ILU0Rowmajor" end time: Dec 01 16:20 EST
+"BSR4ILU0Rowmajor" time elapsed: 00:00:00
+----------------------------------------------------------
+
+End testing: Dec 01 16:20 EST
