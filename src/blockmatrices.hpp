@@ -472,7 +472,7 @@ protected:
 	/** Use \ref bcolind and \ref browptr to access the storage,
 	 * as the non-zero structure of this matrix is same as the original matrix.
 	 */
-	Matrix<scalar,Dynamic,bs,RowMajor> iluvals;
+	scalar *iluvals;
 
 	/// Storage for intermediate results in preconditioning operations
 	mutable Vector<scalar> ytemp;

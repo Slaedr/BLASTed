@@ -156,9 +156,6 @@ void block_jacobi_apply(const ConstRawBSRMatrix<scalar,index> *const mat,
 			Mattype::IsRowMajor ? mat->nbrows*bs : bs,
 			Mattype::IsRowMajor ? bs : mat->nbrows*bs
 		);
-	//////////////////
-	//dblks(0,0) = 12;
-	/////////////////
 
 #pragma omp parallel for default(shared)
 	for(index irow = 0; irow < mat->nbrows; irow++)
@@ -307,41 +304,21 @@ static inline void inner_search(const index *const aind,
  *   block-column indices and diagonal pointers of the original BSR matrix
  * \param[out] ytemp A temporary vector, needed for applying the ILU0 factors, allocated here
  */
-template <typename scalar, typename index, int bs>
+template <typename scalar, typename index, int bs, class Mattype>
 inline
 void block_ilu0_setup(const ConstRawBSRMatrix<scalar,index> *const mat,
 		const int nbuildsweeps, const int thread_chunk_size,
-		Matrix<scalar,Dynamic,bs,RowMajor>& iluvals, Vector<scalar>& ytemp
+		scalar *const ilu, Vector<scalar>& ytemp
 	)
 {
-	Eigen::Map<const Matrix<scalar,Dynamic,bs,RowMajor>> 
-		data(mat->vals, mat->browptr[mat->nbrows]*bs, bs);
-
-	if(iluvals.size() < mat->browptr[mat->nbrows]*bs*bs)
-	{
-#if DEBUG==1
-		std::printf(" BSRMatrix: precILUSetup(): First-time setup\n");
-#endif
-
-		// Allocate lu
-		iluvals.resize(mat->browptr[mat->nbrows]*bs,bs);
-#pragma omp parallel for simd default(shared)
-		for(index j = 0; j < mat->browptr[mat->nbrows]*bs*bs; j++) {
-			iluvals.data()[j] = mat->vals[j];
-		}
-
-		// intermediate array for the solve part
-		if(ytemp.size() < mat->nbrows*bs) {
-			ytemp.resize(mat->nbrows*bs);
-#pragma omp parallel for simd default(shared)
-			for(index i = 0; i < mat->nbrows*bs; i++)
-			{
-				ytemp.data()[i] = 0;
-			}
-		}
-		else
-			std::cout << "! BSRMatrix: precILUSetup(): Temp vector is already allocated!\n";
-	}
+	Eigen::Map<const Mattype> data(mat->vals, 
+			Mattype::IsRowMajor ? mat->browptr[mat->nbrows]*bs : bs,
+			Mattype::IsRowMajor ? bs : mat->browptr[mat->nbrows]*bs
+		);
+	Eigen::Map<Mattype> iluvals(ilu, 
+			Mattype::IsRowMajor ? mat->browptr[mat->nbrows]*bs : bs,
+			Mattype::IsRowMajor ? bs : mat->browptr[mat->nbrows]*bs
+		);
 
 	// compute L and U
 	/** Note that in the factorization loop, the variable pos is initially set negative.
@@ -423,10 +400,10 @@ void block_ilu0_setup(const ConstRawBSRMatrix<scalar,index> *const mat,
  * \param[in] r The RHS vector of the preconditioning problem Mz = r
  * \param[in,out] z The solution vector of the preconditioning problem Mz = r
  */
-template <typename scalar, typename index, int bs>
+template <typename scalar, typename index, int bs, class Mattype>
 inline
 void block_ilu0_apply( const ConstRawBSRMatrix<scalar,index> *const mat,
-		const Matrix<scalar,Dynamic,bs,RowMajor>& iluvals,
+		const scalar *const ilu,
 		Vector<scalar>& ytemp,
 		const int napplysweeps, const int thread_chunk_size,
 		const scalar *const r, 
@@ -435,6 +412,10 @@ void block_ilu0_apply( const ConstRawBSRMatrix<scalar,index> *const mat,
 {
 	Eigen::Map<const Vector<scalar>> ra(r, mat->nbrows*bs);
 	Eigen::Map<Vector<scalar>> za(z, mat->nbrows*bs);
+	Eigen::Map<const Mattype> iluvals(ilu, 
+			Mattype::IsRowMajor ? mat->browptr[mat->nbrows]*bs : bs,
+			Mattype::IsRowMajor ? bs : mat->browptr[mat->nbrows]*bs
+		);
 
 	// No scaling like z := Sr done here
 	
@@ -716,16 +697,44 @@ void BSRMatrix<scalar,index,bs>::precSGSApply(const scalar *const rr,
 template <typename scalar, typename index, int bs>
 void BSRMatrix<scalar,index,bs>::precILUSetup()
 {
-	block_ilu0_setup(reinterpret_cast<const ConstRawBSRMatrix<scalar,index>*>(&mat),
-		nbuildsweeps, thread_chunk_size, iluvals, ytemp);
+	if(iluvals.size() < mat.browptr[mat.nbrows]*bs*bs)
+	{
+#if DEBUG==1
+		std::printf(" BSRMatrix: precILUSetup(): First-time setup\n");
+#endif
+
+		// Allocate lu
+		iluvals.resize(mat.browptr[mat.nbrows]*bs,bs);
+#pragma omp parallel for simd default(shared)
+		for(index j = 0; j < mat.browptr[mat.nbrows]*bs*bs; j++) {
+			iluvals.data()[j] = mat.vals[j];
+		}
+
+		// intermediate array for the solve part
+		if(ytemp.size() < mat.nbrows*bs) {
+			ytemp.resize(mat.nbrows*bs);
+#pragma omp parallel for simd default(shared)
+			for(index i = 0; i < mat.nbrows*bs; i++)
+			{
+				ytemp.data()[i] = 0;
+			}
+		}
+		else
+			std::cout << "! BSRMatrix: precILUSetup(): Temp vector is already allocated!\n";
+	}
+
+	block_ilu0_setup<scalar,index,bs,Matrix<scalar,Dynamic,bs,RowMajor>>(
+		reinterpret_cast<const ConstRawBSRMatrix<scalar,index>*>(&mat),
+		nbuildsweeps, thread_chunk_size, iluvals.data(), ytemp);
 }
 
 template <typename scalar, typename index, int bs>
 void BSRMatrix<scalar,index,bs>::precILUApply(const scalar *const r, 
                                               scalar *const __restrict z) const
 {
-	block_ilu0_apply(reinterpret_cast<const ConstRawBSRMatrix<scalar,index>*>(&mat),
-		iluvals, ytemp, napplysweeps, thread_chunk_size, 
+	block_ilu0_apply<scalar,index,bs,Matrix<scalar,Dynamic,bs,RowMajor>>(
+		reinterpret_cast<const ConstRawBSRMatrix<scalar,index>*>(&mat),
+		iluvals.data(), ytemp, napplysweeps, thread_chunk_size, 
 		r, z);
 }
 
@@ -1353,7 +1362,7 @@ BSRMatrixView<scalar,index,bs,stor>::BSRMatrixView(const index n_brows, const in
 		const index *const bcinds, const scalar *const values, const index *const diaginds,
 		const int n_buildsweeps, const int n_applysweeps)
 	: MatrixView<scalar,index>(BSR),
-	  mat{brptrs, bcinds, values, diaginds, n_brows}, dblocks{nullptr},
+	  mat{brptrs, bcinds, values, diaginds, n_brows}, dblocks{nullptr}, iluvals{nullptr},
 	  nbuildsweeps{n_buildsweeps}, napplysweeps{n_applysweeps}, thread_chunk_size{500}
 { }
 
@@ -1361,6 +1370,7 @@ template <typename scalar, typename index, int bs, StorageOptions stor>
 BSRMatrixView<scalar, index, bs,stor>::~BSRMatrixView()
 {
 	delete [] dblocks;
+	delete [] iluvals;
 }
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
@@ -1393,14 +1403,20 @@ void BSRMatrixView<scalar,index,bs,stor>::precJacobiSetup()
 #endif
 	}
 	
-	block_jacobi_setup<scalar,index,bs,Matrix<scalar,Dynamic,bs,RowMajor>>(&mat, dblocks);
+	if(stor == RowMajor)
+		block_jacobi_setup<scalar,index,bs,Matrix<scalar,Dynamic,bs,RowMajor>>(&mat, dblocks);
+	else
+		block_jacobi_setup<scalar,index,bs,Matrix<scalar,Dynamic,bs,ColMajor>>(&mat, dblocks);
 }
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
 void BSRMatrixView<scalar,index,bs,stor>::precJacobiApply(const scalar *const rr, 
                                                  scalar *const __restrict zz) const
 {
-	block_jacobi_apply<scalar,index,bs,Matrix<scalar,Dynamic,bs,RowMajor>>( &mat, dblocks, rr, zz);
+	if(stor == RowMajor)
+		block_jacobi_apply<scalar,index,bs,Matrix<scalar,Dynamic,bs,RowMajor>>( &mat, dblocks, rr, zz);
+	else
+		block_jacobi_apply<scalar,index,bs,Matrix<scalar,Dynamic,bs,ColMajor>>( &mat, dblocks, rr, zz);
 }
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
@@ -1413,14 +1429,14 @@ void BSRMatrixView<scalar,index,bs,stor>::precSGSSetup()
 #endif
 	}
 	
-	block_sgs_setup<scalar,index,bs,Matrix<scalar,Dynamic,bs,RowMajor>>(&mat, dblocks, ytemp);
+	block_sgs_setup<scalar,index,bs,Matrix<scalar,Dynamic,bs,stor>>(&mat, dblocks, ytemp);
 }
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
 void BSRMatrixView<scalar,index,bs,stor>::precSGSApply(const scalar *const rr, 
                                               scalar *const __restrict zz) const
 {
-	block_sgs_apply<scalar,index,bs,Matrix<scalar,Dynamic,bs,RowMajor>>(
+	block_sgs_apply<scalar,index,bs,Matrix<scalar,Dynamic,bs,stor>>(
 			&mat, dblocks, ytemp, napplysweeps,thread_chunk_size, rr, zz);
 }
 
@@ -1431,14 +1447,42 @@ void BSRMatrixView<scalar,index,bs,stor>::precSGSApply(const scalar *const rr,
 template <typename scalar, typename index, int bs, StorageOptions stor>
 void BSRMatrixView<scalar,index,bs,stor>::precILUSetup()
 {
-	block_ilu0_setup(&mat, nbuildsweeps, thread_chunk_size, iluvals, ytemp);
+	if(!iluvals)
+	{
+#if DEBUG==1
+		std::printf(" BSRMatrixView: precILUSetup(): First-time setup\n");
+#endif
+
+		// Allocate lu
+		iluvals = new scalar[mat.browptr[mat.nbrows]*bs*bs];
+#pragma omp parallel for simd default(shared)
+		for(index j = 0; j < mat.browptr[mat.nbrows]*bs*bs; j++) {
+			iluvals[j] = mat.vals[j];
+		}
+
+		// intermediate array for the solve part
+		if(ytemp.size() < mat.nbrows*bs) {
+			ytemp.resize(mat.nbrows*bs);
+#pragma omp parallel for simd default(shared)
+			for(index i = 0; i < mat.nbrows*bs; i++)
+			{
+				ytemp.data()[i] = 0;
+			}
+		}
+		else
+			std::cout << "! BSRMatrix: precILUSetup(): Temp vector is already allocated!\n";
+	}
+
+	block_ilu0_setup<scalar,index,bs,Matrix<scalar,Dynamic,bs,stor>>(
+			&mat, nbuildsweeps, thread_chunk_size, iluvals, ytemp);
 }
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
 void BSRMatrixView<scalar,index,bs,stor>::precILUApply(const scalar *const r, 
                                               scalar *const __restrict z) const
 {
-	block_ilu0_apply(&mat, iluvals, ytemp, napplysweeps, thread_chunk_size, r, z);
+	block_ilu0_apply<scalar,index,bs,Matrix<scalar,Dynamic,bs,stor>>(
+			&mat, iluvals, ytemp, napplysweeps, thread_chunk_size, r, z);
 }
 
 
