@@ -19,6 +19,11 @@
  *   along with BLASTed.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+/// Shorthand for dependent templates for Eigen segment function for vectors
+#define SEG template segment
+/// Shorthand for dependent templates for Eigen block function for matrices
+#define BLK template block
+
 /// Matrix-vector product for BSR matrices
 /** The template parameter Mattype is the type of the Eigen Matrix that the array of non-zero entries
  * of the matrix should be mapped to.
@@ -1406,7 +1411,7 @@ void BSRMatrixView<scalar,index,bs,stor>::precJacobiSetup()
 	if(stor == RowMajor)
 		block_jacobi_setup<scalar,index,bs,Matrix<scalar,Dynamic,bs,RowMajor>>(&mat, dblocks);
 	else
-		block_jacobi_setup<scalar,index,bs,Matrix<scalar,Dynamic,bs,ColMajor>>(&mat, dblocks);
+		block_jacobi_setup<scalar,index,bs,Matrix<scalar,bs,Dynamic,ColMajor>>(&mat, dblocks);
 }
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
@@ -1416,7 +1421,7 @@ void BSRMatrixView<scalar,index,bs,stor>::precJacobiApply(const scalar *const rr
 	if(stor == RowMajor)
 		block_jacobi_apply<scalar,index,bs,Matrix<scalar,Dynamic,bs,RowMajor>>( &mat, dblocks, rr, zz);
 	else
-		block_jacobi_apply<scalar,index,bs,Matrix<scalar,Dynamic,bs,ColMajor>>( &mat, dblocks, rr, zz);
+		block_jacobi_apply<scalar,index,bs,Matrix<scalar,bs,Dynamic,ColMajor>>( &mat, dblocks, rr, zz);
 }
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
@@ -1429,14 +1434,21 @@ void BSRMatrixView<scalar,index,bs,stor>::precSGSSetup()
 #endif
 	}
 	
-	block_sgs_setup<scalar,index,bs,Matrix<scalar,Dynamic,bs,stor>>(&mat, dblocks, ytemp);
+	if(stor == RowMajor)
+		block_sgs_setup<scalar,index,bs,Matrix<scalar,Dynamic,bs,RowMajor>>(&mat, dblocks, ytemp);
+	else
+		block_sgs_setup<scalar,index,bs,Matrix<scalar,bs,Dynamic,ColMajor>>(&mat, dblocks, ytemp);
 }
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
 void BSRMatrixView<scalar,index,bs,stor>::precSGSApply(const scalar *const rr, 
                                               scalar *const __restrict zz) const
 {
-	block_sgs_apply<scalar,index,bs,Matrix<scalar,Dynamic,bs,stor>>(
+	if(stor == RowMajor)
+		block_sgs_apply<scalar,index,bs,Matrix<scalar,Dynamic,bs,RowMajor>>(
+			&mat, dblocks, ytemp, napplysweeps,thread_chunk_size, rr, zz);
+	else
+		block_sgs_apply<scalar,index,bs,Matrix<scalar,bs,Dynamic,ColMajor>>(
 			&mat, dblocks, ytemp, napplysweeps,thread_chunk_size, rr, zz);
 }
 
@@ -1473,7 +1485,11 @@ void BSRMatrixView<scalar,index,bs,stor>::precILUSetup()
 			std::cout << "! BSRMatrix: precILUSetup(): Temp vector is already allocated!\n";
 	}
 
-	block_ilu0_setup<scalar,index,bs,Matrix<scalar,Dynamic,bs,stor>>(
+	if(stor == RowMajor)
+		block_ilu0_setup<scalar,index,bs,Matrix<scalar,Dynamic,bs,RowMajor>>(
+			&mat, nbuildsweeps, thread_chunk_size, iluvals, ytemp);
+	else
+		block_ilu0_setup<scalar,index,bs,Matrix<scalar,bs,Dynamic,ColMajor>>(
 			&mat, nbuildsweeps, thread_chunk_size, iluvals, ytemp);
 }
 
@@ -1481,7 +1497,11 @@ template <typename scalar, typename index, int bs, StorageOptions stor>
 void BSRMatrixView<scalar,index,bs,stor>::precILUApply(const scalar *const r, 
                                               scalar *const __restrict z) const
 {
-	block_ilu0_apply<scalar,index,bs,Matrix<scalar,Dynamic,bs,stor>>(
+	if(stor == RowMajor)
+		block_ilu0_apply<scalar,index,bs,Matrix<scalar,Dynamic,bs,RowMajor>>(
+			&mat, iluvals, ytemp, napplysweeps, thread_chunk_size, r, z);
+	else
+		block_ilu0_apply<scalar,index,bs,Matrix<scalar,bs,Dynamic,ColMajor>>(
 			&mat, iluvals, ytemp, napplysweeps, thread_chunk_size, r, z);
 }
 

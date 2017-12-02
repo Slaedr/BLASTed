@@ -13,11 +13,6 @@
 #ifndef BLOCKMATRICES_H
 #define BLOCKMATRICES_H
 
-/// Shorthand for dependent templates for Eigen segment function for vectors
-#define SEG template segment
-/// Shorthand for dependent templates for Eigen block function for matrices
-#define BLK template block
-
 #include "linearoperator.hpp"
 #include <iostream>
 #include <fstream>
