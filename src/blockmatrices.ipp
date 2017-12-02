@@ -19,6 +19,11 @@
  *   along with BLASTed.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "blockmatrices.hpp"
+#include <Eigen/LU>
+
+namespace blasted {
+
 /// Shorthand for dependent templates for Eigen segment function for vectors
 #define SEG template segment
 /// Shorthand for dependent templates for Eigen block function for matrices
@@ -1618,5 +1623,7 @@ void CSRMatrixView<scalar,index>::precILUApply(const scalar *const __restrict ra
                                               scalar *const __restrict za) const
 {
 	scalar_ilu0_apply(&mat, iluvals, scale, ytemp, napplysweeps, thread_chunk_size, ra, za);
+}
+
 }
 

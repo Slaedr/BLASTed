@@ -1,11 +1,11 @@
 add_library(coomatrix coomatrix.cpp)
-#add_library(blockmatrices csrmatrix.cpp bsrmatrix.cpp)
+add_library(blockmatrices csrmatrix.cpp bsrmatrix.cpp)
 
 if(WITH_PETSC)
 	#find_package(MPI REQUIRED)
 
 	add_library(blasted_petsc blasted_petsc.cpp)
-	target_link_libraries(blasted_petsc ${PETSC_LIB})
+	target_link_libraries(blasted_petsc ${PETSC_LIB} blockmatrices)
 	#target_include_directories(blasted_petsc PRIVATE ${MPI_C_INCLUDE_PATH})
 endif()
 

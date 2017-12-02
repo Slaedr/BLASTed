@@ -17,7 +17,7 @@
 #include <iostream>
 #include <limits>
 #include <type_traits>
-#include <Eigen/Dense>
+#include <Eigen/Core>
 
 namespace blasted {
 
@@ -563,8 +563,6 @@ protected:
 	/// Thread chunk size for OpenMP parallelism
 	const int thread_chunk_size;
 };
-
-#include "blockmatrices.ipp"
 
 }
 #endif

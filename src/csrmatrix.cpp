@@ -8,9 +8,9 @@
 namespace blasted {
 
 template class BSRMatrix<double,int,1>;
-template class BSRMatrix<float,int,1>;
+//template class BSRMatrix<float,int,1>;
 template class CSRMatrixView<double,int>;
-template class CSRMatrixView<float,int>;
+//template class CSRMatrixView<float,int>;
 
 
 }
