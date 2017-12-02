@@ -20,13 +20,8 @@
 #ifndef COOMATRIX_H
 #define COOMATRIX_H
 
-#include <cassert>
 #include <limits>
-#include <vector>
 #include <string>
-#include <algorithm>
-#include <fstream>
-#include <boost/algorithm/string.hpp>
 #include "blockmatrices.hpp"
 
 namespace blasted {
@@ -46,16 +41,6 @@ struct MMDescription {
 	MMScalarType scalartype;
 	MMMatrixType matrixtype;
 };
-
-/// Returns a [description](\ref MMDescription) of the matrix if it's in Matrix Market format
-MMDescription getMMDescription(std::ifstream& fin);
-
-/// Returns a vector containing size information of a matrix in a Matrix Market file
-template <typename index>
-std::vector<index> getSizeFromMatrixMarket(
-		std::ifstream& fin,                   ///< Opened file stream to read from
-		const MMDescription& descr            ///< Matrix description
-	);
 
 /// Reads a dense matrix from a Matrix Market file in row-major format
 /** Allocates the required storage and returns a pointer to it.
@@ -113,8 +98,6 @@ protected:
 
 	std::vector<index> rowptr;                    ///< Vector of row pointers into \ref entries
 };
-
-#include "coomatrix.ipp"
 
 }
 

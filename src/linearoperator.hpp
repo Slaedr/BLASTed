@@ -123,9 +123,6 @@ public:
 
 	/// Applies an LU factorization
 	virtual void precILUApply(const scalar *const r, scalar *const __restrict__ z) const = 0;
-
-	/// Print parts of the matrix for diagnostics
-	virtual void printDiagnostic(const char choice) const { }
 };
 	
 /// Interface for a view of a matrix

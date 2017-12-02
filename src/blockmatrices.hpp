@@ -15,10 +15,9 @@
 
 #include "linearoperator.hpp"
 #include <iostream>
-#include <fstream>
 #include <limits>
 #include <type_traits>
-#include <Eigen/LU>
+#include <Eigen/Dense>
 
 namespace blasted {
 
@@ -188,9 +187,6 @@ public:
 	/// Returns the dimension (number of rows) of the square matrix
 	index dim() const { return mat.nbrows*bs; }
 
-	// Prints the matrix out to a file in dense format
-	void printDiagnostic(const char choice) const;
-
 protected:
 
 	/** Indicates whether this objects owns data of \ref vals, \ref bcolind, \ref browptr,
@@ -340,9 +336,6 @@ public:
 	/// Returns the number of rows in the matrix
 	index dim() const { return mat.nbrows; }
 	
-	/// Prints out the matrix to a file in dense format
-	void printDiagnostic(const char choice) const;
-
 protected:
 	
 	/** Indicates whether the data (\ref vals, \ref bcolind, \ref browptr, \ref diagind)
@@ -570,7 +563,6 @@ protected:
 	/// Thread chunk size for OpenMP parallelism
 	const int thread_chunk_size;
 };
-
 
 #include "blockmatrices.ipp"
 

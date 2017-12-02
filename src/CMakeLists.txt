@@ -1,3 +1,6 @@
+add_library(coomatrix coomatrix.cpp)
+#add_library(blockmatrices csrmatrix.cpp bsrmatrix.cpp)
+
 if(WITH_PETSC)
 	#find_package(MPI REQUIRED)
 

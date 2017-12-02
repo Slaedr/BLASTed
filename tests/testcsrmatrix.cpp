@@ -6,6 +6,7 @@
 #undef NDEBUG
 
 #include <vector>
+#include <fstream>
 #include <float.h>
 #include "testcsrmatrix.hpp"
 #include "../src/coomatrix.hpp"

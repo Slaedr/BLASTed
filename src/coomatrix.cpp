@@ -17,6 +17,16 @@
  *   along with BLASTed.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <cassert>
+#include <vector>
+#include <algorithm>
+#include <fstream>
+#include <boost/algorithm/string.hpp>
+#include "coomatrix.hpp"
+
+namespace blasted {
+
+/// Returns a [description](\ref MMDescription) of the matrix if it's in Matrix Market format
 inline
 MMDescription getMMDescription(std::ifstream& fin)
 {
@@ -72,9 +82,9 @@ MMDescription getMMDescription(std::ifstream& fin)
 	return descr;
 }
 
+/// Returns a vector containing size information of a matrix in a Matrix Market file
 template <typename index>
-std::vector<index> getSizeFromMatrixMarket(std::ifstream& fin, 
-		const MMDescription& descr)
+std::vector<index> getSizeFromMatrixMarket(std::ifstream& fin, const MMDescription& descr)
 {
 	// read and discard lines until the first line that does not begin with '%'
 	std::string line = "%";
@@ -149,6 +159,9 @@ scalar * readDenseMatrixMarket(const std::string file)
 	fin.close();
 	return vals;
 }
+
+template double *readDenseMatrixMarket<double>(const std::string file);
+template float *readDenseMatrixMarket<float>(const std::string file);
 
 template <typename scalar, typename index>
 COOMatrix<scalar,index>::COOMatrix()
@@ -231,21 +244,6 @@ void COOMatrix<scalar,index>::readMatrixMarket(const std::string file)
 				[](Entry<scalar,index> a, Entry<scalar,index> b) { return a.colind < b.colind; } );
 	}
 }
-
-/*template <typename scalar, typename index>
-void COOMatrix<scalar,index>::convertToCSR(BSRMatrix<scalar,index,1> *const cmat) const
-{ 
-	std::vector<index> cinds(nnz);
-	for(index i = 0; i < nnz; i++)
-		cinds[i] = entries[i].colind;
-	
-	cmat->setStructure(nrows, cinds.data(), rowptr.data());
-
-	for(index i=0; i < nnz; i++)
-	{
-		cmat->submitBlock(entries[i].rowind, entries[i].colind, &entries[i].value, 1, 1);
-	}
-}*/
 
 template <typename scalar, typename index>
 void COOMatrix<scalar,index>::convertToCSR(RawBSRMatrix<scalar,index> *const cmat) const
@@ -372,4 +370,56 @@ void COOMatrix<scalar,index>::convertToBSR(RawBSRMatrix<scalar,index> *const bma
 	}
 }
 
+template class COOMatrix<double,int>;
+template class COOMatrix<float,int>;
 
+template
+void COOMatrix<double,int>::convertToBSR<2,RowMajor>(RawBSRMatrix<double,int> *const bmat) const;
+template
+void COOMatrix<double,int>::convertToBSR<3,RowMajor>(RawBSRMatrix<double,int> *const bmat) const;
+template
+void COOMatrix<double,int>::convertToBSR<4,RowMajor>(RawBSRMatrix<double,int> *const bmat) const;
+template
+void COOMatrix<double,int>::convertToBSR<5,RowMajor>(RawBSRMatrix<double,int> *const bmat) const;
+template
+void COOMatrix<double,int>::convertToBSR<6,RowMajor>(RawBSRMatrix<double,int> *const bmat) const;
+template
+void COOMatrix<double,int>::convertToBSR<7,RowMajor>(RawBSRMatrix<double,int> *const bmat) const;
+template
+void COOMatrix<double,int>::convertToBSR<2,ColMajor>(RawBSRMatrix<double,int> *const bmat) const;
+template
+void COOMatrix<double,int>::convertToBSR<3,ColMajor>(RawBSRMatrix<double,int> *const bmat) const;
+template
+void COOMatrix<double,int>::convertToBSR<4,ColMajor>(RawBSRMatrix<double,int> *const bmat) const;
+template
+void COOMatrix<double,int>::convertToBSR<5,ColMajor>(RawBSRMatrix<double,int> *const bmat) const;
+template
+void COOMatrix<double,int>::convertToBSR<6,ColMajor>(RawBSRMatrix<double,int> *const bmat) const;
+template
+void COOMatrix<double,int>::convertToBSR<7,ColMajor>(RawBSRMatrix<double,int> *const bmat) const;
+template
+void COOMatrix<float,int>::convertToBSR<2,RowMajor>(RawBSRMatrix<float,int> *const bmat) const;
+template
+void COOMatrix<float,int>::convertToBSR<3,RowMajor>(RawBSRMatrix<float,int> *const bmat) const;
+template
+void COOMatrix<float,int>::convertToBSR<4,RowMajor>(RawBSRMatrix<float,int> *const bmat) const;
+template
+void COOMatrix<float,int>::convertToBSR<5,RowMajor>(RawBSRMatrix<float,int> *const bmat) const;
+template
+void COOMatrix<float,int>::convertToBSR<6,RowMajor>(RawBSRMatrix<float,int> *const bmat) const;
+template
+void COOMatrix<float,int>::convertToBSR<7,RowMajor>(RawBSRMatrix<float,int> *const bmat) const;
+template
+void COOMatrix<float,int>::convertToBSR<2,ColMajor>(RawBSRMatrix<float,int> *const bmat) const;
+template
+void COOMatrix<float,int>::convertToBSR<3,ColMajor>(RawBSRMatrix<float,int> *const bmat) const;
+template
+void COOMatrix<float,int>::convertToBSR<4,ColMajor>(RawBSRMatrix<float,int> *const bmat) const;
+template
+void COOMatrix<float,int>::convertToBSR<5,ColMajor>(RawBSRMatrix<float,int> *const bmat) const;
+template
+void COOMatrix<float,int>::convertToBSR<6,ColMajor>(RawBSRMatrix<float,int> *const bmat) const;
+template
+void COOMatrix<float,int>::convertToBSR<7,ColMajor>(RawBSRMatrix<float,int> *const bmat) const;
+
+}

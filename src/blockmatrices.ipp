@@ -743,7 +743,7 @@ void BSRMatrix<scalar,index,bs>::precILUApply(const scalar *const r,
 		r, z);
 }
 
-template <typename scalar, typename index, int bs>
+/*template <typename scalar, typename index, int bs>
 void BSRMatrix<scalar,index,bs>::printDiagnostic(const char choice) const
 {
 	std::ofstream fout("blockmatrix.txt");
@@ -768,7 +768,7 @@ void BSRMatrix<scalar,index,bs>::printDiagnostic(const char choice) const
 		fout << '\n';
 	}
 	fout.close();
-}
+}*/
 
 ////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -1336,7 +1336,7 @@ void BSRMatrix<scalar,index,1>::precILUApply(const scalar *const __restrict ra,
 		ra, za);
 }
 
-template <typename scalar, typename index>
+/*template <typename scalar, typename index>
 void BSRMatrix<scalar,index,1>::printDiagnostic(const char choice) const
 {
 	std::ofstream fout("pointmatrix.txt");
@@ -1358,7 +1358,7 @@ void BSRMatrix<scalar,index,1>::printDiagnostic(const char choice) const
 		fout << '\n';
 	}
 	fout.close();
-}
+}*/
 
 ////////////////////////////////////////////////////////////////////////////////////////
 
@@ -1619,3 +1619,4 @@ void CSRMatrixView<scalar,index>::precILUApply(const scalar *const __restrict ra
 {
 	scalar_ilu0_apply(&mat, iluvals, scale, ytemp, napplysweeps, thread_chunk_size, ra, za);
 }
+

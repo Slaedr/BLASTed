@@ -3,10 +3,16 @@
 add_library(solvers solvers.cpp)
 
 add_executable(testbsrmatrix runbsrmatrixtest.cpp testbsrmatrix.cpp)
+target_link_libraries(testbsrmatrix coomatrix)
+
 add_executable(testcsrmatrix runcsrmatrixtest.cpp testcsrmatrix.cpp)
+target_link_libraries(testcsrmatrix coomatrix)
+
 add_executable(testcoomatrix runcoomatrixtest.cpp testcoomatrix.cpp testcsrmatrix.cpp)
+target_link_libraries(testcoomatrix coomatrix)
+
 add_executable(testsolve runsolvetest.cpp testsolve.cpp)
-target_link_libraries(testsolve solvers)
+target_link_libraries(testsolve solvers coomatrix)
 
 # Tests
 

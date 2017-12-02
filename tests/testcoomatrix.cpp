@@ -10,6 +10,7 @@
 #define __restrict
 #endif
 
+#include <fstream>
 #include "testcoomatrix.hpp"
 
 TestCOOMatrix::TestCOOMatrix() : COOMatrix<double,int>()
