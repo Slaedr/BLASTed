@@ -324,7 +324,7 @@ template <typename scalar, typename index, int bs, class Mattype>
 inline
 void block_ilu0_setup(const ConstRawBSRMatrix<scalar,index> *const mat,
 		const int nbuildsweeps, const int thread_chunk_size,
-		scalar *const ilu, Vector<scalar>& ytemp
+		scalar *const __restrict ilu, Vector<scalar>& ytemp
 	)
 {
 	Eigen::Map<const Mattype> data(mat->vals, 
@@ -351,11 +351,13 @@ void block_ilu0_setup(const ConstRawBSRMatrix<scalar,index> *const mat,
 			{
 				if(irow > mat->bcolind[j])
 				{
-					Matrix<scalar,bs,bs> sum = data.BLK<bs,bs>(j*bs,0);
+					Matrix<scalar,bs,bs> sum = Mattype::IsRowMajor ?
+						data.BLK<bs,bs>(j*bs,0) : data.BLK<bs,bs>(0,j*bs);
 
-					for(index k = mat->browptr[irow]; 
-					    (k < mat->browptr[irow+1]) && (mat->bcolind[k] < mat->bcolind[j]); 
-					    k++  ) 
+					for( index k = mat->browptr[irow]; 
+							(k < mat->browptr[irow+1]) && (mat->bcolind[k] < mat->bcolind[j]); 
+							k++
+						) 
 					{
 						index pos = -1;
 						inner_search<index> ( mat->bcolind, mat->diagind[mat->bcolind[k]], 
@@ -363,16 +365,26 @@ void block_ilu0_setup(const ConstRawBSRMatrix<scalar,index> *const mat,
 
 						if(pos == -1) continue;
 
-						sum.noalias() -= iluvals.BLK<bs,bs>(k*bs,0)*iluvals.BLK<bs,bs>(pos*bs,0);
+						if(Mattype::IsRowMajor)
+							sum.noalias() -= iluvals.BLK<bs,bs>(k*bs,0)*iluvals.BLK<bs,bs>(pos*bs,0);
+						else
+							sum.noalias() -= iluvals.BLK<bs,bs>(0,k*bs)*iluvals.BLK<bs,bs>(0,pos*bs);
 					}
 
-					iluvals.BLK<bs,bs>(j*bs,0).noalias()
-						= sum * iluvals.BLK<bs,bs>(mat->diagind[mat->bcolind[j]]*bs,0).inverse();
+					if(Mattype::IsRowMajor)
+						iluvals.BLK<bs,bs>(j*bs,0).noalias()
+							= sum * iluvals.BLK<bs,bs>(mat->diagind[mat->bcolind[j]]*bs,0).inverse();
+					else
+						iluvals.BLK<bs,bs>(0,j*bs).noalias()
+							= sum * iluvals.BLK<bs,bs>(0,mat->diagind[mat->bcolind[j]]*bs).inverse();
 				}
 				else
 				{
 					// compute u_ij
-					iluvals.BLK<bs,bs>(j*bs,0) = data.BLK<bs,bs>(j*bs,0);
+					if(Mattype::IsRowMajor)
+						iluvals.BLK<bs,bs>(j*bs,0) = data.BLK<bs,bs>(j*bs,0);
+					else
+						iluvals.BLK<bs,bs>(0,j*bs) = data.BLK<bs,bs>(0,j*bs);
 
 					for(index k = mat->browptr[irow]; 
 							(k < mat->browptr[irow+1]) && (mat->bcolind[k] < irow); k++) 
@@ -388,8 +400,12 @@ void block_ilu0_setup(const ConstRawBSRMatrix<scalar,index> *const mat,
 
 						if(pos == -1) continue;
 
-						iluvals.BLK<bs,bs>(j*bs,0).noalias()
-							-= iluvals.BLK<bs,bs>(k*bs,0)*iluvals.BLK<bs,bs>(pos*bs,0);
+						if(Mattype::IsRowMajor)
+							iluvals.BLK<bs,bs>(j*bs,0).noalias()
+								-= iluvals.BLK<bs,bs>(k*bs,0)*iluvals.BLK<bs,bs>(pos*bs,0);
+						else
+							iluvals.BLK<bs,bs>(0,j*bs).noalias()
+								-= iluvals.BLK<bs,bs>(0,k*bs)*iluvals.BLK<bs,bs>(0,pos*bs);
 					}
 				}
 			}
@@ -399,8 +415,12 @@ void block_ilu0_setup(const ConstRawBSRMatrix<scalar,index> *const mat,
 	// invert diagonal blocks
 #pragma omp parallel for default(shared)
 	for(index irow = 0; irow < mat->nbrows; irow++)
-		iluvals.BLK<bs,bs>(mat->diagind[irow]*bs,0) 
-			= iluvals.BLK<bs,bs>(mat->diagind[irow]*bs,0).inverse().eval();
+		if(Mattype::IsRowMajor)
+			iluvals.BLK<bs,bs>(mat->diagind[irow]*bs,0) 
+				= iluvals.BLK<bs,bs>(mat->diagind[irow]*bs,0).inverse().eval();
+		else
+			iluvals.BLK<bs,bs>(0,mat->diagind[irow]*bs) 
+				= iluvals.BLK<bs,bs>(0,mat->diagind[irow]*bs).inverse().eval();
 }
 
 /// Applies the block-ILU0 factorization using a block variant of the asynch triangular solve in
@@ -446,7 +466,10 @@ void block_ilu0_apply( const ConstRawBSRMatrix<scalar,index> *const mat,
 			Matrix<scalar,bs,1> sum = Matrix<scalar,bs,1>::Zero();
 
 			for(index j = mat->browptr[i]; j < mat->diagind[i]; j++)
-				sum += iluvals.BLK<bs,bs>(j*bs,0) * ytemp.SEG<bs>(mat->bcolind[j]*bs);
+				if(Mattype::IsRowMajor)
+					sum += iluvals.BLK<bs,bs>(j*bs,0) * ytemp.SEG<bs>(mat->bcolind[j]*bs);
+				else
+					sum += iluvals.BLK<bs,bs>(0,j*bs) * ytemp.SEG<bs>(mat->bcolind[j]*bs);
 			
 			ytemp.SEG<bs>(i*bs) = ra.SEG<bs>(i*bs) - sum;
 		}
@@ -463,10 +486,17 @@ void block_ilu0_apply( const ConstRawBSRMatrix<scalar,index> *const mat,
 			Matrix<scalar,bs,1> sum = Matrix<scalar,bs,1>::Zero();
 
 			for(index j = mat->diagind[i]+1; j < mat->browptr[i+1]; j++)
-				sum += iluvals.BLK<bs,bs>(j*bs,0) * za.SEG<bs>(mat->bcolind[j]*bs);
+				if(Mattype::IsRowMajor)
+					sum += iluvals.BLK<bs,bs>(j*bs,0) * za.SEG<bs>(mat->bcolind[j]*bs);
+				else
+					sum += iluvals.BLK<bs,bs>(0,j*bs) * za.SEG<bs>(mat->bcolind[j]*bs);
 			
-			za.SEG<bs>(i*bs) = 
-				iluvals.BLK<bs,bs>(mat->diagind[i]*bs,0) * (ytemp.SEG<bs>(i*bs) - sum);
+			if(Mattype::IsRowMajor)
+				za.SEG<bs>(i*bs) = 
+					iluvals.BLK<bs,bs>(mat->diagind[i]*bs,0) * (ytemp.SEG<bs>(i*bs) - sum);
+			else
+				za.SEG<bs>(i*bs) = 
+					iluvals.BLK<bs,bs>(0,mat->diagind[i]*bs) * (ytemp.SEG<bs>(i*bs) - sum);
 		}
 	}
 

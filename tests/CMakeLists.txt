@@ -145,4 +145,11 @@ add_test(NAME BSR4SGSColmajor COMMAND ${CMAKE_CURRENT_BINARY_DIR}/testsolve bcgs
 	1e-10 1e-8 200
 )
 
+add_test(NAME BSR4ILU0Colmajor COMMAND ${CMAKE_CURRENT_BINARY_DIR}/testsolve bcgs ilu0 bsr colmajor
+	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.mtx 
+	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.mtx 
+	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.mtx
+	1e-10 1e-8 200
+)
+
 add_subdirectory(poisson3d-fd)
