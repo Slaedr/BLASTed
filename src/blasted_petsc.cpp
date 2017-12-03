@@ -106,7 +106,6 @@ static PetscErrorCode setupDataFromOptions(PC pc)
 /** \brief Generates a matrix view from the preconditioning operator in a sub PC
  *
  * \warning We assume that the pc passed here is a subpc, ie, a local preconditioner.
- * \todo TODO: Implement this for block preconditioners as well
  * \param[in,out] pc PETSc preconditioner context
  */
 PetscErrorCode createNewBlockMatrixView(PC pc)
@@ -181,26 +180,29 @@ PetscErrorCode createNewBlockMatrixView(PC pc)
 			abort();
 			break;
 		case 1:
-			op = new CSRMatrixView<PetscReal, PetscInt>(localrows, 
-					Adiag->i, Adiag->j, Adiag->a, Adiag->diag,
-					ctx->nbuildsweeps,ctx->napplysweeps);
+			op = new CSRMatrixView<PetscReal, PetscInt>
+				(localrows, Adiag->i, Adiag->j, Adiag->a, Adiag->diag,
+				ctx->nbuildsweeps,ctx->napplysweeps);
 			break;
 		/*case 2:
-			op = new BSRMatrixView<PetscReal,PetscInt,2>(localrows, Adrowp, Adcols, Advals, Addiagind,
-					ctx->nbuildsweeps,ctx->napplysweeps);
-			break;
+			op = new BSRMatrixView<PetscReal,PetscInt,2,Eigen::ColMajor>
+				(localrows, Adiag->i, Adiag->j, Adiag->a, Adiag->diag, 
+				 ctx->nbuildsweeps,ctx->napplysweeps);*/
 		case 3:
-			op = new BSRMatrixView<PetscReal,PetscInt,3>(localrows, Adrowp, Adcols, Advals, Addiagind,
-					ctx->nbuildsweeps,ctx->napplysweeps);
+			op = new BSRMatrixView<PetscReal,PetscInt,3,Eigen::ColMajor>
+				(localrows, Adiag->i, Adiag->j, Adiag->a, Adiag->diag, 
+				 ctx->nbuildsweeps,ctx->napplysweeps);
 			break;
 		case 4:
-			op = new BSRMatrixView<PetscReal,PetscInt,4>(localrows, Adrowp, Adcols, Advals, Addiagind,
-					ctx->nbuildsweeps,ctx->napplysweeps);
+			op = new BSRMatrixView<PetscReal,PetscInt,4,Eigen::ColMajor>
+				(localrows, Adiag->i, Adiag->j, Adiag->a, Adiag->diag, 
+				 ctx->nbuildsweeps,ctx->napplysweeps);
 			break;
 		case 5:
-			op = new BSRMatrixView<PetscReal,PetscInt,5>(localrows, Adrowp, Adcols, Advals, Addiagind,
-					ctx->nbuildsweeps,ctx->napplysweeps);
-			break;*/
+			op = new BSRMatrixView<PetscReal,PetscInt,5,Eigen::ColMajor>
+				(localrows, Adiag->i, Adiag->j, Adiag->a, Adiag->diag, 
+				 ctx->nbuildsweeps,ctx->napplysweeps);
+			break;
 		default:
 			printf("BLASTed: createNewBlockMatrix: That block size is not supported!\n");
 			abort();

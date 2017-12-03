@@ -38,7 +38,7 @@ template class BSRMatrixView<float,int,7,RowMajor>;*/
 //template class BSRMatrixView<double,int,2,ColMajor>;
 template class BSRMatrixView<double,int,3,ColMajor>;
 template class BSRMatrixView<double,int,4,ColMajor>;
-//template class BSRMatrixView<double,int,5,ColMajor>;
+template class BSRMatrixView<double,int,5,ColMajor>;
 //template class BSRMatrixView<double,int,6,ColMajor>;
 template class BSRMatrixView<double,int,7,ColMajor>;
 

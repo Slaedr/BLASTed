@@ -5,9 +5,9 @@ Basic Linear Algebra Subprograms Threaded: A collection of sparse matrix contain
 
 Building
 --------
-The library is currently header-only, mostly to make template instantiations possible. However, the PETSc interface and tests need to be built. The following programs and libraries are required:
+The following programs and libraries are required:
 - [CMake](https://cmake.org/) version 3.0 or later
-- [Eigen](http://eigen.tuxfamily.org) version 3.3.4 or later
+- [Eigen](http://eigen.tuxfamily.org) version 3.3.4 or later (an even more recent version is needed for the GCC 7 series)
 - [Boost](http://www.boost.org/)
 - [PETSc](http://www.mcs.anl.gov/petsc/) and MPI are required to build the PETSc interface. PETSc 3.8 is required to run the tests.
 
@@ -27,7 +27,7 @@ and to run the tests,
 
 	make test
 
-A C++ compiler with C++ 14 support is required; the build is known to work with GCC 5.4, GCC 6.4 and Intel 2017 in a GNU/Linux environment. To build in other enviroments, tweaking the CMakeLists.txt file will be required.
+A C++ compiler with C++ 14 support is required; the build is known to work with GCC 5.4, 6.4, 7.2 and Intel 2017 in a GNU/Linux environment. To build in other enviroments, tweaking the CMakeLists.txt file will be required.
 
 To build the [Doxygen](http://www.stack.nl/~dimitri/doxygen/) documentation,
 
@@ -44,9 +44,6 @@ to generate a tags file for [easier navigation of the source code in Vim](http:/
 
 Usage
 -----
-For C++ codes, the library can be used header-only, if necessary. But for the most part, one would want to use it as a plugin for PETSc. For an example of that, please see the finite difference Poisson example in `tests/poisson3d-fd`.
+For the most part, one would want to use the library as a plugin for PETSc. For an example of that, please see the finite difference Poisson example in `tests/poisson3d-fd`.
 
-Known issues
-------------
-The PETSc interface currently supports only scalar matrix storage in CSR format, ie., BSR matrices with block size 1.
 

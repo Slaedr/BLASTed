@@ -128,7 +128,7 @@ add_test(NAME BSR4NoneColmajor COMMAND ${CMAKE_CURRENT_BINARY_DIR}/testsolve bcg
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.mtx 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.mtx 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.mtx
-	4e-11 1e-8 1000
+	1e-11 1e-8 1000
 )
 
 add_test(NAME BSR4JacobiColmajor COMMAND ${CMAKE_CURRENT_BINARY_DIR}/testsolve bcgs jacobi bsr colmajor
@@ -151,5 +151,11 @@ add_test(NAME BSR4ILU0Colmajor COMMAND ${CMAKE_CURRENT_BINARY_DIR}/testsolve bcg
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.mtx
 	1e-10 1e-8 200
 )
+
+if(WITH_PETSC)
+	add_executable(testpetscsolver runpetsctest.cpp testpetscsolver.cpp)
+	target_link_libraries(testpetscsolver coomatrix)
+	
+endif()
 
 add_subdirectory(poisson3d-fd)
