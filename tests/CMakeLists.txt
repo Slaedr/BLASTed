@@ -41,7 +41,7 @@ add_test(NAME CSRViewMatMul COMMAND ${CMAKE_CURRENT_BINARY_DIR}/testcsrmatrix ap
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fluorem-dk01r/DK01R_b.mtx
 )
 
-add_test(NAME BSR3ViewMatMul COMMAND ${CMAKE_CURRENT_BINARY_DIR}/testbsrmatrix apply view rowmajor 3
+add_test(NAME BSR3ViewMatMul COMMAND ${CMAKE_CURRENT_BINARY_DIR}/testbsrmatrix apply view colmajor 3
 	${CMAKE_CURRENT_SOURCE_DIR}/input/small_block3_matrix.mtx 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/small_block3_matrix_x.mtx 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/small_block3_matrix_b.mtx
@@ -118,6 +118,27 @@ add_test(NAME BSR4SGSRowmajor COMMAND ${CMAKE_CURRENT_BINARY_DIR}/testsolve bcgs
 )
 
 add_test(NAME BSR4ILU0Rowmajor COMMAND ${CMAKE_CURRENT_BINARY_DIR}/testsolve bcgs ilu0 bsr rowmajor
+	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.mtx 
+	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.mtx 
+	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.mtx
+	1e-10 1e-8 200
+)
+
+add_test(NAME BSR4NoneColmajor COMMAND ${CMAKE_CURRENT_BINARY_DIR}/testsolve bcgs none bsr colmajor
+	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.mtx 
+	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.mtx 
+	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.mtx
+	4e-11 1e-8 1000
+)
+
+add_test(NAME BSR4JacobiColmajor COMMAND ${CMAKE_CURRENT_BINARY_DIR}/testsolve bcgs jacobi bsr colmajor
+	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.mtx 
+	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.mtx 
+	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.mtx
+	1e-10 1e-8 200
+)
+
+add_test(NAME BSR4SGSColmajor COMMAND ${CMAKE_CURRENT_BINARY_DIR}/testsolve bcgs sgs bsr colmajor
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.mtx 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.mtx 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.mtx

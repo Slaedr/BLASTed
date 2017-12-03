@@ -142,7 +142,10 @@ void block_jacobi_setup(const ConstRawBSRMatrix<scalar,index> *const mat,
 
 #pragma omp parallel for default(shared)
 	for(index irow = 0; irow < mat->nbrows; irow++)
-		dblks.BLK<bs,bs>(irow*bs,0) = data.BLK<bs,bs>(mat->diagind[irow]*bs,0).inverse();
+		if(Mattype::IsRowMajor)
+			dblks.BLK<bs,bs>(irow*bs,0) = data.BLK<bs,bs>(mat->diagind[irow]*bs,0).inverse();
+		else
+			dblks.BLK<bs,bs>(0,irow*bs) = data.BLK<bs,bs>(0,mat->diagind[irow]*bs).inverse();
 }
 
 /// Applies the block-Jacobi preconditioner assuming inverses of diagonal blocks have been computed 
@@ -269,7 +272,10 @@ void block_sgs_apply(const ConstRawBSRMatrix<scalar,index> *const mat,
 			
 			// compute U z
 			for(index jj = mat->diagind[irow]+1; jj < mat->browptr[irow+1]; jj++)
-				inter += data.BLK<bs,bs>(jj*bs,0) * z.SEG<bs>(mat->bcolind[jj]*bs);
+				if(Mattype::IsRowMajor)
+					inter += data.BLK<bs,bs>(jj*bs,0) * z.SEG<bs>(mat->bcolind[jj]*bs);
+				else
+					inter += data.BLK<bs,bs>(0,jj*bs) * z.SEG<bs>(mat->bcolind[jj]*bs);
 
 			// compute z = D^(-1) (D y - U z) for the irow-th block-segment of z
 			if(Mattype::IsRowMajor)
