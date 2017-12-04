@@ -37,11 +37,9 @@ int testSolve(const std::string solvertype, const std::string precontype,
 		else
 			coom.convertToBSR<bs,ColMajor>(&rm);
 
-	const double *const ans = readDenseMatrixMarket<double>(xfile);
-	const double *const b = readDenseMatrixMarket<double>(bfile);
-	double *const x = new double[rm.nbrows*bs];
-	for(int i = 0; i < rm.nbrows*bs; i++)
-		x[i] = 0;
+	const std::vector<double> ans = readDenseMatrixMarket<double>(xfile);
+	const std::vector<double> b = readDenseMatrixMarket<double>(bfile);
+	std::vector<double> x(rm.nbrows*bs,0.0);
 
 	MatrixView<double,int>* mat = nullptr;
 	if(mattype == "csr")
@@ -81,11 +79,8 @@ int testSolve(const std::string solvertype, const std::string precontype,
 
 	solver->setupPreconditioner();
 	solver->setParams(tol,maxiter);
-	int iters = solver->solve(b, x);
+	int iters = solver->solve(b.data(), x.data());
 	std::cout << " Num iters = " << iters << std::endl;
-	/*for(int i = 0; i < mat->dim(); i++)
-		std::cout << x[i] << " " << ans[i] << ", ";
-	std::cout << std::endl;*/
 
 	double l2norm = 0;
 	for(int i = 0; i < mat->dim(); i++) {
@@ -98,14 +93,7 @@ int testSolve(const std::string solvertype, const std::string precontype,
 	delete solver;
 	delete prec;
 	delete mat;
-
-	delete [] rm.browptr;
-	delete [] rm.bcolind;
-	delete [] rm.vals;
-	delete [] rm.diagind;
-	delete [] x;
-	delete [] b;
-	delete [] ans;
+	destroyRawBSRMatrix(rm);
 
 	return 0;
 }

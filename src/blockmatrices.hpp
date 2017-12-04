@@ -51,6 +51,12 @@ struct RawBSRMatrix
 	index nbrows;
 };
 
+template <typename scalar, typename index>
+void destroyRawBSRMatrix(RawBSRMatrix<scalar,index>& rmat);
+
+template <typename scalar, typename index>
+void destroyConstRawBSRMatrix(ConstRawBSRMatrix<scalar,index>& rmat);
+
 /// Block sparse row matrix
 /** Dense blocks stored in a (block-) row-major storage order.
  * Unsigned types cannot be used as index; that will cause SGS and ILU preconditioners to fail.

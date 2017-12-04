@@ -1,12 +1,14 @@
+#undef NDEBUG
+
 #include <petscksp.h>
 
 #include <sys/time.h>
-#include <ctime>
-#include <cfloat>
-#include <cassert>
+#include <time.h>
+#include <float.h>
+#include <assert.h>
 
-#include "../../src/blasted_petsc.h"
-#include "testpetscsolver.hpp"
+#include "../src/blasted_petsc.h"
+#include "testpetscsolver.h"
 
 #define PETSCOPTION_STR_LEN 30
 
@@ -23,19 +25,17 @@ PetscReal compute_error(const MPI_Comm comm, const Vec u, const Vec uexact) {
 
 int main(int argc, char* argv[])
 {
-	using namespace std;
-
 	if(argc < 3) {
 		printf("Please specify a control file and a Petsc options file.\n");
 		return 0;
 	}
 
-	char help[] = "Solves a CFD linear system.\n\
-		Arguments: (1) Control file (2) RHS file (3) Exact soln file\
+	char help[] = "Solves a linear system.\n\
+		Arguments: (1) Matrix file in COO format (2) RHS file (3) Exact soln file\
 		(4) Petsc options file\n\n";
 	char * matfile = argv[1];
 	char * bfile = argv[2];
-	char * xfile = argv[3]
+	char * xfile = argv[3];
 	char * optfile = argv[3];
 	PetscMPIInt size, rank;
 	PetscErrorCode ierr = 0;
@@ -191,7 +191,7 @@ int main(int argc, char* argv[])
 
 	// the test
 	assert(avgkspiters/nruns == refkspiters);
-	assert(std::fabs(errnorm-errnormref) < 2.0*DBL_EPSILON);
+	assert(fabs(errnorm-errnormref) < 2.0*DBL_EPSILON);
 
 	VecDestroy(&u);
 	VecDestroy(&uexact);
@@ -203,46 +203,4 @@ int main(int argc, char* argv[])
 
 	return ierr;
 }
-		
-// some unused snippets that might be useful at some point
 	
-	/*struct timeval time1, time2;
-	gettimeofday(&time1, NULL);
-	double initialwtime = (double)time1.tv_sec + (double)time1.tv_usec * 1.0e-6;
-	double initialctime = (double)clock() / (double)CLOCKS_PER_SEC;*/
-
-	/*gettimeofday(&time2, NULL);
-	double finalwtime = (double)time2.tv_sec + (double)time2.tv_usec * 1.0e-6;
-	double finalctime = (double)clock() / (double)CLOCKS_PER_SEC;
-	if(rank==0) {
-		printf("Total times: Wall = %f, CPU = %f\n", finalwtime-initialwtime, finalctime-initialctime);
-		printf("Time taken by FGPILU factorization: Wall = %f, CPU = %f\n", iluctrl.factorwalltime, iluctrl.factorcputime);
-		printf("Time taken by FGPILU application: Wall = %f, CPU = %f\n", iluctrl.applywalltime, iluctrl.applycputime);
-		double totalwall = iluctrl.factorwalltime + iluctrl.applywalltime;
-		double totalcpu = iluctrl.factorcputime + iluctrl.applycputime;
-		printf("Time taken by FGPILU total: Wall = %f, CPU = %f\n", totalwall, totalcpu);
-		printf("Average number of iterations: %d\n", (int)(avgkspiters/nruns));
-	}*/
-
-/* For viewing the ILU factors computed by PETSc PCILU
-#include <../src/mat/impls/aij/mpi/mpiaij.h>
-#include <../src/ksp/pc/impls/factor/factor.h>
-#include <../src/ksp/pc/impls/factor/ilu/ilu.h>*/
-
-	/*if(precch == 'i') {	
-		// view factors
-		PC_ILU* ilu = (PC_ILU*)pc->data;
-		//PC_Factor* pcfact = (PC_Factor*)pc->data;
-		//Mat fact = pcfact->fact;
-		Mat fact = ((PC_Factor*)ilu)->fact;
-		printf("ILU0 factored matrix:\n");
-
-		Mat_SeqAIJ* fseq = (Mat_SeqAIJ*)fact->data;
-		for(int i = 0; i < fact->rmap->n; i++) {
-			printf("Row %d: ", i);
-			for(int j = fseq->i[i]; j < fseq->i[i+1]; j++)
-				printf("(%d: %f) ", fseq->j[j], fseq->a[j]);
-			printf("\n");
-		}
-	}*/
-

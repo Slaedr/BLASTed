@@ -8,6 +8,7 @@
 #include <float.h>
 #include <string>
 #include <iomanip>
+#include <vector>
 #include "testbsrmatrix.hpp"
 #include "../src/coomatrix.hpp"
 
@@ -25,9 +26,9 @@ int testBSRMatMult(const std::string type, const std::string storageorder,
 	else
 		coom.convertToBSR<bs,ColMajor>(&rm);
 
-	const double *const x = readDenseMatrixMarket<double>(xvec);
-	const double *const ans = readDenseMatrixMarket<double>(prodvec);
-	double *const y = new double[rm.nbrows*bs];
+	const std::vector<double> x = readDenseMatrixMarket<double>(xvec);
+	const std::vector<double> ans = readDenseMatrixMarket<double>(prodvec);
+	std::vector<double> y(rm.nbrows*bs);
 
 	AbstractLinearOperator<double,int>* testmat = nullptr;
 	if(type == "view") {
@@ -42,21 +43,14 @@ int testBSRMatMult(const std::string type, const std::string storageorder,
 		testmat = new BSRMatrix<double,int,bs>(rm.nbrows,
 				rm.browptr,rm.bcolind,rm.vals,rm.diagind,1,1);
 	
-	testmat->apply(1.0, x, y);
+	testmat->apply(1.0, x.data(), y.data());
 
 	for(int i = 0; i < rm.nbrows*bs; i++) {
 		assert(std::fabs(y[i]-ans[i]) < 10*DBL_EPSILON);
 	}
 
 	delete testmat;
-
-	delete [] rm.browptr;
-	delete [] rm.bcolind;
-	delete [] rm.vals;
-	delete [] rm.diagind;
-	delete [] x;
-	delete [] y;
-	delete [] ans;
+	destroyRawBSRMatrix<double,int>(rm);
 
 	return 0;
 }

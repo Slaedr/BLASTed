@@ -12,5 +12,9 @@ template class BSRMatrix<double,int,1>;
 template class CSRMatrixView<double,int>;
 //template class CSRMatrixView<float,int>;
 
+template
+void destroyRawBSRMatrix<double,int>(RawBSRMatrix<double,int>& rmat);
+template
+void destroyConstRawBSRMatrix<double,int>(ConstRawBSRMatrix<double,int>& rmat);
 
 }

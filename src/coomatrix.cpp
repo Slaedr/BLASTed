@@ -18,7 +18,6 @@
  */
 
 #include <cassert>
-#include <vector>
 #include <algorithm>
 #include <fstream>
 #include <boost/algorithm/string.hpp>
@@ -128,7 +127,7 @@ std::vector<index> getSizeFromMatrixMarket(std::ifstream& fin, const MMDescripti
 }
 
 template <typename scalar>
-scalar * readDenseMatrixMarket(const std::string file)
+std::vector<scalar> readDenseMatrixMarket(const std::string file)
 {
 	std::ifstream fin(file);
 	if(!fin) {
@@ -152,7 +151,7 @@ scalar * readDenseMatrixMarket(const std::string file)
 		throw "Size vector has less than 2 entries!";
 	}
 
-	scalar * vals = new scalar[sizes[0]*sizes[1]];
+	std::vector<scalar> vals(sizes[0]*sizes[1]);
 	for(int i = 0; i < sizes[0]*sizes[1]; i++)
 		fin >> vals[i];
 
@@ -160,8 +159,8 @@ scalar * readDenseMatrixMarket(const std::string file)
 	return vals;
 }
 
-template double *readDenseMatrixMarket<double>(const std::string file);
-template float *readDenseMatrixMarket<float>(const std::string file);
+template std::vector<double> readDenseMatrixMarket<double>(const std::string file);
+template std::vector<float> readDenseMatrixMarket<float>(const std::string file);
 
 template <typename scalar, typename index>
 COOMatrix<scalar,index>::COOMatrix()

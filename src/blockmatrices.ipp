@@ -29,6 +29,19 @@ namespace blasted {
 /// Shorthand for dependent templates for Eigen block function for matrices
 #define BLK template block
 
+template <typename scalar, typename index>
+void destroyConstRawBSRMatrix(ConstRawBSRMatrix<scalar,index>& rmat) {
+	delete [] rmat.browptr;
+	delete [] rmat.bcolind;
+	delete [] rmat.vals;
+	delete [] rmat.diagind;
+}
+
+template <typename scalar, typename index>
+void destroyRawBSRMatrix(RawBSRMatrix<scalar,index>& rmat) {
+	destroyConstRawBSRMatrix(reinterpret_cast<ConstRawBSRMatrix<scalar,index>&>(rmat));
+}
+
 /// Matrix-vector product for BSR matrices
 /** The template parameter Mattype is the type of the Eigen Matrix that the array of non-zero entries
  * of the matrix should be mapped to.

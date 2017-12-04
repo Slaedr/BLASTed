@@ -153,8 +153,8 @@ add_test(NAME BSR4ILU0Colmajor COMMAND ${CMAKE_CURRENT_BINARY_DIR}/testsolve bcg
 )
 
 if(WITH_PETSC)
-	add_executable(testpetscsolver runpetsctest.cpp testpetscsolver.cpp)
-	target_link_libraries(testpetscsolver coomatrix)
+	#add_executable(testpetscsolver runpetsctest.c testpetscsolver.cpp)
+	#target_link_libraries(testpetscsolver coomatrix)
 	
 endif()
 

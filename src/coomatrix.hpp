@@ -22,6 +22,7 @@
 
 #include <limits>
 #include <string>
+#include <vector>
 #include "blockmatrices.hpp"
 
 namespace blasted {
@@ -43,10 +44,8 @@ struct MMDescription {
 };
 
 /// Reads a dense matrix from a Matrix Market file in row-major format
-/** Allocates the required storage and returns a pointer to it.
- */
 template <typename scalar>
-scalar * readDenseMatrixMarket(const std::string file);
+std::vector<scalar> readDenseMatrixMarket(const std::string file);
 
 /// A triplet that encapsulates one entry of a coordinate matrix
 template <typename scalar, typename index>
