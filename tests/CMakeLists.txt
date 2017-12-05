@@ -70,14 +70,14 @@ add_test(NAME SPDCSRJacobi COMMAND ${CMAKE_CURRENT_BINARY_DIR}/testsolve bcgs ja
 	1e-10 1e-9 200
 )
 
-add_test(NAME SPDCSRSGS COMMAND ${CMAKE_CURRENT_BINARY_DIR}/testsolve bcgs sgs csr rowmajor
+add_test(NAME SPDCSRSGS COMMAND env OMP_NUM_THREADS=1 ${CMAKE_CURRENT_BINARY_DIR}/testsolve bcgs sgs csr rowmajor
 	${CMAKE_CURRENT_SOURCE_DIR}/input/boeing-msc00726/msc00726.mtx 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/boeing-msc00726/msc00726_x.mtx 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/boeing-msc00726/msc00726_b.mtx
 	1e-10 1e-10 200
 )
 
-add_test(NAME SPDCSRILU0 COMMAND ${CMAKE_CURRENT_BINARY_DIR}/testsolve bcgs ilu0 csr rowmajor
+add_test(NAME SPDCSRILU0 COMMAND env OMP_NUM_THREADS=1 ${CMAKE_CURRENT_BINARY_DIR}/testsolve bcgs ilu0 csr rowmajor
 	${CMAKE_CURRENT_SOURCE_DIR}/input/boeing-msc00726/msc00726.mtx 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/boeing-msc00726/msc00726_x.mtx 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/boeing-msc00726/msc00726_b.mtx
@@ -90,13 +90,13 @@ add_test(NAME CSRJacobi COMMAND ${CMAKE_CURRENT_BINARY_DIR}/testsolve bcgs jacob
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.mtx
 	1e-10 1e-8 200
 )
-add_test(NAME CSRSGS COMMAND ${CMAKE_CURRENT_BINARY_DIR}/testsolve bcgs sgs csr rowmajor
+add_test(NAME CSRSGS COMMAND env OMP_NUM_THREADS=1 ${CMAKE_CURRENT_BINARY_DIR}/testsolve bcgs sgs csr rowmajor
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.mtx 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.mtx 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.mtx
 	1e-10 1e-8 200
 )
-add_test(NAME CSRILU0 COMMAND ${CMAKE_CURRENT_BINARY_DIR}/testsolve bcgs ilu0 csr rowmajor
+add_test(NAME CSRILU0 COMMAND env OMP_NUM_THREADS=1 ${CMAKE_CURRENT_BINARY_DIR}/testsolve bcgs ilu0 csr rowmajor
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.mtx 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.mtx 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.mtx
@@ -110,14 +110,14 @@ add_test(NAME BSR4JacobiRowmajor COMMAND ${CMAKE_CURRENT_BINARY_DIR}/testsolve b
 	1e-10 1e-8 200
 )
 
-add_test(NAME BSR4SGSRowmajor COMMAND ${CMAKE_CURRENT_BINARY_DIR}/testsolve bcgs sgs bsr rowmajor
+add_test(NAME BSR4SGSRowmajor COMMAND env OMP_NUM_THREADS=1 ${CMAKE_CURRENT_BINARY_DIR}/testsolve bcgs sgs bsr rowmajor
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.mtx 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.mtx 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.mtx
 	1e-10 1e-8 200
 )
 
-add_test(NAME BSR4ILU0Rowmajor COMMAND ${CMAKE_CURRENT_BINARY_DIR}/testsolve bcgs ilu0 bsr rowmajor
+add_test(NAME BSR4ILU0Rowmajor COMMAND env OMP_NUM_THREADS=1 ${CMAKE_CURRENT_BINARY_DIR}/testsolve bcgs ilu0 bsr rowmajor
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.mtx 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.mtx 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.mtx
@@ -138,14 +138,14 @@ add_test(NAME BSR4JacobiColmajor COMMAND ${CMAKE_CURRENT_BINARY_DIR}/testsolve b
 	1e-10 1e-8 200
 )
 
-add_test(NAME BSR4SGSColmajor COMMAND ${CMAKE_CURRENT_BINARY_DIR}/testsolve bcgs sgs bsr colmajor
+add_test(NAME BSR4SGSColmajor COMMAND env OMP_NUM_THREADS=1 ${CMAKE_CURRENT_BINARY_DIR}/testsolve bcgs sgs bsr colmajor
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.mtx 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.mtx 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.mtx
 	1e-10 1e-8 200
 )
 
-add_test(NAME BSR4ILU0Colmajor COMMAND ${CMAKE_CURRENT_BINARY_DIR}/testsolve bcgs ilu0 bsr colmajor
+add_test(NAME BSR4ILU0Colmajor COMMAND env OMP_NUM_THREADS=1 ${CMAKE_CURRENT_BINARY_DIR}/testsolve bcgs ilu0 bsr colmajor
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.mtx 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.mtx 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.mtx
