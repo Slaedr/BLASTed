@@ -170,6 +170,15 @@ template <typename scalar, typename index>
 COOMatrix<scalar,index>::~COOMatrix()
 { }
 
+template <typename scalar, typename index>
+index COOMatrix<scalar,index>::numrows() const {return nrows; }
+
+template <typename scalar, typename index>
+index COOMatrix<scalar,index>::numcols() const {return ncols; }
+
+template <typename scalar, typename index>
+index COOMatrix<scalar,index>::numnonzeros() const {return nnz; }
+
 /** Currently reads only general mtx matrices, not symmetric or skew-symmetric.
  */
 template <typename scalar, typename index>
@@ -326,7 +335,7 @@ void COOMatrix<scalar,index>::convertToBSR(RawBSRMatrix<scalar,index> *const bma
 		}
 	}
 
-	std::cout << "convertToBSR: Number of nonzero blocks = " << bnnz << std::endl;
+	//std::cout << "convertToBSR: Number of nonzero blocks = " << bnnz << std::endl;
 	bmat->browptr[bmat->nbrows] = bnnz;
 
 	// fix browptr for empty block rows

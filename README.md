@@ -11,13 +11,10 @@ The following programs and libraries are required:
 - [Boost](http://www.boost.org/)
 - [PETSc](http://www.mcs.anl.gov/petsc/) and MPI are required to build the PETSc interface. PETSc 3.8 is required to run the tests.
 
-Assuming that you are in the top-level BLASTed directory, type
+Assuming that you are in the top-level BLASTed directory, type `sh config_release_petsc.sh` to configure a release version with AVX vectorization and the PETSc interface. To do it manually,
 
     mkdir build && cd build
-
-and then, to build a release version with AVX vectorization and the PETSc interface,
-
-	cmake .. -DCMAKE_BUILD_TYPE=Release -DAVX=1 -DWITH_PETSC=1 -DCMAKE_CXX_COMPILER=mpicxx
+	cmake .. -DCMAKE_BUILD_TYPE=Release -DAVX=1 -DWITH_PETSC=1 -DCMAKE_C_COMPILER=mpicc -DCMAKE_CXX_COMPILER=mpicxx
 
 To build without the PETSc interface, `-DWITH_PETSC` should be removed. See the beginning of the top-level CMakeLists.txt file for all the options. To build,
 
@@ -44,6 +41,6 @@ to generate a tags file for [easier navigation of the source code in Vim](http:/
 
 Usage
 -----
-For the most part, one would want to use the library as a plugin for PETSc. For an example of that, please see the finite difference Poisson example in `tests/poisson3d-fd`.
+For the most part, one would want to use the library as a plugin for PETSc. For an example of that, please see `tests/runpetsctest.c` or the finite difference Poisson example in `tests/poisson3d-fd/poisson3d.cpp`.
 
 

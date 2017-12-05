@@ -67,6 +67,13 @@ public:
 
 	virtual ~COOMatrix();
 
+	/// Returns the total number of rows
+	index numrows() const;
+	/// Total number of columns
+	index numcols() const;
+	/// Total number of non-zero entries
+	index numnonzeros() const;
+
 	/// Reads a matrix from a file in Matrix Market format
 	/** We store the row and column indices with zero-based indexing, but
 	 * the file contains 1-based indexing.

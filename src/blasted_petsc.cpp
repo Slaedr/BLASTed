@@ -133,46 +133,12 @@ PetscErrorCode createNewBlockMatrixView(PC pc)
 	ierr = MatGetOwnershipRange(A, &firstrow, &lastrow); CHKERRQ(ierr);	
 	ierr = MatGetLocalSize(A, &localrows, &localcols); CHKERRQ(ierr);
 	ierr = MatGetSize(A, &globalrows, &globalcols); CHKERRQ(ierr);
-	const Mat_SeqAIJ *Adiag;
-	//const Mat_SeqAIJ *Aoffdiag;
+	assert(localrows == localcols);
+	assert(globalrows == globalcols);
 
 	// get access to local matrix entries
-
-	/*if(numprocs > 1) {
-		const Mat_MPIAIJ *Atemp = (const Mat_MPIAIJ*)A->data;
-		
-		// Square diagonal portion of the local part of the matrix
-		Adiag = (const Mat_SeqAIJ*)Atemp->A->data;	
-	
-		// Off-diagonal portion of the local part of the matrix
-		//Aoffdiag = (const Mat_SeqAIJ*)Atemp->B->data;
-	}
-	else {*/
-		Adiag = (const Mat_SeqAIJ*)A->data;
-		//Aoffdiag = NULL;
-	//}
-
-#if 0
-	const PetscInt Adnnz = Adiag->nz;
-
-	printf("BLASTed: createNewBlockMatrix(): firstrow = %d, lastrow = %d,\n",
-			firstrow, lastrow);
-	printf("     localrows = %d, localcols = %d, globalrows = %d, globalcols = %d\n", 
-			localrows, localcols, globalrows, globalcols);
-	
-	if(localrows != localcols)
-		printf("! BLASTed: createNewBlockMatrix(): Local matrix is not square! Size is %dx%d.\n", 
-				localrows, localcols);
-	
-	if(localrows != (lastrow-firstrow))
-		printf("! BLASTed: createNewBlockMatrix(): \
-				Ownership range %d and local rows %d are not consistent with each other!", 
-				lastrow-firstrow, localrows);
-	
-	if(Adnnz != Adiag->i[localrows])
-		printf("! BLASTed: createNewBlockMatrix(): M nnz = %d, last entry of M rowp = %d!\n", 
-				Adnnz, Adiag->i[localrows]);
-#endif
+	//const Mat_SeqAIJ *Aoffdiag;
+	const Mat_SeqAIJ *const Adiag = (const Mat_SeqAIJ*)A->data;
 
 	switch(ctx->bs) {
 		case 0:
@@ -186,21 +152,21 @@ PetscErrorCode createNewBlockMatrixView(PC pc)
 			break;
 		/*case 2:
 			op = new BSRMatrixView<PetscReal,PetscInt,2,Eigen::ColMajor>
-				(localrows, Adiag->i, Adiag->j, Adiag->a, Adiag->diag, 
+				(localrows/bs, Adiag->i, Adiag->j, Adiag->a, Adiag->diag, 
 				 ctx->nbuildsweeps,ctx->napplysweeps);*/
 		case 3:
 			op = new BSRMatrixView<PetscReal,PetscInt,3,Eigen::ColMajor>
-				(localrows, Adiag->i, Adiag->j, Adiag->a, Adiag->diag, 
+				(localrows/ctx->bs, Adiag->i, Adiag->j, Adiag->a, Adiag->diag, 
 				 ctx->nbuildsweeps,ctx->napplysweeps);
 			break;
 		case 4:
 			op = new BSRMatrixView<PetscReal,PetscInt,4,Eigen::ColMajor>
-				(localrows, Adiag->i, Adiag->j, Adiag->a, Adiag->diag, 
+				(localrows/ctx->bs, Adiag->i, Adiag->j, Adiag->a, Adiag->diag, 
 				 ctx->nbuildsweeps,ctx->napplysweeps);
 			break;
 		case 5:
 			op = new BSRMatrixView<PetscReal,PetscInt,5,Eigen::ColMajor>
-				(localrows, Adiag->i, Adiag->j, Adiag->a, Adiag->diag, 
+				(localrows/ctx->bs, Adiag->i, Adiag->j, Adiag->a, Adiag->diag, 
 				 ctx->nbuildsweeps,ctx->napplysweeps);
 			break;
 		default:

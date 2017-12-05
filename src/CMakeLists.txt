@@ -6,7 +6,10 @@ if(WITH_PETSC)
 
 	add_library(blasted_petsc blasted_petsc.cpp)
 	target_link_libraries(blasted_petsc ${PETSC_LIB} blockmatrices)
-	#target_include_directories(blasted_petsc PRIVATE ${MPI_C_INCLUDE_PATH})
+	
+	add_executable(util_petsc_io util_petsc_io.c blasted_petsc_io.cpp)
+	target_link_libraries(util_petsc_io coomatrix blockmatrices ${PETSC_LIB})
+	
 endif()
 
 # Tags

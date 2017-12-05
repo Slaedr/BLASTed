@@ -153,8 +153,45 @@ add_test(NAME BSR4ILU0Colmajor COMMAND ${CMAKE_CURRENT_BINARY_DIR}/testsolve bcg
 )
 
 if(WITH_PETSC)
-	#add_executable(testpetscsolver runpetsctest.c testpetscsolver.cpp)
-	#target_link_libraries(testpetscsolver coomatrix)
+	add_executable(testpetscsolver runpetsctest.c)
+	target_link_libraries(testpetscsolver coomatrix blasted_petsc)
+	
+	add_test(NAME SerialPetscBSR4Jacobi COMMAND env OMP_NUM_THREADS=1 mpirun -n 1 ${CMAKE_CURRENT_BINARY_DIR}/testpetscsolver
+		${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.pmat 
+		${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.pmat 
+		${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.pmat
+		-options_file ${CMAKE_CURRENT_SOURCE_DIR}/input/2dcyl1_jacobi.perc
+	)
+	add_test(NAME SerialPetscBSR4SGS COMMAND env OMP_NUM_THREADS=1 mpirun -n 1 ${CMAKE_CURRENT_BINARY_DIR}/testpetscsolver
+		${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.pmat
+		${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.pmat 
+		${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.pmat
+		-options_file ${CMAKE_CURRENT_SOURCE_DIR}/input/2dcyl1_sgs.perc
+	)
+	add_test(NAME SerialPetscBSR4ILU0 COMMAND env OMP_NUM_THREADS=1 mpirun -n 1 ${CMAKE_CURRENT_BINARY_DIR}/testpetscsolver
+		${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.pmat
+		${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.pmat 
+		${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.pmat
+		-options_file ${CMAKE_CURRENT_SOURCE_DIR}/input/2dcyl1_ilu0.perc
+	)
+	add_test(NAME MPIPetscBSR4Jacobi COMMAND env OMP_NUM_THREADS=1 mpirun -n 3 ${CMAKE_CURRENT_BINARY_DIR}/testpetscsolver
+		${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.pmat
+		${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.pmat 
+		${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.pmat
+		-options_file ${CMAKE_CURRENT_SOURCE_DIR}/input/2dcyl1_jacobi.perc
+	)
+	add_test(NAME MPIPetscBSR4SGS COMMAND env OMP_NUM_THREADS=1 mpirun -n 2 ${CMAKE_CURRENT_BINARY_DIR}/testpetscsolver
+		${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.pmat 
+		${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.pmat 
+		${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.pmat
+		-options_file ${CMAKE_CURRENT_SOURCE_DIR}/input/2dcyl1_sgs.perc
+	)
+	add_test(NAME MPIPetscBSR4ILU0 COMMAND env OMP_NUM_THREADS=1 mpirun -n 2 ${CMAKE_CURRENT_BINARY_DIR}/testpetscsolver
+		${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.pmat 
+		${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.pmat 
+		${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.pmat
+		-options_file ${CMAKE_CURRENT_SOURCE_DIR}/input/2dcyl1_ilu0.perc
+	)
 	
 endif()
 

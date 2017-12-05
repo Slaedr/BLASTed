@@ -6,9 +6,9 @@
 #include <time.h>
 #include <float.h>
 #include <assert.h>
+#include <string.h>
 
 #include "../src/blasted_petsc.h"
-#include "testpetscsolver.h"
 
 #define PETSCOPTION_STR_LEN 30
 
@@ -25,23 +25,24 @@ PetscReal compute_error(const MPI_Comm comm, const Vec u, const Vec uexact) {
 
 int main(int argc, char* argv[])
 {
-	if(argc < 3) {
-		printf("Please specify a control file and a Petsc options file.\n");
+	char help[] = "This program solves a linear system.\n\
+		Arguments: (1) Matrix file in COO format (2) RHS file (3) Exact soln file\n\
+		Additionally, use -options_file to provide a PETSc options file.\n";
+
+	if(argc < 4) {
+		printf("Please specify the required files.\n");
+		printf("%s", help);
 		return 0;
 	}
 
-	char help[] = "Solves a linear system.\n\
-		Arguments: (1) Matrix file in COO format (2) RHS file (3) Exact soln file\
-		(4) Petsc options file\n\n";
 	char * matfile = argv[1];
 	char * bfile = argv[2];
 	char * xfile = argv[3];
-	char * optfile = argv[3];
 	PetscMPIInt size, rank;
 	PetscErrorCode ierr = 0;
-	int nruns;
+	const int nruns = 1;
 
-	ierr = PetscInitialize(&argc, &argv, optfile, help); CHKERRQ(ierr);
+	ierr = PetscInitialize(&argc, &argv, NULL, help); CHKERRQ(ierr);
 	MPI_Comm comm = PETSC_COMM_WORLD;
 	MPI_Comm_size(comm,&size);
 	MPI_Comm_rank(comm,&rank);
@@ -54,30 +55,61 @@ int main(int argc, char* argv[])
 		printf("Max OMP threads = %d\n", nthreads);
 #endif
 
-	Vec u, uexact, b, err;
+	PetscViewer matreader;
+	PetscViewerBinaryOpen(comm, matfile, FILE_MODE_READ, &matreader);
+	PetscViewer bvecreader;
+	PetscViewerBinaryOpen(comm, bfile, FILE_MODE_READ, &bvecreader);
+	PetscViewer xvecreader;
+	PetscViewerBinaryOpen(comm, xfile, FILE_MODE_READ, &xvecreader);
+
 	Mat A;
+	ierr = MatCreate(comm,&A); CHKERRQ(ierr);
+	ierr = MatSetFromOptions(A); CHKERRQ(ierr);
+	ierr = MatLoad(A, matreader); CHKERRQ(ierr);
+	PetscInt m,n;
+	ierr = MatGetLocalSize(A, &m, &n); CHKERRQ(ierr);
+	PetscInt matbs; MatType mtype;
+	ierr = MatGetBlockSize(A, &matbs); CHKERRQ(ierr);
+	ierr = MatGetType(A, &mtype); CHKERRQ(ierr);
+	printf(" Rank %d: Local size: %d, %d. Block size = %d.\n", rank, m, n, matbs);
+	bool isBlockMat = false;
+	if(!strcmp(mtype, MATBAIJ) || !strcmp(mtype,MATMPIBAIJ) || !strcmp(mtype,MATSEQBAIJ)) {
+		isBlockMat = true;
+	}
 
-	ierr = DMCreateGlobalVector(da, &u); CHKERRQ(ierr);
-	ierr = VecDuplicate(u, &b); CHKERRQ(ierr);
-	VecDuplicate(u, &uexact);
-	VecDuplicate(u, &err);
-	VecSet(u, 0.0);
-	ierr = DMCreateMatrix(da, &A); CHKERRQ(ierr);
+	Vec u, uexact, b, err;
+	ierr = VecCreate(comm,&b); CHKERRQ(ierr);
+	ierr = VecCreate(comm,&uexact); CHKERRQ(ierr);
+	ierr = VecLoad(b, bvecreader); CHKERRQ(ierr);
+	ierr = VecLoad(uexact, xvecreader); CHKERRQ(ierr);
+	ierr = MatCreateVecs(A, &err, NULL); CHKERRQ(ierr);
+	ierr = MatCreateVecs(A, &u, NULL); CHKERRQ(ierr);
+	ierr = VecSet(u, 0.0); CHKERRQ(ierr);
 
-	// compute values of LHS, RHS and exact soln
+	PetscViewerDestroy(&matreader);
+	PetscViewerDestroy(&bvecreader);
+	PetscViewerDestroy(&xvecreader);
 	
-	ierr = computeRHS(&m, da, rank, b, uexact); CHKERRQ(ierr);
-	ierr = computeLHS(&m, da, rank, A); CHKERRQ(ierr);
-
-	// Assemble LHS
-
-	ierr = MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
-	ierr = MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
-
-	KSP kspref; 
+	// Matrix multiply check
+	
+	Vec test; 
+	ierr = MatCreateVecs(A, NULL, &test); CHKERRQ(ierr);
+	PetscInt vs; 
+	VecGetLocalSize(test, &vs);
+	printf(" Rank %d: Local test size = %d.\n", rank, vs);
+	VecGetLocalSize(uexact, &vs);
+	printf(" Rank %d: Local u_exact size = %d.\n", rank, vs);
+	ierr = MatMult(A, uexact, test); CHKERRQ(ierr);
+	ierr = VecAXPY(test, -1.0, b); CHKERRQ(ierr);
+	PetscReal multerrnorm = 0;
+	ierr = VecNorm(test, NORM_2, &multerrnorm); CHKERRQ(ierr);
+	printf(" Mult error = %16.16e\n", multerrnorm);
+	assert(multerrnorm < 400*DBL_EPSILON);
+	VecDestroy(&test);
 
 	// compute reference solution using a preconditioner from PETSc
-	
+
+	KSP kspref; 
 	ierr = KSPCreate(comm, &kspref);
 	KSPSetType(kspref, KSPRICHARDSON);
 	KSPRichardsonSetScale(kspref, 1.0);
@@ -90,7 +122,7 @@ int main(int argc, char* argv[])
 
 	PetscInt refkspiters;
 	ierr = KSPGetIterationNumber(kspref, &refkspiters);
-	PetscReal errnormref = compute_error(comm,m,da,u,uexact);
+	PetscReal errnormref = compute_error(comm,u,uexact);
 
 	if(rank==0) {
 		printf("Ref run: error = %.16f\n", errnormref);
@@ -155,7 +187,9 @@ int main(int argc, char* argv[])
 		}
 
 		// Create BLASTed data structure and setup the PC
-		Blasted_data bctx; bctx.bs = 1; bctx.first_setup_done = false;
+		Blasted_data bctx; 
+		bctx.bs = isBlockMat ? matbs : 1; 
+		bctx.first_setup_done = false;
 		PCShellSetContext(subpc, (void*)&bctx);
 		PCShellSetSetUp(subpc, &compute_preconditioner_blasted);
 		ierr = PCShellSetApply(subpc, &apply_local_blasted); CHKERRQ(ierr);
@@ -176,11 +210,10 @@ int main(int argc, char* argv[])
 			printf(" KSP residual norm = %f\n", rnorm);
 		}
 		
-		errnorm = compute_error(comm,m,da,u,uexact);
+		errnorm = compute_error(comm,u,uexact);
 		if(rank == 0) {
 			printf("Test run:\n");
-			printf(" h and error: %f  %.16f\n", m.gh(), errnorm);
-			printf(" log h and log error: %f  %f\n", log10(m.gh()), log10(errnorm));
+			printf(" error and log error: %.16f, %f\n", errnorm, log10(errnorm));
 		}
 
 		ierr = KSPDestroy(&ksp); CHKERRQ(ierr);
@@ -189,16 +222,36 @@ int main(int argc, char* argv[])
 	if(rank == 0)
 		printf("KSP Iters: Reference %d vs BLASTed %d.\n", refkspiters, avgkspiters/nruns);
 
+	PetscBool set = PETSC_FALSE;
+	char precstr[PETSCOPTION_STR_LEN];
+	PetscOptionsHasName(NULL, NULL, "-blasted_pc_type", &set);
+	if(set == PETSC_FALSE) {
+		printf(" Preconditioner type not set!\n");
+	}
+	else {
+		PetscBool flag = PETSC_FALSE;
+		PetscOptionsGetString(NULL, NULL, "-blasted_pc_type", 
+				precstr, PETSCOPTION_STR_LEN, &flag);
+		if(flag == PETSC_FALSE) {
+			printf(" Preconditioner type not set!\n");
+		}
+	}
+
 	// the test
-	assert(avgkspiters/nruns == refkspiters);
-	assert(fabs(errnorm-errnormref) < 2.0*DBL_EPSILON);
+	/*if(!strcmp(precstr,"sgs")) {
+		assert(abs(avgkspiters/nruns - refkspiters) <= 1);
+		assert(fabs(errnorm-errnormref) < 1e-4);
+	}
+	else {*/
+		assert(avgkspiters/nruns == refkspiters);
+		assert(fabs(errnorm-errnormref) < 1000.0*DBL_EPSILON);
+	//}
 
 	VecDestroy(&u);
 	VecDestroy(&uexact);
 	VecDestroy(&b);
 	VecDestroy(&err);
 	MatDestroy(&A);
-	DMDestroy(&da);
 	PetscFinalize();
 
 	return ierr;
