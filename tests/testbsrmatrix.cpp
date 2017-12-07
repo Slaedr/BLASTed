@@ -9,8 +9,9 @@
 #include <string>
 #include <iomanip>
 #include <vector>
+
+#include <coomatrix.hpp>
 #include "testbsrmatrix.hpp"
-#include "../src/coomatrix.hpp"
 
 using namespace blasted;
 

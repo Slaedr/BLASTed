@@ -19,7 +19,7 @@
  *   along with BLASTed.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "blockmatrices.hpp"
+#include <blockmatrices.hpp>
 #include <Eigen/LU>
 
 namespace blasted {

@@ -21,7 +21,7 @@
 #include <algorithm>
 #include <fstream>
 #include <boost/algorithm/string.hpp>
-#include "coomatrix.hpp"
+#include <coomatrix.hpp>
 
 namespace blasted {
 

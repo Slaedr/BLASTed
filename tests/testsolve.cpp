@@ -7,10 +7,10 @@
 #undef NDEBUG
 
 #include <iostream>
+#include <blockmatrices.hpp>
+#include <coomatrix.hpp>
 #include "testsolve.hpp"
 #include "solvers.hpp"
-#include "../src/blockmatrices.hpp"
-#include "../src/coomatrix.hpp"
 
 using namespace blasted;
 

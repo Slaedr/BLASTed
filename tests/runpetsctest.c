@@ -8,7 +8,7 @@
 #include <assert.h>
 #include <string.h>
 
-#include "../src/blasted_petsc.h"
+#include <blasted_petsc.h>
 
 #define PETSCOPTION_STR_LEN 30
 

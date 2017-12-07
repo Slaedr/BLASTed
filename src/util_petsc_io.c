@@ -3,7 +3,7 @@
 #include <assert.h>
 #include <string.h>
 
-#include "blasted_petsc_io.h"
+#include <blasted_petsc_io.h>
 
 int main(int argc, char *argv[])
 {

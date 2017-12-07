@@ -11,9 +11,8 @@
 
 #include <../src/mat/impls/aij/mpi/mpiaij.h>
 
-#include "blockmatrices.hpp"
-
-#include "blasted_petsc.h"
+#include <blockmatrices.hpp>
+#include <blasted_petsc.h>
 
 using namespace blasted;
 

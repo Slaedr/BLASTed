@@ -13,7 +13,8 @@
 #ifndef BLOCKMATRICES_H
 #define BLOCKMATRICES_H
 
-#include "linearoperator.hpp"
+#include <linearoperator.hpp>
+
 #include <iostream>
 #include <limits>
 #include <type_traits>

@@ -5,7 +5,7 @@
 #include <cfloat>
 #include <cassert>
 
-#include "../../src/blasted_petsc.h"
+#include <blasted_petsc.h>
 
 #include "poisson3d_fd.hpp"
 

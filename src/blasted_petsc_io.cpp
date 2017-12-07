@@ -5,9 +5,10 @@
 
 #include <cstring>
 #include <vector>
-#include "blasted_petsc_io.h"
-#include "../src/coomatrix.hpp"
-#include "../src/blockmatrices.hpp"
+
+#include <blasted_petsc_io.h>
+#include <coomatrix.hpp>
+#include <blockmatrices.hpp>
 
 extern "C" {
 

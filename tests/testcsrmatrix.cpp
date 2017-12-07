@@ -8,8 +8,8 @@
 #include <vector>
 #include <fstream>
 #include <float.h>
+#include <coomatrix.hpp>
 #include "testcsrmatrix.hpp"
-#include "../src/coomatrix.hpp"
 
 template <typename scalar>
 TestCSRMatrix<scalar>::TestCSRMatrix(const int nbuildsweeps, const int napplysweeps)

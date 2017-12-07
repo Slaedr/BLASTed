@@ -23,7 +23,8 @@
 #include <limits>
 #include <string>
 #include <vector>
-#include "blockmatrices.hpp"
+
+#include <blockmatrices.hpp>
 
 namespace blasted {
 

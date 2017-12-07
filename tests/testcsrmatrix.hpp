@@ -20,7 +20,7 @@
 #ifndef TESTCSRMATRIX_H
 #define TESTCSRMATRIX_H
 
-#include "../src/blockmatrices.hpp"
+#include <blockmatrices.hpp>
 
 using namespace blasted;
 

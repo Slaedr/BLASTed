@@ -6,7 +6,7 @@
 #ifndef TESTCOOMATRIX_H
 #define TESTCOOMATRIX_H
 
-#include "../src/coomatrix.hpp"
+#include <coomatrix.hpp>
 #include "testcsrmatrix.hpp"
 
 using namespace blasted;

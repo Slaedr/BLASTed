@@ -7,7 +7,7 @@
 #ifndef BLASTED_SOLVERS_H
 #define BLASTED_SOLVERS_H
 
-#include "../src/linearoperator.hpp"
+#include <linearoperator.hpp>
 
 namespace blasted {
 
