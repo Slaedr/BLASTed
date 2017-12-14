@@ -19,6 +19,7 @@
 
 #undef NDEBUG
 #include <iostream>
+#include <stdexcept>
 #include "testsolve.hpp"
 
 int main(const int argc, const char *const argv[])
