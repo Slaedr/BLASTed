@@ -5,7 +5,8 @@
 
 #include <cmath>
 #include <cstdio>
-#include <cstdlib>
+//#include <cstdlib>
+#include <cstring>
 #include <ctime>
 #include <sys/time.h>
 
@@ -301,6 +302,75 @@ PetscErrorCode get_blasted_timing_data(PC pc, double *const factorcputime,
 	*factorwalltime = ctx->factorwalltime;
 	*applycputime = ctx->applycputime;
 	*applywalltime = ctx->applywalltime;
+	return ierr;
+}
+
+PetscErrorCode setup_localpreconditioner_blasted(KSP ksp, Blasted_data *const bctx)
+{
+	PetscErrorCode ierr = 0;
+	int mpisize, mpirank;
+	MPI_Comm comm = PETSC_COMM_WORLD;
+	MPI_Comm_size(comm,&mpisize);
+	MPI_Comm_rank(comm,&mpirank);
+
+	Mat A;
+	ierr = KSPGetOperators(ksp, NULL, &A); CHKERRQ(ierr);
+	PetscInt m,n;
+	ierr = MatGetLocalSize(A, &m, &n); CHKERRQ(ierr);
+	PetscInt matbs; MatType mtype;
+	ierr = MatGetBlockSize(A, &matbs); CHKERRQ(ierr);
+	ierr = MatGetType(A, &mtype); CHKERRQ(ierr);
+	//printf(" Rank %d: Local size: %d, %d. Block size = %d.\n", rank, m, n, matbs);
+	bool isBlockMat = false;
+	if(!strcmp(mtype, MATBAIJ) || !strcmp(mtype,MATMPIBAIJ) || !strcmp(mtype,MATSEQBAIJ)) {
+		isBlockMat = true;
+	}
+
+	KSP *subksp;
+	PC pc, subpc;
+
+	KSPGetPC(ksp, &pc);
+	PetscBool isbjacobi, isasm, isshell;
+	PetscObjectTypeCompare((PetscObject)pc,PCBJACOBI,&isbjacobi);
+	PetscObjectTypeCompare((PetscObject)pc,PCASM,&isasm);
+	PetscObjectTypeCompare((PetscObject)pc,PCSHELL,&isshell);
+	if(isbjacobi)
+	{
+		// extract sub pc
+		PetscInt nlocalblocks, firstlocalblock;
+		KSPSetUp(ksp); PCSetUp(pc);
+		ierr = PCBJacobiGetSubKSP(pc, &nlocalblocks, &firstlocalblock, &subksp);
+		CHKERRQ(ierr);
+		assert(nlocalblocks == 1);
+		KSPGetPC(subksp[0], &subpc);
+	}
+	else if(isasm)
+	{
+		// extract sub pc
+		PetscInt nlocalblocks, firstlocalblock;
+		KSPSetUp(ksp); PCSetUp(pc);
+		ierr = PCASMGetSubKSP(pc, &nlocalblocks, &firstlocalblock, &subksp);
+		CHKERRQ(ierr);
+		assert(nlocalblocks == 1);
+		KSPGetPC(subksp[0], &subpc);
+	}
+	else if(isshell) {
+		subpc = pc;
+		// only for single-process runs
+		assert(mpisize == 1);
+	}
+	else {
+		SETERRQ(comm, PETSC_ERR_ARG_WRONGSTATE, "Invalid global preconditioner for BLASTed!\n");
+	}
+
+	// setup the PC
+	bctx->bs = isBlockMat ? matbs : 1; 
+	bctx->first_setup_done = false;
+	ierr = PCShellSetContext(subpc, (void*)bctx);                   CHKERRQ(ierr);
+	ierr = PCShellSetSetUp(subpc, &compute_preconditioner_blasted); CHKERRQ(ierr);
+	ierr = PCShellSetApply(subpc, &apply_local_blasted);            CHKERRQ(ierr);
+	ierr = PCShellSetDestroy(subpc, &cleanup_blasted);              CHKERRQ(ierr);
+
 	return ierr;
 }
 

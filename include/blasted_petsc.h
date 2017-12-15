@@ -12,7 +12,7 @@
 #define BLASTED_PETSC_H
 
 #include <stdbool.h>
-#include <petscpc.h>
+#include <petscksp.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -47,6 +47,21 @@ typedef struct
 	double applycputime;      ///< CPU time taken for application of the preconditioner
 	double applywalltime;     ///< Wall-clock time for application
 } Blasted_data;
+
+/// Configure local PCs to enable BLASTed preconditioners
+/** Note that it's not mandatory to use BLASTed preconditioners after this function is called;
+ * BLASTed preconditioners are only used in case the 'shell' preconditioner PCSHELL is requested.
+ *
+ * \param ksp The top level KSP or the global KSP at a multigrid level. Make sure:
+ * - The KSP is created and set up.
+ * - KSPSetOperators has been called to set the preconditioning matrix.
+ * \param bctx The BLASTed structure that stores required settings and data which
+ *   must be allocated before passing to this function. It should later be deleted by the user
+ *   after the ksp has been destroyed.
+ *
+ * \warning bctx must NOT be deleted before the ksp is destroyed. Doing so will cause a memory leak.
+ */
+PetscErrorCode setup_localpreconditioner_blasted(KSP ksp, Blasted_data *const bctx);
 
 /// Free arrays in the context struct
 /** \param pc A PETSc subdomain preconditioner context
