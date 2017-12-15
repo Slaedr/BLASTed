@@ -66,16 +66,6 @@ int main(int argc, char* argv[])
 	ierr = MatCreate(comm,&A); CHKERRQ(ierr);
 	ierr = MatSetFromOptions(A); CHKERRQ(ierr);
 	ierr = MatLoad(A, matreader); CHKERRQ(ierr);
-	PetscInt m,n;
-	ierr = MatGetLocalSize(A, &m, &n); CHKERRQ(ierr);
-	PetscInt matbs; MatType mtype;
-	ierr = MatGetBlockSize(A, &matbs); CHKERRQ(ierr);
-	ierr = MatGetType(A, &mtype); CHKERRQ(ierr);
-	printf(" Rank %d: Local size: %d, %d. Block size = %d.\n", rank, m, n, matbs);
-	bool isBlockMat = false;
-	if(!strcmp(mtype, MATBAIJ) || !strcmp(mtype,MATMPIBAIJ) || !strcmp(mtype,MATSEQBAIJ)) {
-		isBlockMat = true;
-	}
 
 	Vec u, uexact, b, err;
 	ierr = VecCreate(comm,&b); CHKERRQ(ierr);
@@ -131,15 +121,15 @@ int main(int argc, char* argv[])
 	KSPDestroy(&kspref);
 
 	// run the solve to be tested as many times as requested
-	
+
+	Blasted_data bctx;
 	int avgkspiters = 0;
 	PetscReal errnorm = 0;
 	for(int irun = 0; irun < nruns; irun++)
 	{
 		if(rank == 0)
 			printf("Run %d:\n", irun);
-		KSP ksp, *subksp;
-		PC pc, subpc;
+		KSP ksp;
 
 		ierr = KSPCreate(comm, &ksp); CHKERRQ(ierr);
 		KSPSetType(ksp, KSPRICHARDSON);
@@ -150,52 +140,8 @@ int main(int argc, char* argv[])
 
 		// Operators MUST be set before extracting sub KSPs!
 		ierr = KSPSetOperators(ksp, A, A); CHKERRQ(ierr);
-		
-		KSPGetPC(ksp, &pc);
-		PetscBool isbjacobi, isasm, isshell;
-		PetscObjectTypeCompare((PetscObject)pc,PCBJACOBI,&isbjacobi);
-		PetscObjectTypeCompare((PetscObject)pc,PCASM,&isasm);
-		PetscObjectTypeCompare((PetscObject)pc,PCSHELL,&isshell);
-		if(isbjacobi)
-		{
-			// extract sub pc
-			PetscInt nlocalblocks, firstlocalblock;
-			KSPSetUp(ksp); PCSetUp(pc);
-			ierr = PCBJacobiGetSubKSP(pc, &nlocalblocks, &firstlocalblock, &subksp);
-			CHKERRQ(ierr);
-			assert(nlocalblocks == 1);
-			KSPGetPC(subksp[0], &subpc);
-		}
-		else if(isasm)
-		{
-			// extract sub pc
-			PetscInt nlocalblocks, firstlocalblock;
-			KSPSetUp(ksp); PCSetUp(pc);
-			ierr = PCASMGetSubKSP(pc, &nlocalblocks, &firstlocalblock, &subksp);
-			CHKERRQ(ierr);
-			assert(nlocalblocks == 1);
-			KSPGetPC(subksp[0], &subpc);
-		}
-		else if(isshell) {
-			subpc = pc;
-			// only for single-process runs
-			assert(size == 1);
-		}
-		else {
-			printf("! Invalid global preconditioner for testing!\n");
-			abort();
-		}
 
-		// Create BLASTed data structure and setup the PC
-		Blasted_data bctx; 
-		bctx.bs = isBlockMat ? matbs : 1; 
-		bctx.first_setup_done = false;
-		PCShellSetContext(subpc, (void*)&bctx);
-		PCShellSetSetUp(subpc, &compute_preconditioner_blasted);
-		ierr = PCShellSetApply(subpc, &apply_local_blasted); CHKERRQ(ierr);
-		PCShellSetDestroy(subpc, &cleanup_blasted);
-		
-		ierr = KSPSetOperators(ksp, A, A); CHKERRQ(ierr);
+		setup_localpreconditioner_blasted(ksp, &bctx);
 		
 		ierr = KSPSolve(ksp, b, u); CHKERRQ(ierr);
 
