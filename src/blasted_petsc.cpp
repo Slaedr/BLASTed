@@ -69,7 +69,7 @@ static PetscErrorCode setupDataFromOptions(PC pc)
 		}
 		else {
 			PetscBool flag = PETSC_FALSE;
-			PetscInt nmax;
+			PetscInt nmax = 2;
 			PetscOptionsGetIntArray(NULL, NULL, "-blasted_async_sweeps", sweeps, &nmax, &flag);
 			
 			if(flag == PETSC_FALSE || nmax < 2) {
@@ -139,10 +139,10 @@ PetscErrorCode createNewBlockMatrixView(PC pc)
 	// get access to local matrix entries
 	//const Mat_SeqAIJ *Aoffdiag;
 	const Mat_SeqAIJ *const Adiag = (const Mat_SeqAIJ*)A->data;
-	printf("Adiag a 0: %f\n", Adiag->a[0]);
+	/*printf("Adiag a 0: %f\n", Adiag->a[0]);
 	printf("Adiag i 0: %d\n", Adiag->i[0]);
 	printf("Adiag j 0: %d\n", Adiag->j[0]);
-	printf("Adiag diag 0: %d\n", Adiag->diag[0]);
+	printf("Adiag diag 0: %d\n", Adiag->diag[0]);*/
 
 	switch(ctx->bs) {
 		case 0:
