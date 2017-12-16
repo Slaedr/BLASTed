@@ -624,12 +624,12 @@ void BSRMatrix<scalar,index,bs>::setAllZero()
 template <typename scalar, typename index, int bs>
 void BSRMatrix<scalar,index,bs>::setDiagZero()
 {
-	constexpr int bs2 = bs*bs;
+	constexpr unsigned int bs2 = bs*bs;
 
 #pragma omp parallel for default(shared)
 	for(index irow = 0; irow < mat.nbrows; irow++)
 #pragma omp simd
-		for(index jj = mat.diagind[irow]*bs2; jj < (mat.diagind[irow]+1)*bs2; jj++)
+		for(index jj = mat.diagind[irow]*bs2; jj < (index)((mat.diagind[irow]+1)*bs2); jj++)
 			mat.vals[jj] = 0;
 }
 
