@@ -139,6 +139,10 @@ PetscErrorCode createNewBlockMatrixView(PC pc)
 	// get access to local matrix entries
 	//const Mat_SeqAIJ *Aoffdiag;
 	const Mat_SeqAIJ *const Adiag = (const Mat_SeqAIJ*)A->data;
+	printf("Adiag a 0: %f\n", Adiag->a[0]);
+	printf("Adiag i 0: %d\n", Adiag->i[0]);
+	printf("Adiag j 0: %d\n", Adiag->j[0]);
+	printf("Adiag diag 0: %d\n", Adiag->diag[0]);
 
 	switch(ctx->bs) {
 		case 0:
@@ -315,12 +319,9 @@ PetscErrorCode setup_localpreconditioner_blasted(KSP ksp, Blasted_data *const bc
 
 	Mat A;
 	ierr = KSPGetOperators(ksp, NULL, &A); CHKERRQ(ierr);
-	PetscInt m,n;
-	ierr = MatGetLocalSize(A, &m, &n); CHKERRQ(ierr);
 	PetscInt matbs; MatType mtype;
 	ierr = MatGetBlockSize(A, &matbs); CHKERRQ(ierr);
 	ierr = MatGetType(A, &mtype); CHKERRQ(ierr);
-	//printf(" Rank %d: Local size: %d, %d. Block size = %d.\n", rank, m, n, matbs);
 	bool isBlockMat = false;
 	if(!strcmp(mtype, MATBAIJ) || !strcmp(mtype,MATMPIBAIJ) || !strcmp(mtype,MATSEQBAIJ)) {
 		isBlockMat = true;
@@ -331,33 +332,37 @@ PetscErrorCode setup_localpreconditioner_blasted(KSP ksp, Blasted_data *const bc
 
 	KSPGetPC(ksp, &pc);
 	PetscBool isbjacobi, isasm, isshell;
-	PetscObjectTypeCompare((PetscObject)pc,PCBJACOBI,&isbjacobi);
-	PetscObjectTypeCompare((PetscObject)pc,PCASM,&isasm);
-	PetscObjectTypeCompare((PetscObject)pc,PCSHELL,&isshell);
+	ierr = PetscObjectTypeCompare((PetscObject)pc,PCBJACOBI,&isbjacobi); CHKERRQ(ierr);
+	ierr = PetscObjectTypeCompare((PetscObject)pc,PCASM,&isasm); CHKERRQ(ierr);
+	ierr = PetscObjectTypeCompare((PetscObject)pc,PCSHELL,&isshell); CHKERRQ(ierr);
+
+	// extract sub pc
 	if(isbjacobi)
 	{
-		// extract sub pc
 		PetscInt nlocalblocks, firstlocalblock;
 		KSPSetUp(ksp); PCSetUp(pc);
 		ierr = PCBJacobiGetSubKSP(pc, &nlocalblocks, &firstlocalblock, &subksp);
 		CHKERRQ(ierr);
-		assert(nlocalblocks == 1);
-		KSPGetPC(subksp[0], &subpc);
+		if(nlocalblocks != 1)
+			SETERRQ(comm, PETSC_ERR_ARG_WRONGSTATE, "Only one subdomain per rank is supported.");
+		ierr = KSPGetPC(subksp[0], &subpc); CHKERRQ(ierr);
 	}
 	else if(isasm)
 	{
-		// extract sub pc
 		PetscInt nlocalblocks, firstlocalblock;
 		KSPSetUp(ksp); PCSetUp(pc);
 		ierr = PCASMGetSubKSP(pc, &nlocalblocks, &firstlocalblock, &subksp);
 		CHKERRQ(ierr);
-		assert(nlocalblocks == 1);
-		KSPGetPC(subksp[0], &subpc);
+		if(nlocalblocks != 1)
+			SETERRQ(comm, PETSC_ERR_ARG_WRONGSTATE, "Only one subdomain per rank is supported.");
+		ierr = KSPGetPC(subksp[0], &subpc); CHKERRQ(ierr);
 	}
 	else if(isshell) {
 		subpc = pc;
 		// only for single-process runs
-		assert(mpisize == 1);
+		if(mpisize != 1)
+			SETERRQ(comm, PETSC_ERR_SUP, 
+					"SubPC as PCSHELL is only supported for single process.");
 	}
 	else {
 		SETERRQ(comm, PETSC_ERR_ARG_WRONGSTATE, "Invalid global preconditioner for BLASTed!\n");

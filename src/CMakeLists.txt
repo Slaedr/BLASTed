@@ -1,10 +1,11 @@
 add_library(coomatrix coomatrix.cpp)
 add_library(blockmatrices csrmatrix.cpp bsrmatrix.cpp)
+set_property(TARGET blockmatrices PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 if(WITH_PETSC)
 	#find_package(MPI REQUIRED)
 
-	add_library(blasted_petsc blasted_petsc.cpp)
+	add_library(blasted_petsc SHARED blasted_petsc.cpp)
 	target_link_libraries(blasted_petsc ${PETSC_LIB} blockmatrices)
 	
 	add_executable(util_petsc_io util_petsc_io.c blasted_petsc_io.cpp)
