@@ -139,10 +139,13 @@ PetscErrorCode createNewBlockMatrixView(PC pc)
 	// get access to local matrix entries
 	//const Mat_SeqAIJ *Aoffdiag;
 	const Mat_SeqAIJ *const Adiag = (const Mat_SeqAIJ*)A->data;
-	/*printf("Adiag a 0: %f\n", Adiag->a[0]);
-	printf("Adiag i 0: %d\n", Adiag->i[0]);
-	printf("Adiag j 0: %d\n", Adiag->j[0]);
-	printf("Adiag diag 0: %d\n", Adiag->diag[0]);*/
+	// ensure diagonal entry locations have been computed; as a bonus, check for singular diagonals
+	PetscBool diagmissing = PETSC_FALSE;
+	PetscInt badrow = -1;
+	ierr = MatMissingDiagonal(A, &diagmissing, &badrow); CHKERRQ(ierr);
+	if(diagmissing == PETSC_TRUE) {
+		SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_LIB, "! Zero diagonal in (block-)row %d!", badrow);
+	}
 
 	switch(ctx->bs) {
 		case 0:

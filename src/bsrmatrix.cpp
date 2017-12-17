@@ -9,7 +9,7 @@ namespace blasted {
 
 //template class BSRMatrix<double,int,2>;
 template class BSRMatrix<double,int,3>;
-template class BSRMatrix<double,int,4>;
+//template class BSRMatrix<double,int,4>;
 //template class BSRMatrix<double,int,5>;
 //template class BSRMatrix<double,int,6>;
 template class BSRMatrix<double,int,7>;

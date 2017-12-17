@@ -1484,7 +1484,7 @@ void BSRMatrixView<scalar,index,bs,stor>::precSGSSetup()
 	if(!dblocks) {
 		dblocks = new scalar[mat.nbrows*bs*bs];
 #if DEBUG==1
-		std::cout << " precSGSSetup(): Allocating.\n";
+		//std::cout << " precSGSSetup(): Allocating.\n";
 #endif
 	}
 	
@@ -1619,7 +1619,7 @@ void CSRMatrixView<scalar,index>::precSGSSetup()
 		dblocks = new scalar[mat.nbrows];
 		delete [] ytemp;
 		ytemp = new scalar[mat.nbrows];
-		std::cout << " CSR MatrixView: precSGSSetup(): Initial setup.\n";
+		//std::cout << " CSR MatrixView: precSGSSetup(): Initial setup.\n";
 	}
 	
 	scalar_sgs_setup(&mat, dblocks, ytemp);
