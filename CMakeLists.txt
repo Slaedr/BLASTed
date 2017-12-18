@@ -14,7 +14,7 @@ cmake_minimum_required(VERSION 3.0)
 
 project (blasted)
 
-set (CMAKE_CXX_FLAGS "-std=c++14 -Wall -Werror -Wconversion")
+set (CMAKE_CXX_FLAGS "-std=c++14 -Wall -Werror")
 set (CMAKE_C_FLAGS "-std=c11 -Wall -Werror")
 set (CMAKE_CXX_FLAGS_DEBUG " ")
 set (CMAKE_CXX_FLAGS_RELEASE " ")
