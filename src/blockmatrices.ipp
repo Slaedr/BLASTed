@@ -30,7 +30,7 @@ namespace blasted {
 #define BLK template block
 
 template <typename scalar, typename index>
-void destroyConstRawBSRMatrix(ConstRawBSRMatrix<scalar,index>& rmat) {
+void destroyCRawBSRMatrix(CRawBSRMatrix<scalar,index>& rmat) {
 	delete [] rmat.browptr;
 	delete [] rmat.bcolind;
 	delete [] rmat.vals;
@@ -39,20 +39,20 @@ void destroyConstRawBSRMatrix(ConstRawBSRMatrix<scalar,index>& rmat) {
 
 template <typename scalar, typename index>
 void destroyRawBSRMatrix(RawBSRMatrix<scalar,index>& rmat) {
-	destroyConstRawBSRMatrix(reinterpret_cast<ConstRawBSRMatrix<scalar,index>&>(rmat));
+	destroyCRawBSRMatrix(reinterpret_cast<CRawBSRMatrix<scalar,index>&>(rmat));
 }
 
 /// Matrix-vector product for BSR matrices
 /** The template parameter Mattype is the type of the Eigen Matrix that the array of non-zero entries
  * of the matrix should be mapped to.
  * The reason this is a template parameter is that this type changes depending on whether
- * the array of non-zero entries ConstRawBSRMatrix::vals is arragned row-major or column-major within
+ * the array of non-zero entries CRawBSRMatrix::vals is arragned row-major or column-major within
  * each block. If it's row-major, the type should be Eigen::Matrix<scalar,Dynamic,bs,RowMajor> but
  * if it's column-major, Mattype should be Eigen::Matrix<scalar,bs,Dynamic,ColMajor>.
  */
 template <typename scalar, typename index, int bs, class Mattype>
 inline
-void block_matrix_apply(const ConstRawBSRMatrix<scalar,index> *const mat,
+void block_matrix_apply(const CRawBSRMatrix<scalar,index> *const mat,
 		const scalar a, const scalar *const xx,
 		scalar *const __restrict yy)
 {
@@ -95,7 +95,7 @@ void block_matrix_apply(const ConstRawBSRMatrix<scalar,index> *const mat,
  */
 template <typename scalar, typename index, int bs, class Mattype>
 inline
-void block_gemv3(const ConstRawBSRMatrix<scalar,index> *const mat,
+void block_gemv3(const CRawBSRMatrix<scalar,index> *const mat,
 		const scalar a, const scalar *const __restrict xx, 
 		const scalar b, const scalar *const yy, scalar *const zz)
 {
@@ -136,7 +136,7 @@ void block_gemv3(const ConstRawBSRMatrix<scalar,index> *const mat,
  */
 template <typename scalar, typename index, int bs, class Mattype>
 inline
-void block_jacobi_setup(const ConstRawBSRMatrix<scalar,index> *const mat,
+void block_jacobi_setup(const CRawBSRMatrix<scalar,index> *const mat,
 		scalar *const dblocks 
 	)
 {
@@ -163,7 +163,7 @@ void block_jacobi_setup(const ConstRawBSRMatrix<scalar,index> *const mat,
 
 /// Applies the block-Jacobi preconditioner assuming inverses of diagonal blocks have been computed 
 template <typename scalar, typename index, int bs, class Mattype>
-void block_jacobi_apply(const ConstRawBSRMatrix<scalar,index> *const mat,
+void block_jacobi_apply(const CRawBSRMatrix<scalar,index> *const mat,
 		const scalar *const dblocks,
 		const scalar *const rr, scalar *const __restrict zz)
 {
@@ -198,7 +198,7 @@ void block_jacobi_apply(const ConstRawBSRMatrix<scalar,index> *const mat,
  */
 template <typename scalar, typename index, int bs, class Mattype>
 inline
-void block_sgs_setup(const ConstRawBSRMatrix<scalar,index> *const mat,
+void block_sgs_setup(const CRawBSRMatrix<scalar,index> *const mat,
 		scalar *const dblocks,
 		Vector<scalar>& ytemp
 	)
@@ -227,7 +227,7 @@ void block_sgs_setup(const ConstRawBSRMatrix<scalar,index> *const mat,
  */
 template <typename scalar, typename index, int bs, class Mattype>
 inline
-void block_sgs_apply(const ConstRawBSRMatrix<scalar,index> *const mat,
+void block_sgs_apply(const CRawBSRMatrix<scalar,index> *const mat,
 		const scalar *const dblocks,
 		Vector<scalar>& ytemp,
 		const int napplysweeps,
@@ -335,7 +335,7 @@ static inline void inner_search(const index *const aind,
  */
 template <typename scalar, typename index, int bs, class Mattype>
 inline
-void block_ilu0_setup(const ConstRawBSRMatrix<scalar,index> *const mat,
+void block_ilu0_setup(const CRawBSRMatrix<scalar,index> *const mat,
 		const int nbuildsweeps, const int thread_chunk_size,
 		scalar *const __restrict ilu, Vector<scalar>& ytemp
 	)
@@ -451,7 +451,7 @@ void block_ilu0_setup(const ConstRawBSRMatrix<scalar,index> *const mat,
  */
 template <typename scalar, typename index, int bs, class Mattype>
 inline
-void block_ilu0_apply( const ConstRawBSRMatrix<scalar,index> *const mat,
+void block_ilu0_apply( const CRawBSRMatrix<scalar,index> *const mat,
 		const scalar *const ilu,
 		Vector<scalar>& ytemp,
 		const int napplysweeps, const int thread_chunk_size,
@@ -703,7 +703,7 @@ void BSRMatrix<scalar,index,bs>::apply(const scalar a, const scalar *const xx,
                                        scalar *const __restrict yy) const
 {
 	block_matrix_apply<scalar,index,bs,Matrix<scalar,Dynamic,bs,RowMajor>>(
-			reinterpret_cast<const ConstRawBSRMatrix<scalar,index>*>(&mat), 
+			reinterpret_cast<const CRawBSRMatrix<scalar,index>*>(&mat), 
 			a, xx, yy);
 }
 
@@ -712,7 +712,7 @@ void BSRMatrix<scalar,index,bs>::gemv3(const scalar a, const scalar *const __res
 		const scalar b, const scalar *const yy, scalar *const zz) const
 {
 	block_gemv3<scalar,index,bs,Matrix<scalar,Dynamic,bs,RowMajor>>(
-			reinterpret_cast<const ConstRawBSRMatrix<scalar,index>*>(&mat), 
+			reinterpret_cast<const CRawBSRMatrix<scalar,index>*>(&mat), 
 			a, xx, b, yy, zz);
 }
 
@@ -720,7 +720,7 @@ template <typename scalar, typename index, int bs>
 void BSRMatrix<scalar,index,bs>::precJacobiSetup()
 {
 	block_jacobi_setup<scalar,index,bs,Matrix<scalar,Dynamic,bs,RowMajor>>
-		(reinterpret_cast<const ConstRawBSRMatrix<scalar,index>*>(&mat), dblocks.data());
+		(reinterpret_cast<const CRawBSRMatrix<scalar,index>*>(&mat), dblocks.data());
 }
 
 template <typename scalar, typename index, int bs>
@@ -728,7 +728,7 @@ void BSRMatrix<scalar,index,bs>::precJacobiApply(const scalar *const rr,
                                                  scalar *const __restrict zz) const
 {
 	block_jacobi_apply<scalar,index,bs,Matrix<scalar,Dynamic,bs,RowMajor>>
-		( reinterpret_cast<const ConstRawBSRMatrix<scalar,index>*>(&mat), dblocks.data(), 
+		( reinterpret_cast<const CRawBSRMatrix<scalar,index>*>(&mat), dblocks.data(), 
 			rr, zz);
 }
 
@@ -736,7 +736,7 @@ template <typename scalar, typename index, int bs>
 void BSRMatrix<scalar,index,bs>::precSGSSetup()
 {
 	block_sgs_setup<scalar,index,bs,Matrix<scalar,Dynamic,bs,RowMajor>>
-		(reinterpret_cast<const ConstRawBSRMatrix<scalar,index>*>(&mat), dblocks.data(),ytemp);
+		(reinterpret_cast<const CRawBSRMatrix<scalar,index>*>(&mat), dblocks.data(),ytemp);
 }
 
 template <typename scalar, typename index, int bs>
@@ -744,7 +744,7 @@ void BSRMatrix<scalar,index,bs>::precSGSApply(const scalar *const rr,
                                               scalar *const __restrict zz) const
 {
 	block_sgs_apply<scalar,index,bs,Matrix<scalar,Dynamic,bs,RowMajor>>(
-			reinterpret_cast<const ConstRawBSRMatrix<scalar,index>*>(&mat), dblocks.data(), ytemp,
+			reinterpret_cast<const CRawBSRMatrix<scalar,index>*>(&mat), dblocks.data(), ytemp,
 			napplysweeps,thread_chunk_size,
 			rr, zz);
 }
@@ -783,7 +783,7 @@ void BSRMatrix<scalar,index,bs>::precILUSetup()
 	}
 
 	block_ilu0_setup<scalar,index,bs,Matrix<scalar,Dynamic,bs,RowMajor>>(
-		reinterpret_cast<const ConstRawBSRMatrix<scalar,index>*>(&mat),
+		reinterpret_cast<const CRawBSRMatrix<scalar,index>*>(&mat),
 		nbuildsweeps, thread_chunk_size, iluvals.data(), ytemp);
 }
 
@@ -792,7 +792,7 @@ void BSRMatrix<scalar,index,bs>::precILUApply(const scalar *const r,
                                               scalar *const __restrict z) const
 {
 	block_ilu0_apply<scalar,index,bs,Matrix<scalar,Dynamic,bs,RowMajor>>(
-		reinterpret_cast<const ConstRawBSRMatrix<scalar,index>*>(&mat),
+		reinterpret_cast<const CRawBSRMatrix<scalar,index>*>(&mat),
 		iluvals.data(), ytemp, napplysweeps, thread_chunk_size, 
 		r, z);
 }
@@ -828,7 +828,7 @@ void BSRMatrix<scalar,index,bs>::printDiagnostic(const char choice) const
 
 template <typename scalar, typename index>
 inline
-void matrix_apply(const ConstRawBSRMatrix<scalar,index> *const mat,
+void matrix_apply(const CRawBSRMatrix<scalar,index> *const mat,
 		const scalar a, const scalar *const xx, scalar *const __restrict yy) 
 {
 #pragma omp parallel for default(shared)
@@ -845,7 +845,7 @@ void matrix_apply(const ConstRawBSRMatrix<scalar,index> *const mat,
 
 template <typename scalar, typename index>
 inline
-void scalar_gemv3(const ConstRawBSRMatrix<scalar,index> *const mat,
+void scalar_gemv3(const CRawBSRMatrix<scalar,index> *const mat,
 		const scalar a, const scalar *const __restrict xx, 
 		const scalar b, const scalar *const yy, scalar *const zz)
 {
@@ -867,7 +867,7 @@ void scalar_gemv3(const ConstRawBSRMatrix<scalar,index> *const mat,
  */
 template <typename scalar, typename index>
 inline
-void scalar_jacobi_setup(const ConstRawBSRMatrix<scalar,index> *const mat,
+void scalar_jacobi_setup(const CRawBSRMatrix<scalar,index> *const mat,
 		scalar *const dblocks)
 {
 #pragma omp parallel for simd default(shared)
@@ -877,7 +877,7 @@ void scalar_jacobi_setup(const ConstRawBSRMatrix<scalar,index> *const mat,
 
 template <typename scalar, typename index>
 inline
-void scalar_jacobi_apply(const ConstRawBSRMatrix<scalar,index> *const mat,
+void scalar_jacobi_apply(const CRawBSRMatrix<scalar,index> *const mat,
 		const scalar *const dblocks,	
 		const scalar *const rr, scalar *const __restrict zz)
 {
@@ -893,7 +893,7 @@ void scalar_jacobi_apply(const ConstRawBSRMatrix<scalar,index> *const mat,
  */
 template <typename scalar, typename index>
 inline
-void scalar_sgs_setup(const ConstRawBSRMatrix<scalar,index> *const mat, 
+void scalar_sgs_setup(const CRawBSRMatrix<scalar,index> *const mat, 
 		scalar *const dblocks, scalar *const ytemp)
 {
 #pragma omp parallel for simd default(shared)
@@ -906,7 +906,7 @@ void scalar_sgs_setup(const ConstRawBSRMatrix<scalar,index> *const mat,
 
 template <typename scalar, typename index>
 inline
-void scalar_sgs_apply(const ConstRawBSRMatrix<scalar,index> *const mat,
+void scalar_sgs_apply(const CRawBSRMatrix<scalar,index> *const mat,
 		const scalar *const dblocks, scalar *const __restrict ytemp,
 		const int napplysweeps, const int thread_chunk_size,
 		const scalar *const rr, scalar *const __restrict zz) 
@@ -955,7 +955,7 @@ void scalar_sgs_apply(const ConstRawBSRMatrix<scalar,index> *const mat,
  */
 template <typename scalar, typename index>
 inline
-void scalar_ilu0_setup(const ConstRawBSRMatrix<scalar,index> *const mat,
+void scalar_ilu0_setup(const CRawBSRMatrix<scalar,index> *const mat,
 		const int nbuildsweeps, const int thread_chunk_size,
 		scalar *const __restrict iluvals, scalar *const __restrict scale)
 {
@@ -1028,7 +1028,7 @@ void scalar_ilu0_setup(const ConstRawBSRMatrix<scalar,index> *const mat,
 
 template <typename scalar, typename index>
 inline
-void scalar_ilu0_apply(const ConstRawBSRMatrix<scalar,index> *const mat,
+void scalar_ilu0_apply(const CRawBSRMatrix<scalar,index> *const mat,
 		const scalar *const iluvals, const scalar *const scale,
 		scalar *const __restrict ytemp,
 		const int napplysweeps, const int thread_chunk_size,
@@ -1291,14 +1291,14 @@ template <typename scalar, typename index>
 void BSRMatrix<scalar,index,1>::apply(const scalar a, const scalar *const xx,
                                        scalar *const __restrict yy) const
 {
-	matrix_apply(reinterpret_cast<const ConstRawBSRMatrix<scalar,index>*>(&mat), a, xx, yy);
+	matrix_apply(reinterpret_cast<const CRawBSRMatrix<scalar,index>*>(&mat), a, xx, yy);
 }
 
 template <typename scalar, typename index>
 void BSRMatrix<scalar,index,1>::gemv3(const scalar a, const scalar *const __restrict__ xx, 
 		const scalar b, const scalar *const yy, scalar *const zz) const
 {
-	scalar_gemv3(reinterpret_cast<const ConstRawBSRMatrix<scalar,index>*>(&mat), a, xx, b, yy, zz);
+	scalar_gemv3(reinterpret_cast<const CRawBSRMatrix<scalar,index>*>(&mat), a, xx, b, yy, zz);
 }
 
 template <typename scalar, typename index>
@@ -1309,14 +1309,14 @@ void BSRMatrix<scalar,index,1>::precJacobiSetup()
 		std::cout << " CSR Matrix: precJacobiSetup(): Allocating.\n";
 	}
 
-	scalar_jacobi_setup(reinterpret_cast<const ConstRawBSRMatrix<scalar,index>*>(&mat), dblocks);
+	scalar_jacobi_setup(reinterpret_cast<const CRawBSRMatrix<scalar,index>*>(&mat), dblocks);
 }
 
 template <typename scalar, typename index>
 void BSRMatrix<scalar,index,1>::precJacobiApply(const scalar *const rr, 
                                                  scalar *const __restrict zz) const
 {
-	scalar_jacobi_apply(reinterpret_cast<const ConstRawBSRMatrix<scalar,index>*>(&mat),
+	scalar_jacobi_apply(reinterpret_cast<const CRawBSRMatrix<scalar,index>*>(&mat),
 		dblocks, rr, zz);
 }
 
@@ -1330,7 +1330,7 @@ void BSRMatrix<scalar,index,1>::precSGSSetup()
 		std::cout << " CSR Matrix: precSGSSetup(): Allocating.\n";
 	}
 	
-	scalar_sgs_setup(reinterpret_cast<const ConstRawBSRMatrix<scalar,index>*>(&mat),
+	scalar_sgs_setup(reinterpret_cast<const CRawBSRMatrix<scalar,index>*>(&mat),
 		dblocks, ytemp);
 }
 
@@ -1338,7 +1338,7 @@ template <typename scalar, typename index>
 void BSRMatrix<scalar,index,1>::precSGSApply(const scalar *const rr, 
                                               scalar *const __restrict zz) const
 {
-	scalar_sgs_apply(reinterpret_cast<const ConstRawBSRMatrix<scalar,index>*>(&mat),
+	scalar_sgs_apply(reinterpret_cast<const CRawBSRMatrix<scalar,index>*>(&mat),
 		dblocks, ytemp, napplysweeps, thread_chunk_size,
 		rr, zz);
 }
@@ -1377,7 +1377,7 @@ void BSRMatrix<scalar,index,1>::precILUSetup()
 			std::cout << "! BSRMatrix<1>: precILUSetup(): Scale vector is already allocated!\n";
 	}
 
-	scalar_ilu0_setup(reinterpret_cast<const ConstRawBSRMatrix<scalar,index>*>(&mat),
+	scalar_ilu0_setup(reinterpret_cast<const CRawBSRMatrix<scalar,index>*>(&mat),
 		nbuildsweeps, thread_chunk_size, iluvals, scale);
 }
 
@@ -1385,7 +1385,7 @@ template <typename scalar, typename index>
 void BSRMatrix<scalar,index,1>::precILUApply(const scalar *const __restrict ra, 
                                               scalar *const __restrict za) const
 {
-	scalar_ilu0_apply(reinterpret_cast<const ConstRawBSRMatrix<scalar,index>*>(&mat),
+	scalar_ilu0_apply(reinterpret_cast<const CRawBSRMatrix<scalar,index>*>(&mat),
 		iluvals, scale, ytemp, napplysweeps, thread_chunk_size,
 		ra, za);
 }
@@ -1420,14 +1420,29 @@ template <typename scalar, typename index, int bs, StorageOptions stor>
 BSRMatrixView<scalar,index,bs,stor>::BSRMatrixView(const index n_brows, const index *const brptrs,
 		const index *const bcinds, const scalar *const values, const index *const diaginds,
 		const int n_buildsweeps, const int n_applysweeps)
-	: MatrixView<scalar,index>(BSR),
+	: SRMatrixView<scalar,index>(BSR),
 	  mat{brptrs, bcinds, values, diaginds, n_brows}, dblocks{nullptr}, iluvals{nullptr},
 	  nbuildsweeps{n_buildsweeps}, napplysweeps{n_applysweeps}, thread_chunk_size{500}
 { }
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
+void BSRMatrixView<scalar,index,bs,stor>::wrap(const index n_brows, const index *const brptrs,
+	const index *const bcinds, const scalar *const values, const index *const dinds)
+{
+	mat.nbrows = n_brows;
+	mat.browptr = brptrs;
+	mat.bcolind = bcinds;
+	mat.vals = values;
+	mat.diagind = dinds;
+}
+
+template <typename scalar, typename index, int bs, StorageOptions stor>
 BSRMatrixView<scalar, index, bs,stor>::~BSRMatrixView()
 {
+	mat.browptr = nullptr;
+	mat.bcolind = nullptr;
+	mat.vals = nullptr;
+	mat.diagind = nullptr;
 	delete [] dblocks;
 	delete [] iluvals;
 }
@@ -1484,7 +1499,7 @@ void BSRMatrixView<scalar,index,bs,stor>::precSGSSetup()
 	if(!dblocks) {
 		dblocks = new scalar[mat.nbrows*bs*bs];
 #if DEBUG==1
-		//std::cout << " precSGSSetup(): Allocating.\n";
+		std::cout << " precSGSSetup(): Allocating.\n";
 #endif
 	}
 	
@@ -1564,7 +1579,7 @@ template <typename scalar, typename index>
 CSRMatrixView<scalar,index>::CSRMatrixView(const index nrows, const index *const brptrs,
 		const index *const bcinds, const scalar *const values, const index *const diaginds,
 		const int n_buildsweeps, const int n_applysweeps)
-	: MatrixView<scalar,index>(CSR),
+	: SRMatrixView<scalar,index>(CSR),
 	mat{brptrs,bcinds,values,diaginds,nrows},
 	dblocks(nullptr), iluvals(nullptr), scale(nullptr), ytemp(nullptr),
 	nbuildsweeps{n_buildsweeps}, napplysweeps{n_applysweeps}, thread_chunk_size{800}
@@ -1573,11 +1588,26 @@ CSRMatrixView<scalar,index>::CSRMatrixView(const index nrows, const index *const
 template <typename scalar, typename index>
 CSRMatrixView<scalar,index>::~CSRMatrixView()
 { 
+	mat.browptr = nullptr;
+	mat.bcolind = nullptr;
+	mat.vals = nullptr;
+	mat.diagind = nullptr;
 	delete [] dblocks;
 	delete [] iluvals;
 	delete [] scale;
 	delete [] ytemp;
 	dblocks = iluvals = scale = ytemp = nullptr;
+}
+
+template <typename scalar, typename index>
+void CSRMatrixView<scalar,index>::wrap(const index n_brows, const index *const brptrs,
+	const index *const bcinds, const scalar *const values, const index *const dinds)
+{
+	mat.nbrows = n_brows;
+	mat.browptr = brptrs;
+	mat.bcolind = bcinds;
+	mat.vals = values;
+	mat.diagind = dinds;
 }
 
 template <typename scalar, typename index>

@@ -17,7 +17,7 @@
 
 using namespace blasted;
 
-typedef MatrixView<PetscReal, PetscInt> BlastedPetscMat;
+typedef SRMatrixView<PetscReal, PetscInt> BlastedPetscMat;
 
 #define PETSCOPTION_STR_LEN 10
 
@@ -111,10 +111,7 @@ static PetscErrorCode setupDataFromOptions(PC pc)
 PetscErrorCode createNewBlockMatrixView(PC pc)
 {
 	PetscErrorCode ierr = 0;
-
 	PetscInt firstrow, lastrow, localrows, localcols, globalrows, globalcols;
-	/*PetscInt numprocs;
-	MPI_Comm_size(PETSC_COMM_WORLD,&numprocs);*/
 	
 	// get control structure
 	Blasted_data* ctx;
@@ -129,7 +126,6 @@ PetscErrorCode createNewBlockMatrixView(PC pc)
 	 */
 	Mat A;
 	ierr = PCGetOperators(pc, NULL, &A); CHKERRQ(ierr);
-	// Petsc distributes matrices by row
 	ierr = MatGetOwnershipRange(A, &firstrow, &lastrow); CHKERRQ(ierr);	
 	ierr = MatGetLocalSize(A, &localrows, &localcols); CHKERRQ(ierr);
 	ierr = MatGetSize(A, &globalrows, &globalcols); CHKERRQ(ierr);
@@ -137,9 +133,10 @@ PetscErrorCode createNewBlockMatrixView(PC pc)
 	assert(globalrows == globalcols);
 
 	// get access to local matrix entries
-	//const Mat_SeqAIJ *Aoffdiag;
 	const Mat_SeqAIJ *const Adiag = (const Mat_SeqAIJ*)A->data;
-	// ensure diagonal entry locations have been computed; as a bonus, check for singular diagonals
+	
+	// ensure diagonal entry locations have been computed; this is necessary for BAIJ matrices
+	// as a bonus, check for singular diagonals
 	PetscBool diagmissing = PETSC_FALSE;
 	PetscInt badrow = -1;
 	ierr = MatMissingDiagonal(A, &diagmissing, &badrow); CHKERRQ(ierr);
@@ -185,7 +182,61 @@ PetscErrorCode createNewBlockMatrixView(PC pc)
 	return ierr;
 }
 
+PetscErrorCode updateBlockMatrixView(PC pc)
+{
+	PetscErrorCode ierr = 0;
+
+	PetscInt firstrow, lastrow, localrows, localcols, globalrows, globalcols;
+	/*PetscInt numprocs;
+	MPI_Comm_size(PETSC_COMM_WORLD,&numprocs);*/
+	
+	// get control structure
+	Blasted_data* ctx;
+	ierr = PCShellGetContext(pc, (void**)&ctx); CHKERRQ(ierr);
+	BlastedPetscMat* op = reinterpret_cast<BlastedPetscMat*>(ctx->bmat);
+
+	/* get the local preconditioning matrix
+	 * we operate on the diagonal matrix block corresponding to this process
+	 */
+	Mat A;
+	ierr = PCGetOperators(pc, NULL, &A); CHKERRQ(ierr);
+	ierr = MatGetOwnershipRange(A, &firstrow, &lastrow); CHKERRQ(ierr);	
+	ierr = MatGetLocalSize(A, &localrows, &localcols); CHKERRQ(ierr);
+	ierr = MatGetSize(A, &globalrows, &globalcols); CHKERRQ(ierr);
+	assert(localrows == localcols);
+	assert(globalrows == globalcols);
+
+	// get access to local matrix entries
+	const Mat_SeqAIJ *const Adiag = (const Mat_SeqAIJ*)A->data;
+	
+	// ensure diagonal entry locations have been computed; as a bonus, check for singular diagonals
+	/*PetscBool diagmissing = PETSC_FALSE;
+	PetscInt badrow = -1;
+	ierr = MatMissingDiagonal(A, &diagmissing, &badrow); CHKERRQ(ierr);
+	if(diagmissing == PETSC_TRUE) {
+		SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_LIB, "! Zero diagonal in (block-)row %d!", badrow);
+	}*/
+
+	if(ctx->bs <= 0 || ctx->bs > 5 || ctx->bs == 2)
+		SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_SUP, "Block size %d is not supported!", ctx->bs);
+
+	op->wrap(localrows/ctx->bs, Adiag->i, Adiag->j, Adiag->a, Adiag->diag);
+
+	ctx->bmat = reinterpret_cast<void*>(op);
+	return ierr;
+}
+
 extern "C" {
+
+Blasted_data newBlastedDataContext()
+{
+	Blasted_data ctx;
+	ctx.bmat = NULL;
+	ctx.first_setup_done = false;
+	ctx.cputime = ctx.walltime = ctx.factorcputime = ctx.factorwalltime
+		= ctx.applycputime = ctx.applywalltime = 0.0;
+	return ctx;
+}
 
 PetscErrorCode cleanup_blasted(PC pc)
 {
@@ -208,11 +259,12 @@ PetscErrorCode compute_preconditioner_blasted(PC pc)
 	ierr = PCShellGetContext(pc, (void**)&ctx); CHKERRQ(ierr);
 
 	if(!ctx->first_setup_done) {
-		ierr = setupDataFromOptions(pc);
-		CHKERRQ(ierr);
+		ierr = setupDataFromOptions(pc); CHKERRQ(ierr);
+		ierr = createNewBlockMatrixView(pc); CHKERRQ(ierr);
 	}
 
-	ierr = createNewBlockMatrixView(pc); CHKERRQ(ierr);
+	ierr = updateBlockMatrixView(pc); CHKERRQ(ierr);
+
 	BlastedPetscMat *const op = reinterpret_cast<BlastedPetscMat*>(ctx->bmat);
 
 	struct timeval time1, time2;
@@ -232,8 +284,7 @@ PetscErrorCode compute_preconditioner_blasted(PC pc)
 			op->precILUSetup();
 			break;
 		default:
-			printf("BLASTed: compute_preconditioner: Preconditioner not available!\n");
-			ierr = -1;
+			SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "Preconditioner not available!");
 	}
 	
 	gettimeofday(&time2, NULL);

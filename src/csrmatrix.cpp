@@ -15,6 +15,6 @@ template class CSRMatrixView<double,int>;
 template
 void destroyRawBSRMatrix<double,int>(RawBSRMatrix<double,int>& rmat);
 template
-void destroyConstRawBSRMatrix<double,int>(ConstRawBSRMatrix<double,int>& rmat);
+void destroyCRawBSRMatrix<double,int>(CRawBSRMatrix<double,int>& rmat);
 
 }

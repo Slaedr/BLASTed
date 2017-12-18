@@ -122,7 +122,7 @@ int main(int argc, char* argv[])
 
 	// run the solve to be tested as many times as requested
 
-	Blasted_data bctx;
+	Blasted_data bctx = newBlastedDataContext();
 	int avgkspiters = 0;
 	PetscReal errnorm = 0;
 	for(int irun = 0; irun < nruns; irun++)

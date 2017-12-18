@@ -48,6 +48,9 @@ typedef struct
 	double applywalltime;     ///< Wall-clock time for application
 } Blasted_data;
 
+/// Create a new BLASTed data context
+Blasted_data newBlastedDataContext();
+
 /// Configure local PCs to enable BLASTed preconditioners
 /** Note that it's not mandatory to use BLASTed preconditioners after this function is called;
  * BLASTed preconditioners are only used in case the 'shell' preconditioner PCSHELL is requested.

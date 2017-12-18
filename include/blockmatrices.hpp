@@ -32,13 +32,13 @@ using Vector = Matrix<scalar,Dynamic,1>;
 
 /// A collection of data that represents an immutable compressed sparse block-row square matrix
 template <typename scalar, typename index>
-struct ConstRawBSRMatrix
+struct CRawBSRMatrix
 {
-	const index *const browptr;
-	const index *const bcolind;
-	const scalar *const vals;
-	const index *const diagind;
-	const index nbrows;
+	const index *browptr;
+	const index *bcolind;
+	const scalar *vals;
+	const index *diagind;
+	index nbrows;
 };
 
 /// A collection of data that represents a compressed sparse block-row square matrix
@@ -56,7 +56,7 @@ template <typename scalar, typename index>
 void destroyRawBSRMatrix(RawBSRMatrix<scalar,index>& rmat);
 
 template <typename scalar, typename index>
-void destroyConstRawBSRMatrix(ConstRawBSRMatrix<scalar,index>& rmat);
+void destroyCRawBSRMatrix(CRawBSRMatrix<scalar,index>& rmat);
 
 /// Block sparse row matrix
 /** Dense blocks stored in a (block-) row-major storage order.
@@ -378,6 +378,29 @@ protected:
 	const int thread_chunk_size;
 };
 
+/// An abstract matrix view used for wrapping matrices with sparse row storage
+template<typename scalar, typename index>
+class SRMatrixView : public MatrixView<scalar, index>
+{
+public:
+	SRMatrixView(const StorageType storagetype) 
+		: MatrixView<scalar,index>(storagetype)
+	{ }
+	
+	/// Just wraps a sparse-row matrix described by 4 arrays
+	/** \param[in] n_brows Number of (block-)rows
+	 * \param[in] brptrs Array of (block-)row pointers
+	 * \param[in] bcinds Array of (block-)column indices
+	 * \param[in] values Non-zero values
+	 * \param[in] dinds Array of pointers to diagonal entries/blocks
+	 *
+	 * Does not take ownership of the 4 arrays; they are not cleaned up in the destructor either.
+	 */
+	virtual void wrap(const index n_brows, const index *const brptrs,
+		const index *const bcinds, const scalar *const values, const index *const dinds) = 0;
+
+};
+
 /// A BSR matrix that is formed by wrapping a pre-existing read-only matrix
 /** StorageOptions is an Eigen type describing storage options, which we use here to
  * specify whether storage within blocks is row-major or column-major. If each block is row-major,
@@ -385,7 +408,7 @@ protected:
  * The blocks are always arranged block-row-wise relative to each other.
  */
 template <typename scalar, typename index, int bs, StorageOptions stopt>
-class BSRMatrixView : public MatrixView<scalar, index>
+class BSRMatrixView : public SRMatrixView<scalar, index>
 {
 	static_assert(std::numeric_limits<index>::is_signed, "Signed index type required!");
 	static_assert(std::numeric_limits<index>::is_integer, "Integer index type required!");
@@ -410,6 +433,18 @@ public:
 
 	/// Cleans up temporary data needed for preconditioning operations
 	virtual ~BSRMatrixView();
+
+	/// Just wraps a sparse-row matrix described by 4 arrays
+	/** \param[in] n_brows Number of block-rows
+	 * \param[in] brptrs Array of block-row pointers
+	 * \param[in] bcinds Array of block-column indices
+	 * \param[in] values Non-zero values
+	 * \param[in] dinds Array of pointers to diagonal blocks
+	 *
+	 * Does not take ownership of the 4 arrays; they are not cleaned up in the destructor either.
+	 */
+	void wrap(const index n_brows, const index *const brptrs,
+		const index *const bcinds, const scalar *const values, const index *const dinds);
 
 	/// Computes the matrix vector product of this matrix with one vector-- y := a Ax
 	virtual void apply(const scalar a, const scalar *const x, scalar *const __restrict y) const;
@@ -458,7 +493,7 @@ public:
 protected:
 
 	/// The BSR matrix wrapper
-	ConstRawBSRMatrix<scalar,index> mat;
+	CRawBSRMatrix<scalar,index> mat;
 
 	/// Storage for factored or inverted diagonal blocks
 	scalar *dblocks;
@@ -487,7 +522,7 @@ protected:
  * On destruct, cleans up only its own data that are needed for preconditioning operations.
  */
 template <typename scalar, typename index>
-class CSRMatrixView : public MatrixView<scalar, index>
+class CSRMatrixView : public SRMatrixView<scalar, index>
 {
 	static_assert(std::numeric_limits<index>::is_signed, "Signed index type required!");
 	static_assert(std::numeric_limits<index>::is_integer, "Integer index type required!");
@@ -511,6 +546,18 @@ public:
 
 	/// De-allocates temporary storage only, not the matrix storage itself
 	virtual ~CSRMatrixView();
+	
+	/// Just wraps a sparse-row matrix described by 4 arrays
+	/** \param[in] n_brows Number of rows
+	 * \param[in] brptrs Array of row pointers
+	 * \param[in] bcinds Array of column indices
+	 * \param[in] values Non-zero values
+	 * \param[in] dinds Array of pointers to diagonal entries
+	 *
+	 * Does not take ownership of the 4 arrays; they are not cleaned up in the destructor either.
+	 */
+	void wrap(const index n_brows, const index *const brptrs,
+		const index *const bcinds, const scalar *const values, const index *const dinds);
 
 	/// Computes the matrix vector product of this matrix with one vector-- y := a Ax
 	virtual void apply(const scalar a, const scalar *const x, scalar *const __restrict y) const;
@@ -544,7 +591,7 @@ public:
 protected:
 	
 	/// The CSR matrix data	
-	ConstRawBSRMatrix<scalar,index> mat;
+	CRawBSRMatrix<scalar,index> mat;
 
 	/// Storage for factored or inverted diagonal blocks
 	scalar* dblocks;
