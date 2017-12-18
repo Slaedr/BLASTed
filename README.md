@@ -9,9 +9,9 @@ The following programs and libraries are required:
 - [CMake](https://cmake.org/) version 3.0 or later
 - [Eigen](http://eigen.tuxfamily.org) version 3.3.4 or later (an even more recent version is needed for the GCC 7 series)
 - [Boost](http://www.boost.org/)
-- [PETSc](http://www.mcs.anl.gov/petsc/) and MPI are required to build the PETSc interface. PETSc 3.8 is required to run the tests.
+- [PETSc](http://www.mcs.anl.gov/petsc/) 3.8 and MPI are required to build the PETSc interface. PETSc built with Intel MKL support is required to run the tests.
 
-Assuming that you are in the top-level BLASTed directory, type `sh config_release_petsc.sh` to configure a release version with AVX vectorization and the PETSc interface. To do it manually,
+Assuming that you are in the top-level BLASTed directory, to configure a release version with AVX vectorization and the PETSc interface, type
 
     mkdir build && cd build
 	cmake .. -DCMAKE_BUILD_TYPE=Release -DAVX=1 -DWITH_PETSC=1 -DCMAKE_C_COMPILER=mpicc -DCMAKE_CXX_COMPILER=mpicxx
