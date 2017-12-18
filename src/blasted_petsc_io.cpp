@@ -17,7 +17,7 @@ PetscErrorCode readVecFromFile(const char *const file, MPI_Comm comm, Mat a, Vec
 	PetscErrorCode ierr = 0;
 
 	std::vector<PetscReal> array = blasted::readDenseMatrixMarket<PetscReal>(file);
-	const PetscInt size = array.size();
+	const PetscInt size = static_cast<PetscInt>(array.size());
 
 	if(a) {
 		ierr = MatCreateVecs(a, NULL, v); CHKERRQ(ierr);
