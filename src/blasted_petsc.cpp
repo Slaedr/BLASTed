@@ -377,7 +377,9 @@ PetscErrorCode setup_localpreconditioner_blasted(KSP ksp, Blasted_data *const bc
 	ierr = MatGetBlockSize(A, &matbs); CHKERRQ(ierr);
 	ierr = MatGetType(A, &mtype); CHKERRQ(ierr);
 	bool isBlockMat = false;
-	if(!strcmp(mtype, MATBAIJ) || !strcmp(mtype,MATMPIBAIJ) || !strcmp(mtype,MATSEQBAIJ)) {
+	if(!strcmp(mtype, MATBAIJ) || !strcmp(mtype,MATMPIBAIJ) || !strcmp(mtype,MATSEQBAIJ) ||
+		!strcmp(mtype, MATBAIJMKL) || !strcmp(mtype,MATMPIBAIJMKL) || !strcmp(mtype,MATSEQBAIJMKL) )
+	{
 		isBlockMat = true;
 	}
 

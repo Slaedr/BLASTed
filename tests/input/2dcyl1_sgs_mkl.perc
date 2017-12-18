@@ -1,0 +1,38 @@
+-mat_type baijmkl
+-mat_block_size 4
+
+# With reference PETSc preconditioner
+
+-ref_ksp_type gmres
+-ref_ksp_richardson_scale 1.0
+
+-ref_ksp_rtol 1e-6
+-ref_ksp_max_it 150
+-ref_ksp_final_residual
+-ref_ksp_view
+
+-ref_pc_type bjacobi
+-ref_sub_pc_type sor
+-ref_sub_pc_sor_symmetric
+-ref_sub_pc_sor_local_symmetric
+-ref_sub_pc_sor_omega 1.0
+-ref_sub_pc_sor_its 1
+-ref_sub_pc_sor_lits 1
+
+# With blasted preconditioner
+
+-ksp_type gmres
+-ksp_richardson_scale 1.0
+
+-ksp_rtol 1e-6
+-ksp_max_it 150
+-ksp_final_residual
+
+-ksp_view
+
+-pc_type bjacobi
+-sub_pc_type shell
+
+-blasted_pc_type sgs
+-blasted_async_sweeps 1,1
+
