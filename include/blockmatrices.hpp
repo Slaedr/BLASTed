@@ -1,7 +1,7 @@
 /** \file blockmatrices.hpp
  * \brief Classes for sparse square matrices consisting of square dense blocks of static size
  *
- * There are two kinds of sparse matrix classes. One kind, consisting of \refBSRMatrix,
+ * There are two kinds of sparse matrix classes. One kind, consisting of \ref BSRMatrix,
  * implements a matrix which provides assembling operations and allocates and handles its own data.
  * The other kind, \ref BSRMatrixView, only provides BLAS 2 operations while wrapping an
  * external matrix. It does not allocate or delete storage for the matrix itself.
