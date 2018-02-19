@@ -376,14 +376,16 @@ PetscErrorCode setup_localpreconditioner_blasted(KSP ksp, Blasted_data *const bc
 	PetscInt matbs; MatType mtype;
 	ierr = MatGetBlockSize(A, &matbs); CHKERRQ(ierr);
 	ierr = MatGetType(A, &mtype); CHKERRQ(ierr);
-	bool isBlockMat = false;
+	bool isBlockMat = false, islocal = false;
 	if(!strcmp(mtype, MATBAIJ) || !strcmp(mtype,MATMPIBAIJ) || !strcmp(mtype,MATSEQBAIJ) ||
 		!strcmp(mtype, MATBAIJMKL) || !strcmp(mtype,MATMPIBAIJMKL) || !strcmp(mtype,MATSEQBAIJMKL) )
 	{
 		isBlockMat = true;
 	}
+	if(!strcmp(mtype, MATSEQAIJ) || !strcmp(mtype, MATSEQBAIJ) || !strcmp(mtype, MATSEQAIJMKL)
+			|| !strcmp(mtype, MATSEQBAIJMKL))
+		islocal = true;
 
-	KSP *subksp;
 	PC pc, subpc;
 
 	KSPGetPC(ksp, &pc);
@@ -397,6 +399,7 @@ PetscErrorCode setup_localpreconditioner_blasted(KSP ksp, Blasted_data *const bc
 	{
 		PetscInt nlocalblocks, firstlocalblock;
 		KSPSetUp(ksp); PCSetUp(pc);
+		KSP *subksp;
 		ierr = PCBJacobiGetSubKSP(pc, &nlocalblocks, &firstlocalblock, &subksp);
 		CHKERRQ(ierr);
 		if(nlocalblocks != 1)
@@ -407,6 +410,7 @@ PetscErrorCode setup_localpreconditioner_blasted(KSP ksp, Blasted_data *const bc
 	{
 		PetscInt nlocalblocks, firstlocalblock;
 		KSPSetUp(ksp); PCSetUp(pc);
+		KSP *subksp;
 		ierr = PCASMGetSubKSP(pc, &nlocalblocks, &firstlocalblock, &subksp);
 		CHKERRQ(ierr);
 		if(nlocalblocks != 1)
@@ -416,9 +420,9 @@ PetscErrorCode setup_localpreconditioner_blasted(KSP ksp, Blasted_data *const bc
 	else if(isshell) {
 		subpc = pc;
 		// only for single-process runs
-		if(mpisize != 1)
+		if(!islocal)
 			SETERRQ(comm, PETSC_ERR_SUP, 
-					"SubPC as PCSHELL is only supported for single process.");
+					"PC as PCSHELL is only supported for local solvers.");
 	}
 	else {
 		SETERRQ(comm, PETSC_ERR_ARG_WRONGSTATE, "Invalid global preconditioner for BLASTed!\n");
