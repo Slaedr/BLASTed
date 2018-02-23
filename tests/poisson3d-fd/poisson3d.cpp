@@ -59,19 +59,30 @@ int main(int argc, char* argv[])
 	PetscReal rmax[NDIM], rmin[NDIM];
 	char temp[50], gridtype[50];
 	FILE* conf = fopen(confile, "r");
-	fscanf(conf, "%s", temp);
-	fscanf(conf, "%s", gridtype);
-	fscanf(conf, "%s", temp);
+	int fstatus = 1;
+	fstatus = fscanf(conf, "%s", temp);
+	fstatus = fscanf(conf, "%s", gridtype);
+	fstatus = fscanf(conf, "%s", temp);
+	if(!fstatus) {
+		std::printf("! Error reading control file!\n");
+		std::abort();
+	}
 	for(int i = 0; i < NDIM; i++)
-		fscanf(conf, "%d", &npdim[i]);
-	fscanf(conf, "%s", temp);
+		fstatus = fscanf(conf, "%d", &npdim[i]);
+	fstatus = fscanf(conf, "%s", temp);
 	for(int i = 0; i < NDIM; i++)
-		fscanf(conf, "%lf", &rmin[i]);
-	fscanf(conf, "%s", temp);
+		fstatus = fscanf(conf, "%lf", &rmin[i]);
+	fstatus = fscanf(conf, "%s", temp);
 	for(int i = 0; i < NDIM; i++)
-		fscanf(conf, "%lf", &rmax[i]);
-	fscanf(conf, "%s", temp); fscanf(conf, "%d", &nruns);
+		fstatus = fscanf(conf, "%lf", &rmax[i]);
+	fstatus = fscanf(conf, "%s", temp); 
+	fstatus = fscanf(conf, "%d", &nruns);
 	fclose(conf);
+	
+	if(!fstatus) {
+		std::printf("! Error reading control file!\n");
+		std::abort();
+	}
 
 	if(rank == 0) {
 		printf("Domain boundaries in each dimension:\n");
@@ -93,7 +104,8 @@ int main(int argc, char* argv[])
 
 	// grid structure - a copy of the mesh is stored by all processes as the mesh structure is very small
 	CartMesh m;
-	ierr = m.createMeshAndDMDA(comm, npdim, ndofpernode, stencil_width, bx, by, bz, stencil_type, &da, rank);
+	ierr = m.createMeshAndDMDA(comm, npdim, ndofpernode, stencil_width, bx, by, bz, stencil_type, 
+			&da, rank);
 	CHKERRQ(ierr);
 
 	// generate grid
