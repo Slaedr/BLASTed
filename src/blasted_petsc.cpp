@@ -82,8 +82,10 @@ static PetscErrorCode setupDataFromOptions(PC pc)
 		sweeps[0] = 1; sweeps[1] = 1;
 	}
 
-	//std::printf("BLASTed: newDataFromOptions: Setting up preconditioner with\n");
-	//std::printf("ptype = %d and sweeps = %d,%d.\n", ptype, sweeps[0], sweeps[1]);
+#ifdef DEBUG
+	std::printf("BLASTed: newDataFromOptions: Setting up preconditioner with\n");
+	std::printf("ptype = %d and sweeps = %d,%d.\n", ptype, sweeps[0], sweeps[1]);
+#endif
 
 	ctx->bmat = nullptr; 
 	ctx->prectype = ptype;
