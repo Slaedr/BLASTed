@@ -55,6 +55,10 @@ Blasted_data newBlastedDataContext();
 /** Note that it's not mandatory to use BLASTed preconditioners after this function is called;
  * BLASTed preconditioners are only used in case the 'shell' preconditioner PCSHELL is requested.
  *
+ * Adds two new command line options:
+ * -> -blasted_pc_type [string: "jacobi", "sgs", "ilu0"]
+ * -> -blasted_async_sweeps [array int[2]: number of build sweeps, number of apply sweeps]
+ *
  * \param ksp The top level KSP or the global KSP at a multigrid level. Make sure:
  * - The KSP is created and set up.
  * - KSPSetOperators has been called to set the preconditioning matrix.
