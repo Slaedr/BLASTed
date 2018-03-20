@@ -4,9 +4,11 @@ cmake_minimum_required(VERSION 3.0)
 #
 # - The environment variable EIGEN_DIR needs to be set to the path of the Eigen top-level directory.
 # - -DNOOMP=1 to compile without OpenMP
-# - -DMICKNC=1 to compile for Xeon Phi Knights Corner.
 # - -DSSE=1 to compile with SSE 4.2 instructions; ignored when compiling for KNC.
 # - -DAVX=1 to compile with AVX instructions.
+# - -DSKYLAKE=1 to compile with AVX-512 instructions for Xeon Skylake CPUs
+# - -DKNL=1 to compile for Xeon Phi Knights Landing
+# - -DMICKNC=1 to compile for Xeon Phi Knights Corner
 # - -DWITH_PETSC=1 to compile with PETSc support; in which case
 #     make sure PETSC_LIB and PETSC_ARCH envonment variables have been set.
 #     Note that in this case, MPI is required.
@@ -22,6 +24,9 @@ set (CMAKE_CXX_FLAGS_RELEASE " ")
 # to compile with OpenMP
 if(NOOMP)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unknown-pragmas")
+	if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Cray")
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -hnoomp")
+	endif()
 	message(STATUS "Compiling without OpenMP")
 else()
 	if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" OR "${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
@@ -30,6 +35,8 @@ else()
 	elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel")
 		set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -qopenmp")
 		message(STATUS "Compiling with OpenMP for Intel")
+	elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Cray")
+		message(STATUS "Compiling with OpenMP for Cray")
 	else()
 		message(SEND_ERROR "Don't know OpenMP flag for this compiler")
 	endif()
@@ -42,6 +49,9 @@ elseif("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
 	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Rpass=inline,vectorize")
 elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel")
 	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -qopt-report=2")
+elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Cray")
+	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -hlist=a")
+	set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O1")
 endif()
 
 if(MICKNC)
@@ -61,7 +71,7 @@ else()
 	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m64")
 	message(STATUS "Compiling for x86_64")
 	
-	# Select vector instruction set
+	# Select hardware-specific optimizations
 	if(SSE)
 		set (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -msse4.2")
 		if("${CMAKE_BUILD_TYPE}" STREQUAL "Release")
@@ -72,10 +82,27 @@ else()
 		if("${CMAKE_BUILD_TYPE}" STREQUAL "Release")
 			message(STATUS "Compiling with AVX")
 		endif()
-	elseif(KNL)
-		set (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -march=knl")
+	elseif(SKYLAKE)
+		if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel")
+			set (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -xcore-avx512")
+		elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" OR "${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+			set (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -march=skylake-avx512")
+		else()
+			message(SEND_ERROR "Don't know/require option for this compiler!")
+		endif()
 		if("${CMAKE_BUILD_TYPE}" STREQUAL "Release")
-			message(STATUS "Compiling with AVX")
+			message(STATUS "Compiling with AVX-512 for Skylake")
+		endif()
+	elseif(KNL)
+		if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel")
+			set (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -xmic-avx512")
+		elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" OR "${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+			set (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -march=knl")
+		else()
+			message(SEND_ERROR "Don't know/require option for this compiler!")
+		endif()
+		if("${CMAKE_BUILD_TYPE}" STREQUAL "Release")
+			message(STATUS "Compiling with AVX-512 for KNL")
 		endif()
 	endif()
 
