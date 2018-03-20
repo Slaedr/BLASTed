@@ -229,13 +229,14 @@ template <typename scalar, typename index, int bs, class Mattype>
 inline
 void block_sgs_apply(const CRawBSRMatrix<scalar,index> *const mat,
 		const scalar *const dblocks,
-		Vector<scalar>& ytemp,
+		scalar *const __restrict y_temp,
 		const int napplysweeps,
 		const int thread_chunk_size,
 		const scalar *const rr, scalar *const __restrict zz)
 {
 	Eigen::Map<const Vector<scalar>> r(rr, mat->nbrows*bs);
 	Eigen::Map<Vector<scalar>> z(zz, mat->nbrows*bs);
+	Eigen::Map<Vector<scalar>> ytemp(y_temp, mat->nbrows*bs);
 
 	static_assert(std::is_same<Mattype, Matrix<scalar,Dynamic,bs,RowMajor>>::value 
 			|| std::is_same<Mattype, Matrix<scalar,bs,Dynamic,ColMajor>>::value,
@@ -453,7 +454,7 @@ template <typename scalar, typename index, int bs, class Mattype>
 inline
 void block_ilu0_apply( const CRawBSRMatrix<scalar,index> *const mat,
 		const scalar *const ilu,
-		Vector<scalar>& ytemp,
+		scalar *const __restrict y_temp,
 		const int napplysweeps, const int thread_chunk_size,
 		const scalar *const r, 
         scalar *const __restrict z
@@ -461,6 +462,7 @@ void block_ilu0_apply( const CRawBSRMatrix<scalar,index> *const mat,
 {
 	Eigen::Map<const Vector<scalar>> ra(r, mat->nbrows*bs);
 	Eigen::Map<Vector<scalar>> za(z, mat->nbrows*bs);
+	Eigen::Map<Vector<scalar>> ytemp(y_temp, mat->nbrows*bs);
 	Eigen::Map<const Mattype> iluvals(ilu, 
 			Mattype::IsRowMajor ? mat->browptr[mat->nbrows]*bs : bs,
 			Mattype::IsRowMajor ? bs : mat->browptr[mat->nbrows]*bs
@@ -744,7 +746,7 @@ void BSRMatrix<scalar,index,bs>::precSGSApply(const scalar *const rr,
                                               scalar *const __restrict zz) const
 {
 	block_sgs_apply<scalar,index,bs,Matrix<scalar,Dynamic,bs,RowMajor>>(
-			reinterpret_cast<const CRawBSRMatrix<scalar,index>*>(&mat), dblocks.data(), ytemp,
+			reinterpret_cast<const CRawBSRMatrix<scalar,index>*>(&mat), dblocks.data(), ytemp.data(),
 			napplysweeps,thread_chunk_size,
 			rr, zz);
 }
@@ -793,7 +795,7 @@ void BSRMatrix<scalar,index,bs>::precILUApply(const scalar *const r,
 {
 	block_ilu0_apply<scalar,index,bs,Matrix<scalar,Dynamic,bs,RowMajor>>(
 		reinterpret_cast<const CRawBSRMatrix<scalar,index>*>(&mat),
-		iluvals.data(), ytemp, napplysweeps, thread_chunk_size, 
+		iluvals.data(), ytemp.data(), napplysweeps, thread_chunk_size, 
 		r, z);
 }
 
@@ -1515,10 +1517,10 @@ void BSRMatrixView<scalar,index,bs,stor>::precSGSApply(const scalar *const rr,
 {
 	if(stor == RowMajor)
 		block_sgs_apply<scalar,index,bs,Matrix<scalar,Dynamic,bs,RowMajor>>(
-			&mat, dblocks, ytemp, napplysweeps,thread_chunk_size, rr, zz);
+			&mat, dblocks, ytemp.data(), napplysweeps,thread_chunk_size, rr, zz);
 	else
 		block_sgs_apply<scalar,index,bs,Matrix<scalar,bs,Dynamic,ColMajor>>(
-			&mat, dblocks, ytemp, napplysweeps,thread_chunk_size, rr, zz);
+			&mat, dblocks, ytemp.data(), napplysweeps,thread_chunk_size, rr, zz);
 }
 
 /** There is currently no pre-scaling of the original matrix A, unlike the point ILU0.
@@ -1568,10 +1570,10 @@ void BSRMatrixView<scalar,index,bs,stor>::precILUApply(const scalar *const r,
 {
 	if(stor == RowMajor)
 		block_ilu0_apply<scalar,index,bs,Matrix<scalar,Dynamic,bs,RowMajor>>(
-			&mat, iluvals, ytemp, napplysweeps, thread_chunk_size, r, z);
+			&mat, iluvals, ytemp.data(), napplysweeps, thread_chunk_size, r, z);
 	else
 		block_ilu0_apply<scalar,index,bs,Matrix<scalar,bs,Dynamic,ColMajor>>(
-			&mat, iluvals, ytemp, napplysweeps, thread_chunk_size, r, z);
+			&mat, iluvals, ytemp.data(), napplysweeps, thread_chunk_size, r, z);
 }
 
 
