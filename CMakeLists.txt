@@ -3,15 +3,17 @@ cmake_minimum_required(VERSION 3.0)
 # Variables that can/must be passed to the cmake command:
 #
 # - The environment variable EIGEN_DIR needs to be set to the path of the Eigen top-level directory.
+#
+# - -DBOOST_ROOT=<path-to-Boost-root-directory> if Boost is not present in a default directory
+# - -DWITH_PETSC=1 to compile with PETSc support; in which case
+#     make sure PETSC_LIB and PETSC_ARCH envonment variables have been set.
+#     Note that in this case, MPI is required.
 # - -DNOOMP=1 to compile without OpenMP
 # - -DSSE=1 to compile with SSE 4.2 instructions; ignored when compiling for KNC.
 # - -DAVX=1 to compile with AVX instructions.
 # - -DSKYLAKE=1 to compile with AVX-512 instructions for Xeon Skylake CPUs
 # - -DKNL=1 to compile for Xeon Phi Knights Landing
 # - -DMICKNC=1 to compile for Xeon Phi Knights Corner
-# - -DWITH_PETSC=1 to compile with PETSc support; in which case
-#     make sure PETSC_LIB and PETSC_ARCH envonment variables have been set.
-#     Note that in this case, MPI is required.
 # - -DPROFILE=1 for profiling with gprof.
 
 project (blasted)
@@ -117,6 +119,11 @@ endif()
 # profiling
 if(PROFILE)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pg")
+endif()
+
+# Boost
+if(BOOST_ROOT)
+	include_directories(${BOOST_ROOT})
 endif()
 
 # Eigen
