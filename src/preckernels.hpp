@@ -56,7 +56,7 @@ scalar scalar_bgs(const scalar *const __restrict vals, const index *const __rest
 /// Forward block Gauss-Seidel kernel
 template <typename scalar, typename index, int bs, class Mattype> inline
 void block_fgs(Map<const Mattype>& vals, const index *const __restrict bcolind,
-		const index browstart, const index bdiagind,
+		const index irow, const index browstart, const index bdiagind,
 		Map<const Mattype>& diaginv, Map<Vector<scalar>>& rhs,  Map<Vector<scalar>>& x)
 {
 	Matrix<scalar,bs,1> inter = Matrix<scalar,bs,1>::Zero();
@@ -78,7 +78,7 @@ void block_fgs(Map<const Mattype>& vals, const index *const __restrict bcolind,
 /// Backward block Gauss-Seidel kernel
 template <typename scalar, typename index, int bs, class Mattype> inline
 void block_bgs(Map<const Mattype>& vals, const index *const __restrict bcolind,
-		const index bdiagind, const int nextbrowstart,
+		const index irow, const index bdiagind, const int nextbrowstart,
 		Map<const Mattype>& diaginv, Map<Vector<scalar>>& rhs,  Map<Vector<scalar>>& x)
 {
 	Matrix<scalar,bs,1> inter = Matrix<scalar,bs,1>::Zero();

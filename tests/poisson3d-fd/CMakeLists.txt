@@ -2,6 +2,9 @@
 if(WITH_PETSC)
 	add_executable(testcsr_poisson poisson3d.cpp poisson3d_fd.cpp cartmesh.cpp)
 	target_link_libraries(testcsr_poisson blasted_petsc)
+	
+	add_executable(testcsr_poisson_threaded poisson3d-threaded.cpp poisson3d_fd.cpp cartmesh.cpp)
+	target_link_libraries(testcsr_poisson_threaded blasted_petsc)
 
 # Tests
 add_test(NAME SerialPoissonCSRPetscILU0 COMMAND env OMP_NUM_THREADS=1 mpirun -n 1 ./testcsr_poisson 
@@ -15,6 +18,14 @@ ${CMAKE_CURRENT_SOURCE_DIR}/../input/poisson.control ${CMAKE_CURRENT_SOURCE_DIR}
 
 add_test(NAME MPIPoissonCSRPetscSGS COMMAND env OMP_NUM_THREADS=1 mpirun -n 8 ./testcsr_poisson 
 ${CMAKE_CURRENT_SOURCE_DIR}/../input/poisson.control ${CMAKE_CURRENT_SOURCE_DIR}/../input/mpi_poisson_csr_sgs.perc)
+
+add_test(NAME ThreadedPoissonCSRPetscSGS COMMAND mpirun -n 1 ./testcsr_poisson_threaded 
+${CMAKE_CURRENT_SOURCE_DIR}/../input/poisson.control ${CMAKE_CURRENT_SOURCE_DIR}/../input/thread_poisson_csr.perc 
+-ref_sub_pc_type sor -blasted_pc_type sgs)
+
+add_test(NAME ThreadedPoissonCSRPetscILU0 COMMAND mpirun -n 1 ./testcsr_poisson_threaded 
+${CMAKE_CURRENT_SOURCE_DIR}/../input/poisson.control ${CMAKE_CURRENT_SOURCE_DIR}/../input/thread_poisson_csr.perc 
+-ref_sub_pc_type ilu -blasted_pc_type ilu0)
 
 endif()
 
