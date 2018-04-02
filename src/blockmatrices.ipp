@@ -20,6 +20,8 @@
  */
 
 #include <blockmatrices.hpp>
+#include "preckernels.hpp"
+
 #include <Eigen/LU>
 
 namespace blasted {
@@ -258,20 +260,8 @@ void block_sgs_apply(const CRawBSRMatrix<scalar,index> *const mat,
 #pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size)
 		for(index irow = 0; irow < mat->nbrows; irow++)
 		{
-			Matrix<scalar,bs,1> inter = Matrix<scalar,bs,1>::Zero();
-
-			for(index jj = mat->browptr[irow]; jj < mat->diagind[irow]; jj++)
-				if(Mattype::IsRowMajor)
-					inter += data.BLK<bs,bs>(jj*bs,0)*ytemp.SEG<bs>(mat->bcolind[jj]*bs);
-				else
-					inter += data.BLK<bs,bs>(0,jj*bs)*ytemp.SEG<bs>(mat->bcolind[jj]*bs);
-
-			if(Mattype::IsRowMajor)
-				ytemp.SEG<bs>(irow*bs) = dblks.BLK<bs,bs>(irow*bs,0) 
-			                                          * (r.SEG<bs>(irow*bs) - inter);
-			else
-				ytemp.SEG<bs>(irow*bs) = dblks.BLK<bs,bs>(0,irow*bs) 
-			                                          * (r.SEG<bs>(irow*bs) - inter);
+			block_fgs<scalar, index, bs, Mattype>(data, mat->bcolind, irow, mat->browptr[irow], 
+					mat->diagind[irow], dblks, r, ytemp);
 		}
 	}
 
@@ -282,22 +272,8 @@ void block_sgs_apply(const CRawBSRMatrix<scalar,index> *const mat,
 #pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size)
 		for(index irow = mat->nbrows-1; irow >= 0; irow--)
 		{
-			Matrix<scalar,bs,1> inter = Matrix<scalar,bs,1>::Zero();
-			
-			// compute U z
-			for(index jj = mat->diagind[irow]+1; jj < mat->browptr[irow+1]; jj++)
-				if(Mattype::IsRowMajor)
-					inter += data.BLK<bs,bs>(jj*bs,0) * z.SEG<bs>(mat->bcolind[jj]*bs);
-				else
-					inter += data.BLK<bs,bs>(0,jj*bs) * z.SEG<bs>(mat->bcolind[jj]*bs);
-
-			// compute z = D^(-1) (D y - U z) for the irow-th block-segment of z
-			if(Mattype::IsRowMajor)
-				z.SEG<bs>(irow*bs) = dblks.BLK<bs,bs>(irow*bs,0) 
-					* ( data.BLK<bs,bs>(mat->diagind[irow]*bs,0)*ytemp.SEG<bs>(irow*bs) - inter );
-			else
-				z.SEG<bs>(irow*bs) = dblks.BLK<bs,bs>(0,irow*bs) 
-					* ( data.BLK<bs,bs>(0,mat->diagind[irow]*bs)*ytemp.SEG<bs>(irow*bs) - inter );
+			block_bgs<scalar, index, bs, Mattype>(data, mat->bcolind, irow, mat->diagind[irow], 
+					mat->browptr[irow+1], dblks, ytemp, z);
 		}
 	}
 }
@@ -460,6 +436,10 @@ void block_ilu0_apply( const CRawBSRMatrix<scalar,index> *const mat,
         scalar *const __restrict z
 	)
 {
+	static_assert(std::is_same<Mattype, Matrix<scalar,Dynamic,bs,RowMajor>>::value 
+			|| std::is_same<Mattype, Matrix<scalar,bs,Dynamic,ColMajor>>::value,
+		"Invalid matrix type!");
+	
 	Eigen::Map<const Vector<scalar>> ra(r, mat->nbrows*bs);
 	Eigen::Map<Vector<scalar>> za(z, mat->nbrows*bs);
 	Eigen::Map<Vector<scalar>> ytemp(y_temp, mat->nbrows*bs);
@@ -478,15 +458,8 @@ void block_ilu0_apply( const CRawBSRMatrix<scalar,index> *const mat,
 #pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size)
 		for(index i = 0; i < mat->nbrows; i++)
 		{
-			Matrix<scalar,bs,1> sum = Matrix<scalar,bs,1>::Zero();
-
-			for(index j = mat->browptr[i]; j < mat->diagind[i]; j++)
-				if(Mattype::IsRowMajor)
-					sum += iluvals.BLK<bs,bs>(j*bs,0) * ytemp.SEG<bs>(mat->bcolind[j]*bs);
-				else
-					sum += iluvals.BLK<bs,bs>(0,j*bs) * ytemp.SEG<bs>(mat->bcolind[j]*bs);
-			
-			ytemp.SEG<bs>(i*bs) = ra.SEG<bs>(i*bs) - sum;
+			block_unit_lower_triangular<scalar,index,bs,Mattype>(iluvals, mat->bcolind, i, 
+					mat->browptr[i], mat->diagind[i], ra, ytemp);
 		}
 	}
 
@@ -498,20 +471,8 @@ void block_ilu0_apply( const CRawBSRMatrix<scalar,index> *const mat,
 #pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size)
 		for(index i = mat->nbrows-1; i >= 0; i--)
 		{
-			Matrix<scalar,bs,1> sum = Matrix<scalar,bs,1>::Zero();
-
-			for(index j = mat->diagind[i]+1; j < mat->browptr[i+1]; j++)
-				if(Mattype::IsRowMajor)
-					sum += iluvals.BLK<bs,bs>(j*bs,0) * za.SEG<bs>(mat->bcolind[j]*bs);
-				else
-					sum += iluvals.BLK<bs,bs>(0,j*bs) * za.SEG<bs>(mat->bcolind[j]*bs);
-			
-			if(Mattype::IsRowMajor)
-				za.SEG<bs>(i*bs) = 
-					iluvals.BLK<bs,bs>(mat->diagind[i]*bs,0) * (ytemp.SEG<bs>(i*bs) - sum);
-			else
-				za.SEG<bs>(i*bs) = 
-					iluvals.BLK<bs,bs>(0,mat->diagind[i]*bs) * (ytemp.SEG<bs>(i*bs) - sum);
+			block_upper_triangular<scalar,index,bs,Mattype>(iluvals, mat->bcolind, i, 
+					mat->diagind[i], mat->browptr[i+1], ytemp, za);
 		}
 	}
 
@@ -920,12 +881,8 @@ void scalar_sgs_apply(const CRawBSRMatrix<scalar,index> *const mat,
 #pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size)
 		for(index irow = 0; irow < mat->nbrows; irow++)
 		{
-			scalar inter = 0;
-
-			for(index jj = mat->browptr[irow]; jj < mat->diagind[irow]; jj++)
-				inter += mat->vals[jj]*ytemp[mat->bcolind[jj]];
-
-			ytemp[irow] = dblocks[irow] * (rr[irow] - inter);
+			ytemp[irow] = scalar_ftri(mat->vals, mat->bcolind, mat->browptr[irow], mat->diagind[irow],
+					dblocks[irow], rr[irow], ytemp);
 		}
 	}
 
@@ -936,14 +893,8 @@ void scalar_sgs_apply(const CRawBSRMatrix<scalar,index> *const mat,
 #pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size)
 		for(index irow = mat->nbrows-1; irow >= 0; irow--)
 		{
-			scalar inter = 0;
-			
-			// compute U z
-			for(index jj = mat->diagind[irow]+1; jj < mat->browptr[irow+1]; jj++)
-				inter += mat->vals[jj] * zz[mat->bcolind[jj]];
-
-			// compute z = D^(-1) (D y - U z) for the irow-th block-segment of z
-			zz[irow] = dblocks[irow] * ( mat->vals[mat->diagind[irow]]*ytemp[irow] - inter );
+			zz[irow] = scalar_btri(mat->vals, mat->bcolind, mat->diagind[irow], mat->browptr[irow+1],
+					mat->vals[mat->diagind[irow]], dblocks[irow], ytemp[irow], zz);
 		}
 	}
 }
@@ -1050,12 +1001,8 @@ void scalar_ilu0_apply(const CRawBSRMatrix<scalar,index> *const mat,
 #pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size)
 		for(index i = 0; i < mat->nbrows; i++)
 		{
-			scalar sum = 0;
-			for(index j = mat->browptr[i]; j < mat->diagind[i]; j++)
-			{
-				sum += iluvals[j] * ytemp[mat->bcolind[j]];
-			}
-			ytemp[i] = za[i] - sum;
+			ytemp[i] = scalar_unit_lower_triangular(iluvals, mat->bcolind, mat->browptr[i],
+					mat->diagind[i], za[i], ytemp);
 		}
 	}
 
@@ -1067,12 +1014,8 @@ void scalar_ilu0_apply(const CRawBSRMatrix<scalar,index> *const mat,
 #pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size)
 		for(index i = mat->nbrows-1; i >= 0; i--)
 		{
-			scalar sum = 0;
-			for(index j = mat->diagind[i]+1; j < mat->browptr[i+1]; j++)
-			{
-				sum += iluvals[j] * za[mat->bcolind[j]];
-			}
-			za[i] = 1.0/iluvals[mat->diagind[i]] * (ytemp[i] - sum);
+			za[i] = scalar_upper_triangular<scalar,index>(iluvals, mat->bcolind, mat->diagind[i], 
+					mat->browptr[i+1], 1.0/iluvals[mat->diagind[i]], ytemp[i], za);
 		}
 	}
 
