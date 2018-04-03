@@ -871,14 +871,14 @@ template <typename scalar, typename index>
 inline
 void scalar_sgs_apply(const CRawBSRMatrix<scalar,index> *const mat,
 		const scalar *const dblocks, scalar *const __restrict ytemp,
-		const int napplysweeps, const int thread_chunk_size,
+		const int napplysweeps, const int thread_chunk_size, const bool usethreads,
 		const scalar *const rr, scalar *const __restrict zz) 
 {
 	for(int isweep = 0; isweep < napplysweeps; isweep++)
 	{
 		// forward sweep ytemp := D^(-1) (r - L ytemp)
 
-#pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size)
+#pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size) if(usethreads)
 		for(index irow = 0; irow < mat->nbrows; irow++)
 		{
 			ytemp[irow] = scalar_ftri(mat->vals, mat->bcolind, mat->browptr[irow], mat->diagind[irow],
@@ -890,7 +890,7 @@ void scalar_sgs_apply(const CRawBSRMatrix<scalar,index> *const mat,
 	{
 		// backward sweep z := D^(-1) (D y - U z)
 
-#pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size)
+#pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size) if(usethreads)
 		for(index irow = mat->nbrows-1; irow >= 0; irow--)
 		{
 			zz[irow] = scalar_btri(mat->vals, mat->bcolind, mat->diagind[irow], mat->browptr[irow+1],
@@ -909,7 +909,7 @@ void scalar_sgs_apply(const CRawBSRMatrix<scalar,index> *const mat,
 template <typename scalar, typename index>
 inline
 void scalar_ilu0_setup(const CRawBSRMatrix<scalar,index> *const mat,
-		const int nbuildsweeps, const int thread_chunk_size,
+		const int nbuildsweeps, const int thread_chunk_size, const bool usethreads,
 		scalar *const __restrict iluvals, scalar *const __restrict scale)
 {
 	// get the diagonal scaling matrix
@@ -926,7 +926,7 @@ void scalar_ilu0_setup(const CRawBSRMatrix<scalar,index> *const mat,
 	
 	for(int isweep = 0; isweep < nbuildsweeps; isweep++)
 	{
-#pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size)
+#pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size) if(usethreads)
 		for(index irow = 0; irow < mat->nbrows; irow++)
 		{
 			for(index j = mat->browptr[irow]; j < mat->browptr[irow+1]; j++)
@@ -984,7 +984,7 @@ inline
 void scalar_ilu0_apply(const CRawBSRMatrix<scalar,index> *const mat,
 		const scalar *const iluvals, const scalar *const scale,
 		scalar *const __restrict ytemp,
-		const int napplysweeps, const int thread_chunk_size,
+		const int napplysweeps, const int thread_chunk_size, const bool usethreads,
 		const scalar *const ra, scalar *const __restrict za) 
 {
 	// initially, z := Sr
@@ -998,7 +998,7 @@ void scalar_ilu0_apply(const CRawBSRMatrix<scalar,index> *const mat,
 	 */
 	for(int isweep = 0; isweep < napplysweeps; isweep++)
 	{
-#pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size)
+#pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size) if(usethreads)
 		for(index i = 0; i < mat->nbrows; i++)
 		{
 			ytemp[i] = scalar_unit_lower_triangular(iluvals, mat->bcolind, mat->browptr[i],
@@ -1011,7 +1011,7 @@ void scalar_ilu0_apply(const CRawBSRMatrix<scalar,index> *const mat,
 	 */
 	for(int isweep = 0; isweep < napplysweeps; isweep++)
 	{
-#pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size)
+#pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size) if(usethreads)
 		for(index i = mat->nbrows-1; i >= 0; i--)
 		{
 			za[i] = scalar_upper_triangular<scalar,index>(iluvals, mat->bcolind, mat->diagind[i], 
@@ -1284,7 +1284,7 @@ void BSRMatrix<scalar,index,1>::precSGSApply(const scalar *const rr,
                                               scalar *const __restrict zz) const
 {
 	scalar_sgs_apply(reinterpret_cast<const CRawBSRMatrix<scalar,index>*>(&mat),
-		dblocks, ytemp, napplysweeps, thread_chunk_size,
+		dblocks, ytemp, napplysweeps, thread_chunk_size, true,
 		rr, zz);
 }
 
@@ -1323,7 +1323,7 @@ void BSRMatrix<scalar,index,1>::precILUSetup()
 	}
 
 	scalar_ilu0_setup(reinterpret_cast<const CRawBSRMatrix<scalar,index>*>(&mat),
-		nbuildsweeps, thread_chunk_size, iluvals, scale);
+		nbuildsweeps, thread_chunk_size, true, iluvals, scale);
 }
 
 template <typename scalar, typename index>
@@ -1331,7 +1331,7 @@ void BSRMatrix<scalar,index,1>::precILUApply(const scalar *const __restrict ra,
                                               scalar *const __restrict za) const
 {
 	scalar_ilu0_apply(reinterpret_cast<const CRawBSRMatrix<scalar,index>*>(&mat),
-		iluvals, scale, ytemp, napplysweeps, thread_chunk_size,
+		iluvals, scale, ytemp, napplysweeps, thread_chunk_size, true,
 		ra, za);
 }
 
@@ -1604,7 +1604,7 @@ template <typename scalar, typename index>
 void CSRMatrixView<scalar,index>::precSGSApply(const scalar *const rr, 
                                               scalar *const __restrict zz) const
 {
-	scalar_sgs_apply(&mat, dblocks, ytemp, napplysweeps, thread_chunk_size, rr, zz);
+	scalar_sgs_apply(&mat, dblocks, ytemp, napplysweeps, thread_chunk_size, true, rr, zz);
 }
 
 template <typename scalar, typename index>
@@ -1639,14 +1639,22 @@ void CSRMatrixView<scalar,index>::precILUSetup()
 			std::cout << "! BSRMatrixView<1>: precILUSetup(): Scale vector is already allocated!\n";
 	}
 
-	scalar_ilu0_setup(&mat, nbuildsweeps, thread_chunk_size, iluvals, scale);
+	scalar_ilu0_setup(&mat, nbuildsweeps, thread_chunk_size, true, iluvals, scale);
 }
 
 template <typename scalar, typename index>
 void CSRMatrixView<scalar,index>::precILUApply(const scalar *const __restrict ra, 
                                               scalar *const __restrict za) const
 {
-	scalar_ilu0_apply(&mat, iluvals, scale, ytemp, napplysweeps, thread_chunk_size, ra, za);
+	scalar_ilu0_apply(&mat, iluvals, scale, ytemp, napplysweeps, thread_chunk_size, true, ra, za);
+}
+
+
+template <typename scalar, typename index>
+void CSRMatrixView<scalar,index>::precILUApply_seq(const scalar *const __restrict ra, 
+                                              scalar *const __restrict za) const
+{
+	scalar_ilu0_apply(&mat, iluvals, scale, ytemp, napplysweeps, thread_chunk_size, false, ra, za);
 }
 
 }

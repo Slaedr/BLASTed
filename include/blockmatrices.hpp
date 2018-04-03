@@ -584,6 +584,9 @@ public:
 
 	/// Applies a block LU factorization
 	void precILUApply(const scalar *const r, scalar *const __restrict z) const;
+
+	/// Applies a block LU factorization sequentially
+	void precILUApply_seq(const scalar *const r, scalar *const __restrict z) const;
 	
 	/// Returns the number of rows in the matrix
 	index dim() const { return mat.nbrows; }
