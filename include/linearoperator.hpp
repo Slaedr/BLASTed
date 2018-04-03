@@ -167,6 +167,9 @@ public:
 
 	/// Applies an LU factorization
 	virtual void precILUApply(const scalar *const r, scalar *const __restrict__ z) const = 0;
+	
+	/// Applies an LU factorization sequentially
+	virtual void precILUApply_seq(const scalar *const r, scalar *const __restrict__ z) const = 0;
 };
 
 }

@@ -224,6 +224,7 @@ void block_sgs_setup(const CRawBSRMatrix<scalar,index> *const mat,
  * \param ytemp A pre-allocated temporary vector needed for SGS
  * \param[in] napplysweeps Number of sweeps to use for asynchronous block-SGS application
  * \param[in] thread_chunk_size Batch size of allocation of work-items to thread contexts
+ * \param[in] usethreads Whether to use asynchronous threaded (true) or serial (false) application
  * \param[in] rr The input vector to apply the preconditioner to
  * \param[in,out] zz The output vector
  */
@@ -234,6 +235,7 @@ void block_sgs_apply(const CRawBSRMatrix<scalar,index> *const mat,
 		scalar *const __restrict y_temp,
 		const int napplysweeps,
 		const int thread_chunk_size,
+		const bool usethreads,
 		const scalar *const rr, scalar *const __restrict zz)
 {
 	Eigen::Map<const Vector<scalar>> r(rr, mat->nbrows*bs);
@@ -257,7 +259,7 @@ void block_sgs_apply(const CRawBSRMatrix<scalar,index> *const mat,
 	{
 		// forward sweep ytemp := D^(-1) (r - L ytemp)
 
-#pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size)
+#pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size) if(usethreads)
 		for(index irow = 0; irow < mat->nbrows; irow++)
 		{
 			block_fgs<scalar, index, bs, Mattype>(data, mat->bcolind, irow, mat->browptr[irow], 
@@ -269,7 +271,7 @@ void block_sgs_apply(const CRawBSRMatrix<scalar,index> *const mat,
 	{
 		// backward sweep z := D^(-1) (D y - U z)
 
-#pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size)
+#pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size) if(usethreads)
 		for(index irow = mat->nbrows-1; irow >= 0; irow--)
 		{
 			block_bgs<scalar, index, bs, Mattype>(data, mat->bcolind, irow, mat->diagind[irow], 
@@ -306,6 +308,7 @@ static inline void inner_search(const index *const aind,
  * \param[in] nbuildsweeps Number of asynchronous sweeps to use for parallel builds
  * \param[in] thread_chunk_size The number of work-items to assign to thread-contexts in one batch
  *   for dynamically scheduled threads - should not be too small or too large
+ * \param[in] usethreads Whether to use asynchronous threaded (true) or serial (false) factorization
  * \param[out] iluvals The ILU factorization non-zeros, accessed using the block-row pointers, 
  *   block-column indices and diagonal pointers of the original BSR matrix
  * \param[out] ytemp A temporary vector, needed for applying the ILU0 factors, allocated here
@@ -313,7 +316,7 @@ static inline void inner_search(const index *const aind,
 template <typename scalar, typename index, int bs, class Mattype>
 inline
 void block_ilu0_setup(const CRawBSRMatrix<scalar,index> *const mat,
-		const int nbuildsweeps, const int thread_chunk_size,
+		const int nbuildsweeps, const int thread_chunk_size, const bool usethreads,
 		scalar *const __restrict ilu, Vector<scalar>& ytemp
 	)
 {
@@ -334,7 +337,7 @@ void block_ilu0_setup(const CRawBSRMatrix<scalar,index> *const mat,
 	
 	for(int isweep = 0; isweep < nbuildsweeps; isweep++)
 	{
-#pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size)
+#pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size) if(usethreads)
 		for(index irow = 0; irow < mat->nbrows; irow++)
 		{
 			for(index j = mat->browptr[irow]; j < mat->browptr[irow+1]; j++)
@@ -423,6 +426,7 @@ void block_ilu0_setup(const CRawBSRMatrix<scalar,index> *const mat,
  * \param[in] napplysweeps Number of asynchronous sweeps to use for parallel application
  * \param[in] thread_chunk_size The number of work-items to assign to thread-contexts in one batch
  *   for dynamically scheduled threads - should not be too small or too large
+ * \param[in] usethreads Whether to use asynchronous threaded (true) or serial (false) application
  * \param[in] r The RHS vector of the preconditioning problem Mz = r
  * \param[in,out] z The solution vector of the preconditioning problem Mz = r
  */
@@ -431,7 +435,7 @@ inline
 void block_ilu0_apply( const CRawBSRMatrix<scalar,index> *const mat,
 		const scalar *const ilu,
 		scalar *const __restrict y_temp,
-		const int napplysweeps, const int thread_chunk_size,
+		const int napplysweeps, const int thread_chunk_size, const bool usethreads,
 		const scalar *const r, 
         scalar *const __restrict z
 	)
@@ -439,7 +443,7 @@ void block_ilu0_apply( const CRawBSRMatrix<scalar,index> *const mat,
 	static_assert(std::is_same<Mattype, Matrix<scalar,Dynamic,bs,RowMajor>>::value 
 			|| std::is_same<Mattype, Matrix<scalar,bs,Dynamic,ColMajor>>::value,
 		"Invalid matrix type!");
-	
+
 	Eigen::Map<const Vector<scalar>> ra(r, mat->nbrows*bs);
 	Eigen::Map<Vector<scalar>> za(z, mat->nbrows*bs);
 	Eigen::Map<Vector<scalar>> ytemp(y_temp, mat->nbrows*bs);
@@ -455,7 +459,7 @@ void block_ilu0_apply( const CRawBSRMatrix<scalar,index> *const mat,
 	 */
 	for(int isweep = 0; isweep < napplysweeps; isweep++)
 	{
-#pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size)
+#pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size) if(usethreads)
 		for(index i = 0; i < mat->nbrows; i++)
 		{
 			block_unit_lower_triangular<scalar,index,bs,Mattype>(iluvals, mat->bcolind, i, 
@@ -468,7 +472,7 @@ void block_ilu0_apply( const CRawBSRMatrix<scalar,index> *const mat,
 	 */
 	for(int isweep = 0; isweep < napplysweeps; isweep++)
 	{
-#pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size)
+#pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size) if(usethreads)
 		for(index i = mat->nbrows-1; i >= 0; i--)
 		{
 			block_upper_triangular<scalar,index,bs,Mattype>(iluvals, mat->bcolind, i, 
@@ -479,6 +483,555 @@ void block_ilu0_apply( const CRawBSRMatrix<scalar,index> *const mat,
 	// No correction of z needed because no scaling
 }
 
+
+template <typename scalar, typename index>
+inline
+void matrix_apply(const CRawBSRMatrix<scalar,index> *const mat,
+		const scalar a, const scalar *const xx, scalar *const __restrict yy) 
+{
+#pragma omp parallel for default(shared)
+	for(index irow = 0; irow < mat->nbrows; irow++)
+	{
+		yy[irow] = 0;
+
+		for(index jj = mat->browptr[irow]; jj < mat->browptr[irow+1]; jj++)
+		{
+			yy[irow] += a * mat->vals[jj] * xx[mat->bcolind[jj]];
+		}
+	}
+}
+
+template <typename scalar, typename index>
+inline
+void scalar_gemv3(const CRawBSRMatrix<scalar,index> *const mat,
+		const scalar a, const scalar *const __restrict xx, 
+		const scalar b, const scalar *const yy, scalar *const zz)
+{
+#pragma omp parallel for default(shared)
+	for(index irow = 0; irow < mat->nbrows; irow++)
+	{
+		zz[irow] = b * yy[irow];
+
+		for(index jj = mat->browptr[irow]; jj < mat->browptr[irow+1]; jj++)
+		{
+			zz[irow] += a * mat->vals[jj] * xx[mat->bcolind[jj]];
+		}
+	}
+}
+
+/// Inverts diagonal entries
+/** \param[in] mat The matrix
+ * \param[in,out] dblocks It must be pre-allocated; contains inverse of diagonal entries on exit
+ */
+template <typename scalar, typename index>
+inline
+void scalar_jacobi_setup(const CRawBSRMatrix<scalar,index> *const mat,
+		scalar *const dblocks)
+{
+#pragma omp parallel for simd default(shared)
+	for(index irow = 0; irow < mat->nbrows; irow++)
+		dblocks[irow] = 1.0/mat->vals[mat->diagind[irow]];
+}
+
+template <typename scalar, typename index>
+inline
+void scalar_jacobi_apply(const CRawBSRMatrix<scalar,index> *const mat,
+		const scalar *const dblocks,	
+		const scalar *const rr, scalar *const __restrict zz)
+{
+#pragma omp parallel for simd default(shared)
+	for(index irow = 0; irow < mat->nbrows; irow++)
+		zz[irow] = dblocks[irow] * rr[irow];
+}
+
+/// Computes inverses of diagonal entries and zeros a temporary storage vector
+/** \param[in] mat The matrix
+ * \param[in,out] dblocks It must be pre-allocated; contains inverse of diagonal entries on exit
+ * \param[in,out] ytemp It must be pre-allocated; zeroed here for use later
+ */
+template <typename scalar, typename index>
+inline
+void scalar_sgs_setup(const CRawBSRMatrix<scalar,index> *const mat, 
+		scalar *const dblocks, scalar *const ytemp)
+{
+#pragma omp parallel for simd default(shared)
+	for(index i = 0; i < mat->nbrows; i++)
+	{
+		dblocks[i] = 1.0/mat->vals[mat->diagind[i]];
+		ytemp[i] = 0;
+	}
+}
+
+template <typename scalar, typename index>
+inline
+void scalar_sgs_apply(const CRawBSRMatrix<scalar,index> *const mat,
+		const scalar *const dblocks, scalar *const __restrict ytemp,
+		const int napplysweeps, const int thread_chunk_size, const bool usethreads,
+		const scalar *const rr, scalar *const __restrict zz) 
+{
+	for(int isweep = 0; isweep < napplysweeps; isweep++)
+	{
+		// forward sweep ytemp := D^(-1) (r - L ytemp)
+
+#pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size) if(usethreads)
+		for(index irow = 0; irow < mat->nbrows; irow++)
+		{
+			ytemp[irow] = scalar_ftri(mat->vals, mat->bcolind, mat->browptr[irow], mat->diagind[irow],
+					dblocks[irow], rr[irow], ytemp);
+		}
+	}
+
+	for(int isweep = 0; isweep < napplysweeps; isweep++)
+	{
+		// backward sweep z := D^(-1) (D y - U z)
+
+#pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size) if(usethreads)
+		for(index irow = mat->nbrows-1; irow >= 0; irow--)
+		{
+			zz[irow] = scalar_btri(mat->vals, mat->bcolind, mat->diagind[irow], mat->browptr[irow+1],
+					mat->vals[mat->diagind[irow]], dblocks[irow], ytemp[irow], zz);
+		}
+	}
+}
+
+/// Computes the scalar ILU0 factorization using asynch iterations \cite ilu:chowpatel
+/** \param[in] mat The preconditioner as a CSR matrix
+ * \param[in] nbuildweeps The number of asynch sweeps to use for a parallel build
+ * \param[in] thread_chunk_size The batch size of allocation of work-items to threads
+ * \param[in] usethreads Whether to use asynchronous threaded (true) or serial (false) factorization
+ * \param[in,out] iluvals A pre-allocated array for storage of the ILU0 factorization
+ * \param[in,out] scale A pre-allocated array for storage of diagonal scaling factors
+ */
+template <typename scalar, typename index>
+inline
+void scalar_ilu0_setup(const CRawBSRMatrix<scalar,index> *const mat,
+		const int nbuildsweeps, const int thread_chunk_size, const bool usethreads,
+		scalar *const __restrict iluvals, scalar *const __restrict scale)
+{
+	// get the diagonal scaling matrix
+	
+#pragma omp parallel for simd default(shared)
+	for(index i = 0; i < mat->nbrows; i++)
+		scale[i] = 1.0/std::sqrt(mat->vals[mat->diagind[i]]);
+
+	// compute L and U
+	/** Note that in the factorization loop, the variable pos is initially set negative.
+	 * If index is an unsigned type, that might be a problem. However,
+	 * it should usually be okay as we are only comparing equality later.
+	 */
+	
+	for(int isweep = 0; isweep < nbuildsweeps; isweep++)
+	{
+#pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size) if(usethreads)
+		for(index irow = 0; irow < mat->nbrows; irow++)
+		{
+			for(index j = mat->browptr[irow]; j < mat->browptr[irow+1]; j++)
+			{
+				if(irow > mat->bcolind[j])
+				{
+					scalar sum = scale[irow] * mat->vals[j] * scale[mat->bcolind[j]];
+
+					for(index k = mat->browptr[irow]; 
+					    (k < mat->browptr[irow+1]) && (mat->bcolind[k] < mat->bcolind[j]); 
+					    k++  ) 
+					{
+						index pos = -1;
+						inner_search<index> ( mat->bcolind, mat->diagind[mat->bcolind[k]], 
+								mat->browptr[mat->bcolind[k]+1], mat->bcolind[j], &pos );
+
+						if(pos == -1) {
+							continue;
+						}
+
+						sum -= iluvals[k]*iluvals[pos];
+					}
+
+					iluvals[j] = sum / iluvals[mat->diagind[mat->bcolind[j]]];
+				}
+				else
+				{
+					// compute u_ij
+					iluvals[j] = scale[irow]*mat->vals[j]*scale[mat->bcolind[j]];
+
+					for(index k = mat->browptr[irow]; 
+							(k < mat->browptr[irow+1]) && (mat->bcolind[k] < irow); k++) 
+					{
+						index pos = -1;
+
+						/* search for column index mat->bcolind[j], 
+						 * between the diagonal index of row mat->bcolind[k] 
+						 * and the last index of row mat->bcolind[k]
+						 */
+						inner_search(mat->bcolind, mat->diagind[mat->bcolind[k]], 
+								mat->browptr[mat->bcolind[k]+1], mat->bcolind[j], &pos);
+
+						if(pos == -1) continue;
+
+						iluvals[j] -= iluvals[k]*iluvals[pos];
+					}
+				}
+			}
+		}
+	}
+}
+
+template <typename scalar, typename index>
+inline
+void scalar_ilu0_apply(const CRawBSRMatrix<scalar,index> *const mat,
+		const scalar *const iluvals, const scalar *const scale,
+		scalar *const __restrict ytemp,
+		const int napplysweeps, const int thread_chunk_size, const bool usethreads,
+		const scalar *const ra, scalar *const __restrict za) 
+{
+	// initially, z := Sr
+#pragma omp parallel for simd default(shared)
+	for(index i = 0; i < mat->nbrows; i++) {
+		za[i] = scale[i]*ra[i];
+	}
+	
+	/** solves Ly = Sr by asynchronous Jacobi iterations.
+	 * Note that if done serially, this is a forward-substitution.
+	 */
+	for(int isweep = 0; isweep < napplysweeps; isweep++)
+	{
+#pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size) if(usethreads)
+		for(index i = 0; i < mat->nbrows; i++)
+		{
+			ytemp[i] = scalar_unit_lower_triangular(iluvals, mat->bcolind, mat->browptr[i],
+					mat->diagind[i], za[i], ytemp);
+		}
+	}
+
+	/* Solves Uz = y by asynchronous Jacobi iteration.
+	 * If done serially, this is a back-substitution.
+	 */
+	for(int isweep = 0; isweep < napplysweeps; isweep++)
+	{
+#pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size) if(usethreads)
+		for(index i = mat->nbrows-1; i >= 0; i--)
+		{
+			za[i] = scalar_upper_triangular<scalar,index>(iluvals, mat->bcolind, mat->diagind[i], 
+					mat->browptr[i+1], 1.0/iluvals[mat->diagind[i]], ytemp[i], za);
+		}
+	}
+
+	// correct z
+#pragma omp parallel for simd default(shared)
+	for(int i = 0; i < mat->nbrows; i++)
+		za[i] = za[i]*scale[i];
+}
+
+////////////////////////////////////////////////////////////////////////////////////////
+
+template <typename scalar, typename index, int bs, StorageOptions stor>
+BSRMatrixView<scalar,index,bs,stor>::BSRMatrixView(const index n_brows, const index *const brptrs,
+		const index *const bcinds, const scalar *const values, const index *const diaginds,
+		const int n_buildsweeps, const int n_applysweeps)
+	: SRMatrixView<scalar,index>(BSR),
+	  mat{brptrs, bcinds, values, diaginds, n_brows}, dblocks{nullptr}, iluvals{nullptr},
+	  nbuildsweeps{n_buildsweeps}, napplysweeps{n_applysweeps}, thread_chunk_size{500}
+{ }
+
+template <typename scalar, typename index, int bs, StorageOptions stor>
+void BSRMatrixView<scalar,index,bs,stor>::wrap(const index n_brows, const index *const brptrs,
+	const index *const bcinds, const scalar *const values, const index *const dinds)
+{
+	mat.nbrows = n_brows;
+	mat.browptr = brptrs;
+	mat.bcolind = bcinds;
+	mat.vals = values;
+	mat.diagind = dinds;
+}
+
+template <typename scalar, typename index, int bs, StorageOptions stor>
+BSRMatrixView<scalar, index, bs,stor>::~BSRMatrixView()
+{
+	mat.browptr = nullptr;
+	mat.bcolind = nullptr;
+	mat.vals = nullptr;
+	mat.diagind = nullptr;
+	delete [] dblocks;
+	delete [] iluvals;
+}
+
+template <typename scalar, typename index, int bs, StorageOptions stor>
+void BSRMatrixView<scalar,index,bs,stor>::apply(const scalar a, const scalar *const xx,
+                                       scalar *const __restrict yy) const
+{
+	if(stor == RowMajor)
+		block_matrix_apply<scalar,index,bs,Matrix<scalar,Dynamic,bs,RowMajor>>(&mat, a, xx, yy);
+	else
+		block_matrix_apply<scalar,index,bs,Matrix<scalar,bs,Dynamic,ColMajor>>(&mat, a, xx, yy);
+}
+
+template <typename scalar, typename index, int bs, StorageOptions stor>
+void BSRMatrixView<scalar,index,bs,stor>::gemv3(const scalar a, const scalar *const __restrict xx, 
+		const scalar b, const scalar *const yy, scalar *const zz) const
+{
+	if(stor == RowMajor)
+		block_gemv3<scalar,index,bs,Matrix<scalar,Dynamic,bs,RowMajor>>(&mat, a, xx, b, yy, zz);
+	else
+		block_gemv3<scalar,index,bs,Matrix<scalar,bs,Dynamic,ColMajor>>(&mat, a, xx, b, yy, zz);
+}
+
+template <typename scalar, typename index, int bs, StorageOptions stor>
+void BSRMatrixView<scalar,index,bs,stor>::precJacobiSetup()
+{
+	if(!dblocks) {
+		dblocks = new scalar[mat.nbrows*bs*bs];
+#if DEBUG==1
+		std::cout << " precJacobiSetup(): Allocating.\n";
+#endif
+	}
+	
+	if(stor == RowMajor)
+		block_jacobi_setup<scalar,index,bs,Matrix<scalar,Dynamic,bs,RowMajor>>(&mat, dblocks);
+	else
+		block_jacobi_setup<scalar,index,bs,Matrix<scalar,bs,Dynamic,ColMajor>>(&mat, dblocks);
+}
+
+template <typename scalar, typename index, int bs, StorageOptions stor>
+void BSRMatrixView<scalar,index,bs,stor>::precJacobiApply(const scalar *const rr, 
+                                                 scalar *const __restrict zz) const
+{
+	if(stor == RowMajor)
+		block_jacobi_apply<scalar,index,bs,Matrix<scalar,Dynamic,bs,RowMajor>>( &mat, dblocks, rr, zz);
+	else
+		block_jacobi_apply<scalar,index,bs,Matrix<scalar,bs,Dynamic,ColMajor>>( &mat, dblocks, rr, zz);
+}
+
+template <typename scalar, typename index, int bs, StorageOptions stor>
+void BSRMatrixView<scalar,index,bs,stor>::precSGSSetup()
+{
+	if(!dblocks) {
+		dblocks = new scalar[mat.nbrows*bs*bs];
+#if DEBUG==1
+		std::cout << " precSGSSetup(): Allocating.\n";
+#endif
+	}
+	
+	if(stor == RowMajor)
+		block_sgs_setup<scalar,index,bs,Matrix<scalar,Dynamic,bs,RowMajor>>(&mat, dblocks, ytemp);
+	else
+		block_sgs_setup<scalar,index,bs,Matrix<scalar,bs,Dynamic,ColMajor>>(&mat, dblocks, ytemp);
+}
+
+template <typename scalar, typename index, int bs, StorageOptions stor>
+void BSRMatrixView<scalar,index,bs,stor>::precSGSApply(const scalar *const rr, 
+                                              scalar *const __restrict zz) const
+{
+	if(stor == RowMajor)
+		block_sgs_apply<scalar,index,bs,Matrix<scalar,Dynamic,bs,RowMajor>>(
+			&mat, dblocks, ytemp.data(), napplysweeps,thread_chunk_size, true, rr, zz);
+	else
+		block_sgs_apply<scalar,index,bs,Matrix<scalar,bs,Dynamic,ColMajor>>(
+			&mat, dblocks, ytemp.data(), napplysweeps,thread_chunk_size, true, rr, zz);
+}
+
+/** There is currently no pre-scaling of the original matrix A, unlike the point ILU0.
+ * It will probably be too expensive to carry out a row-column scaling like in the point case.
+ * However, we could try a row scaling.
+ */
+template <typename scalar, typename index, int bs, StorageOptions stor>
+void BSRMatrixView<scalar,index,bs,stor>::precILUSetup()
+{
+	if(!iluvals)
+	{
+#if DEBUG==1
+		std::printf(" BSRMatrixView: precILUSetup(): First-time setup\n");
+#endif
+
+		// Allocate lu
+		iluvals = new scalar[mat.browptr[mat.nbrows]*bs*bs];
+#pragma omp parallel for simd default(shared)
+		for(index j = 0; j < mat.browptr[mat.nbrows]*bs*bs; j++) {
+			iluvals[j] = mat.vals[j];
+		}
+
+		// intermediate array for the solve part
+		if(ytemp.size() < mat.nbrows*bs) {
+			ytemp.resize(mat.nbrows*bs);
+#pragma omp parallel for simd default(shared)
+			for(index i = 0; i < mat.nbrows*bs; i++)
+			{
+				ytemp.data()[i] = 0;
+			}
+		}
+		else
+			std::cout << "! BSRMatrix: precILUSetup(): Temp vector is already allocated!\n";
+	}
+
+	if(stor == RowMajor)
+		block_ilu0_setup<scalar,index,bs,Matrix<scalar,Dynamic,bs,RowMajor>>(
+			&mat, nbuildsweeps, thread_chunk_size, true, iluvals, ytemp);
+	else
+		block_ilu0_setup<scalar,index,bs,Matrix<scalar,bs,Dynamic,ColMajor>>(
+			&mat, nbuildsweeps, thread_chunk_size, true, iluvals, ytemp);
+}
+
+template <typename scalar, typename index, int bs, StorageOptions stor>
+void BSRMatrixView<scalar,index,bs,stor>::precILUApply(const scalar *const r, 
+                                              scalar *const __restrict z) const
+{
+	if(stor == RowMajor)
+		block_ilu0_apply<scalar,index,bs,Matrix<scalar,Dynamic,bs,RowMajor>>(
+			&mat, iluvals, ytemp.data(), napplysweeps, thread_chunk_size, true, r, z);
+	else
+		block_ilu0_apply<scalar,index,bs,Matrix<scalar,bs,Dynamic,ColMajor>>(
+			&mat, iluvals, ytemp.data(), napplysweeps, thread_chunk_size, true, r, z);
+}
+
+template <typename scalar, typename index, int bs, StorageOptions stor>
+void BSRMatrixView<scalar,index,bs,stor>::precILUApply_seq(const scalar *const r, 
+                                              scalar *const __restrict z) const
+{
+	if(stor == RowMajor)
+		block_ilu0_apply<scalar,index,bs,Matrix<scalar,Dynamic,bs,RowMajor>>(
+			&mat, iluvals, ytemp.data(), 1, thread_chunk_size, false, r, z);
+	else
+		block_ilu0_apply<scalar,index,bs,Matrix<scalar,bs,Dynamic,ColMajor>>(
+			&mat, iluvals, ytemp.data(), 1, thread_chunk_size, false, r, z);
+}
+
+
+template <typename scalar, typename index>
+CSRMatrixView<scalar,index>::CSRMatrixView(const index nrows, const index *const brptrs,
+		const index *const bcinds, const scalar *const values, const index *const diaginds,
+		const int n_buildsweeps, const int n_applysweeps)
+	: SRMatrixView<scalar,index>(CSR),
+	mat{brptrs,bcinds,values,diaginds,nrows},
+	dblocks(nullptr), iluvals(nullptr), scale(nullptr), ytemp(nullptr),
+	nbuildsweeps{n_buildsweeps}, napplysweeps{n_applysweeps}, thread_chunk_size{800}
+{ }
+
+template <typename scalar, typename index>
+CSRMatrixView<scalar,index>::~CSRMatrixView()
+{ 
+	mat.browptr = nullptr;
+	mat.bcolind = nullptr;
+	mat.vals = nullptr;
+	mat.diagind = nullptr;
+	delete [] dblocks;
+	delete [] iluvals;
+	delete [] scale;
+	delete [] ytemp;
+	dblocks = iluvals = scale = ytemp = nullptr;
+}
+
+template <typename scalar, typename index>
+void CSRMatrixView<scalar,index>::wrap(const index n_brows, const index *const brptrs,
+	const index *const bcinds, const scalar *const values, const index *const dinds)
+{
+	mat.nbrows = n_brows;
+	mat.browptr = brptrs;
+	mat.bcolind = bcinds;
+	mat.vals = values;
+	mat.diagind = dinds;
+}
+
+template <typename scalar, typename index>
+void CSRMatrixView<scalar,index>::apply(const scalar a, const scalar *const xx,
+                                       scalar *const __restrict yy) const
+{
+	matrix_apply(&mat, a, xx, yy);
+}
+
+template <typename scalar, typename index>
+void CSRMatrixView<scalar,index>::gemv3(const scalar a, const scalar *const __restrict__ xx, 
+		const scalar b, const scalar *const yy, scalar *const zz) const
+{
+	scalar_gemv3(&mat, a, xx, b, yy, zz);
+}
+
+template <typename scalar, typename index>
+void CSRMatrixView<scalar,index>::precJacobiSetup()
+{
+	if(!dblocks) {
+		dblocks = new scalar[mat.nbrows];
+		std::cout << " CSR MatrixView: precJacobiSetup(): Initial setup.\n";
+	}
+
+	scalar_jacobi_setup(&mat, dblocks);
+}
+
+template <typename scalar, typename index>
+void CSRMatrixView<scalar,index>::precJacobiApply(const scalar *const rr, 
+                                                 scalar *const __restrict zz) const
+{
+	scalar_jacobi_apply(&mat, dblocks, rr, zz);
+}
+
+template <typename scalar, typename index>
+void CSRMatrixView<scalar,index>::precSGSSetup()
+{
+	if(!dblocks) {
+		dblocks = new scalar[mat.nbrows];
+		delete [] ytemp;
+		ytemp = new scalar[mat.nbrows];
+		//std::cout << " CSR MatrixView: precSGSSetup(): Initial setup.\n";
+	}
+	
+	scalar_sgs_setup(&mat, dblocks, ytemp);
+}
+
+template <typename scalar, typename index>
+void CSRMatrixView<scalar,index>::precSGSApply(const scalar *const rr, 
+                                              scalar *const __restrict zz) const
+{
+	scalar_sgs_apply(&mat, dblocks, ytemp, napplysweeps, thread_chunk_size, true, rr, zz);
+}
+
+template <typename scalar, typename index>
+void CSRMatrixView<scalar,index>::precILUSetup()
+{
+	if(!iluvals)
+	{
+		std::printf(" CSR MatrixView: precILUSetup(): First-time setup\n");
+
+		// Allocate lu
+		iluvals = new scalar[mat.browptr[mat.nbrows]];
+#pragma omp parallel for simd default(shared)
+		for(int j = 0; j < mat.browptr[mat.nbrows]; j++) {
+			iluvals[j] = mat.vals[j];
+		}
+
+		// intermediate array for the solve part; NOT ZEROED
+		if(!ytemp) {
+			ytemp = new scalar[mat.nbrows];
+#pragma omp parallel for simd default(shared)
+			for(index i = 0; i < mat.nbrows; i++)
+			{
+				ytemp[i] = 0;
+			}
+		}
+		else
+			std::cout << "! BSRMatrixView<1>: precILUSetup(): Temp vector is already allocated!\n";
+		
+		if(!scale)
+			scale = new scalar[mat.nbrows];	
+		else
+			std::cout << "! BSRMatrixView<1>: precILUSetup(): Scale vector is already allocated!\n";
+	}
+
+	scalar_ilu0_setup(&mat, nbuildsweeps, thread_chunk_size, true, iluvals, scale);
+}
+
+template <typename scalar, typename index>
+void CSRMatrixView<scalar,index>::precILUApply(const scalar *const __restrict ra, 
+                                              scalar *const __restrict za) const
+{
+	scalar_ilu0_apply(&mat, iluvals, scale, ytemp, napplysweeps, thread_chunk_size, true, ra, za);
+}
+
+
+template <typename scalar, typename index>
+void CSRMatrixView<scalar,index>::precILUApply_seq(const scalar *const __restrict ra, 
+                                              scalar *const __restrict za) const
+{
+	scalar_ilu0_apply(&mat, iluvals, scale, ytemp, 1, thread_chunk_size, false, ra, za);
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////
 
 template <typename scalar, typename index, int bs>
 BSRMatrix<scalar,index,bs>::BSRMatrix(const int n_buildsweeps, const int n_applysweeps)
@@ -708,7 +1261,7 @@ void BSRMatrix<scalar,index,bs>::precSGSApply(const scalar *const rr,
 {
 	block_sgs_apply<scalar,index,bs,Matrix<scalar,Dynamic,bs,RowMajor>>(
 			reinterpret_cast<const CRawBSRMatrix<scalar,index>*>(&mat), dblocks.data(), ytemp.data(),
-			napplysweeps,thread_chunk_size,
+			napplysweeps,thread_chunk_size, true,
 			rr, zz);
 }
 
@@ -747,7 +1300,7 @@ void BSRMatrix<scalar,index,bs>::precILUSetup()
 
 	block_ilu0_setup<scalar,index,bs,Matrix<scalar,Dynamic,bs,RowMajor>>(
 		reinterpret_cast<const CRawBSRMatrix<scalar,index>*>(&mat),
-		nbuildsweeps, thread_chunk_size, iluvals.data(), ytemp);
+		nbuildsweeps, thread_chunk_size, true, iluvals.data(), ytemp);
 }
 
 template <typename scalar, typename index, int bs>
@@ -756,7 +1309,7 @@ void BSRMatrix<scalar,index,bs>::precILUApply(const scalar *const r,
 {
 	block_ilu0_apply<scalar,index,bs,Matrix<scalar,Dynamic,bs,RowMajor>>(
 		reinterpret_cast<const CRawBSRMatrix<scalar,index>*>(&mat),
-		iluvals.data(), ytemp.data(), napplysweeps, thread_chunk_size, 
+		iluvals.data(), ytemp.data(), napplysweeps, thread_chunk_size, 1,
 		r, z);
 }
 
@@ -788,242 +1341,6 @@ void BSRMatrix<scalar,index,bs>::printDiagnostic(const char choice) const
 }*/
 
 ////////////////////////////////////////////////////////////////////////////////////////////
-
-template <typename scalar, typename index>
-inline
-void matrix_apply(const CRawBSRMatrix<scalar,index> *const mat,
-		const scalar a, const scalar *const xx, scalar *const __restrict yy) 
-{
-#pragma omp parallel for default(shared)
-	for(index irow = 0; irow < mat->nbrows; irow++)
-	{
-		yy[irow] = 0;
-
-		for(index jj = mat->browptr[irow]; jj < mat->browptr[irow+1]; jj++)
-		{
-			yy[irow] += a * mat->vals[jj] * xx[mat->bcolind[jj]];
-		}
-	}
-}
-
-template <typename scalar, typename index>
-inline
-void scalar_gemv3(const CRawBSRMatrix<scalar,index> *const mat,
-		const scalar a, const scalar *const __restrict xx, 
-		const scalar b, const scalar *const yy, scalar *const zz)
-{
-#pragma omp parallel for default(shared)
-	for(index irow = 0; irow < mat->nbrows; irow++)
-	{
-		zz[irow] = b * yy[irow];
-
-		for(index jj = mat->browptr[irow]; jj < mat->browptr[irow+1]; jj++)
-		{
-			zz[irow] += a * mat->vals[jj] * xx[mat->bcolind[jj]];
-		}
-	}
-}
-
-/// Inverts diagonal entries
-/** \param[in] mat The matrix
- * \param[in,out] dblocks It must be pre-allocated; contains inverse of diagonal entries on exit
- */
-template <typename scalar, typename index>
-inline
-void scalar_jacobi_setup(const CRawBSRMatrix<scalar,index> *const mat,
-		scalar *const dblocks)
-{
-#pragma omp parallel for simd default(shared)
-	for(index irow = 0; irow < mat->nbrows; irow++)
-		dblocks[irow] = 1.0/mat->vals[mat->diagind[irow]];
-}
-
-template <typename scalar, typename index>
-inline
-void scalar_jacobi_apply(const CRawBSRMatrix<scalar,index> *const mat,
-		const scalar *const dblocks,	
-		const scalar *const rr, scalar *const __restrict zz)
-{
-#pragma omp parallel for simd default(shared)
-	for(index irow = 0; irow < mat->nbrows; irow++)
-		zz[irow] = dblocks[irow] * rr[irow];
-}
-
-/// Computes inverses of diagonal entries and zeros a temporary storage vector
-/** \param[in] mat The matrix
- * \param[in,out] dblocks It must be pre-allocated; contains inverse of diagonal entries on exit
- * \param[in,out] ytemp It must be pre-allocated; zeroed here for use later
- */
-template <typename scalar, typename index>
-inline
-void scalar_sgs_setup(const CRawBSRMatrix<scalar,index> *const mat, 
-		scalar *const dblocks, scalar *const ytemp)
-{
-#pragma omp parallel for simd default(shared)
-	for(index i = 0; i < mat->nbrows; i++)
-	{
-		dblocks[i] = 1.0/mat->vals[mat->diagind[i]];
-		ytemp[i] = 0;
-	}
-}
-
-template <typename scalar, typename index>
-inline
-void scalar_sgs_apply(const CRawBSRMatrix<scalar,index> *const mat,
-		const scalar *const dblocks, scalar *const __restrict ytemp,
-		const int napplysweeps, const int thread_chunk_size, const bool usethreads,
-		const scalar *const rr, scalar *const __restrict zz) 
-{
-	for(int isweep = 0; isweep < napplysweeps; isweep++)
-	{
-		// forward sweep ytemp := D^(-1) (r - L ytemp)
-
-#pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size) if(usethreads)
-		for(index irow = 0; irow < mat->nbrows; irow++)
-		{
-			ytemp[irow] = scalar_ftri(mat->vals, mat->bcolind, mat->browptr[irow], mat->diagind[irow],
-					dblocks[irow], rr[irow], ytemp);
-		}
-	}
-
-	for(int isweep = 0; isweep < napplysweeps; isweep++)
-	{
-		// backward sweep z := D^(-1) (D y - U z)
-
-#pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size) if(usethreads)
-		for(index irow = mat->nbrows-1; irow >= 0; irow--)
-		{
-			zz[irow] = scalar_btri(mat->vals, mat->bcolind, mat->diagind[irow], mat->browptr[irow+1],
-					mat->vals[mat->diagind[irow]], dblocks[irow], ytemp[irow], zz);
-		}
-	}
-}
-
-/// Computes the scalar ILU0 factorization using asynch iterations \cite ilu:chowpatel
-/** \param[in] mat The preconditioner as a CSR matrix
- * \param[in] nbuildweeps The number of asynch sweeps to use for a parallel build
- * \param[in] thread_chunk_size The batch size of allocation of work-items to threads
- * \param[in,out] iluvals A pre-allocated array for storage of the ILU0 factorization
- * \param[in,out] scale A pre-allocated array for storage of diagonal scaling factors
- */
-template <typename scalar, typename index>
-inline
-void scalar_ilu0_setup(const CRawBSRMatrix<scalar,index> *const mat,
-		const int nbuildsweeps, const int thread_chunk_size, const bool usethreads,
-		scalar *const __restrict iluvals, scalar *const __restrict scale)
-{
-	// get the diagonal scaling matrix
-	
-#pragma omp parallel for simd default(shared)
-	for(index i = 0; i < mat->nbrows; i++)
-		scale[i] = 1.0/std::sqrt(mat->vals[mat->diagind[i]]);
-
-	// compute L and U
-	/** Note that in the factorization loop, the variable pos is initially set negative.
-	 * If index is an unsigned type, that might be a problem. However,
-	 * it should usually be okay as we are only comparing equality later.
-	 */
-	
-	for(int isweep = 0; isweep < nbuildsweeps; isweep++)
-	{
-#pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size) if(usethreads)
-		for(index irow = 0; irow < mat->nbrows; irow++)
-		{
-			for(index j = mat->browptr[irow]; j < mat->browptr[irow+1]; j++)
-			{
-				if(irow > mat->bcolind[j])
-				{
-					scalar sum = scale[irow] * mat->vals[j] * scale[mat->bcolind[j]];
-
-					for(index k = mat->browptr[irow]; 
-					    (k < mat->browptr[irow+1]) && (mat->bcolind[k] < mat->bcolind[j]); 
-					    k++  ) 
-					{
-						index pos = -1;
-						inner_search<index> ( mat->bcolind, mat->diagind[mat->bcolind[k]], 
-								mat->browptr[mat->bcolind[k]+1], mat->bcolind[j], &pos );
-
-						if(pos == -1) {
-							continue;
-						}
-
-						sum -= iluvals[k]*iluvals[pos];
-					}
-
-					iluvals[j] = sum / iluvals[mat->diagind[mat->bcolind[j]]];
-				}
-				else
-				{
-					// compute u_ij
-					iluvals[j] = scale[irow]*mat->vals[j]*scale[mat->bcolind[j]];
-
-					for(index k = mat->browptr[irow]; 
-							(k < mat->browptr[irow+1]) && (mat->bcolind[k] < irow); k++) 
-					{
-						index pos = -1;
-
-						/* search for column index mat->bcolind[j], 
-						 * between the diagonal index of row mat->bcolind[k] 
-						 * and the last index of row mat->bcolind[k]
-						 */
-						inner_search(mat->bcolind, mat->diagind[mat->bcolind[k]], 
-								mat->browptr[mat->bcolind[k]+1], mat->bcolind[j], &pos);
-
-						if(pos == -1) continue;
-
-						iluvals[j] -= iluvals[k]*iluvals[pos];
-					}
-				}
-			}
-		}
-	}
-}
-
-template <typename scalar, typename index>
-inline
-void scalar_ilu0_apply(const CRawBSRMatrix<scalar,index> *const mat,
-		const scalar *const iluvals, const scalar *const scale,
-		scalar *const __restrict ytemp,
-		const int napplysweeps, const int thread_chunk_size, const bool usethreads,
-		const scalar *const ra, scalar *const __restrict za) 
-{
-	// initially, z := Sr
-#pragma omp parallel for simd default(shared)
-	for(index i = 0; i < mat->nbrows; i++) {
-		za[i] = scale[i]*ra[i];
-	}
-	
-	/** solves Ly = Sr by asynchronous Jacobi iterations.
-	 * Note that if done serially, this is a forward-substitution.
-	 */
-	for(int isweep = 0; isweep < napplysweeps; isweep++)
-	{
-#pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size) if(usethreads)
-		for(index i = 0; i < mat->nbrows; i++)
-		{
-			ytemp[i] = scalar_unit_lower_triangular(iluvals, mat->bcolind, mat->browptr[i],
-					mat->diagind[i], za[i], ytemp);
-		}
-	}
-
-	/* Solves Uz = y by asynchronous Jacobi iteration.
-	 * If done serially, this is a back-substitution.
-	 */
-	for(int isweep = 0; isweep < napplysweeps; isweep++)
-	{
-#pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size) if(usethreads)
-		for(index i = mat->nbrows-1; i >= 0; i--)
-		{
-			za[i] = scalar_upper_triangular<scalar,index>(iluvals, mat->bcolind, mat->diagind[i], 
-					mat->browptr[i+1], 1.0/iluvals[mat->diagind[i]], ytemp[i], za);
-		}
-	}
-
-	// correct z
-#pragma omp parallel for simd default(shared)
-	for(int i = 0; i < mat->nbrows; i++)
-		za[i] = za[i]*scale[i];
-}
 
 template <typename scalar, typename index>
 inline
@@ -1358,304 +1675,6 @@ void BSRMatrix<scalar,index,1>::printDiagnostic(const char choice) const
 	}
 	fout.close();
 }*/
-
-////////////////////////////////////////////////////////////////////////////////////////
-
-template <typename scalar, typename index, int bs, StorageOptions stor>
-BSRMatrixView<scalar,index,bs,stor>::BSRMatrixView(const index n_brows, const index *const brptrs,
-		const index *const bcinds, const scalar *const values, const index *const diaginds,
-		const int n_buildsweeps, const int n_applysweeps)
-	: SRMatrixView<scalar,index>(BSR),
-	  mat{brptrs, bcinds, values, diaginds, n_brows}, dblocks{nullptr}, iluvals{nullptr},
-	  nbuildsweeps{n_buildsweeps}, napplysweeps{n_applysweeps}, thread_chunk_size{500}
-{ }
-
-template <typename scalar, typename index, int bs, StorageOptions stor>
-void BSRMatrixView<scalar,index,bs,stor>::wrap(const index n_brows, const index *const brptrs,
-	const index *const bcinds, const scalar *const values, const index *const dinds)
-{
-	mat.nbrows = n_brows;
-	mat.browptr = brptrs;
-	mat.bcolind = bcinds;
-	mat.vals = values;
-	mat.diagind = dinds;
-}
-
-template <typename scalar, typename index, int bs, StorageOptions stor>
-BSRMatrixView<scalar, index, bs,stor>::~BSRMatrixView()
-{
-	mat.browptr = nullptr;
-	mat.bcolind = nullptr;
-	mat.vals = nullptr;
-	mat.diagind = nullptr;
-	delete [] dblocks;
-	delete [] iluvals;
-}
-
-template <typename scalar, typename index, int bs, StorageOptions stor>
-void BSRMatrixView<scalar,index,bs,stor>::apply(const scalar a, const scalar *const xx,
-                                       scalar *const __restrict yy) const
-{
-	if(stor == RowMajor)
-		block_matrix_apply<scalar,index,bs,Matrix<scalar,Dynamic,bs,RowMajor>>(&mat, a, xx, yy);
-	else
-		block_matrix_apply<scalar,index,bs,Matrix<scalar,bs,Dynamic,ColMajor>>(&mat, a, xx, yy);
-}
-
-template <typename scalar, typename index, int bs, StorageOptions stor>
-void BSRMatrixView<scalar,index,bs,stor>::gemv3(const scalar a, const scalar *const __restrict xx, 
-		const scalar b, const scalar *const yy, scalar *const zz) const
-{
-	if(stor == RowMajor)
-		block_gemv3<scalar,index,bs,Matrix<scalar,Dynamic,bs,RowMajor>>(&mat, a, xx, b, yy, zz);
-	else
-		block_gemv3<scalar,index,bs,Matrix<scalar,bs,Dynamic,ColMajor>>(&mat, a, xx, b, yy, zz);
-}
-
-template <typename scalar, typename index, int bs, StorageOptions stor>
-void BSRMatrixView<scalar,index,bs,stor>::precJacobiSetup()
-{
-	if(!dblocks) {
-		dblocks = new scalar[mat.nbrows*bs*bs];
-#if DEBUG==1
-		std::cout << " precJacobiSetup(): Allocating.\n";
-#endif
-	}
-	
-	if(stor == RowMajor)
-		block_jacobi_setup<scalar,index,bs,Matrix<scalar,Dynamic,bs,RowMajor>>(&mat, dblocks);
-	else
-		block_jacobi_setup<scalar,index,bs,Matrix<scalar,bs,Dynamic,ColMajor>>(&mat, dblocks);
-}
-
-template <typename scalar, typename index, int bs, StorageOptions stor>
-void BSRMatrixView<scalar,index,bs,stor>::precJacobiApply(const scalar *const rr, 
-                                                 scalar *const __restrict zz) const
-{
-	if(stor == RowMajor)
-		block_jacobi_apply<scalar,index,bs,Matrix<scalar,Dynamic,bs,RowMajor>>( &mat, dblocks, rr, zz);
-	else
-		block_jacobi_apply<scalar,index,bs,Matrix<scalar,bs,Dynamic,ColMajor>>( &mat, dblocks, rr, zz);
-}
-
-template <typename scalar, typename index, int bs, StorageOptions stor>
-void BSRMatrixView<scalar,index,bs,stor>::precSGSSetup()
-{
-	if(!dblocks) {
-		dblocks = new scalar[mat.nbrows*bs*bs];
-#if DEBUG==1
-		std::cout << " precSGSSetup(): Allocating.\n";
-#endif
-	}
-	
-	if(stor == RowMajor)
-		block_sgs_setup<scalar,index,bs,Matrix<scalar,Dynamic,bs,RowMajor>>(&mat, dblocks, ytemp);
-	else
-		block_sgs_setup<scalar,index,bs,Matrix<scalar,bs,Dynamic,ColMajor>>(&mat, dblocks, ytemp);
-}
-
-template <typename scalar, typename index, int bs, StorageOptions stor>
-void BSRMatrixView<scalar,index,bs,stor>::precSGSApply(const scalar *const rr, 
-                                              scalar *const __restrict zz) const
-{
-	if(stor == RowMajor)
-		block_sgs_apply<scalar,index,bs,Matrix<scalar,Dynamic,bs,RowMajor>>(
-			&mat, dblocks, ytemp.data(), napplysweeps,thread_chunk_size, rr, zz);
-	else
-		block_sgs_apply<scalar,index,bs,Matrix<scalar,bs,Dynamic,ColMajor>>(
-			&mat, dblocks, ytemp.data(), napplysweeps,thread_chunk_size, rr, zz);
-}
-
-/** There is currently no pre-scaling of the original matrix A, unlike the point ILU0.
- * It will probably be too expensive to carry out a row-column scaling like in the point case.
- * However, we could try a row scaling.
- */
-template <typename scalar, typename index, int bs, StorageOptions stor>
-void BSRMatrixView<scalar,index,bs,stor>::precILUSetup()
-{
-	if(!iluvals)
-	{
-#if DEBUG==1
-		std::printf(" BSRMatrixView: precILUSetup(): First-time setup\n");
-#endif
-
-		// Allocate lu
-		iluvals = new scalar[mat.browptr[mat.nbrows]*bs*bs];
-#pragma omp parallel for simd default(shared)
-		for(index j = 0; j < mat.browptr[mat.nbrows]*bs*bs; j++) {
-			iluvals[j] = mat.vals[j];
-		}
-
-		// intermediate array for the solve part
-		if(ytemp.size() < mat.nbrows*bs) {
-			ytemp.resize(mat.nbrows*bs);
-#pragma omp parallel for simd default(shared)
-			for(index i = 0; i < mat.nbrows*bs; i++)
-			{
-				ytemp.data()[i] = 0;
-			}
-		}
-		else
-			std::cout << "! BSRMatrix: precILUSetup(): Temp vector is already allocated!\n";
-	}
-
-	if(stor == RowMajor)
-		block_ilu0_setup<scalar,index,bs,Matrix<scalar,Dynamic,bs,RowMajor>>(
-			&mat, nbuildsweeps, thread_chunk_size, iluvals, ytemp);
-	else
-		block_ilu0_setup<scalar,index,bs,Matrix<scalar,bs,Dynamic,ColMajor>>(
-			&mat, nbuildsweeps, thread_chunk_size, iluvals, ytemp);
-}
-
-template <typename scalar, typename index, int bs, StorageOptions stor>
-void BSRMatrixView<scalar,index,bs,stor>::precILUApply(const scalar *const r, 
-                                              scalar *const __restrict z) const
-{
-	if(stor == RowMajor)
-		block_ilu0_apply<scalar,index,bs,Matrix<scalar,Dynamic,bs,RowMajor>>(
-			&mat, iluvals, ytemp.data(), napplysweeps, thread_chunk_size, r, z);
-	else
-		block_ilu0_apply<scalar,index,bs,Matrix<scalar,bs,Dynamic,ColMajor>>(
-			&mat, iluvals, ytemp.data(), napplysweeps, thread_chunk_size, r, z);
-}
-
-
-template <typename scalar, typename index>
-CSRMatrixView<scalar,index>::CSRMatrixView(const index nrows, const index *const brptrs,
-		const index *const bcinds, const scalar *const values, const index *const diaginds,
-		const int n_buildsweeps, const int n_applysweeps)
-	: SRMatrixView<scalar,index>(CSR),
-	mat{brptrs,bcinds,values,diaginds,nrows},
-	dblocks(nullptr), iluvals(nullptr), scale(nullptr), ytemp(nullptr),
-	nbuildsweeps{n_buildsweeps}, napplysweeps{n_applysweeps}, thread_chunk_size{800}
-{ }
-
-template <typename scalar, typename index>
-CSRMatrixView<scalar,index>::~CSRMatrixView()
-{ 
-	mat.browptr = nullptr;
-	mat.bcolind = nullptr;
-	mat.vals = nullptr;
-	mat.diagind = nullptr;
-	delete [] dblocks;
-	delete [] iluvals;
-	delete [] scale;
-	delete [] ytemp;
-	dblocks = iluvals = scale = ytemp = nullptr;
-}
-
-template <typename scalar, typename index>
-void CSRMatrixView<scalar,index>::wrap(const index n_brows, const index *const brptrs,
-	const index *const bcinds, const scalar *const values, const index *const dinds)
-{
-	mat.nbrows = n_brows;
-	mat.browptr = brptrs;
-	mat.bcolind = bcinds;
-	mat.vals = values;
-	mat.diagind = dinds;
-}
-
-template <typename scalar, typename index>
-void CSRMatrixView<scalar,index>::apply(const scalar a, const scalar *const xx,
-                                       scalar *const __restrict yy) const
-{
-	matrix_apply(&mat, a, xx, yy);
-}
-
-template <typename scalar, typename index>
-void CSRMatrixView<scalar,index>::gemv3(const scalar a, const scalar *const __restrict__ xx, 
-		const scalar b, const scalar *const yy, scalar *const zz) const
-{
-	scalar_gemv3(&mat, a, xx, b, yy, zz);
-}
-
-template <typename scalar, typename index>
-void CSRMatrixView<scalar,index>::precJacobiSetup()
-{
-	if(!dblocks) {
-		dblocks = new scalar[mat.nbrows];
-		std::cout << " CSR MatrixView: precJacobiSetup(): Initial setup.\n";
-	}
-
-	scalar_jacobi_setup(&mat, dblocks);
-}
-
-template <typename scalar, typename index>
-void CSRMatrixView<scalar,index>::precJacobiApply(const scalar *const rr, 
-                                                 scalar *const __restrict zz) const
-{
-	scalar_jacobi_apply(&mat, dblocks, rr, zz);
-}
-
-template <typename scalar, typename index>
-void CSRMatrixView<scalar,index>::precSGSSetup()
-{
-	if(!dblocks) {
-		dblocks = new scalar[mat.nbrows];
-		delete [] ytemp;
-		ytemp = new scalar[mat.nbrows];
-		//std::cout << " CSR MatrixView: precSGSSetup(): Initial setup.\n";
-	}
-	
-	scalar_sgs_setup(&mat, dblocks, ytemp);
-}
-
-template <typename scalar, typename index>
-void CSRMatrixView<scalar,index>::precSGSApply(const scalar *const rr, 
-                                              scalar *const __restrict zz) const
-{
-	scalar_sgs_apply(&mat, dblocks, ytemp, napplysweeps, thread_chunk_size, true, rr, zz);
-}
-
-template <typename scalar, typename index>
-void CSRMatrixView<scalar,index>::precILUSetup()
-{
-	if(!iluvals)
-	{
-		std::printf(" CSR MatrixView: precILUSetup(): First-time setup\n");
-
-		// Allocate lu
-		iluvals = new scalar[mat.browptr[mat.nbrows]];
-#pragma omp parallel for simd default(shared)
-		for(int j = 0; j < mat.browptr[mat.nbrows]; j++) {
-			iluvals[j] = mat.vals[j];
-		}
-
-		// intermediate array for the solve part; NOT ZEROED
-		if(!ytemp) {
-			ytemp = new scalar[mat.nbrows];
-#pragma omp parallel for simd default(shared)
-			for(index i = 0; i < mat.nbrows; i++)
-			{
-				ytemp[i] = 0;
-			}
-		}
-		else
-			std::cout << "! BSRMatrixView<1>: precILUSetup(): Temp vector is already allocated!\n";
-		
-		if(!scale)
-			scale = new scalar[mat.nbrows];	
-		else
-			std::cout << "! BSRMatrixView<1>: precILUSetup(): Scale vector is already allocated!\n";
-	}
-
-	scalar_ilu0_setup(&mat, nbuildsweeps, thread_chunk_size, true, iluvals, scale);
-}
-
-template <typename scalar, typename index>
-void CSRMatrixView<scalar,index>::precILUApply(const scalar *const __restrict ra, 
-                                              scalar *const __restrict za) const
-{
-	scalar_ilu0_apply(&mat, iluvals, scale, ytemp, napplysweeps, thread_chunk_size, true, ra, za);
-}
-
-
-template <typename scalar, typename index>
-void CSRMatrixView<scalar,index>::precILUApply_seq(const scalar *const __restrict ra, 
-                                              scalar *const __restrict za) const
-{
-	scalar_ilu0_apply(&mat, iluvals, scale, ytemp, napplysweeps, thread_chunk_size, false, ra, za);
-}
 
 }
 

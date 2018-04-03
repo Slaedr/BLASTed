@@ -19,7 +19,7 @@ extern "C" {
 #endif
 
 /// The types of preconditioners that BLASTed provides
-typedef enum {JACOBI, SGS, ILU0} Prec_type;
+typedef enum {JACOBI, SGS, ILU0, SAPILU0} Prec_type;
 
 /// State necessary for local preconditioners
 /** The user must create a variable of this type,

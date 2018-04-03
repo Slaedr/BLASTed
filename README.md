@@ -41,6 +41,6 @@ to generate a tags file for [easier navigation of the source code in Vim](http:/
 
 Usage
 -----
-For the most part, one would want to use the library as a plugin for PETSc. For an example of that, please see `tests/runpetsctest.c` or the finite difference Poisson example in `tests/poisson3d-fd/poisson3d.cpp`.
+For the most part, one would want to use the library as a plugin for PETSc. This is explained in the [usage documentation](doc/user-doc.md).
 
 

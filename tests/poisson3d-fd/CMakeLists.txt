@@ -27,6 +27,10 @@ add_test(NAME ThreadedPoissonCSRPetscILU0 COMMAND mpirun -n 1 ./testcsr_poisson_
 ${CMAKE_CURRENT_SOURCE_DIR}/../input/poisson.control ${CMAKE_CURRENT_SOURCE_DIR}/../input/thread_poisson_csr.perc 
 -ref_sub_pc_type ilu -blasted_pc_type ilu0)
 
+add_test(NAME ThreadedPoissonCSRPetscSAPILU0 COMMAND mpirun -n 1 ./testcsr_poisson_threaded 
+${CMAKE_CURRENT_SOURCE_DIR}/../input/poisson.control ${CMAKE_CURRENT_SOURCE_DIR}/../input/thread_poisson_csr.perc 
+-ref_sub_pc_type ilu -blasted_pc_type sapilu0)
+
 endif()
 
 

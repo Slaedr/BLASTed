@@ -53,6 +53,8 @@ static PetscErrorCode setupDataFromOptions(PC pc)
 			ptype = SGS;
 		else if(precstr2 == "ilu0")
 			ptype = ILU0;
+		else if(precstr2 == "sapilu0")
+			ptype = SAPILU0;
 		else {
 			printf("BLASTed: Preconditioner type not available!\n");
 			abort();
@@ -60,7 +62,7 @@ static PetscErrorCode setupDataFromOptions(PC pc)
 	}
 	
 	PetscInt sweeps[2];
-	if(ptype == SGS || ptype == ILU0)
+	if(ptype != JACOBI)
 	{
 		PetscOptionsHasName(NULL, NULL, "-blasted_async_sweeps", &set);
 		if(set == PETSC_FALSE) {
@@ -99,8 +101,10 @@ static PetscErrorCode setupDataFromOptions(PC pc)
 		ierr = PCShellSetName(pc, "Blasted-Jacobi");
 	else if(ctx->prectype == SGS)
 		ierr = PCShellSetName(pc, "Blasted-SGS");
-	else
+	else if(ctx->prectype == ILU0)
 		ierr = PCShellSetName(pc, "Blasted-ILU0");
+	else if(ctx->prectype == SAPILU0)
+		ierr = PCShellSetName(pc, "Blasted-SeqApILU0");
 
 	return ierr;
 }
@@ -276,14 +280,15 @@ PetscErrorCode compute_preconditioner_blasted(PC pc)
 	
 	// setup preconditioners
 	switch(ctx->prectype) {
-		case JACOBI:
-			op->precJacobiSetup();
-			break;
 		case SGS:
 			op->precSGSSetup();
 			break;
 		case ILU0:
+		case SAPILU0:
 			op->precILUSetup();
+			break;
+		case JACOBI:
+			op->precJacobiSetup();
 			break;
 		default:
 			SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "Preconditioner not available!");
@@ -327,14 +332,17 @@ PetscErrorCode apply_local_blasted(PC pc, Vec r, Vec z)
 	double initialctime = (double)clock() / (double)CLOCKS_PER_SEC;
 
 	switch(ctx->prectype) {
-		case JACOBI:
-			mat->precJacobiApply(ra, za);
-			break;
 		case SGS:
 			mat->precSGSApply(ra, za);
 			break;
 		case ILU0:
 			mat->precILUApply(ra, za);
+			break;
+		case SAPILU0:
+			mat->precILUApply_seq(ra, za);
+			break;
+		case JACOBI:
+			mat->precJacobiApply(ra, za);
 			break;
 		default:
 			printf("BLASTed: apply_local: Preconditioner not available!\n");
