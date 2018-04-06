@@ -51,6 +51,30 @@ typedef struct
 /// Create a new BLASTed data context
 Blasted_data newBlastedDataContext();
 
+/// Recursive function to set the BLASTed preconditioner wherever possible in the entire solver stack
+/** Finds shell PCs and sets BLASTed as the preconditioner for each of them.
+ * \param ksp A PETSc solver context
+ * \param bctx The BLASTed structure that stores required settings and data; must be allocated 
+ *   before passing to this function. It should later be deleted by the user
+ *   after the ksp has been destroyed.
+ */
+PetscErrorCode setup_blasted_stack(KSP ksp, Blasted_data *const bctx);
+
+/// Sets up BLASTed to be used as a AMG smoother assuming a specific solver stack
+/** The solver stack is assumed as follows.
+ * - Global KSP
+ * - Global PC as PCGAMG, PETSc's AMG preconditioner
+ * - Levels KSPs
+ *   * Level PC is block Jacobi or additive Schwarz
+ *   * Subdomain PC is BLASTed given by -blasted_pc_type
+ * - Coarse KSP
+ *   * PC as block Jacobi or ASM
+ *   * subdomain PC is BLASTed given by -blasted_coarse_pc_type
+ *
+ * \todo This is still unimplemented
+ */
+PetscErrorCode setup_blasted_gamg(KSP ksp, Blasted_data *const bctx);
+
 /// Configure local PCs to enable BLASTed preconditioners
 /** Note that it's not mandatory to use BLASTed preconditioners after this function is called;
  * BLASTed preconditioners are only used in case the 'shell' preconditioner PCSHELL is requested.

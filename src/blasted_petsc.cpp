@@ -373,6 +373,82 @@ PetscErrorCode get_blasted_timing_data(PC pc, double *const factorcputime,
 	return ierr;
 }
 
+/// Recursive function to setup the BLASTed preconditioner wherever possible
+/** Finds shell PCs and sets BLASTed as the preconditioner for each of them.
+ */
+PetscErrorCode setup_blasted_stack(KSP ksp, Blasted_data *const bctx)
+{
+	PetscErrorCode ierr = 0;
+	PC pc;
+	ierr = KSPGetPC(ksp, &pc); CHKERRQ(ierr);
+	PetscBool isbjacobi, isasm, isshell, ismg, isgamg, isksp;
+	ierr = PetscObjectTypeCompare((PetscObject)pc,PCBJACOBI,&isbjacobi); CHKERRQ(ierr);
+	ierr = PetscObjectTypeCompare((PetscObject)pc,PCASM,&isasm); CHKERRQ(ierr);
+	ierr = PetscObjectTypeCompare((PetscObject)pc,PCSHELL,&isshell); CHKERRQ(ierr);
+	ierr = PetscObjectTypeCompare((PetscObject)pc,PCMG,&ismg); CHKERRQ(ierr);
+	ierr = PetscObjectTypeCompare((PetscObject)pc,PCGAMG,&isgamg); CHKERRQ(ierr);
+	ierr = PetscObjectTypeCompare((PetscObject)pc,PCKSP,&isksp); CHKERRQ(ierr);
+
+	if(isbjacobi || isasm)
+	{
+		PetscInt nlocalblocks, firstlocalblock;
+		ierr = KSPSetUp(ksp); CHKERRQ(ierr); 
+		ierr = PCSetUp(pc); CHKERRQ(ierr);
+		KSP *subksp;
+		if(isbjacobi) {
+			ierr = PCBJacobiGetSubKSP(pc, &nlocalblocks, &firstlocalblock, &subksp); CHKERRQ(ierr);
+		}
+		else {
+			ierr = PCASMGetSubKSP(pc, &nlocalblocks, &firstlocalblock, &subksp); CHKERRQ(ierr);
+		}
+		if(nlocalblocks != 1)
+			SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, 
+					"Only one subdomain per rank is supported.");
+		ierr = setup_blasted_stack(subksp[0], bctx); CHKERRQ(ierr);
+	}
+	else if(ismg || isgamg) {
+		ierr = KSPSetUp(ksp); CHKERRQ(ierr); 
+		ierr = PCSetUp(pc); CHKERRQ(ierr);
+		PetscInt nlevels;
+		ierr = PCMGGetLevels(pc, &nlevels); CHKERRQ(ierr);
+		for(int ilvl = 1; ilvl < nlevels; ilvl++) {
+			/*KSP smootherctx;
+			ierr = PCMGGetSmoother(pc, ilvl , &smootherctx); CHKERRQ(ierr);
+			ierr = setup_blasted_stack(smootherctx, bctx); CHKERRQ(ierr);*/
+			KSP smootherup, smootherdown;
+			ierr = PCMGGetSmootherUp(pc, ilvl , &smootherup); CHKERRQ(ierr);
+			ierr = PCMGGetSmootherDown(pc, ilvl , &smootherdown); CHKERRQ(ierr);
+			ierr = setup_blasted_stack(smootherup, bctx); CHKERRQ(ierr);
+			ierr = setup_blasted_stack(smootherdown, bctx); CHKERRQ(ierr);
+		}
+		KSP coarsesolver;
+		ierr = PCMGGetCoarseSolve(pc, &coarsesolver); CHKERRQ(ierr);
+		ierr = setup_blasted_stack(coarsesolver, bctx); CHKERRQ(ierr);
+	}
+	else if(isksp) {
+		ierr = KSPSetUp(ksp); CHKERRQ(ierr); 
+		ierr = PCSetUp(pc); CHKERRQ(ierr);
+		KSP subksp;
+		ierr = PCKSPGetKSP(pc, &subksp); CHKERRQ(ierr);
+		ierr = setup_blasted_stack(subksp, bctx); CHKERRQ(ierr);
+	}
+	else if(isshell) {
+		// base case
+		// if the PC is shell, this is the relevant KSP to pass to BLASTed for setup
+		std::cout << "setup_blasted_stack(): Found valid parent KSP for BLASTed.\n";
+		ierr = setup_localpreconditioner_blasted(ksp, bctx); CHKERRQ(ierr);
+	}
+
+	return ierr;
+}
+
+PetscErrorCode setup_blasted_gamg(KSP ksp, Blasted_data *const bctx)
+{
+	PetscErrorCode ierr = 0;
+	// TODO
+	return ierr;
+}
+
 PetscErrorCode setup_localpreconditioner_blasted(KSP ksp, Blasted_data *const bctx)
 {
 	PetscErrorCode ierr = 0;
