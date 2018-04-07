@@ -319,6 +319,7 @@ PetscErrorCode apply_local_blasted(PC pc, Vec r, Vec z)
 	if(mat->dim() != end-start) {
 		printf("! apply_local: Dimension of the input vector r\n");
 		printf("     does not match dimension of the preconditioning matrix!\n");
+		printf("%d vs %d.\n", mat->dim(), end-start);
 		ierr = -1;
 	}
 #endif

@@ -7,7 +7,10 @@
 #include <ctime>
 #include <cfloat>
 #include <cassert>
+
+#ifdef _OPENMP
 #include <omp.h>
+#endif
 
 #include <blasted_petsc.h>
 
@@ -170,7 +173,9 @@ int main(int argc, char* argv[])
 	PetscReal errnorm = 0;
 	
 	// test with 4 threads
+#ifdef _OPENMP
 	omp_set_num_threads(4);
+#endif
 	
 	for(int irun = 0; irun < nruns; irun++)
 	{
