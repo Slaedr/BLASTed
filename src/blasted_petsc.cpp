@@ -190,10 +190,7 @@ PetscErrorCode createNewBlockMatrixView(PC pc)
 PetscErrorCode updateBlockMatrixView(PC pc)
 {
 	PetscErrorCode ierr = 0;
-
 	PetscInt firstrow, lastrow, localrows, localcols, globalrows, globalcols;
-	/*PetscInt numprocs;
-	MPI_Comm_size(PETSC_COMM_WORLD,&numprocs);*/
 	
 	// get control structure
 	Blasted_data* ctx;
@@ -208,7 +205,6 @@ PetscErrorCode updateBlockMatrixView(PC pc)
 	ierr = MatGetOwnershipRange(A, &firstrow, &lastrow); CHKERRQ(ierr);	
 	ierr = MatGetLocalSize(A, &localrows, &localcols); CHKERRQ(ierr);
 	ierr = MatGetSize(A, &globalrows, &globalcols); CHKERRQ(ierr);
-	std::cout << " >> Size of the matrix is " << localrows << std::endl;
 	assert(localrows == localcols);
 	assert(globalrows == globalcols);
 
@@ -431,26 +427,23 @@ PetscErrorCode setup_blasted_stack(KSP ksp, Blasted_data_vec *const bctv, const 
 		if(bctv->size != 0)
 			SETERRQ(PETSC_COMM_WORLD, PETSC_ERR_ARG_WRONGSTATE, 
 					"BLASTed: Multigrid must be the global preconditioner!");
-		/*bctv->size = nlevels;
-		bctv->ctxv = new Blasted_data[nlevels];*/
-		bctv->size = (nlevels-1)*2+1;
-		bctv->ctxv = new Blasted_data[bctv->size];
-#ifdef DEBUG
-			std::cout << "BLASTed: Allocating BLASTed data vector for MG.\n";
-#endif
+		bctv->size = nlevels;
+		bctv->ctxv = new Blasted_data[nlevels];
+		/*bctv->size = (nlevels-1)*2+1;
+		bctv->ctxv = new Blasted_data[bctv->size];*/
 		for(int ilvl = 1; ilvl < nlevels; ilvl++) {
-			/*bctv->ctxv[ilvl] = newBlastedDataContext();
+			bctv->ctxv[ilvl] = newBlastedDataContext();
 			KSP smootherctx;
 			ierr = PCMGGetSmoother(pc, ilvl , &smootherctx); CHKERRQ(ierr);
-			ierr = setup_blasted_stack(smootherctx, bctv, ilvl); CHKERRQ(ierr);*/
-			bctv->ctxv[ilvl] = newBlastedDataContext();
+			ierr = setup_blasted_stack(smootherctx, bctv, ilvl); CHKERRQ(ierr);
+			/*bctv->ctxv[ilvl] = newBlastedDataContext();
 			assert(nlevels > 1);
 			bctv->ctxv[ilvl+nlevels-1] = newBlastedDataContext();
 			KSP smootherup, smootherdown;
 			ierr = PCMGGetSmootherDown(pc, ilvl , &smootherdown); CHKERRQ(ierr);
 			ierr = PCMGGetSmootherUp(pc, ilvl , &smootherup); CHKERRQ(ierr);
 			ierr = setup_blasted_stack(smootherdown, bctv, ilvl); CHKERRQ(ierr);
-			ierr = setup_blasted_stack(smootherup, bctv, ilvl+nlevels-1); CHKERRQ(ierr);
+			ierr = setup_blasted_stack(smootherup, bctv, ilvl+nlevels-1); CHKERRQ(ierr);*/
 		}
 		bctv->ctxv[0] = newBlastedDataContext();
 		KSP coarsesolver;
