@@ -5,7 +5,6 @@
 
 #include <cmath>
 #include <cstdio>
-//#include <cstdlib>
 #include <cstring>
 #include <ctime>
 #include <sys/time.h>
@@ -209,22 +208,15 @@ PetscErrorCode updateBlockMatrixView(PC pc)
 	ierr = MatGetOwnershipRange(A, &firstrow, &lastrow); CHKERRQ(ierr);	
 	ierr = MatGetLocalSize(A, &localrows, &localcols); CHKERRQ(ierr);
 	ierr = MatGetSize(A, &globalrows, &globalcols); CHKERRQ(ierr);
+	std::cout << " >> Size of the matrix is " << localrows << std::endl;
 	assert(localrows == localcols);
 	assert(globalrows == globalcols);
 
 	// get access to local matrix entries
 	const Mat_SeqAIJ *const Adiag = (const Mat_SeqAIJ*)A->data;
-	
-	// ensure diagonal entry locations have been computed; as a bonus, check for singular diagonals
-	/*PetscBool diagmissing = PETSC_FALSE;
-	PetscInt badrow = -1;
-	ierr = MatMissingDiagonal(A, &diagmissing, &badrow); CHKERRQ(ierr);
-	if(diagmissing == PETSC_TRUE) {
-		SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_LIB, "! Zero diagonal in (block-)row %d!", badrow);
-	}*/
 
 	if(ctx->bs <= 0 || ctx->bs > 5 || ctx->bs == 2)
-		SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_SUP, "Block size %d is not supported!", ctx->bs);
+		SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_SUP, "BLASTed: Block size %d is not supported!", ctx->bs);
 
 	op->wrap(localrows/ctx->bs, Adiag->i, Adiag->j, Adiag->a, Adiag->diag);
 
@@ -233,6 +225,20 @@ PetscErrorCode updateBlockMatrixView(PC pc)
 }
 
 extern "C" {
+
+Blasted_data_vec newBlastedDataVec()
+{
+	Blasted_data_vec b;
+	b.ctxv = NULL;
+	b.size = 0;
+	return b;
+}
+
+void destroyBlastedDataVec(Blasted_data_vec bdv)
+{
+	delete [] bdv.ctxv;
+	bdv.size = 0;
+}
 
 Blasted_data newBlastedDataContext()
 {
@@ -317,10 +323,9 @@ PetscErrorCode apply_local_blasted(PC pc, Vec r, Vec z)
 
 #ifdef DEBUG
 	if(mat->dim() != end-start) {
-		printf("! apply_local: Dimension of the input vector r\n");
-		printf("     does not match dimension of the preconditioning matrix!\n");
-		printf("%d vs %d.\n", mat->dim(), end-start);
-		ierr = -1;
+		SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, 
+				"BLASTed: Dimension of vector does not match that of the matrix- %d vs %d!\n", 
+				mat->dim(), end-start);
 	}
 #endif
 	
@@ -374,10 +379,7 @@ PetscErrorCode get_blasted_timing_data(PC pc, double *const factorcputime,
 	return ierr;
 }
 
-/// Recursive function to setup the BLASTed preconditioner wherever possible
-/** Finds shell PCs and sets BLASTed as the preconditioner for each of them.
- */
-PetscErrorCode setup_blasted_stack(KSP ksp, Blasted_data *const bctx)
+PetscErrorCode setup_blasted_stack(KSP ksp, Blasted_data_vec *const bctv, const int ictx)
 {
 	PetscErrorCode ierr = 0;
 	PC pc;
@@ -405,39 +407,69 @@ PetscErrorCode setup_blasted_stack(KSP ksp, Blasted_data *const bctx)
 		if(nlocalblocks != 1)
 			SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, 
 					"Only one subdomain per rank is supported.");
-		ierr = setup_blasted_stack(subksp[0], bctx); CHKERRQ(ierr);
+
+		if(bctv->size < 1 && ictx == 0) {
+			bctv->ctxv = new Blasted_data;
+			bctv->ctxv[0] = newBlastedDataContext();
+			bctv->size = 1;
+#ifdef DEBUG
+			std::cout << "BLASTed: Allocating BLASTed data vector for domain decomposition.\n";
+#endif
+		}
+		else if(bctv->size < 1 && ictx != 0)
+			SETERRQ(PETSC_COMM_WORLD, PETSC_ERR_ARG_WRONGSTATE, 
+					"If a multilevel solver is used, it must be the top-level PC.\n\
+					If not, argument ictx must be zero.");
+
+		ierr = setup_blasted_stack(subksp[0], bctv, ictx); CHKERRQ(ierr);
 	}
 	else if(ismg || isgamg) {
 		ierr = KSPSetUp(ksp); CHKERRQ(ierr); 
 		ierr = PCSetUp(pc); CHKERRQ(ierr);
 		PetscInt nlevels;
 		ierr = PCMGGetLevels(pc, &nlevels); CHKERRQ(ierr);
+		if(bctv->size != 0)
+			SETERRQ(PETSC_COMM_WORLD, PETSC_ERR_ARG_WRONGSTATE, 
+					"BLASTed: Multigrid must be the global preconditioner!");
+		/*bctv->size = nlevels;
+		bctv->ctxv = new Blasted_data[nlevels];*/
+		bctv->size = (nlevels-1)*2+1;
+		bctv->ctxv = new Blasted_data[bctv->size];
+#ifdef DEBUG
+			std::cout << "BLASTed: Allocating BLASTed data vector for MG.\n";
+#endif
 		for(int ilvl = 1; ilvl < nlevels; ilvl++) {
-			/*KSP smootherctx;
+			/*bctv->ctxv[ilvl] = newBlastedDataContext();
+			KSP smootherctx;
 			ierr = PCMGGetSmoother(pc, ilvl , &smootherctx); CHKERRQ(ierr);
-			ierr = setup_blasted_stack(smootherctx, bctx); CHKERRQ(ierr);*/
+			ierr = setup_blasted_stack(smootherctx, bctv, ilvl); CHKERRQ(ierr);*/
+			bctv->ctxv[ilvl] = newBlastedDataContext();
+			assert(nlevels > 1);
+			bctv->ctxv[ilvl+nlevels-1] = newBlastedDataContext();
 			KSP smootherup, smootherdown;
-			ierr = PCMGGetSmootherUp(pc, ilvl , &smootherup); CHKERRQ(ierr);
 			ierr = PCMGGetSmootherDown(pc, ilvl , &smootherdown); CHKERRQ(ierr);
-			ierr = setup_blasted_stack(smootherup, bctx); CHKERRQ(ierr);
-			ierr = setup_blasted_stack(smootherdown, bctx); CHKERRQ(ierr);
+			ierr = PCMGGetSmootherUp(pc, ilvl , &smootherup); CHKERRQ(ierr);
+			ierr = setup_blasted_stack(smootherdown, bctv, ilvl); CHKERRQ(ierr);
+			ierr = setup_blasted_stack(smootherup, bctv, ilvl+nlevels-1); CHKERRQ(ierr);
 		}
+		bctv->ctxv[0] = newBlastedDataContext();
 		KSP coarsesolver;
 		ierr = PCMGGetCoarseSolve(pc, &coarsesolver); CHKERRQ(ierr);
-		ierr = setup_blasted_stack(coarsesolver, bctx); CHKERRQ(ierr);
+		ierr = setup_blasted_stack(coarsesolver, bctv, 0); CHKERRQ(ierr);
 	}
 	else if(isksp) {
 		ierr = KSPSetUp(ksp); CHKERRQ(ierr); 
 		ierr = PCSetUp(pc); CHKERRQ(ierr);
 		KSP subksp;
 		ierr = PCKSPGetKSP(pc, &subksp); CHKERRQ(ierr);
-		ierr = setup_blasted_stack(subksp, bctx); CHKERRQ(ierr);
+		ierr = setup_blasted_stack(subksp, bctv, ictx); CHKERRQ(ierr);
 	}
 	else if(isshell) {
 		// base case
 		// if the PC is shell, this is the relevant KSP to pass to BLASTed for setup
 		std::cout << "setup_blasted_stack(): Found valid parent KSP for BLASTed.\n";
-		ierr = setup_localpreconditioner_blasted(ksp, bctx); CHKERRQ(ierr);
+		assert(ictx < bctv->size);
+		ierr = setup_localpreconditioner_blasted(ksp, &bctv->ctxv[ictx]); CHKERRQ(ierr);
 	}
 
 	return ierr;

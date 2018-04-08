@@ -22,10 +22,6 @@ extern "C" {
 typedef enum {JACOBI, SGS, ILU0, SAPILU0} Prec_type;
 
 /// State necessary for local preconditioners
-/** The user must create a variable of this type,
- * set \ref first_setup_done to false and \ref bs to the required block size,
- * and then pass it to PCShellSetContext.
- */
 typedef struct
 {
 	void* bmat;               ///< BLASTed matrix
@@ -48,17 +44,38 @@ typedef struct
 	double applywalltime;     ///< Wall-clock time for application
 } Blasted_data;
 
+/// A vector of BLASTed state objects for use with multiple BLASTed preconditioner instances
+/** Eg. for use as multigrid smoothers.
+ */
+typedef struct
+{
+	Blasted_data *ctxv;      ///< Array of BLASTed contexts for different instances
+	int size;                ///< Size of the array
+} Blasted_data_vec;
+
+/// Create a new vector of BLASTed data contexts
+Blasted_data_vec newBlastedDataVec();
+
+/// Destroy the vector of BLASTed data contexts \warning Call only AFTER KSPDestroy.
+void destroyBlastedDataVec(Blasted_data_vec bdv);
+
 /// Create a new BLASTed data context
 Blasted_data newBlastedDataContext();
 
 /// Recursive function to set the BLASTed preconditioner wherever possible in the entire solver stack
 /** Finds shell PCs and sets BLASTed as the preconditioner for each of them.
+ * Assumptions:
+ *  - Multigrid occurs only once in the solver stack - no multigrid smoothers for multigrid.
+ *  - If multigrid occurs, it is the global top-level preconditioner. Local multigrid is not supported.
+ *    Smoothers can be domain decomposition methods like ASM.
+ *
  * \param ksp A PETSc solver context
- * \param bctx The BLASTed structure that stores required settings and data; must be allocated 
- *   before passing to this function. It should later be deleted by the user
+ * \param bctx The BLASTed structures that store required settings and data; must be created by
+ * \ref newBlastedDataVec. It should later be deleted by the user, calling \ref destroyBlastedDataVec
  *   after the ksp has been destroyed.
+ * \param level The entry in the BLASTed data vector to use - the user should set this to zero.
  */
-PetscErrorCode setup_blasted_stack(KSP ksp, Blasted_data *const bctx);
+PetscErrorCode setup_blasted_stack(KSP ksp, Blasted_data_vec *const bctx, const int level);
 
 /// Sets up BLASTed to be used as a AMG smoother assuming a specific solver stack
 /** The solver stack is assumed as follows.
