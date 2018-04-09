@@ -13,7 +13,7 @@ ${CMAKE_CURRENT_SOURCE_DIR}/../input/poisson.control ${CMAKE_CURRENT_SOURCE_DIR}
 add_test(NAME SerialPoissonCSRPetscSGS COMMAND env OMP_NUM_THREADS=1 mpirun -n 1 ./testcsr_poisson 
 ${CMAKE_CURRENT_SOURCE_DIR}/../input/poisson.control ${CMAKE_CURRENT_SOURCE_DIR}/../input/poisson_csr_sgs.perc)
 
-add_test(NAME SerialPoissonCSRPetscAMGILU0 COMMAND env OMP_NUM_THREADS=1 ./testcsr_poisson 
+add_test(NAME SerialPoissonCSRPetscAMGILU0 COMMAND env OMP_NUM_THREADS=1 mpirun -n 1 ./testcsr_poisson 
 ${CMAKE_CURRENT_SOURCE_DIR}/../input/poisson-amg.control ${CMAKE_CURRENT_SOURCE_DIR}/../input/poisson_csr_amg.perc)
 
 add_test(NAME MPIPoissonCSRPetscILU0 COMMAND env OMP_NUM_THREADS=1 mpirun -n 8 ./testcsr_poisson 

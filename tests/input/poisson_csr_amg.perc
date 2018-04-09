@@ -48,8 +48,6 @@
 -pc_mg_type multiplicative
 -pc_mg_cycle_type v
 -pc_mg_levels 3
-#-pc_mg_smoothdown 3
-#-pc_mg_smoothup 3
 
 -mg_levels_ksp_type richardson
 -mg_levels_ksp_richardson_scale 1.0

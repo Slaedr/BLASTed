@@ -1,3 +1,5 @@
+#undef NDEBUG
+
 #include <petscksp.h>
 
 #include <sys/time.h>
