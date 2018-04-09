@@ -1,5 +1,5 @@
--mat_type baij
--mat_block_size 4
+
+#-mat_block_size 4
 
 # With reference PETSc preconditioner
 
