@@ -457,6 +457,19 @@ PetscErrorCode setup_blasted_stack(KSP ksp, Blasted_data_vec *const bctv, const 
 		// if the PC is shell, this is the relevant KSP to pass to BLASTed for setup
 		std::cout << "setup_blasted_stack(): Found valid parent KSP for BLASTed.\n";
 		assert(ictx < bctv->size);
+		if(bctv->size < 1 && ictx == 0) {
+			bctv->ctxv = new Blasted_data[1];
+			bctv->ctxv[0] = newBlastedDataContext();
+			bctv->size = 1;
+#ifdef DEBUG
+			std::cout << "BLASTed: Allocating BLASTed data vector for domain decomposition.\n";
+#endif
+		}
+		else if(bctv->size < 1 && ictx != 0)
+			SETERRQ(PETSC_COMM_WORLD, PETSC_ERR_ARG_WRONGSTATE, 
+					"If a multilevel solver is used, it must be the top-level PC.\n\
+					If not, argument ictx must be zero.");
+
 		ierr = setup_localpreconditioner_blasted(ksp, &bctv->ctxv[ictx]); CHKERRQ(ierr);
 	}
 
