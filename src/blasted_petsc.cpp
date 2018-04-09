@@ -10,6 +10,7 @@
 #include <sys/time.h>
 
 #include <../src/mat/impls/aij/mpi/mpiaij.h>
+#include <../src/mat/impls/baij/mpi/mpibaij.h>
 
 #include <blockmatrices.hpp>
 #include <blasted_petsc.h>
@@ -139,6 +140,7 @@ PetscErrorCode createNewBlockMatrixView(PC pc)
 
 	// get access to local matrix entries
 	const Mat_SeqAIJ *const Adiag = (const Mat_SeqAIJ*)A->data;
+	const Mat_SeqBAIJ *const Abdiag = (const Mat_SeqBAIJ*)A->data;
 	
 	// ensure diagonal entry locations have been computed; this is necessary for BAIJ matrices
 	// as a bonus, check for singular diagonals
@@ -165,17 +167,17 @@ PetscErrorCode createNewBlockMatrixView(PC pc)
 				 ctx->nbuildsweeps,ctx->napplysweeps);*/
 		case 3:
 			op = new BSRMatrixView<PetscReal,PetscInt,3,Eigen::ColMajor>
-				(localrows/ctx->bs, Adiag->i, Adiag->j, Adiag->a, Adiag->diag, 
+				(localrows/ctx->bs, Abdiag->i, Abdiag->j, Abdiag->a, Abdiag->diag, 
 				 ctx->nbuildsweeps,ctx->napplysweeps);
 			break;
 		case 4:
 			op = new BSRMatrixView<PetscReal,PetscInt,4,Eigen::ColMajor>
-				(localrows/ctx->bs, Adiag->i, Adiag->j, Adiag->a, Adiag->diag, 
+				(localrows/ctx->bs, Abdiag->i, Abdiag->j, Abdiag->a, Abdiag->diag, 
 				 ctx->nbuildsweeps,ctx->napplysweeps);
 			break;
 		case 5:
 			op = new BSRMatrixView<PetscReal,PetscInt,5,Eigen::ColMajor>
-				(localrows/ctx->bs, Adiag->i, Adiag->j, Adiag->a, Adiag->diag, 
+				(localrows/ctx->bs, Abdiag->i, Abdiag->j, Abdiag->a, Abdiag->diag, 
 				 ctx->nbuildsweeps,ctx->napplysweeps);
 			break;
 		default:
@@ -210,11 +212,15 @@ PetscErrorCode updateBlockMatrixView(PC pc)
 
 	// get access to local matrix entries
 	const Mat_SeqAIJ *const Adiag = (const Mat_SeqAIJ*)A->data;
+	const Mat_SeqBAIJ *const Abdiag = (const Mat_SeqBAIJ*)A->data;
 
 	if(ctx->bs <= 0 || ctx->bs > 5 || ctx->bs == 2)
 		SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_SUP, "BLASTed: Block size %d is not supported!", ctx->bs);
 
-	op->wrap(localrows/ctx->bs, Adiag->i, Adiag->j, Adiag->a, Adiag->diag);
+	if(ctx->bs == 1)
+		op->wrap(localrows/ctx->bs, Adiag->i, Adiag->j, Adiag->a, Adiag->diag);
+	else
+		op->wrap(localrows/ctx->bs, Abdiag->i, Abdiag->j, Abdiag->a, Abdiag->diag);
 
 	ctx->bmat = reinterpret_cast<void*>(op);
 	return ierr;
@@ -227,13 +233,14 @@ Blasted_data_vec newBlastedDataVec()
 	Blasted_data_vec b;
 	b.ctxv = NULL;
 	b.size = 0;
+	b.factorcputime = b.factorwalltime = b.applycputime = b.applywalltime = 0.0;
 	return b;
 }
 
-void destroyBlastedDataVec(Blasted_data_vec bdv)
+void destroyBlastedDataVec(Blasted_data_vec *const bdv)
 {
-	delete [] bdv.ctxv;
-	bdv.size = 0;
+	delete [] bdv->ctxv;
+	bdv->size = 0;
 }
 
 Blasted_data newBlastedDataContext()
@@ -363,18 +370,6 @@ PetscErrorCode apply_local_blasted(PC pc, Vec r, Vec z)
 	return ierr;
 }
 
-PetscErrorCode get_blasted_timing_data(PC pc, double *const factorcputime, 
-		double *const factorwalltime, double *const applycputime, double *const applywalltime)
-{
-	Blasted_data* ctx;
-	PetscErrorCode ierr = PCShellGetContext(pc, (void**)&ctx); CHKERRQ(ierr);
-	*factorcputime = ctx->factorcputime;
-	*factorwalltime = ctx->factorwalltime;
-	*applycputime = ctx->applycputime;
-	*applywalltime = ctx->applywalltime;
-	return ierr;
-}
-
 PetscErrorCode setup_blasted_stack(KSP ksp, Blasted_data_vec *const bctv, const int ictx)
 {
 	PetscErrorCode ierr = 0;
@@ -405,7 +400,7 @@ PetscErrorCode setup_blasted_stack(KSP ksp, Blasted_data_vec *const bctv, const 
 					"Only one subdomain per rank is supported.");
 
 		if(bctv->size < 1 && ictx == 0) {
-			bctv->ctxv = new Blasted_data;
+			bctv->ctxv = new Blasted_data[1];
 			bctv->ctxv[0] = newBlastedDataContext();
 			bctv->size = 1;
 #ifdef DEBUG
@@ -465,13 +460,6 @@ PetscErrorCode setup_blasted_stack(KSP ksp, Blasted_data_vec *const bctv, const 
 		ierr = setup_localpreconditioner_blasted(ksp, &bctv->ctxv[ictx]); CHKERRQ(ierr);
 	}
 
-	return ierr;
-}
-
-PetscErrorCode setup_blasted_gamg(KSP ksp, Blasted_data *const bctx)
-{
-	PetscErrorCode ierr = 0;
-	// TODO
 	return ierr;
 }
 
@@ -549,6 +537,18 @@ PetscErrorCode setup_localpreconditioner_blasted(KSP ksp, Blasted_data *const bc
 	ierr = PCShellSetDestroy(subpc, &cleanup_blasted);              CHKERRQ(ierr);
 
 	return ierr;
+}
+
+void computeTotalTimes(Blasted_data_vec *const bctv)
+{
+	bctv->factorcputime = bctv->factorwalltime = bctv->applycputime = bctv->applywalltime = 0.0;
+
+	for(int i = 0; i < bctv->size; i++) {
+		bctv->factorcputime += bctv->ctxv[i].factorcputime;
+		bctv->factorwalltime += bctv->ctxv[i].factorwalltime;
+		bctv->applycputime +=  bctv->ctxv[i].applycputime;
+		bctv->applywalltime += bctv->ctxv[i].applywalltime;
+	}
 }
 
 }

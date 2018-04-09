@@ -92,11 +92,6 @@ int main(int argc, char* argv[])
 		printf("Number of runs: %d\n", nruns);
 	}
 
-	PetscBool useamg = PETSC_FALSE, flag;
-	ierr = PetscOptionsGetBool(NULL, NULL, "-blasted_setup_amg", &useamg, &flag);
-	if(!flag) {
-		printf("-blasted_setup_amg not set.\n");
-	}
 	//----------------------------------------------------------------------------------
 
 	// set up Petsc variables
@@ -210,6 +205,7 @@ int main(int argc, char* argv[])
 		}
 
 		ierr = KSPDestroy(&ksp); CHKERRQ(ierr);
+		destroyBlastedDataVec(&bctx);
 	}
 
 	if(rank == 0)

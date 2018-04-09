@@ -51,16 +51,21 @@ typedef struct
 {
 	Blasted_data *ctxv;      ///< Array of BLASTed contexts for different instances
 	int size;                ///< Size of the array
+
+	double factorcputime;  ///< CPU time taken by factorizations by all BLASTed instances in this vector
+	double factorwalltime; ///< Walltime taken by factorizations by all BLASTed instances in this vector
+	double applycputime;   ///< CPU time taken by applications of all BLASTed instances in this vector
+	double applywalltime;  ///< Walltime taken by applications of all BLASTed instances in this vector
 } Blasted_data_vec;
 
 /// Create a new vector of BLASTed data contexts
 Blasted_data_vec newBlastedDataVec();
 
-/// Destroy the vector of BLASTed data contexts \warning Call only AFTER KSPDestroy.
-void destroyBlastedDataVec(Blasted_data_vec bdv);
+/// Computes total time take by all BLASTed preconditioner instances in a context vector
+void computeTotalTimes(Blasted_data_vec *const bctv);
 
-/// Create a new BLASTed data context
-Blasted_data newBlastedDataContext();
+/// Destroy the vector of BLASTed data contexts \warning Call only AFTER KSPDestroy.
+void destroyBlastedDataVec(Blasted_data_vec *const bdv);
 
 /// Recursive function to set the BLASTed preconditioner wherever possible in the entire solver stack
 /** Finds shell PCs and sets BLASTed as the preconditioner for each of them.
@@ -77,23 +82,12 @@ Blasted_data newBlastedDataContext();
  */
 PetscErrorCode setup_blasted_stack(KSP ksp, Blasted_data_vec *const bctx, const int level);
 
-/// Sets up BLASTed to be used as a AMG smoother assuming a specific solver stack
-/** The solver stack is assumed as follows.
- * - Global KSP
- * - Global PC as PCGAMG, PETSc's AMG preconditioner
- * - Levels KSPs
- *   * Level PC is block Jacobi or additive Schwarz
- *   * Subdomain PC is BLASTed given by -blasted_pc_type
- * - Coarse KSP
- *   * PC as block Jacobi or ASM
- *   * subdomain PC is BLASTed given by -blasted_coarse_pc_type
- *
- * \todo This is still unimplemented
- */
-PetscErrorCode setup_blasted_gamg(KSP ksp, Blasted_data *const bctx);
+/// Create a new BLASTed data context
+Blasted_data newBlastedDataContext();
 
 /// Configure local PCs to enable BLASTed preconditioners
-/** Note that it's not mandatory to use BLASTed preconditioners after this function is called;
+/** Instead of using this directly, consider using \ref setup_blasted_stack instead.
+ * Note that it's not mandatory to use BLASTed preconditioners after this function is called;
  * BLASTed preconditioners are only used in case the 'shell' preconditioner PCSHELL is requested.
  *
  * Adds two new command line options:
@@ -129,12 +123,6 @@ PetscErrorCode compute_preconditioner_blasted(PC pc);
  * NOTE: It is assumed that the length of r and z on the local process is the same.
  */
 PetscErrorCode apply_local_blasted(PC pc, Vec r, Vec z);
-
-/// Get timing data
-/** \param pc A PETSc subdomain preconditioner context
- */
-PetscErrorCode get_blasted_timing_data(PC pc, double *const factorcputime, 
-		double *const factorwalltime, double *const applycputime, double *const applywalltime);
 
 #ifdef __cplusplus
 }

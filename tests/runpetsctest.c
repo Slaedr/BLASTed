@@ -12,6 +12,8 @@
 
 #define PETSCOPTION_STR_LEN 30
 
+#define TASSERT(x) if(!(x)) return -1
+
 PetscReal compute_error(const MPI_Comm comm, const Vec u, const Vec uexact) {
 	PetscReal errnorm;
 	Vec err;
@@ -94,7 +96,7 @@ int main(int argc, char* argv[])
 	PetscReal multerrnorm = 0;
 	ierr = VecNorm(test, NORM_2, &multerrnorm); CHKERRQ(ierr);
 	printf(" Mult error = %16.16e\n", multerrnorm);
-	assert(multerrnorm < 400*DBL_EPSILON);
+	TASSERT(multerrnorm < 400*DBL_EPSILON);
 	VecDestroy(&test);
 
 	// compute reference solution using a preconditioner from PETSc
@@ -122,7 +124,6 @@ int main(int argc, char* argv[])
 
 	// run the solve to be tested as many times as requested
 
-	Blasted_data bctx = newBlastedDataContext();
 	int avgkspiters = 0;
 	PetscReal errnorm = 0;
 	for(int irun = 0; irun < nruns; irun++)
@@ -141,7 +142,9 @@ int main(int argc, char* argv[])
 		// Operators MUST be set before extracting sub KSPs!
 		ierr = KSPSetOperators(ksp, A, A); CHKERRQ(ierr);
 
-		setup_localpreconditioner_blasted(ksp, &bctx);
+		//setup_localpreconditioner_blasted(ksp, &bctx);
+		Blasted_data_vec bctx = newBlastedDataVec();
+		ierr = setup_blasted_stack(ksp, &bctx, 0); CHKERRQ(ierr);
 		
 		ierr = KSPSolve(ksp, b, u); CHKERRQ(ierr);
 
@@ -163,6 +166,7 @@ int main(int argc, char* argv[])
 		}
 
 		ierr = KSPDestroy(&ksp); CHKERRQ(ierr);
+		destroyBlastedDataVec(&bctx);
 	}
 
 	if(rank == 0)
