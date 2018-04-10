@@ -419,9 +419,10 @@ PetscErrorCode setup_blasted_stack(KSP ksp, Blasted_data_vec *const bctv, const 
 		ierr = PCSetUp(pc); CHKERRQ(ierr);
 		PetscInt nlevels;
 		ierr = PCMGGetLevels(pc, &nlevels); CHKERRQ(ierr);
-		if(bctv->size != 0)
-			SETERRQ(PETSC_COMM_WORLD, PETSC_ERR_ARG_WRONGSTATE, 
-					"BLASTed: Multigrid must be the global preconditioner!");
+		if(bctv->size != 0) {
+			std::cout<<"BLASTed: Multigrid must be the global preconditioner - re-creating contexts.\n";
+			delete [] bctv->ctxv;
+		}
 		bctv->size = nlevels;
 		bctv->ctxv = new Blasted_data[nlevels];
 		/*bctv->size = (nlevels-1)*2+1;
