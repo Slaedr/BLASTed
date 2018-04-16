@@ -255,6 +255,12 @@ void block_sgs_apply(const CRawBSRMatrix<scalar,index> *const mat,
 			Mattype::IsRowMajor ? bs : mat->nbrows*bs
 		);
 
+#pragma omp parallel for simd default(shared)
+	for(index i = 0; i < mat->nbrows*bs; i++)
+	{
+		ytemp.data()[i] = 0;
+	}
+	
 	for(int isweep = 0; isweep < napplysweeps; isweep++)
 	{
 		// forward sweep ytemp := D^(-1) (r - L ytemp)
@@ -265,6 +271,12 @@ void block_sgs_apply(const CRawBSRMatrix<scalar,index> *const mat,
 			block_fgs<scalar, index, bs, Mattype>(data, mat->bcolind, irow, mat->browptr[irow], 
 					mat->diagind[irow], dblks, r, ytemp);
 		}
+	}
+
+#pragma omp parallel for simd default(shared)
+	for(index i = 0; i < mat->nbrows*bs; i++)
+	{
+		z.data()[i] = ytemp.data()[i];
 	}
 
 	for(int isweep = 0; isweep < napplysweeps; isweep++)
