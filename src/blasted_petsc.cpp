@@ -228,19 +228,26 @@ PetscErrorCode updateBlockMatrixView(PC pc)
 
 extern "C" {
 
-Blasted_data_vec newBlastedDataVec()
+Blasted_data_list newBlastedDataList()
 {
-	Blasted_data_vec b;
-	b.ctxv = NULL;
+	Blasted_data_list b;
+	b.ctxlist = NULL;
 	b.size = 0;
 	b.factorcputime = b.factorwalltime = b.applycputime = b.applywalltime = 0.0;
 	return b;
 }
 
-void destroyBlastedDataVec(Blasted_data_vec *const bdv)
+void destroyBlastedDataList(Blasted_data_list *const b)
 {
-	delete [] bdv->ctxv;
-	bdv->size = 0;
+	while(b->ctxlist != NULL) {
+		Blasted_data *temp = b->ctxlist;
+		b->ctxlist = b->ctxlist->next;
+		delete temp;
+		b->size--;
+	}
+
+	if(b->size != 0)
+		throw std::logic_error("Could not delete Blasted_data_list properly!");
 }
 
 Blasted_data newBlastedDataContext()
@@ -250,7 +257,19 @@ Blasted_data newBlastedDataContext()
 	ctx.first_setup_done = false;
 	ctx.cputime = ctx.walltime = ctx.factorcputime = ctx.factorwalltime
 		= ctx.applycputime = ctx.applywalltime = 0.0;
+	ctx.next = NULL;
 	return ctx;
+}
+
+void appendBlastedDataContext(Blasted_data_list *const bdl, const Blasted_data bd)
+{
+	Blasted_data *node = new Blasted_data;
+	*node = bd;
+
+	node->next = bdl->ctxlist;
+	bdl->ctxlist = node;
+
+	bdl->size++;
 }
 
 PetscErrorCode cleanup_blasted(PC pc)
@@ -370,7 +389,7 @@ PetscErrorCode apply_local_blasted(PC pc, Vec r, Vec z)
 	return ierr;
 }
 
-PetscErrorCode setup_blasted_stack(KSP ksp, Blasted_data_vec *const bctv, const int ictx)
+PetscErrorCode setup_blasted_stack(KSP ksp, Blasted_data_list *const bctv, const int ictx)
 {
 	PetscErrorCode ierr = 0;
 	PC pc;
@@ -399,19 +418,6 @@ PetscErrorCode setup_blasted_stack(KSP ksp, Blasted_data_vec *const bctv, const 
 			SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, 
 					"Only one subdomain per rank is supported.");
 
-		if(bctv->size < 1 && ictx == 0) {
-			bctv->ctxv = new Blasted_data[1];
-			bctv->ctxv[0] = newBlastedDataContext();
-			bctv->size = 1;
-#ifdef DEBUG
-			std::cout << "BLASTed: Allocating BLASTed data vector for domain decomposition.\n";
-#endif
-		}
-		else if(bctv->size < 1 && ictx != 0)
-			SETERRQ(PETSC_COMM_WORLD, PETSC_ERR_ARG_WRONGSTATE, 
-					"If a multilevel solver is used, it must be the top-level PC.\n\
-					If not, argument ictx must be zero.");
-
 		ierr = setup_blasted_stack(subksp[0], bctv, ictx); CHKERRQ(ierr);
 	}
 	else if(ismg || isgamg) {
@@ -419,32 +425,21 @@ PetscErrorCode setup_blasted_stack(KSP ksp, Blasted_data_vec *const bctv, const 
 		ierr = PCSetUp(pc); CHKERRQ(ierr);
 		PetscInt nlevels;
 		ierr = PCMGGetLevels(pc, &nlevels); CHKERRQ(ierr);
-		if(bctv->size != 0) {
-			std::cout<<"BLASTed: Multigrid must be the global preconditioner - re-creating contexts.\n";
-			delete [] bctv->ctxv;
-		}
-		bctv->size = nlevels;
-		bctv->ctxv = new Blasted_data[nlevels];
-		/*bctv->size = (nlevels-1)*2+1;
-		bctv->ctxv = new Blasted_data[bctv->size];*/
+
 		for(int ilvl = 1; ilvl < nlevels; ilvl++) {
-			bctv->ctxv[ilvl] = newBlastedDataContext();
 			KSP smootherctx;
 			ierr = PCMGGetSmoother(pc, ilvl , &smootherctx); CHKERRQ(ierr);
-			ierr = setup_blasted_stack(smootherctx, bctv, ilvl); CHKERRQ(ierr);
-			/*bctv->ctxv[ilvl] = newBlastedDataContext();
-			assert(nlevels > 1);
-			bctv->ctxv[ilvl+nlevels-1] = newBlastedDataContext();
+			ierr = setup_blasted_stack(smootherctx, bctv, ictx); CHKERRQ(ierr);
+			/*
 			KSP smootherup, smootherdown;
 			ierr = PCMGGetSmootherDown(pc, ilvl , &smootherdown); CHKERRQ(ierr);
 			ierr = PCMGGetSmootherUp(pc, ilvl , &smootherup); CHKERRQ(ierr);
 			ierr = setup_blasted_stack(smootherdown, bctv, ilvl); CHKERRQ(ierr);
 			ierr = setup_blasted_stack(smootherup, bctv, ilvl+nlevels-1); CHKERRQ(ierr);*/
 		}
-		bctv->ctxv[0] = newBlastedDataContext();
 		KSP coarsesolver;
 		ierr = PCMGGetCoarseSolve(pc, &coarsesolver); CHKERRQ(ierr);
-		ierr = setup_blasted_stack(coarsesolver, bctv, 0); CHKERRQ(ierr);
+		ierr = setup_blasted_stack(coarsesolver, bctv, ictx); CHKERRQ(ierr);
 	}
 	else if(isksp) {
 		ierr = KSPSetUp(ksp); CHKERRQ(ierr); 
@@ -454,24 +449,13 @@ PetscErrorCode setup_blasted_stack(KSP ksp, Blasted_data_vec *const bctv, const 
 		ierr = setup_blasted_stack(subksp, bctv, ictx); CHKERRQ(ierr);
 	}
 	else if(isshell) {
-		// base case
 		// if the PC is shell, this is the relevant KSP to pass to BLASTed for setup
 		std::cout << "setup_blasted_stack(): Found valid parent KSP for BLASTed.\n";
-		assert(ictx < bctv->size);
-		if(bctv->size < 1 && ictx == 0) {
-			bctv->ctxv = new Blasted_data[1];
-			bctv->ctxv[0] = newBlastedDataContext();
-			bctv->size = 1;
-#ifdef DEBUG
-			std::cout << "BLASTed: Allocating BLASTed data vector for domain decomposition.\n";
-#endif
-		}
-		else if(bctv->size < 1 && ictx != 0)
-			SETERRQ(PETSC_COMM_WORLD, PETSC_ERR_ARG_WRONGSTATE, 
-					"If a multilevel solver is used, it must be the top-level PC.\n\
-					If not, argument ictx must be zero.");
 
-		ierr = setup_localpreconditioner_blasted(ksp, &bctv->ctxv[ictx]); CHKERRQ(ierr);
+		appendBlastedDataContext(bctv, newBlastedDataContext());
+		// The new context is appended to the head of the list,
+		// so we setup the BLASTed preconditioner using the context at the head of the list
+		ierr = setup_localpreconditioner_blasted(ksp, bctv->ctxlist); CHKERRQ(ierr);
 	}
 
 	return ierr;
@@ -503,35 +487,11 @@ PetscErrorCode setup_localpreconditioner_blasted(KSP ksp, Blasted_data *const bc
 	PC pc, subpc;
 
 	KSPGetPC(ksp, &pc);
-	PetscBool isbjacobi, isasm, isshell;
-	ierr = PetscObjectTypeCompare((PetscObject)pc,PCBJACOBI,&isbjacobi); CHKERRQ(ierr);
-	ierr = PetscObjectTypeCompare((PetscObject)pc,PCASM,&isasm); CHKERRQ(ierr);
+	PetscBool isshell;
 	ierr = PetscObjectTypeCompare((PetscObject)pc,PCSHELL,&isshell); CHKERRQ(ierr);
 
 	// extract sub pc
-	if(isbjacobi)
-	{
-		PetscInt nlocalblocks, firstlocalblock;
-		KSPSetUp(ksp); PCSetUp(pc);
-		KSP *subksp;
-		ierr = PCBJacobiGetSubKSP(pc, &nlocalblocks, &firstlocalblock, &subksp);
-		CHKERRQ(ierr);
-		if(nlocalblocks != 1)
-			SETERRQ(comm, PETSC_ERR_ARG_WRONGSTATE, "Only one subdomain per rank is supported.");
-		ierr = KSPGetPC(subksp[0], &subpc); CHKERRQ(ierr);
-	}
-	else if(isasm)
-	{
-		PetscInt nlocalblocks, firstlocalblock;
-		KSPSetUp(ksp); PCSetUp(pc);
-		KSP *subksp;
-		ierr = PCASMGetSubKSP(pc, &nlocalblocks, &firstlocalblock, &subksp);
-		CHKERRQ(ierr);
-		if(nlocalblocks != 1)
-			SETERRQ(comm, PETSC_ERR_ARG_WRONGSTATE, "Only one subdomain per rank is supported.");
-		ierr = KSPGetPC(subksp[0], &subpc); CHKERRQ(ierr);
-	}
-	else if(isshell) {
+	if(isshell) {
 		subpc = pc;
 		// only for single-process runs
 		if(!islocal)
@@ -539,7 +499,7 @@ PetscErrorCode setup_localpreconditioner_blasted(KSP ksp, Blasted_data *const bc
 					"PC as PCSHELL is only supported for local solvers.");
 	}
 	else {
-		SETERRQ(comm, PETSC_ERR_ARG_WRONGSTATE, "Invalid global preconditioner for BLASTed!\n");
+		SETERRQ(comm, PETSC_ERR_ARG_WRONGSTATE, "Need SHELL preconditioner for BLASTed!\n");
 	}
 
 	// setup the PC
@@ -553,15 +513,17 @@ PetscErrorCode setup_localpreconditioner_blasted(KSP ksp, Blasted_data *const bc
 	return ierr;
 }
 
-void computeTotalTimes(Blasted_data_vec *const bctv)
+void computeTotalTimes(Blasted_data_list *const bctv)
 {
 	bctv->factorcputime = bctv->factorwalltime = bctv->applycputime = bctv->applywalltime = 0.0;
 
-	for(int i = 0; i < bctv->size; i++) {
-		bctv->factorcputime += bctv->ctxv[i].factorcputime;
-		bctv->factorwalltime += bctv->ctxv[i].factorwalltime;
-		bctv->applycputime +=  bctv->ctxv[i].applycputime;
-		bctv->applywalltime += bctv->ctxv[i].applywalltime;
+	Blasted_data *node = bctv->ctxlist;
+	while(node != NULL){
+		bctv->factorwalltime += node->factorwalltime;
+		bctv->applywalltime += node->applywalltime;
+		bctv->factorcputime += node->factorcputime;
+		bctv->applycputime += node->applycputime;
+		node = node->next;
 	}
 }
 

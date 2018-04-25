@@ -194,7 +194,7 @@ int main(int argc, char* argv[])
 		ierr = KSPSetOperators(ksp, A, A); CHKERRQ(ierr);
 		
 		// Create BLASTed data structure and setup the PC
-		Blasted_data_vec bctx = newBlastedDataVec();
+		Blasted_data_list bctx = newBlastedDataList();
 		ierr = setup_blasted_stack(ksp, &bctx, 0); CHKERRQ(ierr);
 		
 		ierr = KSPSolve(ksp, b, u); CHKERRQ(ierr);
@@ -224,6 +224,19 @@ int main(int argc, char* argv[])
 		}
 
 		ierr = KSPDestroy(&ksp); CHKERRQ(ierr);
+
+		// rudimentary test for time-totaller
+		computeTotalTimes(&bctx);
+		if (bctx.factorwalltime <= 0.0 + DBL_EPSILON || 
+			bctx.applywalltime <= 0.0 + DBL_EPSILON ||
+			bctx.factorcputime <= 0.0 + DBL_EPSILON ||
+			bctx.applycputime <= 0.0 + DBL_EPSILON ) 
+		{
+			PetscFinalize();
+			return -1;
+		}
+
+		destroyBlastedDataList(&bctx);
 	}
 
 	if(rank == 0)

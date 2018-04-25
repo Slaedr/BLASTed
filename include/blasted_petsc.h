@@ -22,7 +22,7 @@ extern "C" {
 typedef enum {JACOBI, SGS, ILU0, SAPILU0} Prec_type;
 
 /// State necessary for local preconditioners
-typedef struct
+struct Blasted_node
 {
 	void* bmat;               ///< BLASTed matrix
 	
@@ -42,30 +42,39 @@ typedef struct
 	double factorwalltime;    ///< Wall-clock time for factorization
 	double applycputime;      ///< CPU time taken for application of the preconditioner
 	double applywalltime;     ///< Wall-clock time for application
-} Blasted_data;
+	
+	struct Blasted_node *next;  ///< Link to next Blasted context
+};
 
-/// A vector of BLASTed state objects for use with multiple BLASTed preconditioner instances
+typedef struct Blasted_node Blasted_data;
+
+/// A list of BLASTed state objects for use with multiple BLASTed preconditioner instances
 /** Eg. for use as multigrid smoothers.
  */
 typedef struct
 {
-	Blasted_data *ctxv;      ///< Array of BLASTed contexts for different instances
+	Blasted_data *ctxlist;   ///< Linked list of BLASTed contexts for different instances
 	int size;                ///< Size of the array
 
 	double factorcputime;  ///< CPU time taken by factorizations by all BLASTed instances in this vector
 	double factorwalltime; ///< Walltime taken by factorizations by all BLASTed instances in this vector
 	double applycputime;   ///< CPU time taken by applications of all BLASTed instances in this vector
 	double applywalltime;  ///< Walltime taken by applications of all BLASTed instances in this vector
-} Blasted_data_vec;
 
-/// Create a new vector of BLASTed data contexts
-Blasted_data_vec newBlastedDataVec();
+} Blasted_data_list;
+
+typedef struct Blasted_node Blasted_data;
+
+/// Create a new list of BLASTed data contexts
+Blasted_data_list newBlastedDataList();
 
 /// Computes total time take by all BLASTed preconditioner instances in a context vector
-void computeTotalTimes(Blasted_data_vec *const bctv);
+void computeTotalTimes(Blasted_data_list *const bctv);
 
-/// Destroy the vector of BLASTed data contexts \warning Call only AFTER KSPDestroy.
-void destroyBlastedDataVec(Blasted_data_vec *const bdv);
+/// Destroy the list of BLASTed data contexts \warning Call only AFTER KSPDestroy.
+/** Throws an instance of std::logic_error if the deletion fails.
+ */
+void destroyBlastedDataList(Blasted_data_list *const bdv);
 
 /// Recursive function to set the BLASTed preconditioner wherever possible in the entire solver stack
 /** Finds shell PCs and sets BLASTed as the preconditioner for each of them.
@@ -76,14 +85,22 @@ void destroyBlastedDataVec(Blasted_data_vec *const bdv);
  *
  * \param ksp A PETSc solver context
  * \param bctx The BLASTed structures that store required settings and data; must be created by
- * \ref newBlastedDataVec. It should later be deleted by the user, calling \ref destroyBlastedDataVec
+ * \ref newBlastedDataList. It should later be deleted by the user, calling \ref destroyBlastedDataList
  *   after the ksp has been destroyed.
- * \param level The entry in the BLASTed data vector to use - the user should set this to zero.
+ * \param level The entry in the BLASTed data list to use - the user should set this to zero.
  */
-PetscErrorCode setup_blasted_stack(KSP ksp, Blasted_data_vec *const bctx, const int level);
+PetscErrorCode setup_blasted_stack(KSP ksp, Blasted_data_list *const bctx, const int level);
 
 /// Create a new BLASTed data context
 Blasted_data newBlastedDataContext();
+
+/// Adds a new node to the list of Blasted contexts
+/** Adds the new node to the head of the list; ie, Blasted_data_list::ctxlist points to the new node
+ * at the end of this function.
+ * \param bdl The list to add a node to
+ * \param bd The new node is initialized to a copy of this
+ */
+void appendBlastedDataContext(Blasted_data_list *const bdl, const Blasted_data bd);
 
 /// Configure local PCs to enable BLASTed preconditioners
 /** Instead of using this directly, consider using \ref setup_blasted_stack instead.

@@ -183,7 +183,7 @@ int main(int argc, char* argv[])
 		// Operators MUST be set before extracting sub KSPs!
 		ierr = KSPSetOperators(ksp, A, A); CHKERRQ(ierr);
 		
-		Blasted_data_vec bctx = newBlastedDataVec();
+		Blasted_data_list bctx = newBlastedDataList();
 		ierr = setup_blasted_stack(ksp, &bctx, 0); CHKERRQ(ierr);
 		
 		ierr = KSPSolve(ksp, b, u); CHKERRQ(ierr);
@@ -207,7 +207,7 @@ int main(int argc, char* argv[])
 		}
 
 		ierr = KSPDestroy(&ksp); CHKERRQ(ierr);
-		destroyBlastedDataVec(&bctx);
+		destroyBlastedDataList(&bctx);
 	}
 
 	if(rank == 0)
