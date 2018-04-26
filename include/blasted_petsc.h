@@ -132,7 +132,7 @@ PetscErrorCode cleanup_blasted(PC pc);
  */
 PetscErrorCode compute_preconditioner_blasted(PC pc);
 
-/// Applies the local preconditioner by Jacobi iterations in parallel
+/// Applies the local preconditioner by asynchronous iterations in parallel
 /** \param pc is the PETSc local preconditioner context
  * \param r is the residual vector, ie, the RHS
  * \param z is the unknown vector to be computed.
@@ -140,6 +140,11 @@ PetscErrorCode compute_preconditioner_blasted(PC pc);
  * NOTE: It is assumed that the length of r and z on the local process is the same.
  */
 PetscErrorCode apply_local_blasted(PC pc, Vec r, Vec z);
+
+/// Applies a local asynchronous relaxation in parallel
+PetscErrorCode relax_local_blasted(PC pc, Vec rhs, Vec x, Vec w, 
+		PetscReal rtol, PetscReal abstol, PetscReal dtol, PetscInt it, PetscBool guesszero, 
+		PetscInt *outits, PCRichardsonConvergedReason *reason);
 
 #ifdef __cplusplus
 }

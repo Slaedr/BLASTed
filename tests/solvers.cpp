@@ -236,7 +236,7 @@ int BiCGSTAB::solve(const a_real *const res, a_real *const __restrict du) const
 		prec->apply(p.data(), y.data());
 		
 		// v <- A y
-		A->apply(1.0,y.data(), v.data());
+		A->apply(y.data(), v.data());
 
 		alpha = rho/dot(N, rhat.data(),v.data());
 
@@ -247,7 +247,7 @@ int BiCGSTAB::solve(const a_real *const res, a_real *const __restrict du) const
 		prec->apply(r.data(), z.data());
 		
 		// t <- A z
-		A->apply(1.0,z.data(), t.data());
+		A->apply(z.data(), t.data());
 
 		// For the left-preconditioned variant: g <- Minv t
 		//prec->apply(t.data(),g.data());

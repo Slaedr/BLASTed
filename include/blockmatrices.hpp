@@ -30,7 +30,11 @@ using Eigen::Matrix;
 template <typename scalar>
 using Vector = Matrix<scalar,Dynamic,1>;
 
-/// A collection of data that represents an immutable compressed sparse block-row square matrix
+/// An (almost-)immutable compressed sparse block-row square matrix
+/** The pointers and the number of (block-)rows are non-const to allow re-wrapping of another matrix.
+ * Since objects of this type are used as members of other classes, we allow those classes to handle
+ * mutability (or lack thereof) through the use of const member functions.
+ */
 template <typename scalar, typename index>
 struct CRawBSRMatrix
 {
@@ -41,7 +45,7 @@ struct CRawBSRMatrix
 	index nbrows;
 };
 
-/// A collection of data that represents a compressed sparse block-row square matrix
+/// A compressed sparse block-row square matrix
 template <typename scalar, typename index>
 struct RawBSRMatrix
 {
@@ -62,10 +66,20 @@ void destroyCRawBSRMatrix(CRawBSRMatrix<scalar,index>& rmat);
 template<typename scalar, typename index>
 class SRMatrixView : public MatrixView<scalar, index>
 {
+	static_assert(std::numeric_limits<index>::is_signed, "Signed index type required!");
+	static_assert(std::numeric_limits<index>::is_integer, "Integer index type required!");
+
 public:
-	SRMatrixView(const StorageType storagetype) 
-		: MatrixView<scalar,index>(storagetype)
-	{ }
+	/// A constructor which just wraps a BSR matrix described by 4 arrays
+	/** \param[in] n_brows Number of block-rows
+	 * \param[in] brptrs Array of block-row pointers
+	 * \param[in] bcinds Array of block-column indices
+	 * \param[in] values Non-zero values
+	 * \param[in] dinds Array of pointers to diagonal blocks
+	 * \param[in] storagetype The type of sparse representation of the matrix data
+	 */
+	SRMatrixView(const index n_brows, const index *const brptrs, const index *const bcinds, 
+			const scalar *const values, const index *const diaginds, const StorageType storagetype);
 	
 	/// Just wraps a sparse-row matrix described by 4 arrays
 	/** \param[in] n_brows Number of (block-)rows
@@ -79,6 +93,10 @@ public:
 	virtual void wrap(const index n_brows, const index *const brptrs,
 		const index *const bcinds, const scalar *const values, const index *const dinds) = 0;
 
+protected:
+
+	/// The SR matrix wrapper
+	CRawBSRMatrix<scalar,index> mat;
 };
 
 /// A BSR matrix that is formed by wrapping a pre-existing read-only matrix
@@ -126,8 +144,8 @@ public:
 	void wrap(const index n_brows, const index *const brptrs,
 		const index *const bcinds, const scalar *const values, const index *const dinds);
 
-	/// Computes the matrix vector product of this matrix with one vector-- y := a Ax
-	virtual void apply(const scalar a, const scalar *const x, scalar *const __restrict y) const;
+	/// Computes the matrix vector product of this matrix with one vector-- y := Ax
+	virtual void apply(const scalar *const x, scalar *const __restrict y) const;
 
 	/// Almost the BLAS gemv: computes z := a Ax + by for  scalars a and b
 	/** \warning x must not alias z.
@@ -175,8 +193,7 @@ public:
 
 protected:
 
-	/// The BSR matrix wrapper
-	CRawBSRMatrix<scalar,index> mat;
+	using SRMatrixView<scalar,index>::mat;
 
 	/// Storage for factored or inverted diagonal blocks
 	scalar *dblocks;
@@ -242,8 +259,8 @@ public:
 	void wrap(const index n_brows, const index *const brptrs,
 		const index *const bcinds, const scalar *const values, const index *const dinds);
 
-	/// Computes the matrix vector product of this matrix with one vector-- y := a Ax
-	virtual void apply(const scalar a, const scalar *const x, scalar *const __restrict y) const;
+	/// Computes the matrix vector product of this matrix with one vector-- y := Ax
+	virtual void apply(const scalar *const x, scalar *const __restrict y) const;
 
 	/// Almost the BLAS gemv: computes z := a Ax + by for  scalars a and b
 	virtual void gemv3(const scalar a, const scalar *const __restrict x, 
@@ -277,7 +294,7 @@ public:
 protected:
 	
 	/// The CSR matrix data	
-	CRawBSRMatrix<scalar,index> mat;
+	using SRMatrixView<scalar,index>::mat;
 
 	/// Storage for factored or inverted diagonal blocks
 	scalar* dblocks;
@@ -396,8 +413,8 @@ public:
 	/// Scales the matrix by a scalar
 	void scaleAll(const scalar factor);
 
-	/// Computes the matrix vector product of this matrix with one vector-- y := a Ax
-	virtual void apply(const scalar a, const scalar *const x, scalar *const __restrict y) const;
+	/// Computes the matrix vector product of this matrix with one vector-- y := Ax
+	virtual void apply(const scalar *const x, scalar *const __restrict y) const;
 
 	/// Almost the BLAS gemv: computes z := a Ax + by for  scalars a and b
 	/** \warning x must not alias z.
@@ -560,8 +577,8 @@ public:
 	/// Scales the matrix by a scalar
 	void scaleAll(const scalar factor);
 
-	/// Computes the matrix vector product of this matrix with one vector-- y := a Ax
-	virtual void apply(const scalar a, const scalar *const x, scalar *const __restrict y) const;
+	/// Computes the matrix vector product of this matrix with one vector-- y := Ax
+	virtual void apply(const scalar *const x, scalar *const __restrict y) const;
 
 	/// Almost the BLAS gemv: computes z := a Ax + by for  scalars a and b
 	virtual void gemv3(const scalar a, const scalar *const __restrict x, 

@@ -389,6 +389,14 @@ PetscErrorCode apply_local_blasted(PC pc, Vec r, Vec z)
 	return ierr;
 }
 
+PetscErrorCode relax_local_blasted(PC pc, Vec rhs, Vec x, Vec w, 
+		const PetscReal rtol, const PetscReal abstol, const PetscReal dtol, const PetscInt it, 
+		const PetscBool guesszero, PetscInt *const outits, PCRichardsonConvergedReason *const reason)
+{
+	int ierr = 0;
+	return ierr;
+}
+
 PetscErrorCode setup_blasted_stack(KSP ksp, Blasted_data_list *const bctv, const int ictx)
 {
 	PetscErrorCode ierr = 0;

@@ -11,11 +11,11 @@
 namespace blasted {
 
 /// Encodes the type of storage of matrix data
-enum StorageType { CSR, BSR, COO, VIEWCSR, VIEWBSR, MATRIXFREE, OTHER };
+enum StorageType { SPARSEROW, CSR, BSR, COO, VIEWCSR, VIEWBSR, MATRIXFREE, OTHER };
 
 /// A generic abstract (finite-dimensional) linear operator
 /** It is only required to have a dimension and
- * provide matrix-vector multiplication
+ * provide its application.
  */
 template <typename scalar, typename index>
 class AbstractLinearOperator
@@ -32,9 +32,8 @@ public:
 	/// Returns the dimension (number of rows) of the operator
 	virtual index dim() const = 0;
 
-	/// To compute the matrix vector product of this matrix with one vector, scaled by a constant
-	virtual void apply(const scalar a, const scalar *const x, 
-			scalar *const __restrict y) const = 0;
+	/// To compute the matrix vector product of this matrix with one vector
+	virtual void apply(const scalar *const x, scalar *const __restrict y) const = 0;
 
 protected:
 	/// Kind of storage that is used
@@ -97,9 +96,8 @@ public:
 	/// Scales all entries of the matrix by scalar
 	virtual void scaleAll(const scalar factor) = 0;
 
-	/// Computes the matrix vector product of this matrix with one vector-- y := a Ax
-	virtual void apply(const scalar a, const scalar *const x, 
-			scalar *const __restrict y) const = 0;
+	/// Computes the matrix vector product of this matrix with one vector-- y := Ax
+	virtual void apply(const scalar *const x, scalar *const __restrict y) const = 0;
 
 	/// Almost the BLAS gemv: computes z := a Ax + by for  scalars a and b
 	virtual void gemv3(const scalar a, const scalar *const __restrict x, 
@@ -142,8 +140,7 @@ public:
 	virtual ~MatrixView() { }
 
 	/// Computes the matrix vector product of this matrix with one vector-- y := a Ax
-	virtual void apply(const scalar a, const scalar *const x, 
-			scalar *const __restrict y) const = 0;
+	virtual void apply(const scalar *const x, scalar *const __restrict y) const = 0;
 
 	/// Almost the BLAS gemv: computes z := a Ax + by for  scalars a and b
 	virtual void gemv3(const scalar a, const scalar *const __restrict x, 

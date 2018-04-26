@@ -55,8 +55,7 @@ void destroyRawBSRMatrix(RawBSRMatrix<scalar,index>& rmat) {
 template <typename scalar, typename index, int bs, class Mattype>
 inline
 void block_matrix_apply(const CRawBSRMatrix<scalar,index> *const mat,
-		const scalar a, const scalar *const xx,
-		scalar *const __restrict yy)
+		const scalar *const xx, scalar *const __restrict yy)
 {
 	Eigen::Map<const Vector<scalar>> x(xx, mat->nbrows*bs);
 	Eigen::Map<Vector<scalar>> y(yy, mat->nbrows*bs);
@@ -82,10 +81,10 @@ void block_matrix_apply(const CRawBSRMatrix<scalar,index> *const mat,
 			const index jcol = mat->bcolind[jj];
 			if(Mattype::IsRowMajor)	
 				y.SEG<bs>(irow*bs).noalias() 
-					+= a * data.BLK<bs,bs>(jj*bs,0) * x.SEG<bs>(jcol*bs);
+					+= data.BLK<bs,bs>(jj*bs,0) * x.SEG<bs>(jcol*bs);
 			else
 				y.SEG<bs>(irow*bs).noalias() 
-					+= a * data.BLK<bs,bs>(0,jj*bs) * x.SEG<bs>(jcol*bs);
+					+= data.BLK<bs,bs>(0,jj*bs) * x.SEG<bs>(jcol*bs);
 		}
 	}
 }
@@ -499,7 +498,7 @@ void block_ilu0_apply( const CRawBSRMatrix<scalar,index> *const mat,
 template <typename scalar, typename index>
 inline
 void matrix_apply(const CRawBSRMatrix<scalar,index> *const mat,
-		const scalar a, const scalar *const xx, scalar *const __restrict yy) 
+		const scalar *const xx, scalar *const __restrict yy) 
 {
 #pragma omp parallel for default(shared)
 	for(index irow = 0; irow < mat->nbrows; irow++)
@@ -508,7 +507,7 @@ void matrix_apply(const CRawBSRMatrix<scalar,index> *const mat,
 
 		for(index jj = mat->browptr[irow]; jj < mat->browptr[irow+1]; jj++)
 		{
-			yy[irow] += a * mat->vals[jj] * xx[mat->bcolind[jj]];
+			yy[irow] += mat->vals[jj] * xx[mat->bcolind[jj]];
 		}
 	}
 }
@@ -738,12 +737,20 @@ void scalar_ilu0_apply(const CRawBSRMatrix<scalar,index> *const mat,
 
 ////////////////////////////////////////////////////////////////////////////////////////
 
+template<typename scalar, typename index>
+SRMatrixView<scalar,index>::SRMatrixView(const index n_brows, 
+		const index *const brptrs, const index *const bcinds, const scalar *const values, 
+		const index *const diaginds,const StorageType storagetype) 
+	: MatrixView<scalar,index>(storagetype),
+	  mat{brptrs, bcinds, values, diaginds, n_brows}
+{ }
+
 template <typename scalar, typename index, int bs, StorageOptions stor>
 BSRMatrixView<scalar,index,bs,stor>::BSRMatrixView(const index n_brows, const index *const brptrs,
 		const index *const bcinds, const scalar *const values, const index *const diaginds,
 		const int n_buildsweeps, const int n_applysweeps)
-	: SRMatrixView<scalar,index>(BSR),
-	  mat{brptrs, bcinds, values, diaginds, n_brows}, dblocks{nullptr}, iluvals{nullptr},
+	: SRMatrixView<scalar,index>(n_brows, brptrs, bcinds, values, diaginds, VIEWBSR), 
+	  dblocks{nullptr}, iluvals{nullptr},
 	  nbuildsweeps{n_buildsweeps}, napplysweeps{n_applysweeps}, thread_chunk_size{500}
 { }
 
@@ -770,13 +777,13 @@ BSRMatrixView<scalar, index, bs,stor>::~BSRMatrixView()
 }
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
-void BSRMatrixView<scalar,index,bs,stor>::apply(const scalar a, const scalar *const xx,
+void BSRMatrixView<scalar,index,bs,stor>::apply(const scalar *const xx,
                                        scalar *const __restrict yy) const
 {
 	if(stor == RowMajor)
-		block_matrix_apply<scalar,index,bs,Matrix<scalar,Dynamic,bs,RowMajor>>(&mat, a, xx, yy);
+		block_matrix_apply<scalar,index,bs,Matrix<scalar,Dynamic,bs,RowMajor>>(&mat, xx, yy);
 	else
-		block_matrix_apply<scalar,index,bs,Matrix<scalar,bs,Dynamic,ColMajor>>(&mat, a, xx, yy);
+		block_matrix_apply<scalar,index,bs,Matrix<scalar,bs,Dynamic,ColMajor>>(&mat, xx, yy);
 }
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
@@ -913,8 +920,7 @@ template <typename scalar, typename index>
 CSRMatrixView<scalar,index>::CSRMatrixView(const index nrows, const index *const brptrs,
 		const index *const bcinds, const scalar *const values, const index *const diaginds,
 		const int n_buildsweeps, const int n_applysweeps)
-	: SRMatrixView<scalar,index>(CSR),
-	mat{brptrs,bcinds,values,diaginds,nrows},
+	: SRMatrixView<scalar,index>(nrows, brptrs, bcinds, values, diaginds, VIEWCSR), 
 	dblocks(nullptr), iluvals(nullptr), scale(nullptr), ytemp(nullptr),
 	nbuildsweeps{n_buildsweeps}, napplysweeps{n_applysweeps}, thread_chunk_size{800}
 { }
@@ -945,10 +951,10 @@ void CSRMatrixView<scalar,index>::wrap(const index n_brows, const index *const b
 }
 
 template <typename scalar, typename index>
-void CSRMatrixView<scalar,index>::apply(const scalar a, const scalar *const xx,
+void CSRMatrixView<scalar,index>::apply(const scalar *const xx,
                                        scalar *const __restrict yy) const
 {
-	matrix_apply(&mat, a, xx, yy);
+	matrix_apply(&mat, xx, yy);
 }
 
 template <typename scalar, typename index>
@@ -1230,12 +1236,11 @@ void BSRMatrix<scalar,index,bs>::scaleAll(const scalar factor)
 }
 
 template <typename scalar, typename index, int bs>
-void BSRMatrix<scalar,index,bs>::apply(const scalar a, const scalar *const xx,
+void BSRMatrix<scalar,index,bs>::apply(const scalar *const xx,
                                        scalar *const __restrict yy) const
 {
 	block_matrix_apply<scalar,index,bs,Matrix<scalar,Dynamic,bs,RowMajor>>(
-			reinterpret_cast<const CRawBSRMatrix<scalar,index>*>(&mat), 
-			a, xx, yy);
+			reinterpret_cast<const CRawBSRMatrix<scalar,index>*>(&mat), xx, yy);
 }
 
 template <typename scalar, typename index, int bs>
@@ -1327,33 +1332,6 @@ void BSRMatrix<scalar,index,bs>::precILUApply(const scalar *const r,
 		iluvals.data(), ytemp.data(), napplysweeps, thread_chunk_size, 1,
 		r, z);
 }
-
-/*template <typename scalar, typename index, int bs>
-void BSRMatrix<scalar,index,bs>::printDiagnostic(const char choice) const
-{
-	std::ofstream fout("blockmatrix.txt");
-	for(index i = 0; i < mat.nbrows*bs; i++)
-	{
-		for(index j = 0; j < mat.nbrows*bs; j++)
-		{
-			index brow = i/bs; index bcol = j/bs;
-			int lcol = j%bs;
-			bool found = false;
-			for(index jj = mat.browptr[brow]; jj < mat.browptr[brow+1]; jj++)
-				if(mat.bcolind[jj] == bcol)
-				{
-					//fout << " " << mat.vals[jj + lrow*bs + lcol];
-					fout << " " << mat.bcolind[jj]*bs+lcol+1;
-					found = true;
-					break;
-				}
-			if(!found)
-				fout << " 0";
-		}
-		fout << '\n';
-	}
-	fout.close();
-}*/
 
 ////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -1565,10 +1543,10 @@ void BSRMatrix<scalar,index,1>::scaleAll(const scalar factor)
 }
 
 template <typename scalar, typename index>
-void BSRMatrix<scalar,index,1>::apply(const scalar a, const scalar *const xx,
+void BSRMatrix<scalar,index,1>::apply(const scalar *const xx,
                                        scalar *const __restrict yy) const
 {
-	matrix_apply(reinterpret_cast<const CRawBSRMatrix<scalar,index>*>(&mat), a, xx, yy);
+	matrix_apply(reinterpret_cast<const CRawBSRMatrix<scalar,index>*>(&mat), xx, yy);
 }
 
 template <typename scalar, typename index>
@@ -1666,30 +1644,6 @@ void BSRMatrix<scalar,index,1>::precILUApply(const scalar *const __restrict ra,
 		iluvals, scale, ytemp, napplysweeps, thread_chunk_size, true,
 		ra, za);
 }
-
-/*template <typename scalar, typename index>
-void BSRMatrix<scalar,index,1>::printDiagnostic(const char choice) const
-{
-	std::ofstream fout("pointmatrix.txt");
-	for(index i = 0; i < mat.nbrows; i++)
-	{
-		for(index j = 0; j < mat.nbrows; j++)
-		{
-			bool found = false;
-			for(index jj = mat.browptr[i]; jj < mat.browptr[i+1]; jj++)
-				if(mat.bcolind[jj] == j)
-				{
-					fout << " " << mat.bcolind[jj]+1;
-					found = true;
-					break;
-				}
-			if(!found)
-				fout << " 0";
-		}
-		fout << '\n';
-	}
-	fout.close();
-}*/
 
 }
 

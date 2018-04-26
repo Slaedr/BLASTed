@@ -117,7 +117,7 @@ int testCSRMatMult(const std::string type,
 				rm.browptr,rm.bcolind,rm.vals,rm.diagind,1,1);
 	
 
-	testmat->apply(1.0, x.data(), y.data());
+	testmat->apply(x.data(), y.data());
 
 	for(int i = 0; i < rm.nbrows; i++) {
 		assert(std::fabs(y[i]-ans[i]) < 10*DBL_EPSILON);
