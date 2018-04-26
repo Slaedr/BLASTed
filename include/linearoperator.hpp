@@ -11,7 +11,7 @@
 namespace blasted {
 
 /// Encodes the type of storage of matrix data
-enum StorageType { SPARSEROW, CSR, BSR, COO, VIEWCSR, VIEWBSR, MATRIXFREE, OTHER };
+enum StorageType { SPARSEROW, CSR, BSR, VIEWCSR, VIEWBSR, COO, MATRIXFREE, OTHER };
 
 /// A generic abstract (finite-dimensional) linear operator
 /** It is only required to have a dimension and
