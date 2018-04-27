@@ -2,6 +2,9 @@ add_library(coomatrix coomatrix.cpp)
 add_library(blockmatrices csrmatrix.cpp bsrmatrix.cpp)
 set_property(TARGET blockmatrices PROPERTY POSITION_INDEPENDENT_CODE ON)
 
+add_library(solverops solverops_jacobi.cpp)
+set_property(TARGET solverops PROPERTY POSITION_INDEPENDENT_CODE ON)
+
 if(WITH_PETSC)
 	#find_package(MPI REQUIRED)
 

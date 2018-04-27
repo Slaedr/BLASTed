@@ -1,10 +1,10 @@
-/** \file solverops.hpp
+/** \file solverops_base.hpp
  * \brief Header for (local) thread-parallel preconditioners and iterations
  * \author Aditya Kashi
  */
 
-#ifndef BLASTED_SOLVEROPS_H
-#define BLASTED_SOLVEROPS_H
+#ifndef BLASTED_SOLVEROPS_BASE_H
+#define BLASTED_SOLVEROPS_BASE_H
 
 #include "blockmatrices.hpp"
 
@@ -15,7 +15,7 @@ namespace blasted {
  * a single iteration of any linear iterative solver.
  */
 template<typename scalar, typename index>
-class Preconditioner : public AbstractLinearOperator
+class Preconditioner : public AbstractLinearOperator<scalar,index>
 {
 	static_assert(std::numeric_limits<index>::is_signed, "Signed index type required!");
 	static_assert(std::numeric_limits<index>::is_integer, "Integer index type required!");
@@ -73,7 +73,7 @@ protected:
 	StorageType _type;
 
 	/// Matrix wrapper
-	CRawBSRMatrix mat;
+	CRawBSRMatrix<scalar,index> mat;
 };
 
 }

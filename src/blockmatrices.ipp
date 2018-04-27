@@ -20,7 +20,8 @@
  */
 
 #include <blockmatrices.hpp>
-#include "preckernels.hpp"
+#include "kernels/kernels_sgs.hpp"
+#include "kernels/kernels_ilu0.hpp"
 
 #include <Eigen/LU>
 
@@ -590,7 +591,7 @@ void scalar_sgs_apply(const CRawBSRMatrix<scalar,index> *const mat,
 #pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size) if(usethreads)
 		for(index irow = 0; irow < mat->nbrows; irow++)
 		{
-			ytemp[irow] = scalar_ftri(mat->vals, mat->bcolind, mat->browptr[irow], mat->diagind[irow],
+			ytemp[irow] = scalar_fgs(mat->vals, mat->bcolind, mat->browptr[irow], mat->diagind[irow],
 					dblocks[irow], rr[irow], ytemp);
 		}
 	}
@@ -602,7 +603,7 @@ void scalar_sgs_apply(const CRawBSRMatrix<scalar,index> *const mat,
 #pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size) if(usethreads)
 		for(index irow = mat->nbrows-1; irow >= 0; irow--)
 		{
-			zz[irow] = scalar_btri(mat->vals, mat->bcolind, mat->diagind[irow], mat->browptr[irow+1],
+			zz[irow] = scalar_bgs(mat->vals, mat->bcolind, mat->diagind[irow], mat->browptr[irow+1],
 					mat->vals[mat->diagind[irow]], dblocks[irow], ytemp[irow], zz);
 		}
 	}
