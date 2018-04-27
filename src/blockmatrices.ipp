@@ -575,7 +575,7 @@ void scalar_sgs_setup(const CRawBSRMatrix<scalar,index> *const mat,
 }
 
 /** \warning This implementation (with 1 thread) is NOT the same as PETSc's - not even mathematically.
- * PETSc's implementation is WAY better.
+ * PETSc's implementation seems better.
  */
 template <typename scalar, typename index>
 inline
