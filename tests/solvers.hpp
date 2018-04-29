@@ -7,99 +7,12 @@
 #ifndef BLASTED_SOLVERS_H
 #define BLASTED_SOLVERS_H
 
-#include <linearoperator.hpp>
+#include <solverops_base.hpp>
 
 namespace blasted {
 
 typedef int a_int;
 typedef double a_real;
-
-/// Preconditioner, ie, performs one iteration to solve M z = r
-/** Note that subclasses do not directly perform any computation but
- * delegate all computation to the relevant subclass of AbstractMatrix. 
- * As such, the precise preconditioning operation applied depends on 
- * which kind of matrix the LHS is stored as.
- */
-class Preconditioner
-{
-protected:
-	MatrixView<a_real,a_int>* A;
-
-public:
-	Preconditioner(MatrixView<a_real,a_int> *const op)
-		: A(op)
-	{ }
-	
-	virtual ~Preconditioner()
-	{ }
-	
-	/// Computes the preconditioning matrix M
-	virtual void compute() = 0;
-
-	/// Applies the preconditioner Mz=r
-	/** \param[in] r The right hand side vector
-	 * \param [in|out] z Contains the solution
-	 */
-	virtual void apply(const a_real *const r, 
-			a_real *const z) = 0;
-};
-
-/// Do-nothing preconditioner
-/** The preconditioner is the identity matrix.
- */
-class NoPrec : public Preconditioner
-{
-	using Preconditioner::A;
-
-public:
-	NoPrec(MatrixView<a_real,a_int> *const op);
-	
-	void compute();
-	
-	void apply(const a_real *const r, a_real *const z);
-};
-
-/// Jacobi preconditioner
-class Jacobi : public Preconditioner
-{
-	using Preconditioner::A;
-
-public:
-	Jacobi(MatrixView<a_real,a_int> *const op);
-	
-	void compute();
-
-	void apply(const a_real *const r, a_real *const __restrict z); 
-};
-
-/// Symmetric Gauss-Seidel preconditioner
-class SGS : public Preconditioner
-{
-	using Preconditioner::A;
-
-public:
-	SGS(MatrixView<a_real,a_int> *const op);
-
-	/// Sets D,L,U and inverts each D; also allocates temp storage
-	void compute();
-
-	void apply(const a_real *const r, a_real *const __restrict z);
-};
-
-/// ILU0 preconditioner
-class ILU0 : public Preconditioner
-{
-	using Preconditioner::A;
-
-public:
-	ILU0(MatrixView<a_real,a_int> *const op);
-
-	/// Sets D,L,U and computes the ILU factorization
-	void compute();
-	
-	/// Solves Mz=r, where M is the preconditioner
-	void apply(const a_real *const r, a_real *const __restrict z);
-};
 
 /// Abstract preconditioned iterative solver
 class IterativeSolverBase
@@ -133,11 +46,11 @@ public:
 class IterativeSolver : public IterativeSolverBase
 {
 protected:
-	MatrixView<a_real,a_int> *const A;        ///< The LHS matrix context
-	Preconditioner *const prec;               ///< Preconditioner context
+	MatrixView<a_real,a_int>& A;            ///< The LHS matrix context
+	Preconditioner<a_real,a_int>& prec;     ///< Preconditioner context
 
 public:
-	IterativeSolver(MatrixView<a_real,a_int>* const mat, Preconditioner *const precond);
+	IterativeSolver(MatrixView<a_real,a_int>& mat, Preconditioner<a_real,a_int>& precond);
 
 	/// Compute the preconditioner
 	virtual void setupPreconditioner();
@@ -164,7 +77,7 @@ class RichardsonSolver : public IterativeSolver
 	using IterativeSolver::prec;
 
 public:
-	RichardsonSolver(MatrixView<a_real,a_int>* const mat, Preconditioner *const precond);
+	RichardsonSolver(MatrixView<a_real,a_int>& mat, Preconditioner<a_real,a_int>& precond);
 
 	/** \param[in] res The right hand side vector
 	 * \param[in] du The solution vector which is assumed to contain an initial solution
@@ -187,7 +100,7 @@ class BiCGSTAB : public IterativeSolver
 	using IterativeSolver::prec;
 
 public:
-	BiCGSTAB( MatrixView<a_real,a_int>* const mat, Preconditioner *const precond);
+	BiCGSTAB(MatrixView<a_real,a_int>& mat, Preconditioner<a_real,a_int>& precond);
 
 	int solve(const a_real *const res, a_real *const __restrict du) const;
 };

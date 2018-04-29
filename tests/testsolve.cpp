@@ -7,8 +7,14 @@
 #undef NDEBUG
 
 #include <iostream>
+
 #include <blockmatrices.hpp>
 #include <coomatrix.hpp>
+#include <solverfactory.hpp>
+#include <solverops_jacobi.hpp>
+#include <solverops_sgs.hpp>
+#include <solverops_ilu0.hpp>
+
 #include "testsolve.hpp"
 #include "solvers.hpp"
 
@@ -29,7 +35,8 @@ int testSolve(const std::string solvertype, const std::string precontype,
 	RawBSRMatrix<double,int> rm;
 	COOMatrix<double,int> coom;
 	coom.readMatrixMarket(matfile);
-	if(mattype == "csr")
+	//if(mattype == "csr")
+	if (bs == 1)
 		coom.convertToCSR(&rm);
 	else
 		if(storageorder == "rowmajor")
@@ -42,7 +49,8 @@ int testSolve(const std::string solvertype, const std::string precontype,
 	std::vector<double> x(rm.nbrows*bs,0.0);
 
 	MatrixView<double,int>* mat = nullptr;
-	if(mattype == "csr")
+	//if(mattype == "csr")
+	if (bs==1)
 		mat = new CSRMatrixView<double,int>(rm.nbrows,
 				rm.browptr,rm.bcolind,rm.vals,rm.diagind,nbuildswps,napplyswps);
 	else
@@ -53,25 +61,18 @@ int testSolve(const std::string solvertype, const std::string precontype,
 			mat = new BSRMatrixView<double,int,bs,ColMajor>(rm.nbrows,
 					rm.browptr,rm.bcolind,rm.vals,rm.diagind,nbuildswps,napplyswps);
 
-	Preconditioner* prec = nullptr;
-	if(precontype == "jacobi")
-		prec = new Jacobi(mat);
-	else if(precontype == "sgs")
-		prec = new SGS(mat);
-	else if(precontype == "ilu0")
-		prec = new ILU0(mat);
-	else if(precontype == "none")
-		prec = new NoPrec(mat);
-	else {
-		std::cout << " ! Invalid preconditioner option!\n";
-		std::abort();
-	}
+	// construct preconditioner context
+	Preconditioner<double,int>* prec = nullptr;
+	std::map<std::string,int> iparamlist;
+	std::map<std::string,double> fparamlist;
+	iparamlist[blasted::nbuildsweeps] = nbuildswps; iparamlist[blasted::napplysweeps] = napplyswps;
+	prec = create_preconditioner<double,int>(precontype, bs, storageorder, iparamlist, fparamlist);
 
 	IterativeSolver* solver = nullptr;
 	if(solvertype == "richardson")
-		solver = new RichardsonSolver(mat,prec);
+		solver = new RichardsonSolver(*mat,*prec);
 	else if(solvertype == "bcgs")
-		solver = new BiCGSTAB(mat,prec);
+		solver = new BiCGSTAB(*mat,*prec);
 	else {
 		std::cout << " ! Invalid solver option!\n";
 		std::abort();
@@ -99,14 +100,21 @@ int testSolve(const std::string solvertype, const std::string precontype,
 }
 
 template
-int testSolve<4>(const std::string solvertype, const std::string precontype,
+int testSolve<1>(const std::string solvertype, const std::string precontype,
 		const std::string mattype, const std::string storageorder, const double testtol,
 		const std::string matfile, const std::string xfile, const std::string bfile,
 		const double tol, const int maxiter, const int nbuildswps, const int napplyswps);
 
 template
+int testSolve<4>(const std::string solvertype, const std::string precontype,
+		const std::string mattype, const std::string storageorder, const double testtol,
+		const std::string matfile, const std::string xfile, const std::string bfile,
+		const double tol, const int maxiter, const int nbuildswps, const int napplyswps);
+
+/*template
 int testSolve<7>(const std::string solvertype, const std::string precontype,
 		const std::string mattype, const std::string storageorder, const double testtol,
 		const std::string matfile, const std::string xfile, const std::string bfile,
 		const double tol, const int maxiter, const int nbuildswps, const int napplyswps);
+*/
 

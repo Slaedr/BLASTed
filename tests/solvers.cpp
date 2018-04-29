@@ -49,6 +49,7 @@ inline a_real dot(const a_int N, const a_real *const a,
 	return sum;
 }
 
+#if 0
 NoPrec::NoPrec(MatrixView<a_real,a_int> *const op) : Preconditioner(op)
 { }
 
@@ -93,6 +94,7 @@ void ILU0::compute() {
 void ILU0::apply(const a_real *const r, a_real *const __restrict z) {
 	A->precILUApply(r, z);
 }
+#endif
 
 IterativeSolverBase::IterativeSolverBase() {
 	resetRunTimes();
@@ -112,7 +114,7 @@ void IterativeSolverBase::getRunTimes(double& wall_time, double& cpu_time) const
 	wall_time = walltime; cpu_time = cputime;
 }
 
-IterativeSolver::IterativeSolver(MatrixView<a_real,a_int>* const mat, Preconditioner *const precond)
+IterativeSolver::IterativeSolver(MatrixView<a_real,a_int>& mat, Preconditioner<a_real,a_int>& precond)
 	: A(mat), prec(precond)
 { }
 
@@ -123,7 +125,7 @@ void IterativeSolver::setupPreconditioner()
 	double initialwtime = (double)time1.tv_sec + (double)time1.tv_usec * 1.0e-6;
 	double initialctime = (double)clock() / (double)CLOCKS_PER_SEC;
 	
-	prec->compute();
+	prec.compute();
 	
 	gettimeofday(&time2, NULL);
 	double finalwtime = (double)time2.tv_sec + (double)time2.tv_usec * 1.0e-6;
@@ -131,7 +133,7 @@ void IterativeSolver::setupPreconditioner()
 	walltime += (finalwtime-initialwtime); cputime += (finalctime-initialctime);
 }
 
-RichardsonSolver::RichardsonSolver(MatrixView<a_real,a_int>* const mat, Preconditioner *const precond)
+RichardsonSolver::RichardsonSolver(MatrixView<a_real,a_int>& mat, Preconditioner<a_real,a_int>& precond)
 	: IterativeSolver(mat, precond)
 { }
 
@@ -149,22 +151,22 @@ int RichardsonSolver::solve(const a_real *const res, a_real *const __restrict du
 
 	a_real resnorm=0;
 	int step = 0;
-	const a_int N = A->dim();
-	std::vector<a_real> s(A->dim());
-	std::vector<a_real> ddu(A->dim());
+	const a_int N = A.dim();
+	std::vector<a_real> s(A.dim());
+	std::vector<a_real> ddu(A.dim());
 
 	// norm of RHS
 	const a_real bnorm = std::sqrt(dot(N, res, res));
 
 	while(step < maxiter)
 	{
-		A->gemv3(-1.0,du, 1.0,res, s.data());
+		A.gemv3(-1.0,du, 1.0,res, s.data());
 
 		resnorm = std::sqrt(dot(N, s.data(),s.data()));
 		//std::cout << "Rel res norm = " << resnorm/bnorm << std::endl;
 		if(resnorm/bnorm < tol) break;
 
-		prec->apply(s.data(), ddu.data());
+		prec.apply(s.data(), ddu.data());
 
 		axpby(N, 1.0, du, 1.0, ddu.data());
 
@@ -179,7 +181,7 @@ int RichardsonSolver::solve(const a_real *const res, a_real *const __restrict du
 	return step;
 }
 
-BiCGSTAB::BiCGSTAB(MatrixView<a_real,a_int> *const mat, Preconditioner *const precond)
+BiCGSTAB::BiCGSTAB(MatrixView<a_real,a_int>& mat, Preconditioner<a_real,a_int>& precond)
 	: IterativeSolver(mat, precond)
 { }
 
@@ -187,7 +189,7 @@ int BiCGSTAB::solve(const a_real *const res, a_real *const __restrict du) const
 {
 	a_real resnorm = 100.0, bnorm = 0;
 	int step = 0;
-	const a_int N = A->dim();
+	const a_int N = A.dim();
 
 	a_real omega = 1.0, rho, rhoold = 1.0, alpha = 1.0, beta;
 	std::vector<a_real> rhat(N);
@@ -211,7 +213,7 @@ int BiCGSTAB::solve(const a_real *const res, a_real *const __restrict du) const
 	double initialctime = (double)clock() / (double)CLOCKS_PER_SEC;
 	
 	// r := res - A du
-	A->gemv3(-1.0,du, 1.0,res, r.data());
+	A.gemv3(-1.0,du, 1.0,res, r.data());
 
 	// norm of RHS
 #pragma omp parallel for simd reduction(+:bnorm) default(shared)
@@ -233,10 +235,10 @@ int BiCGSTAB::solve(const a_real *const res, a_real *const __restrict du) const
 		axpbypcz(N, beta,p.data(), 1.0,r.data(), -beta*omega,v.data());
 		
 		// y <- Minv p
-		prec->apply(p.data(), y.data());
+		prec.apply(p.data(), y.data());
 		
 		// v <- A y
-		A->apply(y.data(), v.data());
+		A.apply(y.data(), v.data());
 
 		alpha = rho/dot(N, rhat.data(),v.data());
 
@@ -244,10 +246,10 @@ int BiCGSTAB::solve(const a_real *const res, a_real *const __restrict du) const
 		axpby(N, 1.0,r.data(), -alpha,v.data());
 
 		// z <- Minv s
-		prec->apply(r.data(), z.data());
+		prec.apply(r.data(), z.data());
 		
 		// t <- A z
-		A->apply(z.data(), t.data());
+		A.apply(z.data(), t.data());
 
 		// For the left-preconditioned variant: g <- Minv t
 		//prec->apply(t.data(),g.data());

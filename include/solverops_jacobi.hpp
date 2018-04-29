@@ -12,15 +12,18 @@ namespace blasted {
 
 /// Block-Jacobi operator for sparse-row matrices
 template <typename scalar, typename index, int bs, StorageOptions stopt>
-class JacobiSRPreconditioner : public SRPreconditioner<scalar,index>
+class BJacobiSRPreconditioner : public SRPreconditioner<scalar,index>
 {
 	static_assert(bs > 0, "Block size must be positive!");
 	static_assert(stopt == RowMajor || stopt == ColMajor, "Invalid storage option!");
 
 public:
-	JacobiSRPreconditioner();
+	BJacobiSRPreconditioner();
 
-	~JacobiSRPreconditioner();
+	~BJacobiSRPreconditioner();
+
+	/// Returns the number of rows of the operator
+	index dim() const { return mat.nbrows*bs; }
 	
 	/// Compute the preconditioner
 	void compute();
@@ -37,17 +40,19 @@ protected:
 };
 
 /// Scalar Jacobi operator for sparse-row matrices
-/** \note The template parameter for storage order does not matter for this specialization.
+/** \note The template parameter for storage order does not matter for this specialization,
+ * but it must be specified RowMajor (an arbitrary decision).
  */	
-template <typename scalar, typename index, StorageOptions stopt>
-class JacobiSRPreconditioner<scalar,index,1,stopt> : public SRPreconditioner<scalar,index>
+template <typename scalar, typename index>
+class JacobiSRPreconditioner : public SRPreconditioner<scalar,index>
 {
-	static_assert(stopt == RowMajor || stopt == ColMajor, "Invalid storage option!");
-
 public:
 	JacobiSRPreconditioner();
 
 	~JacobiSRPreconditioner();
+
+	/// Returns the number of rows of the operator
+	index dim() const { return mat.nbrows; }
 	
 	/// Compute the preconditioner
 	void compute();

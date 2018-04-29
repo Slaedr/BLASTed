@@ -76,6 +76,27 @@ protected:
 	CRawBSRMatrix<scalar,index> mat;
 };
 
+/// Identity operator as preconditioner 
+template<typename scalar, typename index>
+class NoPreconditioner : public Preconditioner<scalar,index>
+{
+public:
+	/// Set the dimension of the preconditioning operator
+	NoPreconditioner(const index n_dim);
+
+	/// Returns the dimension (number of rows) of the operator
+	index dim() const { return ndim; }
+
+	/// Does nothing
+	void compute() { }
+	
+	/// Does nothing but copy the input argument into the output argument
+	void apply(const scalar *const x, scalar *const __restrict y) const;
+
+protected:
+	index ndim;
+};
+
 }
 
 #endif

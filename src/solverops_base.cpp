@@ -3,13 +3,13 @@
  * \author Aditya Kashi
  */
 
-#include "preconditioners.hpp"
+#include "solverops_base.hpp"
 
 namespace blasted {
 
 template <typename scalar, typename index>
 Preconditioner<scalar,index>::Preconditioner(const StorageType stype)
-	: _type{stype}
+	: AbstractLinearOperator<scalar,index>(stype)
 { }
 
 template <typename scalar, typename index>
@@ -19,6 +19,7 @@ Preconditioner<scalar,index>::~Preconditioner()
 template <typename scalar, typename index>
 SRPreconditioner<scalar,index>::SRPreconditioner()
 	: Preconditioner<scalar,index>(SPARSEROW), mat{nullptr, nullptr, nullptr, nullptr, 0}
+{ }
 
 template <typename scalar, typename index>
 void SRPreconditioner<scalar,index>::wrap(const index n_brows, const index *const brptrs,
@@ -35,7 +36,22 @@ void SRPreconditioner<scalar,index>::wrap(const index n_brows, const index *cons
 	compute();
 }
 
+template <typename scalar, typename index>
+NoPreconditioner<scalar,index>::NoPreconditioner(const index matrixdim)
+	: Preconditioner<scalar,index>(MATRIXFREE), ndim{matrixdim}
+{ }
+	
+template <typename scalar, typename index>
+void NoPreconditioner<scalar,index>::apply(const scalar *const x, scalar *const __restrict y) const
+{
+#pragma omp parallel for simd default(shared)
+	for(index i = 0; i < ndim; i++)
+		y[i] = x[i];
+}
+
 // instantiations
-template SRPreconditioner<double,int>;
+template class Preconditioner<double,int>;
+template class SRPreconditioner<double,int>;
+template class NoPreconditioner<double,int>;
 
 }

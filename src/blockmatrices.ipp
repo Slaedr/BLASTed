@@ -19,6 +19,7 @@
  *   along with BLASTed.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <type_traits>
 #include <blockmatrices.hpp>
 #include "kernels/kernels_sgs.hpp"
 #include "kernels/kernels_ilu0.hpp"

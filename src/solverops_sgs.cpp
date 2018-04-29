@@ -3,11 +3,23 @@
  * \author Aditya Kashi
  */
 
+#include <type_traits>
 #include "solverops_sgs.hpp"
 #include "kernels/kernels_sgs.hpp"
 
 namespace blasted {
 
+template <typename scalar, typename index, int bs, StorageOptions stor>
+ABSGS_SRPreconditioner<scalar,index,bs,stor>::ABSGS_SRPreconditioner(const int naswps)
+	: ytemp{nullptr}, napplysweeps{naswps}, thread_chunk_size{400}
+{ }
+
+template <typename scalar, typename index, int bs, StorageOptions stor>
+ABSGS_SRPreconditioner<scalar,index,bs,stor>::~ABSGS_SRPreconditioner()
+{
+	delete [] ytemp;
+}
+	
 /// Applies the block SGS preconditioner
 /** If multiple threads are used, the iteration is asynchronous \cite async:anzt_triangular .
  * Assumes inverses of diagonal blocks have been computed and stored, 
@@ -86,17 +98,28 @@ void block_sgs_apply(const CRawBSRMatrix<scalar,index> *const mat,
 }
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
-void ASGS_SRPreconditioner<scalar,index,bs,stor>::apply(const scalar *const rr,
+void ABSGS_SRPreconditioner<scalar,index,bs,stor>::apply(const scalar *const rr,
                                                         scalar *const __restrict zz) const
 {
 	if(stor == RowMajor)
 		block_sgs_apply<scalar,index,bs,Matrix<scalar,Dynamic,bs,RowMajor>>(
-			&mat, dblocks, ytemp.data(), napplysweeps,thread_chunk_size, true, rr, zz);
+			&mat, dblocks, ytemp, napplysweeps,thread_chunk_size, true, rr, zz);
 	else
 		block_sgs_apply<scalar,index,bs,Matrix<scalar,bs,Dynamic,ColMajor>>(
-			&mat, dblocks, ytemp.data(), napplysweeps,thread_chunk_size, true, rr, zz);
+			&mat, dblocks, ytemp, napplysweeps,thread_chunk_size, true, rr, zz);
 }
 
+template <typename scalar, typename index>
+ASGS_SRPreconditioner<scalar,index>::ASGS_SRPreconditioner(const int naswps)
+	: ytemp{nullptr}, napplysweeps{naswps}, thread_chunk_size{800}
+{ }
+
+template <typename scalar, typename index>
+ASGS_SRPreconditioner<scalar,index>::~ASGS_SRPreconditioner()
+{
+	delete [] ytemp;
+}
+	
 /// Applies scalar SGS preconditioner
 /** \todo Fix initial guesses!
  */
@@ -132,8 +155,8 @@ void scalar_sgs_apply(const CRawBSRMatrix<scalar,index> *const mat,
 	}
 }
 
-template <typename scalar, typename index, StorageOptions stor>
-void ASGS_SRPreconditioner<scalar,index,1,stor>::apply(const scalar *const rr,
+template <typename scalar, typename index>
+void ASGS_SRPreconditioner<scalar,index>::apply(const scalar *const rr,
                                                         scalar *const __restrict zz) const
 {
 	scalar_sgs_apply(&mat, dblocks, ytemp, napplysweeps, thread_chunk_size, true, rr, zz);
@@ -141,16 +164,16 @@ void ASGS_SRPreconditioner<scalar,index,1,stor>::apply(const scalar *const rr,
 
 // instantiations
 
-template class ASGS_SRPreconditioner<double,int,1,RowMajor>;
+template class ASGS_SRPreconditioner<double,int>;
 
-template class ASGS_SRPreconditioner<double,int,4,ColMajor>;
-template class ASGS_SRPreconditioner<double,int,5,ColMajor>;
+template class ABSGS_SRPreconditioner<double,int,4,ColMajor>;
+template class ABSGS_SRPreconditioner<double,int,5,ColMajor>;
 
-template class ASGS_SRPreconditioner<double,int,4,RowMajor>;
+template class ABSGS_SRPreconditioner<double,int,4,RowMajor>;
 
 #ifdef BUILD_BLOCK_SIZE
-template class ASGS_SRPreconditioner<double,int,BUILD_BLOCK_SIZE,ColMajor>;
-template class ASGS_SRPreconditioner<double,int,BUILD_BLOCK_SIZE,RowMajor>;
+template class ABSGS_SRPreconditioner<double,int,BUILD_BLOCK_SIZE,ColMajor>;
+template class ABSGS_SRPreconditioner<double,int,BUILD_BLOCK_SIZE,RowMajor>;
 #endif
 
 } // end namespace

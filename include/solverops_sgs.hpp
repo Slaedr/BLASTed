@@ -11,38 +11,64 @@
 namespace blasted {
 
 /// Asynchronous block-SGS operator for sparse-row matrices
+/** \warning While re-wrapping a different matrix, make sure it's of the same dimension
+ * as the previous one.
+ */
 template <typename scalar, typename index, int bs, StorageOptions stor>
-class ASGS_SRPreconditioner : public JacobiSRPreconditioner<scalar,index,bs,stor>
+class ABSGS_SRPreconditioner : public BJacobiSRPreconditioner<scalar,index,bs,stor>
 {
 public:
-	ASGS_SRPreconditioner();
+	/// Create block SGS preconditioner
+	/** \param napplysweeps Number of asynchronous application sweeps
+	 */
+	ABSGS_SRPreconditioner(const int napplysweeps);
 
-	~ASGS_SRPreconditioner();
+	~ABSGS_SRPreconditioner();
+
+	/// Returns the number of rows of the operator
+	index dim() const { return mat.nbrows*bs; }
 
 	/// To apply the preconditioner
 	void apply(const scalar *const x, scalar *const __restrict y) const;
 
 protected:
+	using SRPreconditioner<scalar,index>::mat;
+	using BJacobiSRPreconditioner<scalar,index,bs,stor>::dblocks;
+	
 	/// Temporary storage for the result of the forward Gauss-Seidel sweep
 	mutable scalar *ytemp;
+
+	const int napplysweeps;
+	const int thread_chunk_size;
 };
 
 /// Asynchronous scalar SGS operator for sparse-row matrices
-template <typename scalar, typename index, StorageOptions stor>
-class ASGS_SRPreconditioner<scalar,index,1,stor>
-	: public JacobiSRPreconditioner<scalar,index,bs,stor>
+template <typename scalar, typename index>
+class ASGS_SRPreconditioner : public JacobiSRPreconditioner<scalar,index>
 {
 public:
-	ASGS_SRPreconditioner();
+	/// Create asynchronous scalar SGS preconditioner
+	/** \param napplysweeps Number of asynchronous application sweeps
+	 */
+	ASGS_SRPreconditioner(const int napplysweeps);
 
 	~ASGS_SRPreconditioner();
+
+	/// Returns the number of rows
+	index dim() const { return mat.nbrows; }
 
 	/// To apply the preconditioner
 	void apply(const scalar *const x, scalar *const __restrict y) const;
 
 protected:
+	using SRPreconditioner<scalar,index>::mat;
+	using JacobiSRPreconditioner<scalar,index>::dblocks;
+	
 	/// Temporary storage for the result of the forward Gauss-Seidel sweep
 	mutable scalar *ytemp;
+
+	const int napplysweeps;
+	const int thread_chunk_size;
 };
 
 }

@@ -3,11 +3,23 @@
  * \author Aditya Kashi
  */
 
+#include <type_traits>
 #include "solverops_jacobi.hpp"
 #include "kernels/kernels_base.hpp"
 
 namespace blasted {
 
+template <typename scalar, typename index, int bs, StorageOptions stor>
+BJacobiSRPreconditioner<scalar,index,bs,stor>::BJacobiSRPreconditioner()
+	: dblocks{nullptr}
+{ }
+
+template <typename scalar, typename index, int bs, StorageOptions stor>
+BJacobiSRPreconditioner<scalar,index,bs,stor>::~BJacobiSRPreconditioner()
+{
+	delete [] dblocks;
+}
+	
 /// Computes and stores the inverses of diagonal blocks
 /** \ref dblocks needs to be pre-allocated.
  */
@@ -68,7 +80,7 @@ void block_jacobi_apply(const CRawBSRMatrix<scalar,index> *const mat,
 }	
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
-void JacobiSRPreconditioner<scalar,index,bs,stor>::compute()
+void BJacobiSRPreconditioner<scalar,index,bs,stor>::compute()
 {
 	if(!dblocks) {
 		dblocks = new scalar[mat.nbrows*bs*bs];
@@ -84,7 +96,7 @@ void JacobiSRPreconditioner<scalar,index,bs,stor>::compute()
 }	
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
-void JacobiSRPreconditioner<scalar,index,bs,stor>::apply(const scalar *const rr,
+void BJacobiSRPreconditioner<scalar,index,bs,stor>::apply(const scalar *const rr,
 														 scalar *const __restrict zz) const
 {
 	if(stor == RowMajor)
@@ -95,6 +107,17 @@ void JacobiSRPreconditioner<scalar,index,bs,stor>::apply(const scalar *const rr,
 			( &mat, dblocks, rr, zz);
 }
 
+template <typename scalar, typename index>
+JacobiSRPreconditioner<scalar,index>::JacobiSRPreconditioner()
+	: dblocks{nullptr}
+{ }
+
+template <typename scalar, typename index>
+JacobiSRPreconditioner<scalar,index>::~JacobiSRPreconditioner()
+{
+	delete [] dblocks;
+}
+	
 /// Inverts diagonal entries
 /** \param[in] mat The matrix
  * \param[in,out] dblocks It must be pre-allocated; contains inverse of diagonal entries on exit
@@ -120,8 +143,8 @@ void scalar_jacobi_apply(const CRawBSRMatrix<scalar,index> *const mat,
 		zz[irow] = dblocks[irow] * rr[irow];
 }
 
-template <typename scalar, typename index, StorageOptions stor=RowMajor>
-void JacobiSRPreconditioner<scalar,index,1,stor>::compute()
+template <typename scalar, typename index>
+void JacobiSRPreconditioner<scalar,index>::compute()
 {
 	if(!dblocks) {
 		dblocks = new scalar[mat.nbrows];
@@ -133,24 +156,24 @@ void JacobiSRPreconditioner<scalar,index,1,stor>::compute()
 	scalar_jacobi_setup(&mat, dblocks);
 }	
 
-template <typename scalar, typename index, StorageOptions stor=RowMajor>
-void JacobiSRPreconditioner<scalar,index,1,stor>::apply(const scalar *const rr,
+template <typename scalar, typename index>
+void JacobiSRPreconditioner<scalar,index>::apply(const scalar *const rr,
 														 scalar *const __restrict zz) const
 {
 	scalar_jacobi_apply(&mat, dblocks, rr, zz);
 }
 
 
-template class JacobiSRPreconditioner<double,int,1,RowMajor>;
+template class JacobiSRPreconditioner<double,int>;
 
-template class JacobiSRPreconditioner<double,int,4,ColMajor>;
-template class JacobiSRPreconditioner<double,int,5,ColMajor>;
+template class BJacobiSRPreconditioner<double,int,4,ColMajor>;
+template class BJacobiSRPreconditioner<double,int,5,ColMajor>;
 
-template class JacobiSRPreconditioner<double,int,4,RowMajor>;
+template class BJacobiSRPreconditioner<double,int,4,RowMajor>;
 
 #ifdef BUILD_BLOCK_SIZE
-template class JacobiSRPreconditioner<double,int,BUILD_BLOCK_SIZE,ColMajor>;
-template class JacobiSRPreconditioner<double,int,BUILD_BLOCK_SIZE,RowMajor>;
+template class BJacobiSRPreconditioner<double,int,BUILD_BLOCK_SIZE,ColMajor>;
+template class BJacobiSRPreconditioner<double,int,BUILD_BLOCK_SIZE,RowMajor>;
 #endif
 
 }

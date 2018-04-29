@@ -17,7 +17,6 @@
 
 #include <iostream>
 #include <limits>
-#include <type_traits>
 #include <Eigen/Core>
 
 namespace blasted {
@@ -38,6 +37,8 @@ using Vector = Matrix<scalar,Dynamic,1>;
 template <typename scalar, typename index>
 struct CRawBSRMatrix
 {
+	static_assert(std::numeric_limits<index>::is_integer, "Integer index type required!");
+	static_assert(std::numeric_limits<index>::is_signed, "Signed index type required!");
 	const index *browptr;
 	const index *bcolind;
 	const scalar *vals;
@@ -49,6 +50,8 @@ struct CRawBSRMatrix
 template <typename scalar, typename index>
 struct RawBSRMatrix
 {
+	static_assert(std::numeric_limits<index>::is_integer, "Integer index type required!");
+	static_assert(std::numeric_limits<index>::is_signed, "Signed index type required!");
 	index * browptr;
 	index * bcolind;
 	scalar * vals;
@@ -66,8 +69,8 @@ void destroyCRawBSRMatrix(CRawBSRMatrix<scalar,index>& rmat);
 template<typename scalar, typename index>
 class SRMatrixView : public MatrixView<scalar, index>
 {
-	static_assert(std::numeric_limits<index>::is_signed, "Signed index type required!");
 	static_assert(std::numeric_limits<index>::is_integer, "Integer index type required!");
+	static_assert(std::numeric_limits<index>::is_signed, "Signed index type required!");
 
 public:
 	/// A constructor which just wraps a BSR matrix described by 4 arrays

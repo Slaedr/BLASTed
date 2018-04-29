@@ -3,13 +3,45 @@
  * \author Aditya Kashi
  */
 
+#include <type_traits>
+#include "solverops_ilu0.hpp"
+#include "kernels/kernels_ilu0.hpp"
+
 namespace blasted {
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
-AILU0_SRPreconditioner<scalar,index,bs,stor>::AILU0_SRPreconditioner(const bool tf = true,
-                                                                     const bool ta = true)
-	: iluvals{nullptr}, ytemp{nullptr}, threadedfactor{tf}, threadedapply{ta}
+ABILU0_SRPreconditioner<scalar,index,bs,stor>::ABILU0_SRPreconditioner
+	(const int nbuildswp, const int napplyswp, const bool tf, const bool ta)
+	: iluvals{nullptr}, scale{nullptr}, ytemp{nullptr}, threadedfactor{tf}, threadedapply{ta},
+	  nbuildsweeps{nbuildswp}, napplysweeps{napplyswp}, thread_chunk_size{400}
 { }
+
+template <typename scalar, typename index, int bs, StorageOptions stor>
+ABILU0_SRPreconditioner<scalar,index,bs,stor>::~ABILU0_SRPreconditioner()
+{
+	delete [] iluvals;
+	delete [] ytemp;
+	delete [] scale;
+}
+
+/// Search through inner indices
+/** Finds the position in the index arary that has value indtofind
+ * Searches between positions
+ * \param[in] start, and
+ * \param[in] end
+ */
+template <typename index>
+static inline void inner_search(const index *const aind, 
+		const index start, const index end, 
+		const index indtofind, index *const pos)
+{
+	for(index j = start; j < end; j++) {
+		if(aind[j] == indtofind) {
+			*pos = j;
+			break;
+		}
+	}
+}
 
 /// Constructs the block-ILU0 factorization using a block variant of the Chow-Patel procedure
 /// \cite ilu:chowpatel
@@ -199,7 +231,7 @@ void block_ilu0_apply( const CRawBSRMatrix<scalar,index> *const mat,
  * However, we could try a row scaling.
  */
 template <typename scalar, typename index, int bs, StorageOptions stor>
-void AILU0_SRPreconditioner<scalar,index,bs,stor>::compute()
+void ABILU0_SRPreconditioner<scalar,index,bs,stor>::compute()
 {
 	if(!iluvals)
 	{
@@ -236,22 +268,31 @@ void AILU0_SRPreconditioner<scalar,index,bs,stor>::compute()
 }
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
-void AILU0_SRPreconditioner<scalar,index,bs,stor>::apply(const scalar *const r, 
+void ABILU0_SRPreconditioner<scalar,index,bs,stor>::apply(const scalar *const r, 
                                               scalar *const __restrict z) const
 {
 	if(stor == RowMajor)
 		block_ilu0_apply<scalar,index,bs,Matrix<scalar,Dynamic,bs,RowMajor>>
-			(&mat, iluvals, ytemp.data(), napplysweeps, thread_chunk_size, threadedapply, r, z);
+			(&mat, iluvals, ytemp, napplysweeps, thread_chunk_size, threadedapply, r, z);
 	else
 		block_ilu0_apply<scalar,index,bs,Matrix<scalar,bs,Dynamic,ColMajor>>
-			(&mat, iluvals, ytemp.data(), napplysweeps, thread_chunk_size, threadedapply, r, z);
+			(&mat, iluvals, ytemp, napplysweeps, thread_chunk_size, threadedapply, r, z);
 }
 
-template <typename scalar, typename index, StorageOptions stor>
-AILU0_SRPreconditioner<scalar,index,1,stor>::AILU0_SRPreconditioner(const bool tf = true,
-                                                                     const bool ta = true)
-	: iluvals{nullptr}, ytemp{nullptr}, threadedfactor{tf}, threadedapply{ta}
+template <typename scalar, typename index>
+AILU0_SRPreconditioner<scalar,index>::AILU0_SRPreconditioner
+	(const int nbuildswp, const int napplyswp, const bool tf, const bool ta)
+	: iluvals{nullptr}, scale{nullptr}, ytemp{nullptr}, threadedfactor{tf}, threadedapply{ta},
+	  nbuildsweeps{nbuildswp}, napplysweeps{napplyswp}, thread_chunk_size{800}
 { }
+
+template <typename scalar, typename index>
+AILU0_SRPreconditioner<scalar,index>::~AILU0_SRPreconditioner()
+{
+	delete [] iluvals;
+	delete [] ytemp;
+	delete [] scale;
+}
 
 /// Computes the scalar ILU0 factorization using asynch iterations \cite ilu:chowpatel
 /** \param[in] mat The preconditioner as a CSR matrix
@@ -380,8 +421,8 @@ void scalar_ilu0_apply(const CRawBSRMatrix<scalar,index> *const mat,
 		za[i] = za[i]*scale[i];
 }
 
-template <typename scalar, typename index, StorageOptions stor>
-void AILU0_SRPreconditioner<scalar,index,1,stor>::compute()
+template <typename scalar, typename index>
+void AILU0_SRPreconditioner<scalar,index>::compute()
 {
 	if(!iluvals)
 	{
@@ -417,8 +458,8 @@ void AILU0_SRPreconditioner<scalar,index,1,stor>::compute()
 	scalar_ilu0_setup(&mat, nbuildsweeps, thread_chunk_size, threadedfactor, iluvals, scale);
 }
 
-template <typename scalar, typename index, StorageOptions stor>
-void AILU0_SRPreconditioner<scalar,index,1,stor>::apply(const scalar *const __restrict ra, 
+template <typename scalar, typename index>
+void AILU0_SRPreconditioner<scalar,index>::apply(const scalar *const __restrict ra, 
                                               scalar *const __restrict za) const
 {
 	scalar_ilu0_apply(&mat, iluvals, scale, ytemp, napplysweeps, thread_chunk_size, threadedapply,
@@ -427,16 +468,16 @@ void AILU0_SRPreconditioner<scalar,index,1,stor>::apply(const scalar *const __re
 
 // instantiations
 
-template class ASGS_SRPreconditioner<double,int,1,RowMajor>;
+template class AILU0_SRPreconditioner<double,int>;
 
-template class ASGS_SRPreconditioner<double,int,4,ColMajor>;
-template class ASGS_SRPreconditioner<double,int,5,ColMajor>;
+template class ABILU0_SRPreconditioner<double,int,4,ColMajor>;
+template class ABILU0_SRPreconditioner<double,int,5,ColMajor>;
 
-template class ASGS_SRPreconditioner<double,int,4,RowMajor>;
+template class ABILU0_SRPreconditioner<double,int,4,RowMajor>;
 
 #ifdef BUILD_BLOCK_SIZE
-template class ASGS_SRPreconditioner<double,int,BUILD_BLOCK_SIZE,ColMajor>;
-template class ASGS_SRPreconditioner<double,int,BUILD_BLOCK_SIZE,RowMajor>;
+template class ABILU0_SRPreconditioner<double,int,BUILD_BLOCK_SIZE,ColMajor>;
+template class ABILU0_SRPreconditioner<double,int,BUILD_BLOCK_SIZE,RowMajor>;
 #endif
 
 }
