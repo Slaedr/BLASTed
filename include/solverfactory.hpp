@@ -44,7 +44,7 @@ const std::string nbuildsweeps = "nbuildsweeps";
 const std::string napplysweeps = "napplysweeps";
 /** @} */
 
-/// Creates a preconditioner object based on the parameters
+/// Creates a preconditioner object, for matrices stored by sparse rows, based on the parameters
 /** \param precstr A string describing what preconditioner is needed \sa prectypelabels
  * \param bs Block size to create a dense block preconditioner
  * \param blockstorage String decsribing the layout within a dense block \sa blockorderlabels
@@ -57,7 +57,7 @@ const std::string napplysweeps = "napplysweeps";
  * required key does not exist in the parameter lists.
  */
 template <typename scalar, typename index>
-Preconditioner<scalar,index> *create_preconditioner(const std::string precstr, const int bs,
+SRPreconditioner<scalar,index> *create_sr_preconditioner(const std::string precstr, const int bs,
 	const std::string blockstorage, 
 	const std::map<std::string,int>& intParamList, const std::map<std::string,double>& floatParamList);
 

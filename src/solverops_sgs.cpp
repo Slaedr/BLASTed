@@ -19,6 +19,15 @@ ABSGS_SRPreconditioner<scalar,index,bs,stor>::~ABSGS_SRPreconditioner()
 {
 	delete [] ytemp;
 }
+
+template <typename scalar, typename index, int bs, StorageOptions stor>
+void ABSGS_SRPreconditioner<scalar,index,bs,stor>::compute()
+{
+	BJacobiSRPreconditioner<scalar,index,bs,stor>::compute();
+	if(!ytemp) {
+		ytemp = new scalar[mat.nbrows*bs];
+	}
+}
 	
 /// Applies the block SGS preconditioner
 /** If multiple threads are used, the iteration is asynchronous \cite async:anzt_triangular .
@@ -119,7 +128,19 @@ ASGS_SRPreconditioner<scalar,index>::~ASGS_SRPreconditioner()
 {
 	delete [] ytemp;
 }
-	
+
+template <typename scalar, typename index>
+void ASGS_SRPreconditioner<scalar,index>::compute()
+{
+	JacobiSRPreconditioner<scalar,index>::compute();
+	if(!ytemp) {
+		ytemp = new scalar[mat.nbrows];
+#pragma omp parallel for simd default(shared)
+		for(index i = 0; i < mat.nbrows; i++)
+			ytemp[i] = 0;
+	}
+}
+
 /// Applies scalar SGS preconditioner
 /** \todo Fix initial guesses!
  */

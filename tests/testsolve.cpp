@@ -27,7 +27,7 @@ int testSolve(const std::string solvertype, const std::string precontype,
 		const double tol, const int maxiter, const int nbuildswps, const int napplyswps)
 {
 	std::cout << "Inputs: Solver = " <<solvertype 
-		<< ", Prec = " << precontype << ", mat type = " << mattype
+		<< ", Prec = " << precontype
 		<< ", order = " << storageorder << ", test tol = " << testtol 
 		<< ", tolerance = " << tol << " maxiter = " << maxiter
 		<< ",\n  Num build sweeps = " << nbuildswps << ", num apply sweeps = " << napplyswps << '\n';
@@ -62,11 +62,16 @@ int testSolve(const std::string solvertype, const std::string precontype,
 					rm.browptr,rm.bcolind,rm.vals,rm.diagind,nbuildswps,napplyswps);
 
 	// construct preconditioner context
-	Preconditioner<double,int>* prec = nullptr;
+	
+	SRPreconditioner<double,int>* prec = nullptr;
 	std::map<std::string,int> iparamlist;
 	std::map<std::string,double> fparamlist;
+	// For async preconditioners
 	iparamlist[blasted::nbuildsweeps] = nbuildswps; iparamlist[blasted::napplysweeps] = napplyswps;
-	prec = create_preconditioner<double,int>(precontype, bs, storageorder, iparamlist, fparamlist);
+	// for no preconditioner
+	iparamlist[blasted::ndimstr] = rm.nbrows*bs;
+	prec = create_sr_preconditioner<double,int>(precontype, bs, storageorder, iparamlist, fparamlist);
+	prec->wrap(rm.nbrows, rm.browptr, rm.bcolind, rm.vals, rm.diagind);
 
 	IterativeSolver* solver = nullptr;
 	if(solvertype == "richardson")
@@ -78,7 +83,7 @@ int testSolve(const std::string solvertype, const std::string precontype,
 		std::abort();
 	}
 
-	solver->setupPreconditioner();
+	//solver->setupPreconditioner();
 	solver->setParams(tol,maxiter);
 	int iters = solver->solve(b.data(), x.data());
 	std::cout << " Num iters = " << iters << std::endl;

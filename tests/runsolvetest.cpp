@@ -65,7 +65,12 @@ int main(const int argc, const char *const argv[])
 		std::abort();
 	}
 
-	int err = testSolve<4>(argv[1], argv[2], argv[3], argv[4], 
+	int err = 0;
+	if(std::string(argv[3]) == "bsr")
+		err = testSolve<4>(argv[1], argv[2], argv[3], argv[4], 
+			testtol, argv[5], argv[6], argv[7], reltol, maxiter, 1, 1);
+	else
+		err = testSolve<1>(argv[1], argv[2], argv[3], argv[4], 
 			testtol, argv[5], argv[6], argv[7], reltol, maxiter, 1, 1);
 
 	return err;

@@ -83,6 +83,11 @@ public:
 	 */
 	SRMatrixView(const index n_brows, const index *const brptrs, const index *const bcinds, 
 			const scalar *const values, const index *const diaginds, const StorageType storagetype);
+
+	/// Allows immutable access to the underlying matrix storage
+	const CRawBSRMatrix<scalar,index> *getRawSRMatrix() const {
+		return &mat;
+	}
 	
 	/// Just wraps a sparse-row matrix described by 4 arrays
 	/** \param[in] n_brows Number of (block-)rows

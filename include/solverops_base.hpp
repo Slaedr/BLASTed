@@ -78,7 +78,7 @@ protected:
 
 /// Identity operator as preconditioner 
 template<typename scalar, typename index>
-class NoPreconditioner : public Preconditioner<scalar,index>
+class NoPreconditioner : public SRPreconditioner<scalar,index>
 {
 public:
 	/// Set the dimension of the preconditioning operator

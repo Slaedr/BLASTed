@@ -28,6 +28,9 @@ public:
 	/// Returns the number of rows of the operator
 	index dim() const { return mat.nbrows*bs; }
 
+	/// Compute the preconditioner
+	void compute();
+
 	/// To apply the preconditioner
 	void apply(const scalar *const x, scalar *const __restrict y) const;
 
@@ -56,6 +59,9 @@ public:
 
 	/// Returns the number of rows
 	index dim() const { return mat.nbrows; }
+
+	/// Compute the preconditioner
+	void compute();
 
 	/// To apply the preconditioner
 	void apply(const scalar *const x, scalar *const __restrict y) const;

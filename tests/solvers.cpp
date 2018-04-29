@@ -49,53 +49,6 @@ inline a_real dot(const a_int N, const a_real *const a,
 	return sum;
 }
 
-#if 0
-NoPrec::NoPrec(MatrixView<a_real,a_int> *const op) : Preconditioner(op)
-{ }
-
-void NoPrec::compute() { }
-
-void NoPrec::apply(const a_real *const r, a_real *const __restrict z)
-{
-#pragma omp parallel for simd default(shared)
-	for(a_int i = 0; i < A->dim(); i++)
-		z[i] = r[i];
-}
-	
-Jacobi::Jacobi(MatrixView<a_real,a_int> *const op) : Preconditioner(op) { }
-
-void Jacobi::compute() {
-	A->precJacobiSetup();
-}
-
-void Jacobi::apply(const a_real *const r, a_real *const __restrict z) {
-	A->precJacobiApply(r, z);
-}
-
-SGS::SGS(MatrixView<a_real,a_int> *const op) : Preconditioner(op) 
-{ }
-
-void SGS::compute() {
-	A->precSGSSetup();
-}
-
-void SGS::apply(const a_real *const r, a_real *const __restrict z) {
-	A->precSGSApply(r, z);
-}
-
-ILU0::ILU0(MatrixView<a_real,a_int> *const op) : Preconditioner(op) { }
-
-/// Sets D,L,U and computes the ILU factorization
-void ILU0::compute() {
-	A->precILUSetup();
-}
-
-/// Solves Mz=r, where M is the preconditioner
-void ILU0::apply(const a_real *const r, a_real *const __restrict z) {
-	A->precILUApply(r, z);
-}
-#endif
-
 IterativeSolverBase::IterativeSolverBase() {
 	resetRunTimes();
 }

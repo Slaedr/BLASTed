@@ -38,7 +38,7 @@ void SRPreconditioner<scalar,index>::wrap(const index n_brows, const index *cons
 
 template <typename scalar, typename index>
 NoPreconditioner<scalar,index>::NoPreconditioner(const index matrixdim)
-	: Preconditioner<scalar,index>(MATRIXFREE), ndim{matrixdim}
+	: SRPreconditioner<scalar,index>(), ndim{matrixdim}
 { }
 	
 template <typename scalar, typename index>

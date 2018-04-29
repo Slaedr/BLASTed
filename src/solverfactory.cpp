@@ -14,7 +14,7 @@ namespace blasted {
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
 static inline
-Preconditioner<scalar,index> *create_preconditioner_of_type(const std::string precstr, 
+SRPreconditioner<scalar,index> *create_srpreconditioner_of_type(const std::string precstr, 
 		const std::map<std::string,int>& intlist, const std::map<std::string,double>& floatlist)
 {
 	if(precstr == jacobistr)
@@ -34,11 +34,11 @@ Preconditioner<scalar,index> *create_preconditioner_of_type(const std::string pr
 }
 
 template <typename scalar, typename index>
-Preconditioner<scalar,index> *create_preconditioner(const std::string precstr, const int bs,
+SRPreconditioner<scalar,index> *create_sr_preconditioner(const std::string precstr, const int bs,
 	const std::string blockstorage,
 	const std::map<std::string,int>& intParamList, const std::map<std::string,double>& floatParamList)
 {
-	Preconditioner<scalar,index> *p = nullptr;
+	SRPreconditioner<scalar,index> *p = nullptr;
 		
 	if(bs == 1) {
 		if(precstr == jacobistr)
@@ -54,12 +54,12 @@ Preconditioner<scalar,index> *create_preconditioner(const std::string precstr, c
 	else if(blockstorage == rowmajorstr) 
 	{
 		if(bs == 4) {
-			p = create_preconditioner_of_type<scalar,index,4,RowMajor>(precstr,
+			p = create_srpreconditioner_of_type<scalar,index,4,RowMajor>(precstr,
 					intParamList, floatParamList);
 		}
 #ifdef BUILD_BLOCK_SIZE
 		else if(bs == BUILD_BLOCK_SIZE) {
-			p = create_preconditioner_of_type<scalar,index,BUILD_BLOCK_SIZE,RowMajor>(precstr, 
+			p = create_srpreconditioner_of_type<scalar,index,BUILD_BLOCK_SIZE,RowMajor>(precstr, 
 					intParamList, floatParamList);
 		}
 #endif
@@ -70,15 +70,15 @@ Preconditioner<scalar,index> *create_preconditioner(const std::string precstr, c
 	}
 	else if(blockstorage == colmajorstr){
 		if(bs==4)
-			p = create_preconditioner_of_type<scalar,index,4,ColMajor>(precstr, 
+			p = create_srpreconditioner_of_type<scalar,index,4,ColMajor>(precstr, 
 					intParamList, floatParamList);
 		else if(bs == 5) {
-			p = create_preconditioner_of_type<scalar,index,5,ColMajor>(precstr, 
+			p = create_srpreconditioner_of_type<scalar,index,5,ColMajor>(precstr, 
 					intParamList, floatParamList);
 		}
 #ifdef BUILD_BLOCK_SIZE
 		else if(bs == BUILD_BLOCK_SIZE) {
-			p = create_preconditioner_of_type<scalar,index,BUILD_BLOCK_SIZE,ColMajor>(precstr, 
+			p = create_srpreconditioner_of_type<scalar,index,BUILD_BLOCK_SIZE,ColMajor>(precstr, 
 					intParamList, floatParamList);
 		}
 #endif
@@ -95,7 +95,7 @@ Preconditioner<scalar,index> *create_preconditioner(const std::string precstr, c
 	return p;
 }
 
-template Preconditioner<double,int>* create_preconditioner<double,int>
+template SRPreconditioner<double,int>* create_sr_preconditioner<double,int>
 	( const std::string precstr, const int bs, const std::string blockstorage,
 	const std::map<std::string,int>& intParamList, const std::map<std::string,double>& floatParamList);
 
