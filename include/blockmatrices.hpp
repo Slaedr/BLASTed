@@ -13,57 +13,14 @@
 #ifndef BLOCKMATRICES_H
 #define BLOCKMATRICES_H
 
-#include <linearoperator.hpp>
+#include "linearoperator.hpp"
+#include "srmatrixdefs.hpp"
 
 #include <iostream>
 #include <limits>
 #include <Eigen/Core>
 
 namespace blasted {
-
-using Eigen::Dynamic;
-using Eigen::RowMajor;
-using Eigen::ColMajor;
-using Eigen::StorageOptions;
-using Eigen::Matrix;
-template <typename scalar>
-using Vector = Matrix<scalar,Dynamic,1>;
-
-/// An (almost-)immutable compressed sparse block-row square matrix
-/** The pointers and the number of (block-)rows are non-const to allow re-wrapping of another matrix.
- * Since objects of this type are used as members of other classes, we allow those classes to handle
- * mutability (or lack thereof) through the use of const member functions.
- */
-template <typename scalar, typename index>
-struct CRawBSRMatrix
-{
-	static_assert(std::numeric_limits<index>::is_integer, "Integer index type required!");
-	static_assert(std::numeric_limits<index>::is_signed, "Signed index type required!");
-	const index *browptr;
-	const index *bcolind;
-	const scalar *vals;
-	const index *diagind;
-	index nbrows;
-};
-
-/// A compressed sparse block-row square matrix
-template <typename scalar, typename index>
-struct RawBSRMatrix
-{
-	static_assert(std::numeric_limits<index>::is_integer, "Integer index type required!");
-	static_assert(std::numeric_limits<index>::is_signed, "Signed index type required!");
-	index * browptr;
-	index * bcolind;
-	scalar * vals;
-	index * diagind;
-	index nbrows;
-};
-
-template <typename scalar, typename index>
-void destroyRawBSRMatrix(RawBSRMatrix<scalar,index>& rmat);
-
-template <typename scalar, typename index>
-void destroyCRawBSRMatrix(CRawBSRMatrix<scalar,index>& rmat);
 
 /// An abstract matrix view used for wrapping matrices with sparse row storage
 template<typename scalar, typename index>
@@ -161,40 +118,6 @@ public:
 	virtual void gemv3(const scalar a, const scalar *const __restrict x, 
 			const scalar b, const scalar *const y,
 			scalar *const z) const;
-
-	/// Computes inverse or factorization of diagonal blocks for applying Jacobi preconditioner
-	void precJacobiSetup();
-	
-	/// Applies block-Jacobi preconditioner. 
-	/** Approximately solves D z = r
-	 */
-	void precJacobiApply(const scalar *const r, scalar *const __restrict z) const;
-
-	/// Inverts diagonal blocks and allocates temporary array needed for Gauss-Seidel
-	void precSGSSetup();
-
-	/// Applies a block symmetric Gauss-Seidel preconditioner ("LU-SGS")
-	/** Approximately solves (D+L) D^(-1) (D+U) z = r
-	 * where D, L and U are the diagonal, upper and lower parts of the matrix respectively,
-	 * by applying asynchronous Jacobi sweeps.
-	 * This block version is adapted from the scalar version in \cite async:anzt_triangular
-	 */
-	void precSGSApply(const scalar *const r, scalar *const __restrict z) const;
-
-	/// Computes an incomplete block lower-upper factorization
-	/** Finds \f$ \tilde{L} \f$ and \f$ \tilde{U} \f$ such that
-	 * \f[ \tilde{L} \tilde{U} = A \f]
-	 * is approximately satisifed, with \f$ \tilde{L} \f$ unit lower triangular.
-	 * The sparsity if A is preserved, so this is ILU(0).
-	 * This block version is adapted from the scalar version in \cite ilu:chowpatel . 
-	 */
-	void precILUSetup();
-
-	/// Applies a block LU factorization L U z = r
-	void precILUApply(const scalar *const r, scalar *const __restrict z) const;
-	
-	/// Applies a block LU factorization L U z = r sequentially
-	void precILUApply_seq(const scalar *const r, scalar *const __restrict z) const;
 	
 	/// Returns the dimension (number of rows) of the square matrix
 	index dim() const { return mat.nbrows*bs; }
@@ -202,27 +125,6 @@ public:
 protected:
 
 	using SRMatrixView<scalar,index>::mat;
-
-	/// Storage for factored or inverted diagonal blocks
-	scalar *dblocks;
-
-	/// Storage for ILU0 factorization
-	/** Use \ref bcolind and \ref browptr to access the storage,
-	 * as the non-zero structure of this matrix is same as the original matrix.
-	 */
-	scalar *iluvals;
-
-	/// Storage for intermediate results in preconditioning operations
-	mutable Vector<scalar> ytemp;
-
-	/// Number of sweeps used to build preconditioners
-	const int nbuildsweeps;
-
-	/// Number of sweeps used to apply preconditioners
-	const int napplysweeps;
-
-	/// Thread chunk size for OpenMP parallelism
-	const int thread_chunk_size;
 };
 
 /// A CSR matrix formed by wrapping a read-only matrix
@@ -274,27 +176,6 @@ public:
 	virtual void gemv3(const scalar a, const scalar *const __restrict x, 
 			const scalar b, const scalar *const y,
 			scalar *const z) const;
-
-	/// Computes inverse or factorization of diagonal blocks for the Jacobi preconditioner
-	void precJacobiSetup();
-	
-	/// Applies Jacobi preconditioner
-	void precJacobiApply(const scalar *const r, scalar *const __restrict z) const;
-
-	/// Inverts diagonal blocks and allocates a temporary array needed for Gauss-Seidel
-	void precSGSSetup();
-
-	/// Applies a block symmetric Gauss-Seidel preconditioner
-	void precSGSApply(const scalar *const r, scalar *const __restrict z) const;
-
-	/// Computes an incomplete block lower-upper factorization
-	void precILUSetup();
-
-	/// Applies a block LU factorization
-	void precILUApply(const scalar *const r, scalar *const __restrict z) const;
-
-	/// Applies a block LU factorization sequentially
-	void precILUApply_seq(const scalar *const r, scalar *const __restrict z) const;
 	
 	/// Returns the number of rows in the matrix
 	index dim() const { return mat.nbrows; }
@@ -303,30 +184,6 @@ protected:
 	
 	/// The CSR matrix data	
 	using SRMatrixView<scalar,index>::mat;
-
-	/// Storage for factored or inverted diagonal blocks
-	scalar* dblocks;
-
-	/// Storage for ILU0 factorization
-	/** Use \ref bcolind and \ref browptr to access the storage,
-	 * as the non-zero structure of this matrix is same as the original matrix.
-	 */
-	scalar* iluvals;
-	
-	/// Stores scaling vector for async ILU factorization
-	scalar* scale;
-
-	/// Storage for intermediate results in preconditioning operations
-	mutable scalar* ytemp;
-
-	/// Number of sweeps used to build preconditioners
-	const int nbuildsweeps;
-
-	/// Number of sweeps used to apply preconditioners
-	const int napplysweeps;
-
-	/// Thread chunk size for OpenMP parallelism
-	const int thread_chunk_size;
 };
 
 /// Block sparse row matrix
@@ -430,37 +287,6 @@ public:
 	virtual void gemv3(const scalar a, const scalar *const __restrict x, 
 			const scalar b, const scalar *const y,
 			scalar *const z) const;
-
-	/// Computes inverse or factorization of diagonal blocks for applying Jacobi preconditioner
-	void precJacobiSetup();
-	
-	/// Applies block-Jacobi preconditioner. 
-	/** Approximately solves D z = r
-	 */
-	void precJacobiApply(const scalar *const r, scalar *const __restrict z) const;
-
-	/// Inverts diagonal blocks and allocates temporary array needed for Gauss-Seidel
-	void precSGSSetup();
-
-	/// Applies a block symmetric Gauss-Seidel preconditioner ("LU-SGS")
-	/** Approximately solves (D+L) D^(-1) (D+U) z = r
-	 * where D, L and U are the diagonal, upper and lower parts of the matrix respectively,
-	 * by applying asynchronous Jacobi sweeps.
-	 * This block version is adapted from the scalar version in \cite async:anzt_triangular
-	 */
-	void precSGSApply(const scalar *const r, scalar *const __restrict z) const;
-
-	/// Computes an incomplete block lower-upper factorization
-	/** Finds \f$ \tilde{L} \f$ and \f$ \tilde{U} \f$ such that
-	 * \f[ \tilde{L} \tilde{U} = A \f]
-	 * is approximately satisifed, with \f$ \tilde{L} \f$ unit lower triangular.
-	 * The sparsity if A is preserved, so this is ILU(0).
-	 * This block version is adapted from the scalar version in \cite ilu:chowpatel . 
-	 */
-	void precILUSetup();
-
-	/// Applies a block LU factorization L U z = r
-	void precILUApply(const scalar *const r, scalar *const __restrict z) const;
 	
 	/// Returns the dimension (number of rows) of the square matrix
 	index dim() const { return mat.nbrows*bs; }
@@ -474,27 +300,6 @@ protected:
 
 	/// The BSR matrix storage
 	RawBSRMatrix<scalar,index> mat;
-
-	/// Storage for factored or inverted diagonal blocks
-	Matrix<scalar,Dynamic,bs,RowMajor> dblocks;
-
-	/// Storage for ILU0 factorization
-	/** Use \ref bcolind and \ref browptr to access the storage,
-	 * as the non-zero structure of this matrix is same as the original matrix.
-	 */
-	Matrix<scalar,Dynamic,bs,RowMajor> iluvals;
-
-	/// Storage for intermediate results in preconditioning operations
-	mutable Vector<scalar> ytemp;
-
-	/// Number of sweeps used to build preconditioners
-	const int nbuildsweeps;
-
-	/// Number of sweeps used to apply preconditioners
-	const int napplysweeps;
-
-	/// Thread chunk size for OpenMP parallelism
-	const int thread_chunk_size;
 };
 
 /// Compressed sparse row (CSR) matrix
@@ -592,24 +397,6 @@ public:
 	virtual void gemv3(const scalar a, const scalar *const __restrict x, 
 			const scalar b, const scalar *const y,
 			scalar *const z) const;
-
-	/// Computes inverse or factorization of diagonal blocks for the Jacobi preconditioner
-	void precJacobiSetup();
-	
-	/// Applies Jacobi preconditioner
-	void precJacobiApply(const scalar *const r, scalar *const __restrict z) const;
-
-	/// Inverts diagonal blocks and allocates a temporary array needed for Gauss-Seidel
-	void precSGSSetup();
-
-	/// Applies a block symmetric Gauss-Seidel preconditioner
-	void precSGSApply(const scalar *const r, scalar *const __restrict z) const;
-
-	/// Computes an incomplete block lower-upper factorization
-	void precILUSetup();
-
-	/// Applies a block LU factorization
-	void precILUApply(const scalar *const r, scalar *const __restrict z) const;
 	
 	/// Returns the number of rows in the matrix
 	index dim() const { return mat.nbrows; }
@@ -623,30 +410,6 @@ protected:
 	
 	/// The CSR matrix data	
 	RawBSRMatrix<scalar,index> mat;
-
-	/// Storage for factored or inverted diagonal blocks
-	scalar* dblocks;
-
-	/// Storage for ILU0 factorization
-	/** Use \ref bcolind and \ref browptr to access the storage,
-	 * as the non-zero structure of this matrix is same as the original matrix.
-	 */
-	scalar* iluvals;
-	
-	/// Stores scaling vector for async ILU factorization
-	scalar* scale;
-
-	/// Storage for intermediate results in preconditioning operations
-	mutable scalar* ytemp;
-
-	/// Number of sweeps used to build preconditioners
-	const int nbuildsweeps;
-
-	/// Number of sweeps used to apply preconditioners
-	const int napplysweeps;
-
-	/// Thread chunk size for OpenMP parallelism
-	const int thread_chunk_size;
 };
 
 }

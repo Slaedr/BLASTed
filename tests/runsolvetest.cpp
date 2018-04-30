@@ -38,32 +38,9 @@ int main(const int argc, const char *const argv[])
 		std::abort();
 	}
 	
-	int maxiter;
-	try {
-		maxiter = std::stoi(argv[10]);
-	}
-	catch(const std::invalid_argument& e) {
-		std::cout << "! getSizeFromMatrixMarket: Invalid size!!\n";
-		std::abort();
-	}
-	catch(const std::out_of_range& e) {
-		std::cout << "! getSizeFromMatrixMarket: Size is too large for the type of index!!\n";
-		std::abort();
-	}
-
-	double reltol, testtol;
-	try {
-		reltol = std::stod(argv[8]);
-		testtol = std::stod(argv[9]);
-	}
-	catch(const std::invalid_argument& e) {
-		std::cout << "! Invalid rel or test tol!!\n";
-		std::abort();
-	}
-	catch(const std::out_of_range& e) {
-		std::cout << "! Rel or test tol is out of range!!\n";
-		std::abort();
-	}
+	const int maxiter = std::stoi(argv[10]);
+	const double reltol = std::stod(argv[8]);
+	const double testtol = std::stod(argv[9]);
 
 	int err = 0;
 	if(std::string(argv[3]) == "bsr")

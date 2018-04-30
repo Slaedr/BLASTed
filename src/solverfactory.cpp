@@ -5,6 +5,7 @@
  */
 
 #include <stdexcept>
+//#include <iostream>
 #include "solverfactory.hpp"
 #include "solverops_jacobi.hpp"
 #include "solverops_sgs.hpp"
@@ -48,6 +49,11 @@ SRPreconditioner<scalar,index> *create_sr_preconditioner(const std::string precs
 		else if(precstr == ilu0str)
 			p = new AILU0_SRPreconditioner<scalar,index>(intParamList.at(nbuildsweeps),
 					intParamList.at(napplysweeps),true,true);
+		else if(precstr == sapilu0str)
+			return new AILU0_SRPreconditioner<scalar,index>(intParamList.at(nbuildsweeps),
+					intParamList.at(napplysweeps),true,false);
+		else if(precstr == noprecstr)
+			return new NoPreconditioner<scalar,index>(intParamList.at(ndimstr));
 		else
 			throw std::invalid_argument("Invalid preconditioner!");
 	}

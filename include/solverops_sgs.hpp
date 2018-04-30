@@ -13,6 +13,12 @@ namespace blasted {
 /// Asynchronous block-SGS operator for sparse-row matrices
 /** \warning While re-wrapping a different matrix, make sure it's of the same dimension
  * as the previous one.
+ * 
+ * Applies a block symmetric Gauss-Seidel preconditioner ("LU-SGS")
+ * Approximately solves (D+L) D^(-1) (D+U) z = r
+ * where D, L and U are the diagonal, upper and lower parts of the matrix respectively,
+ * by applying asynchronous Jacobi sweeps.
+ * This block version is adapted from the scalar version in \cite async:anzt_triangular
  */
 template <typename scalar, typename index, int bs, StorageOptions stor>
 class ABSGS_SRPreconditioner : public BJacobiSRPreconditioner<scalar,index,bs,stor>

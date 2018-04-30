@@ -11,6 +11,12 @@
 namespace blasted {
 
 /// Asynchronous block-ILU(0) preconditioner for sparse-row matrices
+/** Finds \f$ \tilde{L} \f$ and \f$ \tilde{U} \f$ such that
+ * \f[ \tilde{L} \tilde{U} = A \f]
+ * is approximately satisifed, with \f$ \tilde{L} \f$ unit lower triangular.
+ * The sparsity if A is preserved, so this is ILU(0).
+ * This block version is adapted from the scalar version in \cite ilu:chowpatel . 
+ */
 template <typename scalar, typename index, int bs, StorageOptions stor>
 class ABILU0_SRPreconditioner : public SRPreconditioner<scalar,index>
 {
@@ -34,13 +40,16 @@ public:
 	/// Compute the preconditioner
 	void compute();
 
-	/// To apply the preconditioner
+	/// Applies a block LU factorization L U z = r
 	void apply(const scalar *const x, scalar *const __restrict y) const;
 
 protected:
 	using SRPreconditioner<scalar,index>::mat;
 	
 	/// Storage for L and U factors
+	/** Use \ref bcolind and \ref browptr to access the storage,
+	 * as the non-zero structure of this matrix is same as the original matrix.
+	 */
 	scalar *iluvals;
 
 	/// Matrix used to scale the original matrix before factorization

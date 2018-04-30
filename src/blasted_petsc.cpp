@@ -12,12 +12,17 @@
 #include <../src/mat/impls/aij/mpi/mpiaij.h>
 #include <../src/mat/impls/baij/mpi/mpibaij.h>
 
-#include <blockmatrices.hpp>
-#include <blasted_petsc.h>
+//#include <blockmatrices.hpp>
+#include "solverops_jacobi.hpp"
+#include "solverops_sgs.hpp"
+#include "solverops_ilu0.hpp"
+#include "solverfactory.hpp"
+#include "blasted_petsc.h"
 
 using namespace blasted;
 
-typedef SRMatrixView<PetscReal, PetscInt> BlastedPetscMat;
+//typedef SRMatrixView<PetscReal, PetscInt> BlastedPetscMat;
+typedef SRPreconditioner<PetscReal,PetscInt> BlastedPreconditioner;
 
 #define PETSCOPTION_STR_LEN 10
 
@@ -45,6 +50,10 @@ static PetscErrorCode setupDataFromOptions(PC pc)
 			printf("BLASTed: Preconditioner type not set!\n");
 			abort();
 		}
+
+		const size_t len = std::strlen(precstr);
+		ctx->prectypestr = new char[len+1];
+		std::strcpy(ctx->prectypestr, precstr);
 
 		std::string precstr2 = precstr;
 		if(precstr2 == "jacobi")
@@ -89,7 +98,7 @@ static PetscErrorCode setupDataFromOptions(PC pc)
 	std::printf("ptype = %d and sweeps = %d,%d.\n", ptype, sweeps[0], sweeps[1]);
 #endif
 
-	ctx->bmat = nullptr; 
+	ctx->bprec = nullptr; 
 	ctx->prectype = ptype;
 	ctx->nbuildsweeps = sweeps[0]; 
 	ctx->napplysweeps = sweeps[1];
@@ -109,12 +118,13 @@ static PetscErrorCode setupDataFromOptions(PC pc)
 	return ierr;
 }
 
-/** \brief Generates a matrix view from the preconditioning operator in a sub PC
+/** \brief Generates a BLASTed preconditioner for the preconditioning operator in a sub PC
  *
+ * The matrix is assumed to be stored in a sparse (block-)row storage format.
  * \warning We assume that the pc passed here is a subpc, ie, a local preconditioner.
  * \param[in,out] pc PETSc preconditioner context
  */
-PetscErrorCode createNewBlockMatrixView(PC pc)
+PetscErrorCode createNewPreconditioner(PC pc)
 {
 	PetscErrorCode ierr = 0;
 	PetscInt firstrow, lastrow, localrows, localcols, globalrows, globalcols;
@@ -124,7 +134,7 @@ PetscErrorCode createNewBlockMatrixView(PC pc)
 	ierr = PCShellGetContext(pc, (void**)&ctx); CHKERRQ(ierr);
 
 	// delete old matrix
-	BlastedPetscMat* op = reinterpret_cast<BlastedPetscMat*>(ctx->bmat);
+	BlastedPreconditioner* op = reinterpret_cast<BlastedPreconditioner*>(ctx->bprec);
 	delete op;
 
 	/* get the local preconditioning matrix
@@ -139,8 +149,8 @@ PetscErrorCode createNewBlockMatrixView(PC pc)
 	assert(globalrows == globalcols);
 
 	// get access to local matrix entries
-	const Mat_SeqAIJ *const Adiag = (const Mat_SeqAIJ*)A->data;
-	const Mat_SeqBAIJ *const Abdiag = (const Mat_SeqBAIJ*)A->data;
+	/*const Mat_SeqAIJ *const Adiag = (const Mat_SeqAIJ*)A->data;
+	const Mat_SeqBAIJ *const Abdiag = (const Mat_SeqBAIJ*)A->data;*/
 	
 	// ensure diagonal entry locations have been computed; this is necessary for BAIJ matrices
 	// as a bonus, check for singular diagonals
@@ -151,6 +161,15 @@ PetscErrorCode createNewBlockMatrixView(PC pc)
 		SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_LIB, "! Zero diagonal in (block-)row %d!", badrow);
 	}
 
+	// create appropriate preconditioner object
+	std::map<std::string,int> iparamlist;
+	iparamlist[blasted::nbuildsweeps] = ctx->nbuildsweeps;
+	iparamlist[blasted::napplysweeps] = ctx->napplysweeps;
+	std::map<std::string,double> fparamlist;
+	op = create_sr_preconditioner<PetscReal,PetscInt>(ctx->prectypestr, ctx->bs, "colmajor", 
+			iparamlist, fparamlist);
+
+#if 0
 	switch(ctx->bs) {
 		case 0:
 			printf("BLASTed: createNewBlockMatrix: Invalid block size 0!\n");
@@ -184,12 +203,14 @@ PetscErrorCode createNewBlockMatrixView(PC pc)
 			printf("BLASTed: createNewBlockMatrix: That block size is not supported!\n");
 			abort();
 	}
+#endif
 
-	ctx->bmat = reinterpret_cast<void*>(op);
+	ctx->bprec = reinterpret_cast<void*>(op);
 	return ierr;
 }
 
-PetscErrorCode updateBlockMatrixView(PC pc)
+/// Gives a new matrix to the preconditioner and also re-computes it
+PetscErrorCode updatePreconditioner(PC pc)
 {
 	PetscErrorCode ierr = 0;
 	PetscInt firstrow, lastrow, localrows, localcols, globalrows, globalcols;
@@ -197,7 +218,7 @@ PetscErrorCode updateBlockMatrixView(PC pc)
 	// get control structure
 	Blasted_data* ctx;
 	ierr = PCShellGetContext(pc, (void**)&ctx); CHKERRQ(ierr);
-	BlastedPetscMat* op = reinterpret_cast<BlastedPetscMat*>(ctx->bmat);
+	BlastedPreconditioner* op = reinterpret_cast<BlastedPreconditioner*>(ctx->bprec);
 
 	/* get the local preconditioning matrix
 	 * we operate on the diagonal matrix block corresponding to this process
@@ -217,12 +238,13 @@ PetscErrorCode updateBlockMatrixView(PC pc)
 	if(ctx->bs <= 0 || ctx->bs > 5 || ctx->bs == 2)
 		SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_SUP, "BLASTed: Block size %d is not supported!", ctx->bs);
 
+	// update and recompute
 	if(ctx->bs == 1)
 		op->wrap(localrows/ctx->bs, Adiag->i, Adiag->j, Adiag->a, Adiag->diag);
 	else
 		op->wrap(localrows/ctx->bs, Abdiag->i, Abdiag->j, Abdiag->a, Abdiag->diag);
 
-	ctx->bmat = reinterpret_cast<void*>(op);
+	ctx->bprec = reinterpret_cast<void*>(op);
 	return ierr;
 }
 
@@ -253,7 +275,8 @@ void destroyBlastedDataList(Blasted_data_list *const b)
 Blasted_data newBlastedDataContext()
 {
 	Blasted_data ctx;
-	ctx.bmat = NULL;
+	ctx.bprec = NULL;
+	ctx.prectypestr = NULL;
 	ctx.first_setup_done = false;
 	ctx.cputime = ctx.walltime = ctx.factorcputime = ctx.factorwalltime
 		= ctx.applycputime = ctx.applywalltime = 0.0;
@@ -277,9 +300,10 @@ PetscErrorCode cleanup_blasted(PC pc)
 	PetscErrorCode ierr = 0;
 	Blasted_data* ctx;
 	ierr = PCShellGetContext(pc, (void**)&ctx); CHKERRQ(ierr);
-	
-	BlastedPetscMat* mat = reinterpret_cast<BlastedPetscMat*>(ctx->bmat);
+	BlastedPreconditioner* mat = reinterpret_cast<BlastedPreconditioner*>(ctx->bprec);
 	delete mat;
+
+	delete [] ctx->prectypestr;
 
 	return ierr;
 }
@@ -294,20 +318,19 @@ PetscErrorCode compute_preconditioner_blasted(PC pc)
 
 	if(!ctx->first_setup_done) {
 		ierr = setupDataFromOptions(pc); CHKERRQ(ierr);
-		ierr = createNewBlockMatrixView(pc); CHKERRQ(ierr);
+		ierr = createNewPreconditioner(pc); CHKERRQ(ierr);
 	}
 
-	ierr = updateBlockMatrixView(pc); CHKERRQ(ierr);
-
-	BlastedPetscMat *const op = reinterpret_cast<BlastedPetscMat*>(ctx->bmat);
+	//BlastedPreconditioner *const op = reinterpret_cast<BlastedPreconditioner*>(ctx->bprec);
 
 	struct timeval time1, time2;
 	gettimeofday(&time1, NULL);
 	double initialwtime = (double)time1.tv_sec + (double)time1.tv_usec * 1.0e-6;
 	double initialctime = (double)clock() / (double)CLOCKS_PER_SEC;
+
+	ierr = updatePreconditioner(pc); CHKERRQ(ierr);
 	
-	// setup preconditioners
-	switch(ctx->prectype) {
+	/*switch(ctx->prectype) {
 		case SGS:
 			op->precSGSSetup();
 			break;
@@ -320,7 +343,7 @@ PetscErrorCode compute_preconditioner_blasted(PC pc)
 			break;
 		default:
 			SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "Preconditioner not available!");
-	}
+	}*/
 	
 	gettimeofday(&time2, NULL);
 	double finalwtime = (double)time2.tv_sec + (double)time2.tv_usec * 1.0e-6;
@@ -337,29 +360,29 @@ PetscErrorCode apply_local_blasted(PC pc, Vec r, Vec z)
 	const PetscReal *ra;
 	PetscReal *za;
 	PetscInt start, end;
-	VecGetOwnershipRange(r, &start, &end);
+	ierr = VecGetOwnershipRange(r, &start, &end); CHKERRQ(ierr);
 
 	Blasted_data* ctx;
 	PCShellGetContext(pc, (void**)&ctx);
-	const BlastedPetscMat *const mat = reinterpret_cast<const BlastedPetscMat *>(ctx->bmat);
+	const BlastedPreconditioner *const prec = reinterpret_cast<const BlastedPreconditioner*>(ctx->bprec);
 
 #ifdef DEBUG
-	if(mat->dim() != end-start) {
+	if(prec->dim() != end-start) {
 		SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, 
 				"BLASTed: Dimension of vector does not match that of the matrix- %d vs %d!\n", 
-				mat->dim(), end-start);
+				prec->dim(), end-start);
 	}
 #endif
 	
-	VecGetArray(z, &za);
-	VecGetArrayRead(r, &ra);
+	ierr = VecGetArray(z, &za); CHKERRQ(ierr);
+	ierr = VecGetArrayRead(r, &ra); CHKERRQ(ierr);
 	
 	struct timeval time1, time2;
 	gettimeofday(&time1, NULL);
 	double initialwtime = (double)time1.tv_sec + (double)time1.tv_usec * 1.0e-6;
 	double initialctime = (double)clock() / (double)CLOCKS_PER_SEC;
 
-	switch(ctx->prectype) {
+	/*switch(ctx->prectype) {
 		case SGS:
 			mat->precSGSApply(ra, za);
 			break;
@@ -375,7 +398,9 @@ PetscErrorCode apply_local_blasted(PC pc, Vec r, Vec z)
 		default:
 			printf("BLASTed: apply_local: Preconditioner not available!\n");
 			ierr = -1;
-	}
+	}*/
+
+	prec->apply(ra,za);
 
 	gettimeofday(&time2, NULL);
 	double finalwtime = (double)time2.tv_sec + (double)time2.tv_usec * 1.0e-6;
@@ -458,7 +483,7 @@ PetscErrorCode setup_blasted_stack(KSP ksp, Blasted_data_list *const bctv, const
 	}
 	else if(isshell) {
 		// if the PC is shell, this is the relevant KSP to pass to BLASTed for setup
-		std::cout << "setup_blasted_stack(): Found valid parent KSP for BLASTed.\n";
+		std::printf("setup_blasted_stack(): Found valid parent KSP for BLASTed.\n");
 
 		appendBlastedDataContext(bctv, newBlastedDataContext());
 		// The new context is appended to the head of the list,
@@ -498,7 +523,6 @@ PetscErrorCode setup_localpreconditioner_blasted(KSP ksp, Blasted_data *const bc
 	PetscBool isshell;
 	ierr = PetscObjectTypeCompare((PetscObject)pc,PCSHELL,&isshell); CHKERRQ(ierr);
 
-	// extract sub pc
 	if(isshell) {
 		subpc = pc;
 		// only for single-process runs

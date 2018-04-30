@@ -24,9 +24,10 @@ typedef enum {JACOBI, SGS, ILU0, SAPILU0} Prec_type;
 /// State necessary for local preconditioners
 struct Blasted_node
 {
-	void* bmat;               ///< BLASTed matrix
+	void* bprec;               ///< BLASTed preconditioning object
 	
 	int bs;                   ///< Block size of dense blocks
+	char *prectypestr;        ///< String identifier of the preconditioner type to use
 	Prec_type prectype;       ///< The preconditioner to use
 	int nbuildsweeps;         ///< Number of async build sweeps
 	int napplysweeps;         ///< Number of async apply sweeps

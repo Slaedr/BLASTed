@@ -4,6 +4,7 @@
  */
 
 #include <type_traits>
+#include <iostream>
 #include "solverops_ilu0.hpp"
 #include "kernels/kernels_ilu0.hpp"
 

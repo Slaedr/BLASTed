@@ -135,15 +135,10 @@ void ASGS_SRPreconditioner<scalar,index>::compute()
 	JacobiSRPreconditioner<scalar,index>::compute();
 	if(!ytemp) {
 		ytemp = new scalar[mat.nbrows];
-#pragma omp parallel for simd default(shared)
-		for(index i = 0; i < mat.nbrows; i++)
-			ytemp[i] = 0;
 	}
 }
 
 /// Applies scalar SGS preconditioner
-/** \todo Fix initial guesses!
- */
 template <typename scalar, typename index>
 inline
 void scalar_sgs_apply(const CRawBSRMatrix<scalar,index> *const mat,
@@ -151,6 +146,10 @@ void scalar_sgs_apply(const CRawBSRMatrix<scalar,index> *const mat,
 		const int napplysweeps, const int thread_chunk_size, const bool usethreads,
 		const scalar *const rr, scalar *const __restrict zz) 
 {
+#pragma omp parallel for simd default(shared)
+	for(index i = 0; i < mat->nbrows; i++)
+		ytemp[i] = 0;
+
 	for(int isweep = 0; isweep < napplysweeps; isweep++)
 	{
 		// forward sweep ytemp := D^(-1) (r - L ytemp)
@@ -162,6 +161,10 @@ void scalar_sgs_apply(const CRawBSRMatrix<scalar,index> *const mat,
 					dblocks[irow], rr[irow], ytemp);
 		}
 	}
+
+#pragma omp parallel for simd default(shared)
+	for(index i = 0; i < mat->nbrows; i++)
+		zz[i] = ytemp[i];
 
 	for(int isweep = 0; isweep < napplysweeps; isweep++)
 	{

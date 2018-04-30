@@ -104,7 +104,7 @@ public:
 			const scalar b, const scalar *const y,
 			scalar *const z) const = 0;
 
-	/// Meant to compute needed data for applying the Jacobi preconditioner
+	/*/// Meant to compute needed data for applying the Jacobi preconditioner
 	virtual void precJacobiSetup() = 0;
 	
 	/// Applies any of a class of Jacobi-type preconditioners
@@ -120,7 +120,7 @@ public:
 	virtual void precILUSetup() = 0;
 
 	/// Applies an LU factorization
-	virtual void precILUApply(const scalar *const r, scalar *const __restrict__ z) const = 0;
+	virtual void precILUApply(const scalar *const r, scalar *const __restrict__ z) const = 0;*/
 };
 	
 /// Interface for a view of a matrix
@@ -148,7 +148,7 @@ public:
 			scalar *const z) const = 0;
 
 	/// Meant to compute needed data for applying the Jacobi preconditioner
-	virtual void precJacobiSetup() = 0;
+	/*virtual void precJacobiSetup() = 0;
 	
 	/// Applies any of a class of Jacobi-type preconditioners
 	virtual void precJacobiApply(const scalar *const r, scalar *const __restrict z) const = 0;
@@ -166,7 +166,7 @@ public:
 	virtual void precILUApply(const scalar *const r, scalar *const __restrict__ z) const = 0;
 	
 	/// Applies an LU factorization sequentially
-	virtual void precILUApply_seq(const scalar *const r, scalar *const __restrict__ z) const = 0;
+	virtual void precILUApply_seq(const scalar *const r, scalar *const __restrict__ z) const = 0;*/
 };
 
 }

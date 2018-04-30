@@ -6,7 +6,10 @@
 #ifndef BLASTED_SOLVEROPS_BASE_H
 #define BLASTED_SOLVEROPS_BASE_H
 
-#include "blockmatrices.hpp"
+#include <limits>
+
+#include "linearoperator.hpp"
+#include "srmatrixdefs.hpp"
 
 namespace blasted {
 
