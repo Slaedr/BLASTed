@@ -55,28 +55,29 @@ void block_jacobi_apply(const CRawBSRMatrix<scalar,index> *const mat,
 		const scalar *const dblocks,
 		const scalar *const rr, scalar *const __restrict zz)
 {
-	Eigen::Map<const Vector<scalar>> r(rr, mat->nbrows*bs);
-	Eigen::Map<Vector<scalar>> z(zz, mat->nbrows*bs);
-	
 	static_assert(std::is_same<Mattype, Matrix<scalar,Dynamic,bs,RowMajor>>::value 
 			|| std::is_same<Mattype, Matrix<scalar,bs,Dynamic,ColMajor>>::value,
 		"Invalid matrix type!");
 	
-	Eigen::Map<const Mattype> data(mat->vals, 
-			Mattype::IsRowMajor ? mat->browptr[mat->nbrows]*bs : bs,
-			Mattype::IsRowMajor ? bs : mat->browptr[mat->nbrows]*bs
-		);
-	Eigen::Map<const Mattype> dblks(dblocks, 
-			Mattype::IsRowMajor ? mat->nbrows*bs : bs,
-			Mattype::IsRowMajor ? bs : mat->nbrows*bs
-		);
-
 #pragma omp parallel for default(shared)
 	for(index irow = 0; irow < mat->nbrows; irow++)
+	{
+		Eigen::Map<const Vector<scalar>> r(rr, mat->nbrows*bs);
+		Eigen::Map<Vector<scalar>> z(zz, mat->nbrows*bs);
+		Eigen::Map<const Mattype> data(mat->vals, 
+				Mattype::IsRowMajor ? mat->browptr[mat->nbrows]*bs : bs,
+				Mattype::IsRowMajor ? bs : mat->browptr[mat->nbrows]*bs
+			);
+		Eigen::Map<const Mattype> dblks(dblocks, 
+				Mattype::IsRowMajor ? mat->nbrows*bs : bs,
+				Mattype::IsRowMajor ? bs : mat->nbrows*bs
+			);
+
 		if(Mattype::IsRowMajor)
 			z.SEG<bs>(irow*bs).noalias() = dblks.BLK<bs,bs>(irow*bs,0) * r.SEG<bs>(irow*bs);
 		else
 			z.SEG<bs>(irow*bs).noalias() = dblks.BLK<bs,bs>(0,irow*bs) * r.SEG<bs>(irow*bs);
+	}
 }	
 
 template <typename scalar, typename index, int bs, StorageOptions stor>

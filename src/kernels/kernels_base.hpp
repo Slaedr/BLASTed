@@ -22,6 +22,7 @@ using Eigen::ColMajor;
 using Eigen::StorageOptions;
 using Eigen::Map;
 using Eigen::Matrix;
+using Eigen::MatrixBase;
 template <typename scalar>
 using Vector = Matrix<scalar,Dynamic,1>;
 
