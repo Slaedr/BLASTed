@@ -163,6 +163,12 @@ if(WITH_PETSC)
 		${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.pmat
 		-options_file ${CMAKE_CURRENT_SOURCE_DIR}/input/2dcyl1_jacobi.perc
 	)
+	add_test(NAME SerialPetsc-BSR4-Relaxation-Jacobi COMMAND env OMP_NUM_THREADS=1 mpirun -n 1 ${CMAKE_CURRENT_BINARY_DIR}/testpetscsolver
+		${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.pmat 
+		${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.pmat 
+		${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.pmat
+		-options_file ${CMAKE_CURRENT_SOURCE_DIR}/input/2dcyl1_relaxation_jacobi.perc
+	)
 	add_test(NAME SerialPetsc-BSR4-SGS COMMAND env OMP_NUM_THREADS=1 mpirun -n 1 ${CMAKE_CURRENT_BINARY_DIR}/testpetscsolver
 		${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.pmat
 		${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.pmat 

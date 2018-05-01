@@ -15,21 +15,18 @@ template<typename scalar, typename index, int bs, StorageOptions stor>
 class BJacobiRelaxation : public BJacobiSRPreconditioner<scalar,index,bs,stor>
 {
 public:
-	BJacobiRelaxation(const scalar reltol, const scalar abstol, const scalar divtol, 
-			const bool checktol, const int maxiter);
+	//BJacobiRelaxation();
 
 	/// Carry out block-Jacobi relaxation
+	/** Note that no initial condition is set here - the prior contents of x are used as
+	 * the initial guess.
+	 */
 	void apply(const scalar *const b, scalar *const __restrict x) const;
 
 protected:
 	using SRPreconditioner<scalar,index>::mat;
 	using BJacobiSRPreconditioner<scalar,index,bs,stor>::dblocks;
-
-	const scalar rtol;        ///< Relative Cauchy tolerance
-	const scalar atol;        ///< Absolute Cauchy tolerance
-	const scalar dtol;        ///< Cauchy tolerance for divergence (on the relative tolerance)
-	const bool ctol;          ///< Whether to check for the Cauchy tolerances
-	const int maxits;         ///< Maximum iterations - the only thing always obeyed
+	using Preconditioner<scalar,index>::solveparams;
 };
 
 }

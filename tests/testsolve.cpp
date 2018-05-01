@@ -70,7 +70,8 @@ int testSolve(const std::string solvertype, const std::string precontype,
 	iparamlist[blasted::nbuildsweeps] = nbuildswps; iparamlist[blasted::napplysweeps] = napplyswps;
 	// for no preconditioner
 	iparamlist[blasted::ndimstr] = rm.nbrows*bs;
-	prec = create_sr_preconditioner<double,int>(precontype, bs, storageorder, iparamlist, fparamlist);
+	prec = create_sr_preconditioner<double,int>(precontype, bs, storageorder, false,
+	                                            iparamlist, fparamlist);
 	prec->wrap(rm.nbrows, rm.browptr, rm.bcolind, rm.vals, rm.diagind);
 
 	IterativeSolver* solver = nullptr;

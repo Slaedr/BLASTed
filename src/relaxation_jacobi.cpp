@@ -1,4 +1,4 @@
-/** \file relaxation_base.cpp
+/** \file relaxation_jacobi.cpp
  * \brief Implementation of Jacobi relaxation
  * \author Aditya Kashi
  * \date 2018-04
@@ -9,24 +9,24 @@
 
 namespace blasted {
 
-template<typename scalar, typename index, int bs, StorageOptions stor>
-BJacobiRelaxation<scalar,index,bs,stor>::BJacobiRelaxation(const scalar reltol, const scalar abstol, 
-		const scalar divtol, const bool checktol, const int maxiter)
-	: rtol{reltol}, atol{abstol}, dtol{divtol}, ctol{checktol}, maxits{maxiter}
-{ }
+// template<typename scalar, typename index, int bs, StorageOptions stor>
+// BJacobiRelaxation<scalar,index,bs,stor>::BJacobiRelaxation(const scalar reltol, const scalar abstol, 
+// 		const scalar divtol, const bool checktol, const int maxiter)
+// 	: rtol{reltol}, atol{abstol}, dtol{divtol}, ctol{checktol}, maxits{maxiter}
+// { }
 
 template<typename scalar, typename index, int bs, class Mattype>
-void bjacobi_relax(const scalar rtol, const scalar atol, const scalar dtol, 
-		const bool ctol, const int maxits,
+void bjacobi_relax(const SolveParams<scalar>& sp,
 		const CRawBSRMatrix<scalar,index>& mat, const scalar *const dblocks,
 		const scalar *const bb, scalar *const __restrict xx)
 {
-	Vector<scalar> xtemp(mat.nbrows*bs);
+	scalar* xtempr = new scalar[mat.nbrows*bs];
 	scalar refdiffnorm = 1;
 	
 	Eigen::Map<const Vector<scalar>> b(bb, mat.nbrows*bs);
 	//Eigen::Map<Vector<scalar>> x(xx, mat.nbrows*bs);
 	Eigen::Map<const Vector<scalar>> x(xx, mat.nbrows*bs);
+	Eigen::Map<Vector<scalar>> xtemp(xtempr, mat.nbrows*bs);
 
 	Eigen::Map<const Mattype> data(mat.vals, 
 			Mattype::IsRowMajor ? mat.browptr[mat.nbrows]*bs : bs,
@@ -37,7 +37,7 @@ void bjacobi_relax(const scalar rtol, const scalar atol, const scalar dtol,
 			Mattype::IsRowMajor ? bs : mat.nbrows*bs
 		);
 
-	for(int step = 0; step < maxits; step++)
+	for(int step = 0; step < sp.maxits; step++)
 	{
 #pragma omp parallel for default(shared)
 		for(index irow = 0; irow < mat.nbrows; irow++)
@@ -47,7 +47,7 @@ void bjacobi_relax(const scalar rtol, const scalar atol, const scalar dtol,
 				dblks, b, x, x, xtemp);
 		}
 
-		if(ctol)
+		if(sp.ctol)
 		{
 			scalar diffnorm = 0;
 #pragma omp parallel for simd default(shared) reduction(+:diffnorm)
@@ -62,7 +62,8 @@ void bjacobi_relax(const scalar rtol, const scalar atol, const scalar dtol,
 			if(step == 0)
 				refdiffnorm = diffnorm;
 
-			if(diffnorm < atol || diffnorm/refdiffnorm < rtol || diffnorm/refdiffnorm > dtol)
+			if(diffnorm < sp.atol || diffnorm/refdiffnorm < sp.rtol ||
+			   diffnorm/refdiffnorm > sp.dtol)
 				break;
 		}
 		else
@@ -73,6 +74,8 @@ void bjacobi_relax(const scalar rtol, const scalar atol, const scalar dtol,
 			}
 		}
 	}
+
+	delete [] xtempr;
 }
 
 template<typename scalar, typename index, int bs, StorageOptions stor>
@@ -81,10 +84,10 @@ void BJacobiRelaxation<scalar,index,bs,stor>::apply(const scalar *const b,
 {
 	if(stor == RowMajor)
 		bjacobi_relax<scalar,index,bs,Matrix<scalar,Dynamic,bs,RowMajor>>
-			( rtol, atol, dtol, ctol, maxits, mat, dblocks, b, x);
+			( solveparams, mat, dblocks, b, x);
 	else
 		bjacobi_relax<scalar,index,bs,Matrix<scalar,bs,Dynamic,ColMajor>>
-			( rtol, atol, dtol, ctol, maxits, mat, dblocks, b, x);
+			( solveparams, mat, dblocks, b, x);
 }
 
 template class BJacobiRelaxation<double,int,4,RowMajor>;

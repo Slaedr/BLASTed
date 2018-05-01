@@ -21,10 +21,14 @@ extern "C" {
 /// The types of preconditioners that BLASTed provides
 typedef enum {JACOBI, SGS, ILU0, SAPILU0} Prec_type;
 
-/// State necessary for local preconditioners
+/** It has two operators - one for preconditioning and the other for relaxation.
+ * The relaxation operator is only used when the local KSP is richardson. For all other local KSPs
+ * (usually preonly), the preconditioning operator is used.
+ */
 struct Blasted_node
 {
-	void* bprec;               ///< BLASTed preconditioning object
+	void* bprec;              ///< BLASTed preconditioning object
+	void *brelax;             ///< BLASTed relaxation object
 	
 	int bs;                   ///< Block size of dense blocks
 	char *prectypestr;        ///< String identifier of the preconditioner type to use
@@ -47,6 +51,7 @@ struct Blasted_node
 	struct Blasted_node *next;  ///< Link to next Blasted context
 };
 
+/// State necessary for local preconditioners \sa Blasted_node	
 typedef struct Blasted_node Blasted_data;
 
 /// A list of BLASTed state objects for use with multiple BLASTed preconditioner instances

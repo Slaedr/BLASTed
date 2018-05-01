@@ -13,6 +13,16 @@
 
 namespace blasted {
 
+/// Application parameters for certain operators - usually relaxations
+template <typename scalar>
+struct SolveParams {
+	scalar rtol;        ///< Relative tolerance
+	scalar atol;        ///< Absolute  tolerance
+	scalar dtol;        ///< tolerance for divergence (on the relative tolerance)
+	bool ctol;          ///< Whether to check for the tolerances
+	int maxits;         ///< Maximum iterations
+};
+	
 /// Generic 'preconditioner' interface
 /** We use "preconditioner" for want of a better term. It is used here in the general sense of
  * a single iteration of any linear iterative solver.
@@ -27,22 +37,23 @@ public:
 	Preconditioner(const StorageType storagetype);
 
 	virtual ~Preconditioner();
-	
-	/// Returns [type of storage](\ref StorageType)
-	StorageType type() { return _type; }
-	
+		
 	/// Returns the dimension (number of rows) of the operator
 	virtual index dim() const = 0;
 
 	/// Compute the preconditioner
 	virtual void compute() = 0;
 
+	/// Set parameters that may be used by subclasses
+	void setApplyParams(const SolveParams<scalar> sparams) { solveparams = sparams; }
+
 	/// To apply the preconditioner
 	virtual void apply(const scalar *const x, scalar *const __restrict y) const = 0;
 
 protected:
-	/// Kind of storage that is used
-	StorageType _type;
+
+	/// Optional apply parameters \sa SolveParams
+	SolveParams<scalar> solveparams;
 };
 
 /// Preconditioners that operate on sparse row matrices

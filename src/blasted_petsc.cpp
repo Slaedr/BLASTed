@@ -105,16 +105,11 @@ static PetscErrorCode setupDataFromOptions(PC pc)
 	ctx->first_setup_done = true;
 	ctx->cputime = ctx->walltime = ctx->factorcputime = ctx->factorwalltime =
 		ctx->applycputime = ctx->applywalltime = 0;
-	
-	if(ctx->prectype == JACOBI)
-		ierr = PCShellSetName(pc, "Blasted-Jacobi");
-	else if(ctx->prectype == SGS)
-		ierr = PCShellSetName(pc, "Blasted-SGS");
-	else if(ctx->prectype == ILU0)
-		ierr = PCShellSetName(pc, "Blasted-ILU0");
-	else if(ctx->prectype == SAPILU0)
-		ierr = PCShellSetName(pc, "Blasted-SeqApILU0");
 
+	std::string pcname = std::string("Blasted-") + ctx->prectypestr;
+	
+	ierr = PCShellSetName(pc, pcname.c_str()); CHKERRQ(ierr);
+	
 	return ierr;
 }
 
@@ -134,8 +129,10 @@ PetscErrorCode createNewPreconditioner(PC pc)
 	ierr = PCShellGetContext(pc, (void**)&ctx); CHKERRQ(ierr);
 
 	// delete old matrix
-	BlastedPreconditioner* op = reinterpret_cast<BlastedPreconditioner*>(ctx->bprec);
-	delete op;
+	BlastedPreconditioner* precop = reinterpret_cast<BlastedPreconditioner*>(ctx->bprec);
+	BlastedPreconditioner* relop = reinterpret_cast<BlastedPreconditioner*>(ctx->brelax);
+	delete precop;
+	delete relop;
 
 	/* get the local preconditioning matrix
 	 * we operate on the diagonal matrix block corresponding to this process
@@ -147,10 +144,6 @@ PetscErrorCode createNewPreconditioner(PC pc)
 	ierr = MatGetSize(A, &globalrows, &globalcols); CHKERRQ(ierr);
 	assert(localrows == localcols);
 	assert(globalrows == globalcols);
-
-	// get access to local matrix entries
-	/*const Mat_SeqAIJ *const Adiag = (const Mat_SeqAIJ*)A->data;
-	const Mat_SeqBAIJ *const Abdiag = (const Mat_SeqBAIJ*)A->data;*/
 	
 	// ensure diagonal entry locations have been computed; this is necessary for BAIJ matrices
 	// as a bonus, check for singular diagonals
@@ -161,51 +154,18 @@ PetscErrorCode createNewPreconditioner(PC pc)
 		SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_LIB, "! Zero diagonal in (block-)row %d!", badrow);
 	}
 
-	// create appropriate preconditioner object
+	// create appropriate preconditioner and relaxation objects
 	std::map<std::string,int> iparamlist;
 	iparamlist[blasted::nbuildsweeps] = ctx->nbuildsweeps;
 	iparamlist[blasted::napplysweeps] = ctx->napplysweeps;
 	std::map<std::string,double> fparamlist;
-	op = create_sr_preconditioner<PetscReal,PetscInt>(ctx->prectypestr, ctx->bs, "colmajor", 
-			iparamlist, fparamlist);
+	precop = create_sr_preconditioner<PetscReal,PetscInt>(ctx->prectypestr, ctx->bs, "colmajor", 
+	                                                      false, iparamlist, fparamlist);
+	relop = create_sr_preconditioner<PetscReal,PetscInt>(ctx->prectypestr, ctx->bs, "colmajor", 
+	                                                      true, iparamlist, fparamlist);
 
-#if 0
-	switch(ctx->bs) {
-		case 0:
-			printf("BLASTed: createNewBlockMatrix: Invalid block size 0!\n");
-			abort();
-			break;
-		case 1:
-			op = new CSRMatrixView<PetscReal, PetscInt>
-				(localrows, Adiag->i, Adiag->j, Adiag->a, Adiag->diag,
-				ctx->nbuildsweeps,ctx->napplysweeps);
-			break;
-		/*case 2:
-			op = new BSRMatrixView<PetscReal,PetscInt,2,Eigen::ColMajor>
-				(localrows/bs, Adiag->i, Adiag->j, Adiag->a, Adiag->diag, 
-				 ctx->nbuildsweeps,ctx->napplysweeps);*/
-		case 3:
-			op = new BSRMatrixView<PetscReal,PetscInt,3,Eigen::ColMajor>
-				(localrows/ctx->bs, Abdiag->i, Abdiag->j, Abdiag->a, Abdiag->diag, 
-				 ctx->nbuildsweeps,ctx->napplysweeps);
-			break;
-		case 4:
-			op = new BSRMatrixView<PetscReal,PetscInt,4,Eigen::ColMajor>
-				(localrows/ctx->bs, Abdiag->i, Abdiag->j, Abdiag->a, Abdiag->diag, 
-				 ctx->nbuildsweeps,ctx->napplysweeps);
-			break;
-		case 5:
-			op = new BSRMatrixView<PetscReal,PetscInt,5,Eigen::ColMajor>
-				(localrows/ctx->bs, Abdiag->i, Abdiag->j, Abdiag->a, Abdiag->diag, 
-				 ctx->nbuildsweeps,ctx->napplysweeps);
-			break;
-		default:
-			printf("BLASTed: createNewBlockMatrix: That block size is not supported!\n");
-			abort();
-	}
-#endif
-
-	ctx->bprec = reinterpret_cast<void*>(op);
+	ctx->bprec = reinterpret_cast<void*>(precop);
+	ctx->brelax = reinterpret_cast<void*>(relop);
 	return ierr;
 }
 
@@ -218,7 +178,8 @@ PetscErrorCode updatePreconditioner(PC pc)
 	// get control structure
 	Blasted_data* ctx;
 	ierr = PCShellGetContext(pc, (void**)&ctx); CHKERRQ(ierr);
-	BlastedPreconditioner* op = reinterpret_cast<BlastedPreconditioner*>(ctx->bprec);
+	BlastedPreconditioner* precop = reinterpret_cast<BlastedPreconditioner*>(ctx->bprec);
+	BlastedPreconditioner* relop = reinterpret_cast<BlastedPreconditioner*>(ctx->brelax);
 
 	/* get the local preconditioning matrix
 	 * we operate on the diagonal matrix block corresponding to this process
@@ -239,12 +200,17 @@ PetscErrorCode updatePreconditioner(PC pc)
 		SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_SUP, "BLASTed: Block size %d is not supported!", ctx->bs);
 
 	// update and recompute
-	if(ctx->bs == 1)
-		op->wrap(localrows/ctx->bs, Adiag->i, Adiag->j, Adiag->a, Adiag->diag);
-	else
-		op->wrap(localrows/ctx->bs, Abdiag->i, Abdiag->j, Abdiag->a, Abdiag->diag);
+	if(ctx->bs == 1) {
+		precop->wrap(localrows/ctx->bs, Adiag->i, Adiag->j, Adiag->a, Adiag->diag);
+		relop->wrap(localrows/ctx->bs, Adiag->i, Adiag->j, Adiag->a, Adiag->diag);
+	}
+	else {
+		precop->wrap(localrows/ctx->bs, Abdiag->i, Abdiag->j, Abdiag->a, Abdiag->diag);
+		relop->wrap(localrows/ctx->bs, Abdiag->i, Abdiag->j, Abdiag->a, Abdiag->diag);
+	}
 
-	ctx->bprec = reinterpret_cast<void*>(op);
+	/*ctx->bprec = reinterpret_cast<void*>(precop);
+	  ctx->brelax = reinterpret_cast<void*>(relop);*/
 	return ierr;
 }
 
@@ -276,6 +242,7 @@ Blasted_data newBlastedDataContext()
 {
 	Blasted_data ctx;
 	ctx.bprec = NULL;
+	ctx.brelax = NULL;
 	ctx.prectypestr = NULL;
 	ctx.first_setup_done = false;
 	ctx.cputime = ctx.walltime = ctx.factorcputime = ctx.factorwalltime
@@ -298,10 +265,13 @@ void appendBlastedDataContext(Blasted_data_list *const bdl, const Blasted_data b
 PetscErrorCode cleanup_blasted(PC pc)
 {
 	PetscErrorCode ierr = 0;
+	
 	Blasted_data* ctx;
 	ierr = PCShellGetContext(pc, (void**)&ctx); CHKERRQ(ierr);
-	BlastedPreconditioner* mat = reinterpret_cast<BlastedPreconditioner*>(ctx->bprec);
-	delete mat;
+	BlastedPreconditioner* prec = reinterpret_cast<BlastedPreconditioner*>(ctx->bprec);
+	BlastedPreconditioner* relx = reinterpret_cast<BlastedPreconditioner*>(ctx->brelax);
+	delete prec;
+	delete relx;
 
 	delete [] ctx->prectypestr;
 
@@ -330,21 +300,6 @@ PetscErrorCode compute_preconditioner_blasted(PC pc)
 
 	ierr = updatePreconditioner(pc); CHKERRQ(ierr);
 	
-	/*switch(ctx->prectype) {
-		case SGS:
-			op->precSGSSetup();
-			break;
-		case ILU0:
-		case SAPILU0:
-			op->precILUSetup();
-			break;
-		case JACOBI:
-			op->precJacobiSetup();
-			break;
-		default:
-			SETERRQ(PETSC_COMM_SELF, PETSC_ERR_SUP, "Preconditioner not available!");
-	}*/
-	
 	gettimeofday(&time2, NULL);
 	double finalwtime = (double)time2.tv_sec + (double)time2.tv_usec * 1.0e-6;
 	ctx->factorwalltime += (finalwtime - initialwtime);
@@ -354,23 +309,21 @@ PetscErrorCode compute_preconditioner_blasted(PC pc)
 	return ierr;
 }
 
-PetscErrorCode apply_local_blasted(PC pc, Vec r, Vec z)
+/// Apply any kind of BLASTed operator
+PetscErrorCode apply_local_base(Blasted_data *const ctx,
+                                const BlastedPreconditioner *const bp, Vec r, Vec z)
 {
 	PetscErrorCode ierr = 0;
 	const PetscReal *ra;
 	PetscReal *za;
 	PetscInt start, end;
 	ierr = VecGetOwnershipRange(r, &start, &end); CHKERRQ(ierr);
-
-	Blasted_data* ctx;
-	PCShellGetContext(pc, (void**)&ctx);
-	const BlastedPreconditioner *const prec = reinterpret_cast<const BlastedPreconditioner*>(ctx->bprec);
-
+	
 #ifdef DEBUG
-	if(prec->dim() != end-start) {
+	if(bp->dim() != end-start) {
 		SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, 
 				"BLASTed: Dimension of vector does not match that of the matrix- %d vs %d!\n", 
-				prec->dim(), end-start);
+				bp->dim(), end-start);
 	}
 #endif
 	
@@ -382,25 +335,7 @@ PetscErrorCode apply_local_blasted(PC pc, Vec r, Vec z)
 	double initialwtime = (double)time1.tv_sec + (double)time1.tv_usec * 1.0e-6;
 	double initialctime = (double)clock() / (double)CLOCKS_PER_SEC;
 
-	/*switch(ctx->prectype) {
-		case SGS:
-			mat->precSGSApply(ra, za);
-			break;
-		case ILU0:
-			mat->precILUApply(ra, za);
-			break;
-		case SAPILU0:
-			mat->precILUApply_seq(ra, za);
-			break;
-		case JACOBI:
-			mat->precJacobiApply(ra, za);
-			break;
-		default:
-			printf("BLASTed: apply_local: Preconditioner not available!\n");
-			ierr = -1;
-	}*/
-
-	prec->apply(ra,za);
+	bp->apply(ra,za);
 
 	gettimeofday(&time2, NULL);
 	double finalwtime = (double)time2.tv_sec + (double)time2.tv_usec * 1.0e-6;
@@ -414,11 +349,51 @@ PetscErrorCode apply_local_blasted(PC pc, Vec r, Vec z)
 	return ierr;
 }
 
+PetscErrorCode apply_local_blasted(PC pc, Vec r, Vec z)
+{
+	PetscErrorCode ierr = 0;
+	Blasted_data* ctx;
+	ierr = PCShellGetContext(pc, (void**)&ctx); CHKERRQ(ierr);
+	const BlastedPreconditioner *const prec =
+		reinterpret_cast<const BlastedPreconditioner*>(ctx->bprec);
+
+	ierr = apply_local_base(ctx, prec, r, z); CHKERRQ(ierr);
+
+	return ierr;
+}
+
 PetscErrorCode relax_local_blasted(PC pc, Vec rhs, Vec x, Vec w, 
 		const PetscReal rtol, const PetscReal abstol, const PetscReal dtol, const PetscInt it, 
 		const PetscBool guesszero, PetscInt *const outits, PCRichardsonConvergedReason *const reason)
 {
-	int ierr = 0;
+	PetscErrorCode ierr = 0;
+	Blasted_data* ctx;
+	ierr = PCShellGetContext(pc, (void**)&ctx); CHKERRQ(ierr);
+
+	// ILUs are not implemented as relaxation, so just just call the preconditioner instead
+	if(ctx->prectype == ILU0 || ctx->prectype == SAPILU0) {
+		const BlastedPreconditioner *const prec =
+			reinterpret_cast<const BlastedPreconditioner*>(ctx->bprec);
+		
+		ierr = apply_local_base(ctx, prec, rhs, x); CHKERRQ(ierr);
+	}
+	else {
+		BlastedPreconditioner *const relaxation =
+			reinterpret_cast<BlastedPreconditioner*>(ctx->brelax);
+
+		// set relaxation parameters, though we don't use any of them except the max iterations
+		relaxation->setApplyParams({rtol,abstol,dtol,false,it});
+
+		if(guesszero) {
+			ierr = VecSet(x, 0.0); CHKERRQ(ierr);
+		}
+
+		ierr = apply_local_base(ctx, relaxation, rhs, x); CHKERRQ(ierr);
+
+		*reason = PCRICHARDSON_CONVERGED_ITS;
+		*outits = it;
+	}
+
 	return ierr;
 }
 

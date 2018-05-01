@@ -44,10 +44,11 @@ const std::string nbuildsweeps = "nbuildsweeps";
 const std::string napplysweeps = "napplysweeps";
 /** @} */
 
-/// Creates a preconditioner object, for matrices stored by sparse rows, based on the parameters
+/// Creates a preconditioner or relaxation object, for matrices stored by sparse rows
 /** \param precstr A string describing what preconditioner is needed \sa prectypelabels
  * \param bs Block size to create a dense block preconditioner
  * \param blockstorage String decsribing the layout within a dense block \sa blockorderlabels
+ * \param relaxation True if the relaxation form of the algorithm is required.
  * \param intParamList A parameter list of integer parameters. The keys needed depends on the type of
  *  preconditioner requested in \ref precstr. \sa integerkeys
  * \param floatParamList A parameter list of integer parameters. What keys are needed depends on 
@@ -57,9 +58,11 @@ const std::string napplysweeps = "napplysweeps";
  * required key does not exist in the parameter lists.
  */
 template <typename scalar, typename index>
-SRPreconditioner<scalar,index> *create_sr_preconditioner(const std::string precstr, const int bs,
-	const std::string blockstorage, 
-	const std::map<std::string,int>& intParamList, const std::map<std::string,double>& floatParamList);
+SRPreconditioner<scalar,index> *create_sr_preconditioner
+	(const std::string precstr, const int bs, const std::string blockstorage,
+	 const bool relaxation,
+	 const std::map<std::string,int>& intParamList,
+	 const std::map<std::string,double>& floatParamList);
 
 }
 

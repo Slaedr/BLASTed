@@ -1,4 +1,4 @@
-/** \file preconditioners.cpp
+/** \file solverops_base.cpp
  * \brief Implementation of some common functionality for preconditioners
  * \author Aditya Kashi
  */
