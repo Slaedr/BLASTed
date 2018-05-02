@@ -9,12 +9,6 @@
 
 namespace blasted {
 
-// template<typename scalar, typename index, int bs, StorageOptions stor>
-// BJacobiRelaxation<scalar,index,bs,stor>::BJacobiRelaxation(const scalar reltol, const scalar abstol, 
-// 		const scalar divtol, const bool checktol, const int maxiter)
-// 	: rtol{reltol}, atol{abstol}, dtol{divtol}, ctol{checktol}, maxits{maxiter}
-// { }
-
 template<typename scalar, typename index, int bs, class Mattype>
 void bjacobi_relax(const SolveParams<scalar>& sp,
 		const CRawBSRMatrix<scalar,index>& mat, const scalar *const dblocks,
@@ -24,7 +18,7 @@ void bjacobi_relax(const SolveParams<scalar>& sp,
 	scalar refdiffnorm = 1;
 	
 	Eigen::Map<const Vector<scalar>> b(bb, mat.nbrows*bs);
-	//Eigen::Map<Vector<scalar>> x(xx, mat.nbrows*bs);
+	//Eigen::Map<Vector<scalar>> xmut(xx, mat.nbrows*bs);
 	Eigen::Map<const Vector<scalar>> x(xx, mat.nbrows*bs);
 	Eigen::Map<Vector<scalar>> xtemp(xtempr, mat.nbrows*bs);
 

@@ -11,6 +11,9 @@
 namespace blasted {
 
 /// Relax one block-row
+/** Note that there is no aliasing issue between xL,xU and y.
+ * BUT there IS an aliasing issue between rhs and y.
+ */
 template <typename scalar, typename index, int bs, class Mattype, class Vectype> inline
 void block_relax
 	(Map<const Mattype>& vals, const index *const __restrict bcolind,
@@ -18,8 +21,6 @@ void block_relax
 	 Map<const Mattype>& diaginv, Map<const Vector<scalar>>& rhs, 
 	 Map<const Vector<scalar>>& xL, Map<const Vector<scalar>>& xU,
 	 Map<Vector<scalar>>& y
-	 /*const MatrixBase<Vectype>& xL, const MatrixBase<Vectype>& xU,
-	   MatrixBase<Vectype>& y*/
 	 )
 {
 	Matrix<scalar,bs,1> inter = Matrix<scalar,bs,1>::Zero();
