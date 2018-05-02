@@ -5,6 +5,10 @@
 
 #include <blasted_petsc_io.h>
 
+#ifdef _OPENMP
+#include <omp.h>
+#endif
+
 int main(int argc, char *argv[])
 {
 	char help[] = "Writes a matrix and 2 vectors in PETSc's binary format.\n\

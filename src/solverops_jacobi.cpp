@@ -4,6 +4,7 @@
  */
 
 #include <type_traits>
+#include <iostream>
 #include "solverops_jacobi.hpp"
 #include "kernels/kernels_base.hpp"
 

@@ -2,7 +2,7 @@ add_library(coomatrix coomatrix.cpp)
 add_library(blockmatrices csrmatrix.cpp bsrmatrix.cpp)
 set_property(TARGET blockmatrices PROPERTY POSITION_INDEPENDENT_CODE ON)
 
-add_library(solverops solverfactory.cpp relaxation_jacobi.cpp
+add_library(solverops solverfactory.cpp relaxation_jacobi.cpp relaxation_async.cpp
 	solverops_jacobi.cpp solverops_sgs.cpp solverops_ilu0.cpp solverops_base.cpp)
 set_property(TARGET solverops PROPERTY POSITION_INDEPENDENT_CODE ON)
 

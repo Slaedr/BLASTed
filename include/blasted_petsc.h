@@ -19,7 +19,7 @@ extern "C" {
 #endif
 
 /// The types of preconditioners that BLASTed provides
-typedef enum {JACOBI, SGS, ILU0, SAPILU0} Prec_type;
+typedef enum {JACOBI, GS, SGS, ILU0, SAPILU0} Prec_type;
 
 /** It has two operators - one for preconditioning and the other for relaxation.
  * The relaxation operator is only used when the local KSP is richardson. For all other local KSPs

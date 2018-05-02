@@ -31,9 +31,11 @@ PetscReal compute_error(const MPI_Comm comm, const Vec u, const Vec uexact) {
 
 int main(int argc, char* argv[])
 {
-	char help[] = "This program solves a linear system.\n\
+	char help[] = "This program solves a linear system using 2 different solvers\n\
+		and optionally compares the results.\n\
 		Arguments: (1) Matrix file in COO format (2) RHS file (3) Exact soln file\n\
-		Additionally, use -options_file to provide a PETSc options file.\n";
+		Use -options_file to provide a PETSc options file.\n\
+		Use '-test_type compare_its' to compare the two solvers by iteration count.\n";
 
 	if(argc < 4) {
 		printf("Please specify the required files.\n");
@@ -44,8 +46,10 @@ int main(int argc, char* argv[])
 	char * matfile = argv[1];
 	char * bfile = argv[2];
 	char * xfile = argv[3];
+	
 	PetscMPIInt size, rank;
 	PetscErrorCode ierr = 0;
+	
 	const int nruns = 1;
 
 	ierr = PetscInitialize(&argc, &argv, NULL, help); CHKERRQ(ierr);
@@ -68,6 +72,14 @@ int main(int argc, char* argv[])
 	if(!set) {
 		printf("Error tolerance factor not set; using the default 100.");
 		error_tol = 100.0;
+	}
+
+	char testtype[PETSCOPTION_STR_LEN];
+	ierr = PetscOptionsGetString(NULL,NULL,"-test_type",testtype, PETSCOPTION_STR_LEN, &set);
+	CHKERRQ(ierr);
+	if(!set) {
+		printf("Test type not set; testing convergence only.\n");
+		strcpy(testtype,"convergence");
 	}
 
 	PetscViewer matreader;
@@ -95,7 +107,7 @@ int main(int argc, char* argv[])
 	PetscViewerDestroy(&bvecreader);
 	PetscViewerDestroy(&xvecreader);
 	
-	// Matrix multiply check
+	// Matrix multiply check for the solution vector 
 	
 	Vec test; 
 	ierr = MatCreateVecs(A, NULL, &test); CHKERRQ(ierr);
@@ -133,6 +145,10 @@ int main(int argc, char* argv[])
 		printf("Ref run: error = %.16f\n", errnormref);
 	}
 
+	KSPConvergedReason reason;
+	ierr = KSPGetConvergedReason(kspref, &reason); CHKERRQ(ierr);
+	assert(reason == KSP_CONVERGED_RTOL || reason == KSP_CONVERGED_ATOL);
+		       
 	KSPDestroy(&kspref);
 
 	// run the solve to be tested as many times as requested
@@ -178,6 +194,9 @@ int main(int argc, char* argv[])
 			printf(" error and log error: %.16f, %f\n", errnorm, log10(errnorm));
 		}
 
+		ierr = KSPGetConvergedReason(ksp, &reason); CHKERRQ(ierr);
+		assert(reason == KSP_CONVERGED_RTOL || reason == KSP_CONVERGED_ATOL);
+
 		ierr = KSPDestroy(&ksp); CHKERRQ(ierr);
 		destroyBlastedDataList(&bctx);
 	}
@@ -185,24 +204,9 @@ int main(int argc, char* argv[])
 	if(rank == 0)
 		printf("KSP Iters: Reference %d vs BLASTed %d.\n", refkspiters, avgkspiters/nruns);
 
-	/*set = PETSC_FALSE;
-	char precstr[PETSCOPTION_STR_LEN];
-	PetscOptionsHasName(NULL, NULL, "-blasted_pc_type", &set);
-	if(set == PETSC_FALSE) {
-		printf(" Preconditioner type not set!\n");
-	}
-	else {
-		PetscBool flag = PETSC_FALSE;
-		PetscOptionsGetString(NULL, NULL, "-blasted_pc_type", 
-				precstr, PETSCOPTION_STR_LEN, &flag);
-		if(flag == PETSC_FALSE) {
-			printf(" Preconditioner type not set!\n");
-		}
-	}*/
-
-	// the test
-	assert(avgkspiters/nruns == refkspiters);
-	assert(fabs(errnorm-errnormref) < error_tol*DBL_EPSILON);
+	// test if the second solver was better than the reference solver in terms of iterations
+	if(!strcmp(testtype, "compare_its"))
+	   assert(avgkspiters/nruns <= refkspiters);
 
 	VecDestroy(&u);
 	VecDestroy(&uexact);

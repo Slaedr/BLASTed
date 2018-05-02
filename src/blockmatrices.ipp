@@ -456,7 +456,7 @@ BSRMatrix<scalar,index,1>::BSRMatrix(const int n_buildsweeps, const int n_applys
 	: AbstractMatrix<scalar,index>(CSR), mat{nullptr,nullptr,nullptr,nullptr,0}
 {
 #ifdef DEBUG
-	std::cout << "BSRMatrix<1>: Initialized CSR matrix."
+	std::cout << "BSRMatrix<1>: Initialized CSR matrix.";
 #endif
 }
 

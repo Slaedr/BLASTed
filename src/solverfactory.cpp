@@ -9,6 +9,7 @@
 #include "solverfactory.hpp"
 #include "solverops_jacobi.hpp"
 #include "relaxation_jacobi.hpp"
+#include "relaxation_async.hpp"
 #include "solverops_sgs.hpp"
 #include "solverops_ilu0.hpp"
 
@@ -29,12 +30,19 @@ SRPreconditioner<scalar,index> *create_srpreconditioner_of_type
 			return new BJacobiRelaxation<scalar,index,bs,stor>();
 		else
 			return new BJacobiSRPreconditioner<scalar,index,bs,stor>();
+	else if(precstr == gsstr) {
+		if(!relax) {
+			std::cout << "WARNING: SolverFactory: GS preconditioner not yet implemented.";
+			std::cout << " Using the relaxation instead.\n";
+		}
+		return new ChaoticBlockRelaxation<scalar,index,bs,stor>();
+	}
 	else if(precstr == sgsstr) {
 		if(relax) {
-			std::cout << "WARNING: SolverFactory: ASGS relaxation not yet implemented.";
-			std::cout << " Using the preconditioner instead.\n";
+			return new ABSGS_Relaxation<scalar,index,bs,stor>();
 		}
-		return new ABSGS_SRPreconditioner<scalar,index,bs,stor>(intlist.at(napplysweeps));
+		else
+			return new ABSGS_SRPreconditioner<scalar,index,bs,stor>(intlist.at(napplysweeps));
 	}
 	else if(precstr == ilu0str) {
 		if(relax) {

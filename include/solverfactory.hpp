@@ -21,6 +21,8 @@ namespace blasted {
 const std::string noprecstr = "none";
 /// Jacobi
 const std::string jacobistr = "jacobi";
+/// Gauss-Seidel
+const std::string gsstr = "gs";
 /// SGS
 const std::string sgsstr = "sgs";
 /// ILU(0)

@@ -42,12 +42,11 @@ int main(int argc, char* argv[])
 	char help[] = "Solves 3D Poisson equation by finite differences.\
 				   Arguments: (1) Control file (2) Petsc options file\n\n";
 	char * confile = argv[1];
-	char * optfile = argv[2];
 	PetscMPIInt size, rank;
 	PetscErrorCode ierr = 0;
 	int nruns;
 
-	ierr = PetscInitialize(&argc, &argv, optfile, help); CHKERRQ(ierr);
+	ierr = PetscInitialize(&argc, &argv, NULL, help); CHKERRQ(ierr);
 	MPI_Comm comm = PETSC_COMM_WORLD;
 	MPI_Comm_size(comm,&size);
 	MPI_Comm_rank(comm,&rank);

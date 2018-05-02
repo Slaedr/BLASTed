@@ -26,6 +26,26 @@ typedef SRPreconditioner<PetscReal,PetscInt> BlastedPreconditioner;
 
 #define PETSCOPTION_STR_LEN 10
 
+static Prec_type precTypeFromString(const std::string precstr2)
+{
+	Prec_type ptype;
+	if(precstr2 == "jacobi")
+		ptype = JACOBI;
+	else if(precstr2 == "gs")
+		ptype = GS;
+	else if(precstr2 == "sgs")
+		ptype = SGS;
+	else if(precstr2 == "ilu0")
+		ptype = ILU0;
+	else if(precstr2 == "sapilu0")
+		ptype = SAPILU0;
+	else {
+		printf("BLASTed: Preconditioner type not available!\n");
+		abort();
+	}
+	return ptype;
+}
+
 /// Sets options from PETSc options
 static PetscErrorCode setupDataFromOptions(PC pc)
 {
@@ -33,60 +53,31 @@ static PetscErrorCode setupDataFromOptions(PC pc)
 	Blasted_data* ctx;
 	ierr = PCShellGetContext(pc, (void**)&ctx); CHKERRQ(ierr);
 
-	Prec_type ptype;
-
-	PetscBool set = PETSC_FALSE;
-	PetscOptionsHasName(NULL, NULL, "-blasted_pc_type", &set);
-	if(set == PETSC_FALSE) {
-		printf("BLASTed: Preconditioner type not set! Setting to Jacobi.\n");
-		ptype = JACOBI;
+	char precstr[PETSCOPTION_STR_LEN];
+	PetscBool flag = PETSC_FALSE;
+	PetscOptionsGetString(NULL, NULL, "-blasted_pc_type", 
+	                      precstr, PETSCOPTION_STR_LEN, &flag);
+	if(flag == PETSC_FALSE) {
+		printf("BLASTed: Preconditioner type not set!\n");
+		abort();
 	}
-	else {
-		char precstr[PETSCOPTION_STR_LEN];
-		PetscBool flag = PETSC_FALSE;
-		PetscOptionsGetString(NULL, NULL, "-blasted_pc_type", 
-				precstr, PETSCOPTION_STR_LEN, &flag);
-		if(flag == PETSC_FALSE) {
-			printf("BLASTed: Preconditioner type not set!\n");
-			abort();
-		}
 
-		const size_t len = std::strlen(precstr);
-		ctx->prectypestr = new char[len+1];
-		std::strcpy(ctx->prectypestr, precstr);
-
-		std::string precstr2 = precstr;
-		if(precstr2 == "jacobi")
-			ptype = JACOBI;
-		else if(precstr2 == "sgs")
-			ptype = SGS;
-		else if(precstr2 == "ilu0")
-			ptype = ILU0;
-		else if(precstr2 == "sapilu0")
-			ptype = SAPILU0;
-		else {
-			printf("BLASTed: Preconditioner type not available!\n");
-			abort();
-		}
-	}
+	const size_t len = std::strlen(precstr);
+	ctx->prectypestr = new char[len+1];
+	std::strcpy(ctx->prectypestr, precstr);
+	
+	const Prec_type ptype = precTypeFromString(ctx->prectypestr);
 	
 	PetscInt sweeps[2];
 	if(ptype != JACOBI)
 	{
-		PetscOptionsHasName(NULL, NULL, "-blasted_async_sweeps", &set);
-		if(set == PETSC_FALSE) {
-			printf("BLASTed: Number of async sweeps not set!\n");
-			abort();
-		}
-		else {
-			PetscBool flag = PETSC_FALSE;
-			PetscInt nmax = 2;
-			PetscOptionsGetIntArray(NULL, NULL, "-blasted_async_sweeps", sweeps, &nmax, &flag);
+		PetscBool flag = PETSC_FALSE;
+		PetscInt nmax = 2;
+		PetscOptionsGetIntArray(NULL, NULL, "-blasted_async_sweeps", sweeps, &nmax, &flag);
 			
-			if(flag == PETSC_FALSE || nmax < 2) {
-				printf("BLASTed: Number of async sweeps not set properly!\n");
-				abort();
-			}
+		if(flag == PETSC_FALSE || nmax < 2) {
+			printf("BLASTed: Number of async sweeps not set properly!\n");
+			abort();
 		}
 	}
 	else {
@@ -388,6 +379,7 @@ PetscErrorCode relax_local_blasted(PC pc, Vec rhs, Vec x, Vec w,
 			ierr = VecSet(x, 0.0); CHKERRQ(ierr);
 		}
 
+		//std::printf("Applying relaxation.\n");
 		ierr = apply_local_base(ctx, relaxation, rhs, x); CHKERRQ(ierr);
 
 		*reason = PCRICHARDSON_CONVERGED_ITS;
@@ -515,6 +507,7 @@ PetscErrorCode setup_localpreconditioner_blasted(KSP ksp, Blasted_data *const bc
 	ierr = PCShellSetContext(subpc, (void*)bctx);                   CHKERRQ(ierr);
 	ierr = PCShellSetSetUp(subpc, &compute_preconditioner_blasted); CHKERRQ(ierr);
 	ierr = PCShellSetApply(subpc, &apply_local_blasted);            CHKERRQ(ierr);
+	ierr = PCShellSetApplyRichardson(subpc, &relax_local_blasted);  CHKERRQ(ierr);
 	ierr = PCShellSetDestroy(subpc, &cleanup_blasted);              CHKERRQ(ierr);
 
 	return ierr;

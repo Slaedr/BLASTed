@@ -1,6 +1,6 @@
 # With reference PETSc preconditioner
 
--ref_ksp_type fbcgs
+-ref_ksp_type richardson
 -ref_ksp_richardson_scale 1.0
 
 -ref_ksp_rtol 1e-6
@@ -18,7 +18,7 @@
 
 # With blasted preconditioner
 
--ksp_type fbcgs
+-ksp_type richardson
 
 -ksp_rtol 1e-6
 -ksp_max_it 100
