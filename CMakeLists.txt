@@ -15,6 +15,9 @@ cmake_minimum_required(VERSION 3.0)
 # - -DKNL=1 to compile for Xeon Phi Knights Landing
 # - -DMICKNC=1 to compile for Xeon Phi Knights Corner
 # - -DPROFILE=1 for profiling with gprof.
+#
+# - -DBUILD_BLOCK_SIZE=<n> for some integer n, to build the block solver operations for
+#     an additional block size of <n>. By default, block sizes 4 and 5 are supported.
 
 project (blasted)
 
