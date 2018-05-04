@@ -183,7 +183,7 @@ int main(int argc, char* argv[])
 		ierr = KSPSetOperators(ksp, A, A); CHKERRQ(ierr);
 		
 		Blasted_data_list bctx = newBlastedDataList();
-		ierr = setup_blasted_stack(ksp, &bctx, 0); CHKERRQ(ierr);
+		ierr = setup_blasted_stack(ksp, &bctx); CHKERRQ(ierr);
 		
 		ierr = KSPSolve(ksp, b, u); CHKERRQ(ierr);
 
@@ -193,7 +193,6 @@ int main(int argc, char* argv[])
 		avgkspiters += kspiters;
 
 		if(rank == 0) {
-			//printf(" Number of KSP iterations = %d\n", kspiters);
 			KSPGetResidualNorm(ksp, &rnorm);
 			printf(" KSP residual norm = %f\n", rnorm);
 		}

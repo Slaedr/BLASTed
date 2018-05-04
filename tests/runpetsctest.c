@@ -157,7 +157,7 @@ int main(int argc, char* argv[])
 
 		//setup_localpreconditioner_blasted(ksp, &bctx);
 		Blasted_data_list bctx = newBlastedDataList();
-		ierr = setup_blasted_stack(ksp, &bctx, 0); CHKERRQ(ierr);
+		ierr = setup_blasted_stack(ksp, &bctx); CHKERRQ(ierr);
 		
 		ierr = KSPSolve(ksp, b, u); CHKERRQ(ierr);
 
@@ -184,21 +184,6 @@ int main(int argc, char* argv[])
 
 	if(rank == 0)
 		printf("KSP Iters: Reference %d vs BLASTed %d.\n", refkspiters, avgkspiters/nruns);
-
-	/*set = PETSC_FALSE;
-	char precstr[PETSCOPTION_STR_LEN];
-	PetscOptionsHasName(NULL, NULL, "-blasted_pc_type", &set);
-	if(set == PETSC_FALSE) {
-		printf(" Preconditioner type not set!\n");
-	}
-	else {
-		PetscBool flag = PETSC_FALSE;
-		PetscOptionsGetString(NULL, NULL, "-blasted_pc_type", 
-				precstr, PETSCOPTION_STR_LEN, &flag);
-		if(flag == PETSC_FALSE) {
-			printf(" Preconditioner type not set!\n");
-		}
-	}*/
 
 	// the test
 	assert(avgkspiters/nruns == refkspiters);

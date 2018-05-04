@@ -85,17 +85,15 @@ void destroyBlastedDataList(Blasted_data_list *const bdv);
 /// Recursive function to set the BLASTed preconditioner wherever possible in the entire solver stack
 /** Finds shell PCs and sets BLASTed as the preconditioner for each of them.
  * Assumptions:
- *  - Multigrid occurs only once in the solver stack - no multigrid smoothers for multigrid.
- *  - If multigrid occurs, it is the global top-level preconditioner. Local multigrid is not supported.
- *    Smoothers can be domain decomposition methods like ASM.
+ *  - If multigrid occurs, the same smoother (and the same number of sweeps) is used for both
+ *   pre- and post-smoothing.
  *
  * \param ksp A PETSc solver context
  * \param bctx The BLASTed structures that store required settings and data; must be created by
  * \ref newBlastedDataList. It should later be deleted by the user, calling \ref destroyBlastedDataList
  *   after the ksp has been destroyed.
- * \param level The entry in the BLASTed data list to use - the user should set this to zero.
  */
-PetscErrorCode setup_blasted_stack(KSP ksp, Blasted_data_list *const bctx, const int level);
+PetscErrorCode setup_blasted_stack(KSP ksp, Blasted_data_list *const bctx);
 
 /// Create a new BLASTed data context
 Blasted_data newBlastedDataContext();

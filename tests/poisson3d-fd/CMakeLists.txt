@@ -42,15 +42,15 @@ ${CMAKE_CURRENT_SOURCE_DIR}/../input/poisson.control -options_file  ${CMAKE_CURR
 
 add_test(NAME ThreadedPoissonCSRPetscSGS COMMAND mpirun -n 1 ./testcsr_poisson_threaded 
 ${CMAKE_CURRENT_SOURCE_DIR}/../input/poisson.control -options_file  ${CMAKE_CURRENT_SOURCE_DIR}/../input/thread_poisson_csr.perc 
--ref_sub_pc_type sor -blasted_pc_type sgs)
+-ref_sub_pc_type sor -blasted_pc_type sgs -test_type compare_error)
 
 add_test(NAME ThreadedPoissonCSRPetscILU0 COMMAND mpirun -n 1 ./testcsr_poisson_threaded 
 ${CMAKE_CURRENT_SOURCE_DIR}/../input/poisson.control -options_file  ${CMAKE_CURRENT_SOURCE_DIR}/../input/thread_poisson_csr.perc 
--ref_sub_pc_type ilu -blasted_pc_type ilu0)
+-ref_sub_pc_type ilu -blasted_pc_type ilu0 -test_type compare_error)
 
 add_test(NAME ThreadedPoissonCSRPetscSAPILU0 COMMAND mpirun -n 1 ./testcsr_poisson_threaded 
 ${CMAKE_CURRENT_SOURCE_DIR}/../input/poisson.control -options_file  ${CMAKE_CURRENT_SOURCE_DIR}/../input/thread_poisson_csr.perc 
--ref_sub_pc_type ilu -blasted_pc_type sapilu0)
+-ref_sub_pc_type ilu -blasted_pc_type sapilu0 -test_type compare_error)
 
 endif()
 

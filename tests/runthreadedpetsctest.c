@@ -147,7 +147,7 @@ int main(int argc, char* argv[])
 
 	KSPConvergedReason reason;
 	ierr = KSPGetConvergedReason(kspref, &reason); CHKERRQ(ierr);
-	assert(reason == KSP_CONVERGED_RTOL || reason == KSP_CONVERGED_ATOL);
+	assert(reason > 0);
 		       
 	KSPDestroy(&kspref);
 
@@ -173,7 +173,7 @@ int main(int argc, char* argv[])
 
 		//setup_localpreconditioner_blasted(ksp, &bctx);
 		Blasted_data_list bctx = newBlastedDataList();
-		ierr = setup_blasted_stack(ksp, &bctx, 0); CHKERRQ(ierr);
+		ierr = setup_blasted_stack(ksp, &bctx); CHKERRQ(ierr);
 		
 		ierr = KSPSolve(ksp, b, u); CHKERRQ(ierr);
 
@@ -195,7 +195,7 @@ int main(int argc, char* argv[])
 		}
 
 		ierr = KSPGetConvergedReason(ksp, &reason); CHKERRQ(ierr);
-		assert(reason == KSP_CONVERGED_RTOL || reason == KSP_CONVERGED_ATOL);
+		assert(reason > 0);
 
 		ierr = KSPDestroy(&ksp); CHKERRQ(ierr);
 		destroyBlastedDataList(&bctx);

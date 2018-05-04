@@ -43,7 +43,9 @@ int main(int argc, char* argv[])
 	}
 
 	char help[] = "Solves 3D Poisson equation by finite differences.\
-				   Arguments: (1) Control file (2) Petsc options file\n\n";
+				   Arguments: (1) Control file (2) Petsc options file\n \
+           Command line options: -test_type <'compare_error','compare_its'>, -num_runs <int>";
+	
 	char * confile = argv[1];
 	PetscMPIInt size, rank;
 	PetscErrorCode ierr = 0;
@@ -100,6 +102,20 @@ int main(int argc, char* argv[])
 		printf("\n");
 		printf("Number of runs: %d\n", nruns);
 	}
+
+	char testtype[PETSCOPTION_STR_LEN];
+	PetscBool set = PETSC_FALSE;
+	ierr = PetscOptionsGetString(NULL,NULL,"-test_type",testtype, PETSCOPTION_STR_LEN, &set);
+	CHKERRQ(ierr);
+	if(!set) {
+		printf("Test type not set; testing convergence only.\n");
+		strcpy(testtype,"convergence");
+	}
+
+	PetscInt cmdnumruns;
+	ierr = PetscOptionsGetInt(NULL,NULL,"-num_runs",&cmdnumruns,&set); CHKERRQ(ierr);
+	if(set)
+		nruns = cmdnumruns;
 	//----------------------------------------------------------------------------------
 
 	// set up Petsc variables
@@ -166,6 +182,10 @@ int main(int argc, char* argv[])
 	if(rank==0) {
 		printf("Ref run: error = %.16f\n", errnormref);
 	}
+	
+	KSPConvergedReason ref_ksp_reason;
+	ierr = KSPGetConvergedReason(kspref, &ref_ksp_reason); CHKERRQ(ierr);
+	assert(ref_ksp_reason > 0);
 
 	KSPDestroy(&kspref);
 
@@ -174,9 +194,9 @@ int main(int argc, char* argv[])
 	int avgkspiters = 0;
 	PetscReal errnorm = 0;
 	
-	// test with 4 threads
+	// test with 4 threads - or not
 #ifdef _OPENMP
-	omp_set_num_threads(4);
+	//omp_set_num_threads(4);
 #endif
 	
 	for(int irun = 0; irun < nruns; irun++)
@@ -197,7 +217,7 @@ int main(int argc, char* argv[])
 		
 		// Create BLASTed data structure and setup the PC
 		Blasted_data_list bctx = newBlastedDataList();
-		ierr = setup_blasted_stack(ksp, &bctx, 0); CHKERRQ(ierr);
+		ierr = setup_blasted_stack(ksp, &bctx); CHKERRQ(ierr);
 		
 		ierr = KSPSolve(ksp, b, u); CHKERRQ(ierr);
 
@@ -220,14 +240,14 @@ int main(int argc, char* argv[])
 		}
 		
 		// test
-		KSPConvergedReason reason;
-		ierr = KSPGetConvergedReason(ksp, &reason); CHKERRQ(ierr);
-		assert(reason == KSP_CONVERGED_RTOL || reason == KSP_CONVERGED_ATOL);
+		KSPConvergedReason ksp_reason;
+		ierr = KSPGetConvergedReason(ksp, &ksp_reason); CHKERRQ(ierr);
+		assert(ksp_reason > 0);
 
 		// the following test is probably not workable..
 		printf("Difference in error norm = %.16f.\n", std::fabs(errnorm-errnormref));
-		assert(std::fabs(errnorm-errnormref) < 1e6*DBL_EPSILON);
-
+		if(!strcmp(testtype,"compare_error"))
+			assert(std::fabs(errnorm-errnormref) < 1e6*DBL_EPSILON);
 
 		ierr = KSPDestroy(&ksp); CHKERRQ(ierr);
 
@@ -243,6 +263,8 @@ int main(int argc, char* argv[])
 
 	if(rank == 0)
 		printf("KSP Iters: Reference %d vs BLASTed %d.\n", refkspiters, avgkspiters/nruns);
+	if(!strcmp(testtype, "compare_its"))
+		assert(refkspiters >= avgkspiters/nruns);
 
 	VecDestroy(&u);
 	VecDestroy(&uexact);

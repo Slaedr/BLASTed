@@ -12,7 +12,6 @@
 #include <../src/mat/impls/aij/mpi/mpiaij.h>
 #include <../src/mat/impls/baij/mpi/mpibaij.h>
 
-//#include <blockmatrices.hpp>
 #include "solverops_jacobi.hpp"
 #include "solverops_sgs.hpp"
 #include "solverops_ilu0.hpp"
@@ -21,7 +20,6 @@
 
 using namespace blasted;
 
-//typedef SRMatrixView<PetscReal, PetscInt> BlastedPetscMat;
 typedef SRPreconditioner<PetscReal,PetscInt> BlastedPreconditioner;
 
 #define PETSCOPTION_STR_LEN 10
@@ -389,7 +387,7 @@ PetscErrorCode relax_local_blasted(PC pc, Vec rhs, Vec x, Vec w,
 	return ierr;
 }
 
-PetscErrorCode setup_blasted_stack(KSP ksp, Blasted_data_list *const bctv, const int ictx)
+PetscErrorCode setup_blasted_stack(KSP ksp, Blasted_data_list *const bctv)
 {
 	PetscErrorCode ierr = 0;
 	PC pc;
@@ -418,7 +416,7 @@ PetscErrorCode setup_blasted_stack(KSP ksp, Blasted_data_list *const bctv, const
 			SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, 
 					"Only one subdomain per rank is supported.");
 
-		ierr = setup_blasted_stack(subksp[0], bctv, ictx); CHKERRQ(ierr);
+		ierr = setup_blasted_stack(subksp[0], bctv); CHKERRQ(ierr);
 	}
 	else if(ismg || isgamg) {
 		ierr = KSPSetUp(ksp); CHKERRQ(ierr); 
@@ -429,7 +427,7 @@ PetscErrorCode setup_blasted_stack(KSP ksp, Blasted_data_list *const bctv, const
 		for(int ilvl = 1; ilvl < nlevels; ilvl++) {
 			KSP smootherctx;
 			ierr = PCMGGetSmoother(pc, ilvl , &smootherctx); CHKERRQ(ierr);
-			ierr = setup_blasted_stack(smootherctx, bctv, ictx); CHKERRQ(ierr);
+			ierr = setup_blasted_stack(smootherctx, bctv); CHKERRQ(ierr);
 			/*
 			KSP smootherup, smootherdown;
 			ierr = PCMGGetSmootherDown(pc, ilvl , &smootherdown); CHKERRQ(ierr);
@@ -439,14 +437,14 @@ PetscErrorCode setup_blasted_stack(KSP ksp, Blasted_data_list *const bctv, const
 		}
 		KSP coarsesolver;
 		ierr = PCMGGetCoarseSolve(pc, &coarsesolver); CHKERRQ(ierr);
-		ierr = setup_blasted_stack(coarsesolver, bctv, ictx); CHKERRQ(ierr);
+		ierr = setup_blasted_stack(coarsesolver, bctv); CHKERRQ(ierr);
 	}
 	else if(isksp) {
 		ierr = KSPSetUp(ksp); CHKERRQ(ierr); 
 		ierr = PCSetUp(pc); CHKERRQ(ierr);
 		KSP subksp;
 		ierr = PCKSPGetKSP(pc, &subksp); CHKERRQ(ierr);
-		ierr = setup_blasted_stack(subksp, bctv, ictx); CHKERRQ(ierr);
+		ierr = setup_blasted_stack(subksp, bctv); CHKERRQ(ierr);
 	}
 	else if(isshell) {
 		// if the PC is shell, this is the relevant KSP to pass to BLASTed for setup
