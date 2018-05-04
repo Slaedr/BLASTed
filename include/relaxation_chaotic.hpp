@@ -11,7 +11,7 @@
 
 namespace blasted {
 
-/// Point-block version of the Chazan-Miranker chaotic relaxation
+/// Point-block version of the Chazan-Miranker chaotic relaxation \cite async:chazan_1969
 /** Does not use `-blasted_async_sweeps'.
  */
 template<typename scalar, typename index, int bs, StorageOptions stor>
@@ -38,7 +38,7 @@ protected:
 	const int thread_chunk_size;
 };
 
-/// Chazan-Miranker chaotic relaxation
+/// Chazan-Miranker chaotic relaxation \cite async:chazan_1969
 /** Does not use `-blasted_async_sweeps'.
  */
 template<typename scalar, typename index>

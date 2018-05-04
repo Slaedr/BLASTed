@@ -257,7 +257,13 @@ void AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>::compute()
 			}
 		}
 		else
-			std::cout << "! BSRMatrix: precILUSetup(): Temp vector is already allocated!\n";
+			std::cout << "! AsyncBlockILU0_SRPreconditioner: Temp vector is already allocated!\n";
+
+		if(rowscale)
+			if(!scale)
+				scale = new scalar[mat.nbrows*bs*bs];
+			else
+				std::cout << "! AsyncBlockILU0_SRPreconditioner: scale was already allocated!\n";
 	}
 
 	if(stor == RowMajor)

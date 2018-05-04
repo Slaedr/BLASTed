@@ -13,9 +13,9 @@ namespace blasted {
 /// Asynchronous block-ILU(0) preconditioner for sparse-row matrices
 /** Finds \f$ \tilde{L} \f$ and \f$ \tilde{U} \f$ such that
  * \f[ \tilde{L} \tilde{U} = A \f]
- * is approximately satisifed, with \f$ \tilde{L} \f$ unit lower triangular.
+ * is approximately satisifed, with \f$ \tilde{L} \f$ block unit lower triangular.
  * The sparsity if A is preserved, so this is ILU(0).
- * This block version is adapted from the scalar version in \cite ilu:chowpatel . 
+ * This block version is adapted from the scalar version in \cite ilu:chowpatel.
  */
 template <typename scalar, typename index, int bs, StorageOptions stor>
 class AsyncBlockILU0_SRPreconditioner : public SRPreconditioner<scalar,index>
@@ -58,8 +58,10 @@ protected:
 	/// Temporary storage for result of application of L
 	scalar *ytemp;
 
-	const bool threadedfactor;                      ///< True for thread-parallel ILU0 factorization
-	const bool threadedapply;                       ///< True for thread-parallel LU application
+	const bool threadedfactor;         ///< True for thread-parallel ILU0 factorization
+	const bool threadedapply;          ///< True for thread-parallel LU application
+	
+	const bool rowscale;               ///< Whether to pre-scale the block-rows before factorization
 	const int nbuildsweeps;
 	const int napplysweeps;
 	const int thread_chunk_size;
