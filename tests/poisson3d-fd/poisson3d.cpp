@@ -152,6 +152,10 @@ int main(int argc, char* argv[])
 	
 	ierr = KSPSolve(kspref, b, u); CHKERRQ(ierr);
 
+	KSPConvergedReason ref_ksp_reason;
+	ierr = KSPGetConvergedReason(kspref, &ref_ksp_reason); CHKERRQ(ierr);
+	assert(ref_ksp_reason > 0);
+
 	PetscInt refkspiters;
 	ierr = KSPGetIterationNumber(kspref, &refkspiters);
 	PetscReal errnormref = compute_error(comm,m,da,u,uexact);
@@ -191,6 +195,10 @@ int main(int argc, char* argv[])
 		int kspiters; PetscReal rnorm;
 		KSPGetIterationNumber(ksp, &kspiters);
 		avgkspiters += kspiters;
+		
+		KSPConvergedReason ksp_reason;
+		ierr = KSPGetConvergedReason(ksp, &ksp_reason); CHKERRQ(ierr);
+		assert(ksp_reason > 0);
 
 		if(rank == 0) {
 			KSPGetResidualNorm(ksp, &rnorm);

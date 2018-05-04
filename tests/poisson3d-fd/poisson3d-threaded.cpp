@@ -232,7 +232,7 @@ int main(int argc, char* argv[])
 			printf(" KSP residual norm = %f, num iters = %d.\n", rnorm, kspiters);
 		}
 		
-		errnorm = compute_error(comm,m,da,u,uexact);
+		errnorm += compute_error(comm,m,da,u,uexact);
 		if(rank == 0) {
 			printf("Test run:\n");
 			printf(" h and error: %f  %.16f\n", m.gh(), errnorm);
@@ -243,11 +243,6 @@ int main(int argc, char* argv[])
 		KSPConvergedReason ksp_reason;
 		ierr = KSPGetConvergedReason(ksp, &ksp_reason); CHKERRQ(ierr);
 		assert(ksp_reason > 0);
-
-		// the following test is probably not workable..
-		printf("Difference in error norm = %.16f.\n", std::fabs(errnorm-errnormref));
-		if(!strcmp(testtype,"compare_error"))
-			assert(std::fabs(errnorm-errnormref) < 1e6*DBL_EPSILON);
 
 		ierr = KSPDestroy(&ksp); CHKERRQ(ierr);
 
@@ -263,8 +258,15 @@ int main(int argc, char* argv[])
 
 	if(rank == 0)
 		printf("KSP Iters: Reference %d vs BLASTed %d.\n", refkspiters, avgkspiters/nruns);
+
 	if(!strcmp(testtype, "compare_its"))
 		assert(refkspiters >= avgkspiters/nruns);
+
+	// the following test is probably not workable..
+	printf("Difference in error norm = %.16f.\n", std::fabs(errnorm-errnormref));
+	if(!strcmp(testtype,"compare_error"))
+		assert(std::fabs(errnorm/nruns-errnormref) < 1e6*DBL_EPSILON);
+
 
 	VecDestroy(&u);
 	VecDestroy(&uexact);

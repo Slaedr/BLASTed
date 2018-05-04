@@ -16,7 +16,7 @@
 -ref_pc_type bjacobi
 -ref_sub_pc_type sor
 #-ref_sub_pc_sor_symmetric
-#-ref_sub_pc_sor_local_symmetric
+-ref_sub_pc_sor_local_symmetric
 
 # With blasted preconditioner
 

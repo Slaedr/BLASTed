@@ -121,6 +121,7 @@ void block_gemv3(const CRawBSRMatrix<scalar,index> *const mat,
 	}
 }
 
+/// Matrix-vector product for CSR matrices
 template <typename scalar, typename index>
 inline
 void matrix_apply(const CRawBSRMatrix<scalar,index> *const mat,
@@ -138,6 +139,7 @@ void matrix_apply(const CRawBSRMatrix<scalar,index> *const mat,
 	}
 }
 
+/// Computes z := a Ax + by for CSR matrix A, scalars a and b and vectors x and y
 template <typename scalar, typename index>
 inline
 void scalar_gemv3(const CRawBSRMatrix<scalar,index> *const mat,
