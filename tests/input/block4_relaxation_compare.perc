@@ -1,7 +1,4 @@
-# To use this file, specify -ref_sub_pc_type and -blasted_pc_type on the command line.
-
--mat_type baij
--mat_block_size 4
+# To use this file, specify the mat type, -ref_sub_pc_type and -blasted_pc_type on the command line.
 
 # With reference PETSc preconditioner
 

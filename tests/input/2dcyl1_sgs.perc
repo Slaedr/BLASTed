@@ -2,8 +2,6 @@
 
 # The mat type is set separately for different tests that use this file
 
-#-mat_block_size 4
-
 # With reference PETSc preconditioner
 
 -ref_ksp_type gmres

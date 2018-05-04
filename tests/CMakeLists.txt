@@ -226,7 +226,7 @@ if(WITH_PETSC)
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.pmat 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.pmat 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.pmat
-	-options_file ${CMAKE_CURRENT_SOURCE_DIR}/input/block4_relaxation_compare.perc
+	-options_file ${CMAKE_CURRENT_SOURCE_DIR}/input/block4_relaxation_compare.perc -mat_type baij
 	-ref_sub_pc_type pbjacobi -blasted_pc_type jacobi
 	)
   add_test(NAME MPIPetsc-BSR4-GS-Relaxation COMMAND env OMP_NUM_THREADS=1 mpirun -n 3 ${CMAKE_CURRENT_BINARY_DIR}/testpetscsolver
@@ -243,6 +243,22 @@ if(WITH_PETSC)
 	-options_file ${CMAKE_CURRENT_SOURCE_DIR}/input/block4_relaxation_compare.perc -mat_type baij
 	-ref_sub_pc_type sor -ref_sub_pc_sor_local_symmetric -blasted_pc_type sgs
 	)
+
+  ## Fails! Our scalar SGS preconditioner is not the same as PETSc's.
+  #add_test(NAME MPIPetsc-CSR-SGS COMMAND env OMP_NUM_THREADS=1 mpirun -n 3 ${CMAKE_CURRENT_BINARY_DIR}/testpetscsolver
+  #	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.pmat 
+  #	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.pmat 
+  #	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.pmat
+  #	-options_file ${CMAKE_CURRENT_SOURCE_DIR}/input/2dcyl1_sgs.perc -mat_type aij
+  #	)
+  ## Fails! Our scalar SGS relaxation is not the same as PETSc's.
+  #add_test(NAME MPIPetsc-CSR-SGS-Relaxation COMMAND env OMP_NUM_THREADS=1 mpirun -n 3 ${CMAKE_CURRENT_BINARY_DIR}/testpetscsolver
+  #	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.pmat
+  #	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.pmat 
+  #	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.pmat
+  #	-options_file ${CMAKE_CURRENT_SOURCE_DIR}/input/block4_relaxation_compare.perc -mat_type aij
+  #	-ref_sub_pc_type sor -ref_sub_pc_sor_local_symmetric -blasted_pc_type sgs
+  #	)
 
   add_test(NAME AsyncRelaxation-Petsc-BSR4-GS-Convergence COMMAND ${CMAKE_CURRENT_BINARY_DIR}/testthreadedpetscsolver
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.pmat
