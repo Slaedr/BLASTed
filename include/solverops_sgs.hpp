@@ -21,15 +21,15 @@ namespace blasted {
  * This block version is adapted from the scalar version in \cite async:anzt_triangular
  */
 template <typename scalar, typename index, int bs, StorageOptions stor>
-class ABSGS_SRPreconditioner : public BJacobiSRPreconditioner<scalar,index,bs,stor>
+class AsyncBlockSGS_SRPreconditioner : public BJacobiSRPreconditioner<scalar,index,bs,stor>
 {
 public:
 	/// Create block SGS preconditioner
 	/** \param napplysweeps Number of asynchronous application sweeps
 	 */
-	ABSGS_SRPreconditioner(const int napplysweeps);
+	AsyncBlockSGS_SRPreconditioner(const int napplysweeps);
 
-	~ABSGS_SRPreconditioner();
+	~AsyncBlockSGS_SRPreconditioner();
 
 	/// Returns the number of rows of the operator
 	index dim() const { return mat.nbrows*bs; }
@@ -53,15 +53,15 @@ protected:
 
 /// Asynchronous scalar SGS operator for sparse-row matrices
 template <typename scalar, typename index>
-class ASGS_SRPreconditioner : public JacobiSRPreconditioner<scalar,index>
+class AsyncSGS_SRPreconditioner : public JacobiSRPreconditioner<scalar,index>
 {
 public:
 	/// Create asynchronous scalar SGS preconditioner
 	/** \param napplysweeps Number of asynchronous application sweeps
 	 */
-	ASGS_SRPreconditioner(const int napplysweeps);
+	AsyncSGS_SRPreconditioner(const int napplysweeps);
 
-	~ASGS_SRPreconditioner();
+	~AsyncSGS_SRPreconditioner();
 
 	/// Returns the number of rows
 	index dim() const { return mat.nbrows; }

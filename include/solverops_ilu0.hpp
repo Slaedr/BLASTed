@@ -18,7 +18,7 @@ namespace blasted {
  * This block version is adapted from the scalar version in \cite ilu:chowpatel . 
  */
 template <typename scalar, typename index, int bs, StorageOptions stor>
-class ABILU0_SRPreconditioner : public SRPreconditioner<scalar,index>
+class AsyncBlockILU0_SRPreconditioner : public SRPreconditioner<scalar,index>
 {
 	static_assert(bs > 0, "Block size must be positive!");
 	static_assert(stor == RowMajor || stor == ColMajor, "Invalid storage option!");
@@ -29,10 +29,10 @@ public:
 	 * \param threadedfactor If false, the preconditioner is computed sequentially
 	 * \param threadedapply If false, the preconditioner is applied sequentially
 	 */
-	ABILU0_SRPreconditioner(const int nbuildsweeps, const int napplysweeps,
+	AsyncBlockILU0_SRPreconditioner(const int nbuildsweeps, const int napplysweeps,
 	                       const bool threadedfactor=true, const bool threadedapply=true);
 
-	~ABILU0_SRPreconditioner();
+	~AsyncBlockILU0_SRPreconditioner();
 
 	/// Returns the number of rows of the operator
 	index dim() const { return mat.nbrows*bs; }
@@ -67,7 +67,7 @@ protected:
 
 /// Asynchronous scalar ILU(0) operator for sparse-row matrices
 template <typename scalar, typename index>
-class AILU0_SRPreconditioner : public SRPreconditioner<scalar,index>
+class AsyncILU0_SRPreconditioner : public SRPreconditioner<scalar,index>
 {
 public:
 	/** \param nbuildsweeps Number of asynchronous sweeps used to compute the LU factors
@@ -75,10 +75,10 @@ public:
 	 * \param threadedfactor If false, the preconditioner is computed sequentially
 	 * \param threadedapply If false, the preconditioner is applied sequentially
 	 */
-	AILU0_SRPreconditioner(const int nbuildsweeps, const int napplysweeps,
+	AsyncILU0_SRPreconditioner(const int nbuildsweeps, const int napplysweeps,
 	                       const bool threadedfactor=true, const bool threadedapply=true);
 
-	~AILU0_SRPreconditioner();
+	~AsyncILU0_SRPreconditioner();
 
 	/// Returns the number of rows
 	index dim() const { return mat.nbrows; }

@@ -45,6 +45,23 @@ void block_relax
 											  * (rhs.SEG<bs>(irow*bs) - inter);
 }
 
+/// Relax one row
+template <typename scalar, typename index> inline 
+scalar scalar_relax(const scalar *const vals, const index *const colind, 
+                    const index rowstart, const index diagind, const index nextrowstart,
+                    const scalar diag_entry_inv, const scalar rhs,
+                    const scalar *const xL, const scalar *const xU)
+{
+	scalar inter = 0;
+	for(index jj = rowstart; jj < diagind; jj++)
+		inter += vals[jj]*xL[colind[jj]];
+	
+	for(index jj = diagind+1; jj < nextrowstart; jj++)
+		inter += vals[jj]*xU[colind[jj]];
+
+	return diag_entry_inv * (rhs - inter);
+}
+
 }
 
 #endif

@@ -11,14 +11,14 @@
 namespace blasted {
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
-ABILU0_SRPreconditioner<scalar,index,bs,stor>::ABILU0_SRPreconditioner
+AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>::AsyncBlockILU0_SRPreconditioner
 	(const int nbuildswp, const int napplyswp, const bool tf, const bool ta)
 	: iluvals{nullptr}, scale{nullptr}, ytemp{nullptr}, threadedfactor{tf}, threadedapply{ta},
 	  nbuildsweeps{nbuildswp}, napplysweeps{napplyswp}, thread_chunk_size{400}
 { }
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
-ABILU0_SRPreconditioner<scalar,index,bs,stor>::~ABILU0_SRPreconditioner()
+AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>::~AsyncBlockILU0_SRPreconditioner()
 {
 	delete [] iluvals;
 	delete [] ytemp;
@@ -232,7 +232,7 @@ void block_ilu0_apply( const CRawBSRMatrix<scalar,index> *const mat,
  * However, we could try a row scaling.
  */
 template <typename scalar, typename index, int bs, StorageOptions stor>
-void ABILU0_SRPreconditioner<scalar,index,bs,stor>::compute()
+void AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>::compute()
 {
 	if(!iluvals)
 	{
@@ -269,7 +269,7 @@ void ABILU0_SRPreconditioner<scalar,index,bs,stor>::compute()
 }
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
-void ABILU0_SRPreconditioner<scalar,index,bs,stor>::apply(const scalar *const r, 
+void AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>::apply(const scalar *const r, 
                                               scalar *const __restrict z) const
 {
 	if(stor == RowMajor)
@@ -281,14 +281,14 @@ void ABILU0_SRPreconditioner<scalar,index,bs,stor>::apply(const scalar *const r,
 }
 
 template <typename scalar, typename index>
-AILU0_SRPreconditioner<scalar,index>::AILU0_SRPreconditioner
+AsyncILU0_SRPreconditioner<scalar,index>::AsyncILU0_SRPreconditioner
 	(const int nbuildswp, const int napplyswp, const bool tf, const bool ta)
 	: iluvals{nullptr}, scale{nullptr}, ytemp{nullptr}, threadedfactor{tf}, threadedapply{ta},
 	  nbuildsweeps{nbuildswp}, napplysweeps{napplyswp}, thread_chunk_size{800}
 { }
 
 template <typename scalar, typename index>
-AILU0_SRPreconditioner<scalar,index>::~AILU0_SRPreconditioner()
+AsyncILU0_SRPreconditioner<scalar,index>::~AsyncILU0_SRPreconditioner()
 {
 	delete [] iluvals;
 	delete [] ytemp;
@@ -423,12 +423,12 @@ void scalar_ilu0_apply(const CRawBSRMatrix<scalar,index> *const mat,
 }
 
 template <typename scalar, typename index>
-void AILU0_SRPreconditioner<scalar,index>::compute()
+void AsyncILU0_SRPreconditioner<scalar,index>::compute()
 {
 	if(!iluvals)
 	{
 #ifdef DEBUG
-		std::printf(" AILU0 (scalar): First-time setup\n");
+		std::printf(" AsyncILU0 (scalar): First-time setup\n");
 #endif
 
 		// Allocate lu
@@ -460,7 +460,7 @@ void AILU0_SRPreconditioner<scalar,index>::compute()
 }
 
 template <typename scalar, typename index>
-void AILU0_SRPreconditioner<scalar,index>::apply(const scalar *const __restrict ra, 
+void AsyncILU0_SRPreconditioner<scalar,index>::apply(const scalar *const __restrict ra, 
                                               scalar *const __restrict za) const
 {
 	scalar_ilu0_apply(&mat, iluvals, scale, ytemp, napplysweeps, thread_chunk_size, threadedapply,
@@ -469,16 +469,16 @@ void AILU0_SRPreconditioner<scalar,index>::apply(const scalar *const __restrict 
 
 // instantiations
 
-template class AILU0_SRPreconditioner<double,int>;
+template class AsyncILU0_SRPreconditioner<double,int>;
 
-template class ABILU0_SRPreconditioner<double,int,4,ColMajor>;
-template class ABILU0_SRPreconditioner<double,int,5,ColMajor>;
+template class AsyncBlockILU0_SRPreconditioner<double,int,4,ColMajor>;
+template class AsyncBlockILU0_SRPreconditioner<double,int,5,ColMajor>;
 
-template class ABILU0_SRPreconditioner<double,int,4,RowMajor>;
+template class AsyncBlockILU0_SRPreconditioner<double,int,4,RowMajor>;
 
 #ifdef BUILD_BLOCK_SIZE
-template class ABILU0_SRPreconditioner<double,int,BUILD_BLOCK_SIZE,ColMajor>;
-template class ABILU0_SRPreconditioner<double,int,BUILD_BLOCK_SIZE,RowMajor>;
+template class AsyncBlockILU0_SRPreconditioner<double,int,BUILD_BLOCK_SIZE,ColMajor>;
+template class AsyncBlockILU0_SRPreconditioner<double,int,BUILD_BLOCK_SIZE,RowMajor>;
 #endif
 
 }

@@ -16,7 +16,7 @@ Assuming that you are in the top-level BLASTed directory, to configure a release
     mkdir build && cd build
 	cmake .. -DCMAKE_BUILD_TYPE=Release -DAVX=1 -DWITH_PETSC=1 -DCMAKE_C_COMPILER=mpicc -DCMAKE_CXX_COMPILER=mpicxx
 
-To build without the PETSc interface, `-DWITH_PETSC` should be removed. See the beginning of the top-level CMakeLists.txt file for all the options. To build,
+This will build the library for use with PETSc with available block sizes 4 and 5 (the default block sizes). To build without the PETSc interface, `-DWITH_PETSC` should be removed. `-DBUILD_BLOCK_SIZE=10` can be specified to additionally build the block solver operations for a block size of 10, for instance. See the beginning of the top-level CMakeLists.txt file for all the options. To build,
 
     make
 

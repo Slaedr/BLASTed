@@ -8,10 +8,11 @@
 #include <iostream>
 #include "solverfactory.hpp"
 #include "solverops_jacobi.hpp"
-#include "relaxation_jacobi.hpp"
-#include "relaxation_async.hpp"
 #include "solverops_sgs.hpp"
 #include "solverops_ilu0.hpp"
+#include "relaxation_jacobi.hpp"
+#include "relaxation_chaotic.hpp"
+#include "relaxation_async_sgs.hpp"
 
 namespace blasted {
 
@@ -39,17 +40,17 @@ SRPreconditioner<scalar,index> *create_srpreconditioner_of_type
 	}
 	else if(precstr == sgsstr) {
 		if(relax) {
-			return new ABSGS_Relaxation<scalar,index,bs,stor>();
+			return new AsyncBlockSGS_Relaxation<scalar,index,bs,stor>();
 		}
 		else
-			return new ABSGS_SRPreconditioner<scalar,index,bs,stor>(intlist.at(napplysweeps));
+			return new AsyncBlockSGS_SRPreconditioner<scalar,index,bs,stor>(intlist.at(napplysweeps));
 	}
 	else if(precstr == ilu0str) {
 		if(relax) {
 			std::cout << "WARNING: Solverfactory: ILU relaxation is not possible.";
 			std::cout << " Using the preconditioner instead.\n";
 		}
-		return new ABILU0_SRPreconditioner<scalar,index,bs,stor>
+		return new AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>
 			(intlist.at(nbuildsweeps), intlist.at(napplysweeps), true, true);
 	}
 	else if(precstr == sapilu0str) {
@@ -57,7 +58,7 @@ SRPreconditioner<scalar,index> *create_srpreconditioner_of_type
 			std::cout << "WARNING: Solverfactory: ILU relaxation is not possible.";
 			std::cout << " Using the preconditioner instead.\n";
 		}
-		return new ABILU0_SRPreconditioner<scalar,index,bs,stor>(intlist.at(nbuildsweeps),
+		return new AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>(intlist.at(nbuildsweeps),
 				intlist.at(napplysweeps),true,false);
 	}
 	else if(precstr == noprecstr) {
@@ -81,15 +82,30 @@ SRPreconditioner<scalar,index> *create_sr_preconditioner
 	SRPreconditioner<scalar,index> *p = nullptr;
 		
 	if(bs == 1) {
-		if(precstr == jacobistr)
-			p = new JacobiSRPreconditioner<scalar,index>();
-		else if(precstr == sgsstr)
-			p = new ASGS_SRPreconditioner<scalar,index>(intParamList.at(napplysweeps));
+		if(precstr == jacobistr) {
+			if(relax)
+				p = new JacobiRelaxation<scalar,index>();
+			else
+				p = new JacobiSRPreconditioner<scalar,index>();
+		}
+		else if(precstr == gsstr) {
+			p = new ChaoticRelaxation<scalar,index>();
+			if(!relax) {
+				std::cout << "solverfactory(): Warning: Forward Gauss-Seidel preconditioner ";
+				std::cout << "is not implemented; using relaxation instead.\n";
+			}
+		}
+		else if(precstr == sgsstr) {
+			if(relax)
+				p = new AsyncSGS_Relaxation<scalar,index>();
+			else
+				p = new AsyncSGS_SRPreconditioner<scalar,index>(intParamList.at(napplysweeps));
+		}
 		else if(precstr == ilu0str)
-			p = new AILU0_SRPreconditioner<scalar,index>(intParamList.at(nbuildsweeps),
+			p = new AsyncILU0_SRPreconditioner<scalar,index>(intParamList.at(nbuildsweeps),
 					intParamList.at(napplysweeps),true,true);
 		else if(precstr == sapilu0str)
-			return new AILU0_SRPreconditioner<scalar,index>(intParamList.at(nbuildsweeps),
+			return new AsyncILU0_SRPreconditioner<scalar,index>(intParamList.at(nbuildsweeps),
 					intParamList.at(napplysweeps),true,false);
 		else if(precstr == noprecstr)
 			return new NoPreconditioner<scalar,index>(intParamList.at(ndimstr));

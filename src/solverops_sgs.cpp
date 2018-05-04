@@ -10,18 +10,18 @@
 namespace blasted {
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
-ABSGS_SRPreconditioner<scalar,index,bs,stor>::ABSGS_SRPreconditioner(const int naswps)
+AsyncBlockSGS_SRPreconditioner<scalar,index,bs,stor>::AsyncBlockSGS_SRPreconditioner(const int naswps)
 	: ytemp{nullptr}, napplysweeps{naswps}, thread_chunk_size{400}
 { }
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
-ABSGS_SRPreconditioner<scalar,index,bs,stor>::~ABSGS_SRPreconditioner()
+AsyncBlockSGS_SRPreconditioner<scalar,index,bs,stor>::~AsyncBlockSGS_SRPreconditioner()
 {
 	delete [] ytemp;
 }
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
-void ABSGS_SRPreconditioner<scalar,index,bs,stor>::compute()
+void AsyncBlockSGS_SRPreconditioner<scalar,index,bs,stor>::compute()
 {
 	BJacobiSRPreconditioner<scalar,index,bs,stor>::compute();
 	if(!ytemp) {
@@ -107,7 +107,7 @@ void block_sgs_apply(const CRawBSRMatrix<scalar,index> *const mat,
 }
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
-void ABSGS_SRPreconditioner<scalar,index,bs,stor>::apply(const scalar *const rr,
+void AsyncBlockSGS_SRPreconditioner<scalar,index,bs,stor>::apply(const scalar *const rr,
                                                         scalar *const __restrict zz) const
 {
 	if(stor == RowMajor)
@@ -119,18 +119,18 @@ void ABSGS_SRPreconditioner<scalar,index,bs,stor>::apply(const scalar *const rr,
 }
 
 template <typename scalar, typename index>
-ASGS_SRPreconditioner<scalar,index>::ASGS_SRPreconditioner(const int naswps)
+AsyncSGS_SRPreconditioner<scalar,index>::AsyncSGS_SRPreconditioner(const int naswps)
 	: ytemp{nullptr}, napplysweeps{naswps}, thread_chunk_size{800}
 { }
 
 template <typename scalar, typename index>
-ASGS_SRPreconditioner<scalar,index>::~ASGS_SRPreconditioner()
+AsyncSGS_SRPreconditioner<scalar,index>::~AsyncSGS_SRPreconditioner()
 {
 	delete [] ytemp;
 }
 
 template <typename scalar, typename index>
-void ASGS_SRPreconditioner<scalar,index>::compute()
+void AsyncSGS_SRPreconditioner<scalar,index>::compute()
 {
 	JacobiSRPreconditioner<scalar,index>::compute();
 	if(!ytemp) {
@@ -180,7 +180,7 @@ void scalar_sgs_apply(const CRawBSRMatrix<scalar,index> *const mat,
 }
 
 template <typename scalar, typename index>
-void ASGS_SRPreconditioner<scalar,index>::apply(const scalar *const rr,
+void AsyncSGS_SRPreconditioner<scalar,index>::apply(const scalar *const rr,
                                                         scalar *const __restrict zz) const
 {
 	scalar_sgs_apply(&mat, dblocks, ytemp, napplysweeps, thread_chunk_size, true, rr, zz);
@@ -188,16 +188,16 @@ void ASGS_SRPreconditioner<scalar,index>::apply(const scalar *const rr,
 
 // instantiations
 
-template class ASGS_SRPreconditioner<double,int>;
+template class AsyncSGS_SRPreconditioner<double,int>;
 
-template class ABSGS_SRPreconditioner<double,int,4,ColMajor>;
-template class ABSGS_SRPreconditioner<double,int,5,ColMajor>;
+template class AsyncBlockSGS_SRPreconditioner<double,int,4,ColMajor>;
+template class AsyncBlockSGS_SRPreconditioner<double,int,5,ColMajor>;
 
-template class ABSGS_SRPreconditioner<double,int,4,RowMajor>;
+template class AsyncBlockSGS_SRPreconditioner<double,int,4,RowMajor>;
 
 #ifdef BUILD_BLOCK_SIZE
-template class ABSGS_SRPreconditioner<double,int,BUILD_BLOCK_SIZE,ColMajor>;
-template class ABSGS_SRPreconditioner<double,int,BUILD_BLOCK_SIZE,RowMajor>;
+template class AsyncBlockSGS_SRPreconditioner<double,int,BUILD_BLOCK_SIZE,ColMajor>;
+template class AsyncBlockSGS_SRPreconditioner<double,int,BUILD_BLOCK_SIZE,RowMajor>;
 #endif
 
 } // end namespace
