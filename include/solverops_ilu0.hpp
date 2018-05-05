@@ -60,7 +60,6 @@ protected:
 
 	const bool threadedfactor;         ///< True for thread-parallel ILU0 factorization
 	const bool threadedapply;          ///< True for thread-parallel LU application
-	
 	const bool rowscale;               ///< Whether to pre-scale the block-rows before factorization
 	const int nbuildsweeps;
 	const int napplysweeps;

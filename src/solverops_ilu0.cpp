@@ -14,7 +14,7 @@ template <typename scalar, typename index, int bs, StorageOptions stor>
 AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>::AsyncBlockILU0_SRPreconditioner
 	(const int nbuildswp, const int napplyswp, const bool tf, const bool ta)
 	: iluvals{nullptr}, scale{nullptr}, ytemp{nullptr}, threadedfactor{tf}, threadedapply{ta},
-	  nbuildsweeps{nbuildswp}, napplysweeps{napplyswp}, thread_chunk_size{400}
+	  rowscale{false}, nbuildsweeps{nbuildswp}, napplysweeps{napplyswp}, thread_chunk_size{400}
 { }
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
@@ -259,11 +259,12 @@ void AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>::compute()
 		else
 			std::cout << "! AsyncBlockILU0_SRPreconditioner: Temp vector is already allocated!\n";
 
-		if(rowscale)
+		if(rowscale) {
 			if(!scale)
 				scale = new scalar[mat.nbrows*bs*bs];
 			else
 				std::cout << "! AsyncBlockILU0_SRPreconditioner: scale was already allocated!\n";
+		}
 	}
 
 	if(stor == RowMajor)
