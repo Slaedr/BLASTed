@@ -18,7 +18,9 @@ BJacobiSRPreconditioner<scalar,index,bs,stor>::BJacobiSRPreconditioner()
 template <typename scalar, typename index, int bs, StorageOptions stor>
 BJacobiSRPreconditioner<scalar,index,bs,stor>::~BJacobiSRPreconditioner()
 {
-	delete [] dblocks;
+	//delete [] dblocks;
+	Eigen::aligned_allocator<scalar> aa;
+	aa.deallocate(dblocks, mat.nbrows*bs*bs);
 }
 	
 /// Computes and stores the inverses of diagonal blocks
@@ -85,17 +87,25 @@ template <typename scalar, typename index, int bs, StorageOptions stor>
 void BJacobiSRPreconditioner<scalar,index,bs,stor>::compute()
 {
 	if(!dblocks) {
-		dblocks = new scalar[mat.nbrows*bs*bs];
+		Eigen::aligned_allocator<scalar> aa;
+		//dblocks = new scalar[mat.nbrows*bs*bs];
+		dblocks = aa.allocate(mat.nbrows*bs*bs);
 #ifdef DEBUG
 		std::cout << " precJacobiSetup(): Allocating.\n";
 #endif
 	}
 	
-	if(stor == RowMajor)
-		block_jacobi_setup<scalar,index,bs,Matrix<scalar,Dynamic,bs,RowMajor>>(&mat, dblocks);
-	else
-		block_jacobi_setup<scalar,index,bs,Matrix<scalar,bs,Dynamic,ColMajor>>(&mat, dblocks);
-}	
+	// if(stor == RowMajor)
+	// 	block_jacobi_setup<scalar,index,bs,Matrix<scalar,Dynamic,bs,RowMajor>>(&mat, dblocks);
+	// else
+	// 	block_jacobi_setup<scalar,index,bs,Matrix<scalar,bs,Dynamic,ColMajor>>(&mat, dblocks);
+
+	const Block_t<scalar,bs,stor>* vals = reinterpret_cast<const Block_t<scalar,bs,stor>*>(mat.vals);
+	Block_t<scalar,bs,stor>* dblks = reinterpret_cast<Block_t<scalar,bs,stor>*>(dblocks);
+#pragma omp parallel for default(shared)
+	for(index irow = 0; irow < mat.nbrows; irow++)
+		dblks[irow] = vals[mat.diagind[irow]].inverse();
+}
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
 void BJacobiSRPreconditioner<scalar,index,bs,stor>::apply(const scalar *const rr,

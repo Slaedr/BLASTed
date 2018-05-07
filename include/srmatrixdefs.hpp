@@ -16,8 +16,14 @@ using Eigen::RowMajor;
 using Eigen::ColMajor;
 using Eigen::StorageOptions;
 using Eigen::Matrix;
+
+/// Storage type for small segments of vectors
 template <typename scalar>
 using Vector = Matrix<scalar,Dynamic,1>;
+
+/// The storage type to use for each small dense block in case of BSR matrices
+template <typename scalar, int bs, StorageOptions layout>
+using Block_t = Matrix<scalar,bs,bs,layout>;
 
 /// An (almost-)immutable compressed sparse block-row square matrix
 /** The pointers and the number of (block-)rows are non-const to allow re-wrapping of another matrix.
