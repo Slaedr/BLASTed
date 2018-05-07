@@ -37,7 +37,7 @@ public:
 	Preconditioner(const StorageType storagetype);
 
 	virtual ~Preconditioner();
-		
+
 	/// Returns the dimension (number of rows) of the operator
 	virtual index dim() const = 0;
 

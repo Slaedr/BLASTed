@@ -40,7 +40,7 @@ template <typename scalar, typename index>
 NoPreconditioner<scalar,index>::NoPreconditioner(const index matrixdim)
 	: SRPreconditioner<scalar,index>(), ndim{matrixdim}
 { }
-	
+
 template <typename scalar, typename index>
 void NoPreconditioner<scalar,index>::apply(const scalar *const x, scalar *const __restrict y) const
 {
