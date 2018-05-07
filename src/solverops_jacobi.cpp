@@ -100,11 +100,21 @@ void BJacobiSRPreconditioner<scalar,index,bs,stor>::compute()
 	// else
 	// 	block_jacobi_setup<scalar,index,bs,Matrix<scalar,bs,Dynamic,ColMajor>>(&mat, dblocks);
 
-	const Block_t<scalar,bs,stor>* vals = reinterpret_cast<const Block_t<scalar,bs,stor>*>(mat.vals);
-	Block_t<scalar,bs,stor>* dblks = reinterpret_cast<Block_t<scalar,bs,stor>*>(dblocks);
+// 	const Block_t<scalar,bs,stor>* vals = reinterpret_cast<const Block_t<scalar,bs,stor>*>(mat.vals);
+// 	Block_t<scalar,bs,stor>* dblks = reinterpret_cast<Block_t<scalar,bs,stor>*>(dblocks);
+// #pragma omp parallel for default(shared)
+// 	for(index irow = 0; irow < mat.nbrows; irow++)
+// 		dblks[irow] = vals[mat.diagind[irow]].inverse();
+
+	using Mattype = Matrix<scalar,bs,bs,stor>;
+
 #pragma omp parallel for default(shared)
 	for(index irow = 0; irow < mat.nbrows; irow++)
-		dblks[irow] = vals[mat.diagind[irow]].inverse();
+	{
+	  Map<const Mattype> data(mat.vals[mat.diagind[irow]*bs*bs]);
+	  Map<Mattype> dblks(dblocks[irow*bs*bs]);
+	  dblks = data.inverse();
+	}
 }
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
