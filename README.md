@@ -11,14 +11,24 @@ The following programs and libraries are required:
 - [Boost](http://www.boost.org/)
 - [PETSc](http://www.mcs.anl.gov/petsc/) 3.8 or above and MPI are required to build the PETSc interface.
 
+Quick-build:
+Assuming the programs and libraries mentioned above are in standard locations, in your `PATH` or `LD_LIBRARY_PATH` environment variables, or you have otherwise made them available (for instance `PETSC_DIR` and `PETSC_ARCH` environment variables for PETSc), `cd` to the top-level directory of the BLASTed sources and try:
+
+    mkdir build && cd build
+	../common_build.sh
+	make -j4
+	make test
+
+If this does not work, read on.
+
 Assuming that you are in the top-level BLASTed directory, to configure a release version with AVX vectorization and the PETSc interface, type
 
     mkdir build && cd build
 	cmake .. -DCMAKE_BUILD_TYPE=Release -DAVX=1 -DWITH_PETSC=1 -DCMAKE_C_COMPILER=mpicc -DCMAKE_CXX_COMPILER=mpicxx
 
-This will build the library for use with PETSc with available block sizes 4 and 5 (the default block sizes). To build without the PETSc interface, `-DWITH_PETSC` should be removed. `-DBUILD_BLOCK_SIZE=10` can be specified to additionally build the block solver operations for a block size of 10, for instance. See the beginning of the top-level CMakeLists.txt file for all the options. To build,
+where `mpicc` and `mpicxx` are the C and C++ MPI compiler wrappers you want to use. This will build the library for use with PETSc with available block sizes 4 and 5 (the default block sizes). To build without the PETSc interface, `-DWITH_PETSC` should be removed. `-DBUILD_BLOCK_SIZE=10` can be specified to additionally build the block solver operations for a block size of 10, for instance. See the beginning of the top-level CMakeLists.txt file for all the options. To build,
 
-    make
+    make -j4
 
 and to run the tests,
 
@@ -42,5 +52,4 @@ to generate a tags file for [easier navigation of the source code in Vim](http:/
 Usage
 -----
 For the most part, one would want to use the library as a plugin for PETSc. This is explained in the [usage documentation](doc/user-doc.md).
-
 

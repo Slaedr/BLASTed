@@ -5,7 +5,6 @@
 
 #include <type_traits>
 #include <iostream>
-#include "impldefs.hpp"
 #include "solverops_jacobi.hpp"
 #include "kernels/kernels_base.hpp"
 
@@ -19,7 +18,7 @@ BJacobiSRPreconditioner<scalar,index,bs,stor>::BJacobiSRPreconditioner()
 template <typename scalar, typename index, int bs, StorageOptions stor>
 BJacobiSRPreconditioner<scalar,index,bs,stor>::~BJacobiSRPreconditioner()
 {
-  //delete [] dblocks;
+	// delete [] dblocks;
 	Eigen::aligned_allocator<scalar> aa;
 	aa.deallocate(dblocks, mat.nbrows*bs*bs);
 }
@@ -95,39 +94,28 @@ void BJacobiSRPreconditioner<scalar,index,bs,stor>::compute()
 		std::cout << " precJacobiSetup(): Allocating.\n";
 #endif
 	}
-	
-	// if(stor == RowMajor)
-	// 	block_jacobi_setup<scalar,index,bs,Matrix<scalar,Dynamic,bs,RowMajor>>(&mat, dblocks);
-	// else
-	// 	block_jacobi_setup<scalar,index,bs,Matrix<scalar,bs,Dynamic,ColMajor>>(&mat, dblocks);
 
 	const Block_t<scalar,bs,stor>* vals = reinterpret_cast<const Block_t<scalar,bs,stor>*>(mat.vals);
 	Block_t<scalar,bs,stor>* dblks = reinterpret_cast<Block_t<scalar,bs,stor>*>(dblocks);
+
 #pragma omp parallel for default(shared)
 	for(index irow = 0; irow < mat.nbrows; irow++)
-	  dblks[irow] = vals[mat.diagind[irow]].inverse();
-
-// 	using Mattype = Matrix<scalar,bs,bs,stor>;
-
-// #pragma omp parallel for default(shared)
-// 	for(index irow = 0; irow < mat.nbrows; irow++)
-// 	{
-// 	  Map<const Mattype> data(&mat.vals[mat.diagind[irow]*bs*bs]);
-// 	  Map<Mattype> dblks(&dblocks[irow*bs*bs]);
-// 	  dblks = data.inverse();
-// 	}
+		dblks[irow] = vals[mat.diagind[irow]].inverse();
 }
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
 void BJacobiSRPreconditioner<scalar,index,bs,stor>::apply(const scalar *const rr,
 														 scalar *const __restrict zz) const
 {
-	if(stor == RowMajor)
-		block_jacobi_apply<scalar,index,bs,Matrix<scalar,Dynamic,bs,RowMajor>>
-			( &mat, dblocks, rr, zz);
-	else
-		block_jacobi_apply<scalar,index,bs,Matrix<scalar,bs,Dynamic,ColMajor>>
-			( &mat, dblocks, rr, zz);
+	const Blk *dblks = reinterpret_cast<const Blk*>(dblocks);
+	const Seg *r = reinterpret_cast<const Seg*>(rr);
+	Seg *z = reinterpret_cast<Seg*>(zz);
+
+#pragma omp parallel for default(shared)
+	for(index irow = 0; irow < mat.nbrows; irow++)
+	{
+		z[irow].noalias() = dblks[irow] * r[irow];
+	}
 }
 
 template <typename scalar, typename index>

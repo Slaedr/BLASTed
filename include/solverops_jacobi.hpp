@@ -34,6 +34,8 @@ public:
 protected:
 	
 	using SRPreconditioner<scalar,index>::mat;
+	using Blk = Block_t<scalar,bs,stopt>;
+	using Seg = Segment_t<scalar,bs>;
 	
 	/// Storage for factored or inverted diagonal blocks
 	scalar *dblocks;

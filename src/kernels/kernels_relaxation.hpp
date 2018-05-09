@@ -7,7 +7,6 @@
 #define BLASTED_KERNELS_RELAXATION_H
 
 #include "kernels_base.hpp"
-#include "../impldefs.hpp"
 
 namespace blasted {
 
