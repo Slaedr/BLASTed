@@ -1,7 +1,7 @@
 Using BLASTed via the PETSc interface
 =====================================
 
-There are two main PETSc options controlling the use of BLASTed. These options are used for any preconditioner for which `-pc_type` is set to `shell`, assuming your code is set up to do that (see the next section).
+There are three main PETSc options controlling the use of BLASTed. These options are used for any preconditioner for which `-pc_type` is set to `shell`, assuming your code is set up to do that (see the next section). The first two options have been created specifically for BLASTed. The third is a standard PETSc option that affects BLASTed usage.
 
 * `-blasted_pc_type` sets the preconditioner to use. Each option below is affected by whether or not the BAIJ matrix type is being used - if so, the block version of the preconditioner is used, otherwise the regular scalar version is used.
   - `jacobi` Jacobi preconditioner or relaxation
@@ -11,6 +11,8 @@ There are two main PETSc options controlling the use of BLASTed. These options a
   - `sapilu0` ILU(0) preconditioner with asynchronous factorization but sequential (forward- or back-substitution) application
 
 * `-blasted_async_sweeps` An integer array specifying the number of asynchronous iterations ("sweeps") to use each time the preconditioner is built and applied. Eg.: `-blasted_async_sweeps 4,3` means the preconditioner is built using 4 asynchronous iterations (sweeps) while it is applied using 3 asynchronous sweeps. If not specified, the default of 1 sweep is used.
+
+* `-mat_type` "aij" (default, if not mentioned) and "baij". If "aij", scalar versions of the algorithms are applied. For example, the preconditioner for Jacobi will be the diagonal of the matrix. If "baij" is specified, point-block versions of the algorithms are carried out. In case of Jacobi, for instance, the preconditioner will be the block-diagonal part of the matrix with the blocks inverted exactly. **NOTE**: this can also affect several other things in your code apart from the behaviour of BLASTed.
 
 In case of algorithms that have both preconditioning and relaxation forms (Jacobi and Gauss-Seidel), which form is applied depends on the PETSc solver structure being used. Specifically, if the local KSP (for which BLASTed is the PC) is KSPRICHARDSON, relaxation is usually applied. The exception is that if either the Richardson damping factor is NOT 1.0, or `-ksp_monitor` is specified, then the preconditioning form is used even with KSPRICHARDSON. For all other local KSPs including PREONLY, only the preconditioning form is used.
 
