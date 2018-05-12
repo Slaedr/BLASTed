@@ -317,10 +317,20 @@ void scalar_ilu0_setup(const CRawBSRMatrix<scalar,index> *const mat,
 		scalar *const __restrict iluvals, scalar *const __restrict scale)
 {
 	// get the diagonal scaling matrix
-	
-#pragma omp parallel for simd default(shared)
+/*#pragma omp parallel for simd default(shared)
 	for(index i = 0; i < mat->nbrows; i++)
-		scale[i] = 1.0/std::sqrt(mat->vals[mat->diagind[i]]);
+		scale[i] = 1.0/std::sqrt(mat->vals[mat->diagind[i]]);*/
+
+	/** initial guess
+	 * We choose the initial guess such that the preconditioner reduces to SGS in the worst case.
+	 */
+#pragma omp parallel for simd default (shared)
+	for(index i = 0; i < mat->browptr[mat.nbrows]; i++)
+		iluvals[i] = mat.vals[i];
+#pragma omp parallel for default (shared)
+	for(index i = 0; i < mat.nbrows; i++)
+		for(index j = mat.browptr[i]; j < mat.diagind[j]; j++)
+			iluvals[j] *= mat.vals[mat.diagind[mat.bcolind[j]]];
 
 	// compute L and U
 	/** Note that in the factorization loop, the variable pos is initially set negative.
