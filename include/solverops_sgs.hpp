@@ -43,6 +43,9 @@ public:
 protected:
 	using SRPreconditioner<scalar,index>::mat;
 	using BJacobiSRPreconditioner<scalar,index,bs,stor>::dblocks;
+
+	using Blk = Block_t<scalar,bs,stor>;
+	using Seg = Segment_t<scalar,bs>;
 	
 	/// Temporary storage for the result of the forward Gauss-Seidel sweep
 	mutable scalar *ytemp;

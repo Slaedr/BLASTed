@@ -7,6 +7,8 @@
 #ifndef BLASTED_KERNELS_BASE_H
 #define BLASTED_KERNELS_BASE_H
 
+#include "srmatrixdefs.hpp"
+
 #include <Eigen/LU>
 
 /// Shorthand for dependent templates for Eigen segment function for vectors
@@ -16,13 +18,7 @@
 
 namespace blasted {
 
-using Eigen::Dynamic;
-using Eigen::RowMajor;
-using Eigen::ColMajor;
-using Eigen::StorageOptions;
 using Eigen::Map;
-using Eigen::Matrix;
-using Eigen::MatrixBase;
 template <typename scalar>
 using Vector = Matrix<scalar,Dynamic,1>;
 

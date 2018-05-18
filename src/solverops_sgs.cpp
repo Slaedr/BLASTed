@@ -110,12 +110,54 @@ template <typename scalar, typename index, int bs, StorageOptions stor>
 void AsyncBlockSGS_SRPreconditioner<scalar,index,bs,stor>::apply(const scalar *const rr,
                                                         scalar *const __restrict zz) const
 {
-	if(stor == RowMajor)
+	/*if(stor == RowMajor)
 		block_sgs_apply<scalar,index,bs,Matrix<scalar,Dynamic,bs,RowMajor>>(
 			&mat, dblocks, ytemp, napplysweeps,thread_chunk_size, true, rr, zz);
 	else
 		block_sgs_apply<scalar,index,bs,Matrix<scalar,bs,Dynamic,ColMajor>>(
-			&mat, dblocks, ytemp, napplysweeps,thread_chunk_size, true, rr, zz);
+		&mat, dblocks, ytemp, napplysweeps,thread_chunk_size, true, rr, zz);*/
+	
+	const Blk *mvals = reinterpret_cast<const Blk*>(mat.vals);
+	const Blk *dblks = reinterpret_cast<const Blk*>(dblocks);
+	const Seg *r = reinterpret_cast<const Seg*>(rr);
+	Seg *z = reinterpret_cast<Seg*>(zz);
+	Seg *y = reinterpret_cast<Seg*>(ytemp);
+
+#pragma omp parallel for simd default(shared)
+	for(index i = 0; i < mat.nbrows*bs; i++)
+	{
+		ytemp[i] = 0;
+	}
+	
+	for(int isweep = 0; isweep < napplysweeps; isweep++)
+	{
+		// forward sweep ytemp := D^(-1) (r - L ytemp)
+
+#pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size)
+		for(index irow = 0; irow < mat.nbrows; irow++)
+		{
+			block_fgs<scalar, index, bs, stor>(mvals, mat.bcolind, irow, mat.browptr[irow], 
+					mat.diagind[irow], dblks[irow], r[irow], y);
+		}
+	}
+
+#pragma omp parallel for simd default(shared)
+	for(index i = 0; i < mat.nbrows*bs; i++)
+	{
+		zz[i] = ytemp[i];
+	}
+
+	for(int isweep = 0; isweep < napplysweeps; isweep++)
+	{
+		// backward sweep z := D^(-1) (D y - U z)
+
+#pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size)
+		for(index irow = mat.nbrows-1; irow >= 0; irow--)
+		{
+			block_bgs<scalar, index, bs, stor>(mvals, mat.bcolind, irow, mat.diagind[irow], 
+					mat.browptr[irow+1], dblks[irow], y[irow], z);
+		}
+	}
 }
 
 template <typename scalar, typename index>

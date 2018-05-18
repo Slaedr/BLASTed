@@ -64,7 +64,7 @@ void block_fgs(Map<const Mattype>& vals, const index *const __restrict bcolind,
 /// Backward block Gauss-Seidel kernel
 template <typename scalar, typename index, int bs, class Mattype> inline
 void block_bgs(Map<const Mattype>& vals, const index *const __restrict bcolind,
-		const index irow, const index bdiagind, const int nextbrowstart,
+		const index irow, const index bdiagind, const index nextbrowstart,
 		Map<const Mattype>& diaginv, Map<Vector<scalar>>& rhs,  Map<Vector<scalar>>& x)
 {
 	Matrix<scalar,bs,1> inter = Matrix<scalar,bs,1>::Zero();
@@ -83,6 +83,40 @@ void block_bgs(Map<const Mattype>& vals, const index *const __restrict bcolind,
 	else
 		x.SEG<bs>(irow*bs) = diaginv.BLK<bs,bs>(0,irow*bs) 
 			* ( vals.BLK<bs,bs>(0,bdiagind*bs)*rhs.SEG<bs>(irow*bs) - inter );
+}
+
+/// Forward block Gauss-Seidel kernel
+template <typename scalar, typename index, int bs, StorageOptions stor> inline
+void block_fgs(const Block_t<scalar,bs,stor> *const vals, const index *const bcolind,
+		const index irow, const index browstart, const index bdiagind,
+		const Block_t<scalar,bs,stor>& diaginv, const Segment_t<scalar,bs>& rhs,
+		Segment_t<scalar,bs> *const x)
+{
+	Matrix<scalar,bs,1> inter = Matrix<scalar,bs,1>::Zero();
+
+	for(index jj = browstart; jj < bdiagind; jj++)
+		inter += vals[jj]*x[bcolind[jj]];
+
+	x[irow] = diaginv * (rhs - inter);
+}
+
+/// Backward block Gauss-Seidel kernel
+/** \todo FIXME: Change this brain-dead update for x[irow]!!
+ */
+template <typename scalar, typename index, int bs, StorageOptions stor> inline
+void block_bgs(const Block_t<scalar,bs,stor> *const vals, const index *const bcolind,
+		const index irow, const index bdiagind, const index nextbrowstart,
+		const Block_t<scalar,bs,stor>& diaginv, const Segment_t<scalar,bs>& rhs,
+		Segment_t<scalar,bs> *const x)
+{
+	Matrix<scalar,bs,1> inter = Matrix<scalar,bs,1>::Zero();
+	
+	// compute U z
+	for(index jj = bdiagind+1; jj < nextbrowstart; jj++)
+		inter += vals[jj] * x[bcolind[jj]];
+
+	// compute z =  (y - D^(-1)*U z) for the irow-th block-segment of z
+	x[irow] = diaginv * ( vals[bdiagind]*rhs - inter );
 }
 
 }
