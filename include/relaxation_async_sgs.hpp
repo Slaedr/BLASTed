@@ -35,6 +35,9 @@ protected:
 	using BJacobiSRPreconditioner<scalar,index,bs,stor>::dblocks;
 	using Preconditioner<scalar,index>::solveparams;
 
+	using Blk = Block_t<scalar,bs,stor>;
+	using Seg = Segment_t<scalar,bs>;
+	
 	const int thread_chunk_size;
 };
 

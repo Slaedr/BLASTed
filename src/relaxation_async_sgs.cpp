@@ -57,15 +57,43 @@ void chaotic_blockSGS_relax(const SolveParams<scalar>& sp,
 }
 
 template<typename scalar, typename index, int bs, StorageOptions stor>
-void AsyncBlockSGS_Relaxation<scalar,index,bs,stor>::apply(const scalar *const b, 
-		scalar *const __restrict x) const
+void AsyncBlockSGS_Relaxation<scalar,index,bs,stor>::apply(const scalar *const bb, 
+		scalar *const __restrict xx) const
 {
-	if(stor == RowMajor)
+	/*if(stor == RowMajor)
 		chaotic_blockSGS_relax<scalar,index,bs,Matrix<scalar,Dynamic,bs,RowMajor>>
 			( solveparams, mat, dblocks, thread_chunk_size, b, x);
 	else
 		chaotic_blockSGS_relax<scalar,index,bs,Matrix<scalar,bs,Dynamic,ColMajor>>
-			( solveparams, mat, dblocks, thread_chunk_size, b, x);
+		( solveparams, mat, dblocks, thread_chunk_size, b, x);*/
+
+	const Blk *mvals = reinterpret_cast<const Blk*>(mat.vals);
+	const Blk *dblks = reinterpret_cast<const Blk*>(dblocks);
+	const Seg *b = reinterpret_cast<const Seg*>(bb);
+	// the solution vector is wrapped in both a pointer to const segment and one to mutable segment
+	const Seg *x = reinterpret_cast<const Seg*>(xx);
+	Seg *xmut = reinterpret_cast<Seg*>(xx);
+
+#pragma omp parallel default(shared)
+	{
+	for(int step = 0; step < solveparams.maxits; step++)
+	{
+#pragma omp for schedule(dynamic, thread_chunk_size) nowait
+		for(index irow = 0; irow < mat.nbrows; irow++)
+		{
+			block_relax_kernel<scalar,index,bs,stor>
+				(mvals, mat.bcolind, irow, mat.browptr[irow], mat.diagind[irow], mat.browptr[irow+1],
+				 dblks[irow], b[irow], x, x, xmut[irow]);
+		}
+#pragma omp for schedule(dynamic, thread_chunk_size) nowait
+		for(index irow = mat.nbrows-1; irow >= 0; irow--)
+		{
+			block_relax_kernel<scalar,index,bs,stor>
+				(mvals, mat.bcolind, irow, mat.browptr[irow], mat.diagind[irow], mat.browptr[irow+1],
+				 dblks[irow], b[irow], x, x, xmut[irow]);
+		}
+	}
+	}
 }
 
 template class AsyncBlockSGS_Relaxation<double,int,4,RowMajor>;
