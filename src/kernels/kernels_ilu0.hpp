@@ -81,10 +81,21 @@ void block_upper_triangular(Map<const Mattype>& vals, const index *const __restr
 }
 
 /// Unit lower triangular solve kernel
+/**
+ * \param vals The LU factorization matrix to apply - the diagonal blocks are assumed pre-inverted
+ * \param bcolind Array of block-column indices
+ * \param browstart Index into bcolind corresponding to the start of the row irow (see below)
+ * \param bdiagind Index into bcolind that corresponds to the diagonal entry of row irow (see below)
+ * \param rhs The block of the RHS vector corresponding to block-row irow
+ * \param irow The block-component of the vector of unknowns x to be updated
+ * \param x The output vector, whose irow'th block will be updated
+ */
 template <typename scalar, typename index, int bs, StorageOptions stor> inline
 void block_unit_lower_triangular(const Block_t<scalar,bs,stor> *const vals,
-		const index *const bcolind, const index irow, const index browstart, const index bdiagind,
-		const Segment_t<scalar,bs>& rhs,  Segment_t<scalar,bs> *const x)
+                                 const index *const bcolind,
+                                 const index browstart, const index bdiagind,
+                                 const Segment_t<scalar,bs>& rhs,
+                                 const index irow, Segment_t<scalar,bs> *const x)
 {
 	Matrix<scalar,bs,1> inter = Matrix<scalar,bs,1>::Zero();
 
@@ -97,11 +108,19 @@ void block_unit_lower_triangular(const Block_t<scalar,bs,stor> *const vals,
 /// Upper triangular solve kernel
 /**
  * \param vals The LU factorization matrix to apply - the diagonal blocks are assumed pre-inverted
+ * \param bcolind Array of block-column indices
+ * \param bdiagind Index into bcolind that corresponds to the diagonal entry of row irow (see below)
+ * \param nextbrowstart Index into bcolind corresponding to the start of the next row after irow
+ * \param rhs The block of the RHS vector corresponding to block-row irow
+ * \param irow The block-component of the vector of unknowns x to be updated
+ * \param x The output vector, whose irow'th block will be updated
  */
-template <typename scalar, typename index, int bs, class Mattype> inline
+template <typename scalar, typename index, int bs, StorageOptions stor> inline
 void block_upper_triangular(const Block_t<scalar,bs,stor> *const vals,
-		const index *const bcolind, const index irow, const index bdiagind, const int nextbrowstart,
-		const Segment_t<scalar,bs>& rhs,  Segment_t<scalar,bs> *const x)
+                            const index *const bcolind,
+                            const index bdiagind, const int nextbrowstart,
+                            const Segment_t<scalar,bs>& rhs,
+                            const int irow, Segment_t<scalar,bs> *const x)
 {
 	Matrix<scalar,bs,1> inter = Matrix<scalar,bs,1>::Zero();
 	

@@ -79,5 +79,19 @@ void destroyRawBSRMatrix(RawBSRMatrix<scalar,index>& rmat) {
 	destroyCRawBSRMatrix(reinterpret_cast<CRawBSRMatrix<scalar,index>&>(rmat));
 }
 
+template <typename scalar, typename index>
+void alignedDestroyCRawBSRMatrix(CRawBSRMatrix<scalar,index>& rmat) {
+	delete [] rmat.browptr;
+	delete [] rmat.bcolind;
+	delete [] rmat.diagind;
+	Eigen::aligned_allocator<scalar> alloc;
+	alloc.deallocate(const_cast<scalar*>(rmat.vals),0);
+}
+
+template <typename scalar, typename index>
+void alignedDestroyRawBSRMatrix(RawBSRMatrix<scalar,index>& rmat) {
+	alignedDestroyCRawBSRMatrix(reinterpret_cast<CRawBSRMatrix<scalar,index>&>(rmat));
+}
+
 }
 #endif

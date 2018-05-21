@@ -20,7 +20,8 @@ AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>::AsyncBlockILU0_SRPrecondi
 template <typename scalar, typename index, int bs, StorageOptions stor>
 AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>::~AsyncBlockILU0_SRPreconditioner()
 {
-	delete [] iluvals;
+	Eigen::aligned_allocator<scalar> alloc;
+	alloc.deallocate(iluvals,0);
 	delete [] ytemp;
 	delete [] scale;
 }
@@ -61,10 +62,12 @@ template <typename scalar, typename index, int bs, StorageOptions stor>
 inline
 void block_ilu0_setup(const CRawBSRMatrix<scalar,index> *const mat,
 		const int nbuildsweeps, const int thread_chunk_size, const bool usethreads,
-		scalar *const __restrict ilu
+		scalar *const __restrict iluvals
 	)
 {
-	const Blk *mvals = reinterpret_cast<const Blk*>(mat.vals);
+	using Blk = Block_t<scalar,bs,stor>;
+	
+	const Blk *mvals = reinterpret_cast<const Blk*>(mat->vals);
 	Blk *ilu = reinterpret_cast<Blk*>(iluvals);
 
 	// compute L and U
@@ -85,9 +88,9 @@ void block_ilu0_setup(const CRawBSRMatrix<scalar,index> *const mat,
 					Matrix<scalar,bs,bs> sum = mvals[j];
 
 					for( index k = mat->browptr[irow]; 
-							(k < mat->browptr[irow+1]) && (mat->bcolind[k] < mat->bcolind[j]); 
-							k++
-						) 
+						 (k < mat->browptr[irow+1]) && (mat->bcolind[k] < mat->bcolind[j]); 
+						 k++
+					   ) 
 					{
 						index pos = -1;
 						inner_search<index> ( mat->bcolind, mat->diagind[mat->bcolind[k]], 
@@ -149,18 +152,20 @@ void block_ilu0_setup(const CRawBSRMatrix<scalar,index> *const mat,
 template <typename scalar, typename index, int bs, StorageOptions stor>
 inline
 void block_ilu0_apply( const CRawBSRMatrix<scalar,index> *const mat,
-		const scalar *const ilu,
+		const scalar *const iluvals,
 		scalar *const __restrict y_temp,
 		const int napplysweeps, const int thread_chunk_size, const bool usethreads,
 		const scalar *const rr, 
         scalar *const __restrict zz
 	)
 {
-	const Blk *mvals = reinterpret_cast<const Blk*>(mat.vals);
+	using Blk = Block_t<scalar,bs,stor>;
+	using Seg = Segment_t<scalar,bs>;
+	
 	const Blk *ilu = reinterpret_cast<const Blk*>(iluvals);
 	const Seg *r = reinterpret_cast<const Seg*>(rr);
 	Seg *z = reinterpret_cast<Seg*>(zz);
-	Seg *y = reinterpret_cast<Seg*>(ytemp);
+	Seg *y = reinterpret_cast<Seg*>(y_temp);
 
 	// No scaling like z := Sr done here
 	
@@ -172,8 +177,8 @@ void block_ilu0_apply( const CRawBSRMatrix<scalar,index> *const mat,
 #pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size) if(usethreads)
 		for(index i = 0; i < mat->nbrows; i++)
 		{
-			block_unit_lower_triangular<scalar,index,bs,Mattype>(iluvals, mat->bcolind, i, 
-					mat->browptr[i], mat->diagind[i], ra, ytemp);
+			block_unit_lower_triangular<scalar,index,bs,stor>
+			  (ilu, mat->bcolind, mat->browptr[i], mat->diagind[i], r[i], i, y);
 		}
 	}
 
@@ -185,8 +190,8 @@ void block_ilu0_apply( const CRawBSRMatrix<scalar,index> *const mat,
 #pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size) if(usethreads)
 		for(index i = mat->nbrows-1; i >= 0; i--)
 		{
-			block_upper_triangular<scalar,index,bs,Mattype>(iluvals, mat->bcolind, i, 
-					mat->diagind[i], mat->browptr[i+1], ytemp, za);
+			block_upper_triangular<scalar,index,bs,stor>
+			  (ilu, mat->bcolind, mat->diagind[i], mat->browptr[i+1], y[i], i, z);
 		}
 	}
 
@@ -207,7 +212,8 @@ void AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>::compute()
 #endif
 
 		// Allocate lu
-		iluvals = new scalar[mat.browptr[mat.nbrows]*bs*bs];
+		Eigen::aligned_allocator<scalar> alloc;
+		iluvals = alloc.allocate(mat.browptr[mat.nbrows]*bs*bs);
 #pragma omp parallel for simd default(shared)
 		for(index j = 0; j < mat.browptr[mat.nbrows]*bs*bs; j++) {
 			iluvals[j] = mat.vals[j];
@@ -233,24 +239,16 @@ void AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>::compute()
 		}
 	}
 
-	if(stor == RowMajor)
-		block_ilu0_setup<scalar,index,bs,Matrix<scalar,Dynamic,bs,RowMajor>>
-			(&mat, nbuildsweeps, thread_chunk_size, threadedfactor, iluvals);
-	else
-		block_ilu0_setup<scalar,index,bs,Matrix<scalar,bs,Dynamic,ColMajor>>
-			(&mat, nbuildsweeps, thread_chunk_size, threadedfactor, iluvals);
+	block_ilu0_setup<scalar,index,bs,stor>
+	  (&mat, nbuildsweeps, thread_chunk_size, threadedfactor, iluvals);
 }
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
 void AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>::apply(const scalar *const r, 
                                               scalar *const __restrict z) const
 {
-	if(stor == RowMajor)
-		block_ilu0_apply<scalar,index,bs,Matrix<scalar,Dynamic,bs,RowMajor>>
-			(&mat, iluvals, ytemp, napplysweeps, thread_chunk_size, threadedapply, r, z);
-	else
-		block_ilu0_apply<scalar,index,bs,Matrix<scalar,bs,Dynamic,ColMajor>>
-			(&mat, iluvals, ytemp, napplysweeps, thread_chunk_size, threadedapply, r, z);
+	block_ilu0_apply<scalar,index,bs,stor>
+	  (&mat, iluvals, ytemp, napplysweeps, thread_chunk_size, threadedapply, r, z);
 }
 
 template <typename scalar, typename index>

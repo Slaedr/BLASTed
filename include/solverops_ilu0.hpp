@@ -30,7 +30,7 @@ public:
 	 * \param threadedapply If false, the preconditioner is applied sequentially
 	 */
 	AsyncBlockILU0_SRPreconditioner(const int nbuildsweeps, const int napplysweeps,
-	                       const bool threadedfactor=true, const bool threadedapply=true);
+	                                const bool threadedfactor=true, const bool threadedapply=true);
 
 	~AsyncBlockILU0_SRPreconditioner();
 

@@ -345,6 +345,9 @@ void COOMatrix<scalar,index>::convertToBSR(RawBSRMatrix<scalar,index> *const bma
 
 	bmat->bcolind = new index[bnnz];
 	bmat->vals = new scalar[bnnz*bs*bs];
+	//Eigen::aligned_allocator<scalar> alloc;
+	//alloc.allocate(bnnz*bs*bs);
+
 	for(index i = 0; i < bnnz*bs*bs; i++)
 		bmat->vals[i] = 0;
 
