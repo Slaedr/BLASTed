@@ -57,21 +57,15 @@ static inline void inner_search(const index *const aind,
  * \param[out] iluvals The ILU factorization non-zeros, accessed using the block-row pointers, 
  *   block-column indices and diagonal pointers of the original BSR matrix
  */
-template <typename scalar, typename index, int bs, class Mattype>
+template <typename scalar, typename index, int bs, StorageOptions stor>
 inline
 void block_ilu0_setup(const CRawBSRMatrix<scalar,index> *const mat,
 		const int nbuildsweeps, const int thread_chunk_size, const bool usethreads,
 		scalar *const __restrict ilu
 	)
 {
-	Eigen::Map<const Mattype> data(mat->vals, 
-			Mattype::IsRowMajor ? mat->browptr[mat->nbrows]*bs : bs,
-			Mattype::IsRowMajor ? bs : mat->browptr[mat->nbrows]*bs
-		);
-	Eigen::Map<Mattype> iluvals(ilu, 
-			Mattype::IsRowMajor ? mat->browptr[mat->nbrows]*bs : bs,
-			Mattype::IsRowMajor ? bs : mat->browptr[mat->nbrows]*bs
-		);
+	const Blk *mvals = reinterpret_cast<const Blk*>(mat.vals);
+	Blk *ilu = reinterpret_cast<Blk*>(iluvals);
 
 	// compute L and U
 	/** Note that in the factorization loop, the variable pos is initially set negative.
@@ -88,8 +82,7 @@ void block_ilu0_setup(const CRawBSRMatrix<scalar,index> *const mat,
 			{
 				if(irow > mat->bcolind[j])
 				{
-					Matrix<scalar,bs,bs> sum = Mattype::IsRowMajor ?
-						data.BLK<bs,bs>(j*bs,0) : data.BLK<bs,bs>(0,j*bs);
+					Matrix<scalar,bs,bs> sum = mvals[j];
 
 					for( index k = mat->browptr[irow]; 
 							(k < mat->browptr[irow+1]) && (mat->bcolind[k] < mat->bcolind[j]); 
@@ -102,26 +95,15 @@ void block_ilu0_setup(const CRawBSRMatrix<scalar,index> *const mat,
 
 						if(pos == -1) continue;
 
-						if(Mattype::IsRowMajor)
-							sum.noalias() -= iluvals.BLK<bs,bs>(k*bs,0)*iluvals.BLK<bs,bs>(pos*bs,0);
-						else
-							sum.noalias() -= iluvals.BLK<bs,bs>(0,k*bs)*iluvals.BLK<bs,bs>(0,pos*bs);
+						sum.noalias() -= ilu[k]*ilu[pos];
 					}
 
-					if(Mattype::IsRowMajor)
-						iluvals.BLK<bs,bs>(j*bs,0).noalias()
-							= sum * iluvals.BLK<bs,bs>(mat->diagind[mat->bcolind[j]]*bs,0).inverse();
-					else
-						iluvals.BLK<bs,bs>(0,j*bs).noalias()
-							= sum * iluvals.BLK<bs,bs>(0,mat->diagind[mat->bcolind[j]]*bs).inverse();
+					ilu[j].noalias() = sum * ilu[mat->diagind[mat->bcolind[j]]].inverse();
 				}
 				else
 				{
 					// compute u_ij
-					if(Mattype::IsRowMajor)
-						iluvals.BLK<bs,bs>(j*bs,0) = data.BLK<bs,bs>(j*bs,0);
-					else
-						iluvals.BLK<bs,bs>(0,j*bs) = data.BLK<bs,bs>(0,j*bs);
+					ilu[j] = mvals[j];
 
 					for(index k = mat->browptr[irow]; 
 							(k < mat->browptr[irow+1]) && (mat->bcolind[k] < irow); k++) 
@@ -137,12 +119,7 @@ void block_ilu0_setup(const CRawBSRMatrix<scalar,index> *const mat,
 
 						if(pos == -1) continue;
 
-						if(Mattype::IsRowMajor)
-							iluvals.BLK<bs,bs>(j*bs,0).noalias()
-								-= iluvals.BLK<bs,bs>(k*bs,0)*iluvals.BLK<bs,bs>(pos*bs,0);
-						else
-							iluvals.BLK<bs,bs>(0,j*bs).noalias()
-								-= iluvals.BLK<bs,bs>(0,k*bs)*iluvals.BLK<bs,bs>(0,pos*bs);
+						ilu[j].noalias() -= ilu[k]*ilu[pos];
 					}
 				}
 			}
@@ -152,12 +129,7 @@ void block_ilu0_setup(const CRawBSRMatrix<scalar,index> *const mat,
 	// invert diagonal blocks
 #pragma omp parallel for default(shared)
 	for(index irow = 0; irow < mat->nbrows; irow++)
-		if(Mattype::IsRowMajor)
-			iluvals.BLK<bs,bs>(mat->diagind[irow]*bs,0) 
-				= iluvals.BLK<bs,bs>(mat->diagind[irow]*bs,0).inverse().eval();
-		else
-			iluvals.BLK<bs,bs>(0,mat->diagind[irow]*bs) 
-				= iluvals.BLK<bs,bs>(0,mat->diagind[irow]*bs).inverse().eval();
+		ilu[mat->diagind[irow]] = ilu[mat->diagind[irow]].inverse().eval();
 }
 
 /// Applies the block-ILU0 factorization using a block variant of the asynch triangular solve in
@@ -174,27 +146,21 @@ void block_ilu0_setup(const CRawBSRMatrix<scalar,index> *const mat,
  * \param[in] r The RHS vector of the preconditioning problem Mz = r
  * \param[in,out] z The solution vector of the preconditioning problem Mz = r
  */
-template <typename scalar, typename index, int bs, class Mattype>
+template <typename scalar, typename index, int bs, StorageOptions stor>
 inline
 void block_ilu0_apply( const CRawBSRMatrix<scalar,index> *const mat,
 		const scalar *const ilu,
 		scalar *const __restrict y_temp,
 		const int napplysweeps, const int thread_chunk_size, const bool usethreads,
-		const scalar *const r, 
-        scalar *const __restrict z
+		const scalar *const rr, 
+        scalar *const __restrict zz
 	)
 {
-	static_assert(std::is_same<Mattype, Matrix<scalar,Dynamic,bs,RowMajor>>::value 
-			|| std::is_same<Mattype, Matrix<scalar,bs,Dynamic,ColMajor>>::value,
-		"Invalid matrix type!");
-
-	Eigen::Map<const Vector<scalar>> ra(r, mat->nbrows*bs);
-	Eigen::Map<Vector<scalar>> za(z, mat->nbrows*bs);
-	Eigen::Map<Vector<scalar>> ytemp(y_temp, mat->nbrows*bs);
-	Eigen::Map<const Mattype> iluvals(ilu, 
-			Mattype::IsRowMajor ? mat->browptr[mat->nbrows]*bs : bs,
-			Mattype::IsRowMajor ? bs : mat->browptr[mat->nbrows]*bs
-		);
+	const Blk *mvals = reinterpret_cast<const Blk*>(mat.vals);
+	const Blk *ilu = reinterpret_cast<const Blk*>(iluvals);
+	const Seg *r = reinterpret_cast<const Seg*>(rr);
+	Seg *z = reinterpret_cast<Seg*>(zz);
+	Seg *y = reinterpret_cast<Seg*>(ytemp);
 
 	// No scaling like z := Sr done here
 	
@@ -317,20 +283,20 @@ void scalar_ilu0_setup(const CRawBSRMatrix<scalar,index> *const mat,
 		scalar *const __restrict iluvals, scalar *const __restrict scale)
 {
 	// get the diagonal scaling matrix
-/*#pragma omp parallel for simd default(shared)
+#pragma omp parallel for simd default(shared)
 	for(index i = 0; i < mat->nbrows; i++)
-		scale[i] = 1.0/std::sqrt(mat->vals[mat->diagind[i]]);*/
+		scale[i] = 1.0/std::sqrt(mat->vals[mat->diagind[i]]);
 
 	/** initial guess
 	 * We choose the initial guess such that the preconditioner reduces to SGS in the worst case.
 	 */
-#pragma omp parallel for simd default (shared)
+/*#pragma omp parallel for simd default (shared)
 	for(index i = 0; i < mat->browptr[mat->nbrows]; i++)
 		iluvals[i] = mat->vals[i];
 #pragma omp parallel for default (shared)
 	for(index i = 0; i < mat->nbrows; i++)
 		for(index j = mat->browptr[i]; j < mat->diagind[j]; j++)
-			iluvals[j] *= mat->vals[mat->diagind[mat->bcolind[j]]];
+			iluvals[j] *= mat->vals[mat->diagind[mat->bcolind[j]]];*/
 
 	// compute L and U
 	/** Note that in the factorization loop, the variable pos is initially set negative.

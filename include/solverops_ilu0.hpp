@@ -45,6 +45,9 @@ public:
 
 protected:
 	using SRPreconditioner<scalar,index>::mat;
+
+	using Blk = Block_t<scalar,bs,stor>;
+	using Seg = Segment_t<scalar,bs>;
 	
 	/// Storage for L and U factors
 	/** Use \ref bcolind and \ref browptr to access the storage,

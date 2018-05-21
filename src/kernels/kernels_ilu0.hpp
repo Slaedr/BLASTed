@@ -80,6 +80,39 @@ void block_upper_triangular(Map<const Mattype>& vals, const index *const __restr
 		x.SEG<bs>(irow*bs) = vals.BLK<bs,bs>(0,bdiagind*bs) * ( rhs.SEG<bs>(irow*bs) - inter );
 }
 
+/// Unit lower triangular solve kernel
+template <typename scalar, typename index, int bs, StorageOptions stor> inline
+void block_unit_lower_triangular(const Block_t<scalar,bs,stor> *const vals,
+		const index *const bcolind, const index irow, const index browstart, const index bdiagind,
+		const Segment_t<scalar,bs>& rhs,  Segment_t<scalar,bs> *const x)
+{
+	Matrix<scalar,bs,1> inter = Matrix<scalar,bs,1>::Zero();
+
+	for(index jj = browstart; jj < bdiagind; jj++)
+		inter += vals[jj]*x[bcolind[jj]];
+
+	x[irow] = rhs - inter;
+}
+
+/// Upper triangular solve kernel
+/**
+ * \param vals The LU factorization matrix to apply - the diagonal blocks are assumed pre-inverted
+ */
+template <typename scalar, typename index, int bs, class Mattype> inline
+void block_upper_triangular(const Block_t<scalar,bs,stor> *const vals,
+		const index *const bcolind, const index irow, const index bdiagind, const int nextbrowstart,
+		const Segment_t<scalar,bs>& rhs,  Segment_t<scalar,bs> *const x)
+{
+	Matrix<scalar,bs,1> inter = Matrix<scalar,bs,1>::Zero();
+	
+	// compute U z
+	for(index jj = bdiagind+1; jj < nextbrowstart; jj++)
+		inter += vals[jj] * x[bcolind[jj]];
+
+	// compute z = D^(-1) (y - U z) for the irow-th block-segment of z
+	x[irow] = vals[bdiagind] * ( rhs - inter );
+}
+
 }
 
 #endif
