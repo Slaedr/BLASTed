@@ -15,50 +15,30 @@ ChaoticBlockRelaxation<scalar,index,bs,stor>::ChaoticBlockRelaxation()
 	: thread_chunk_size{400}
 { }
 	
-template<typename scalar, typename index, int bs, class Mattype>
-void chaotic_block_relax(const SolveParams<scalar>& sp,
-                   const CRawBSRMatrix<scalar,index>& mat, const scalar *const dblocks,
-                   const int thread_chunk_size,
-                   const scalar *const bb, scalar *const __restrict xx)
+template<typename scalar, typename index, int bs, StorageOptions stor>
+void ChaoticBlockRelaxation<scalar,index,bs,stor>::apply(const scalar *const bb, 
+		scalar *const __restrict xx) const
 {
-	Eigen::Map<const Vector<scalar>> b(bb, mat.nbrows*bs);
-	Eigen::Map<Vector<scalar>> xmut(xx, mat.nbrows*bs);
-	Eigen::Map<const Vector<scalar>> x(xx, mat.nbrows*bs);
-	
-	Eigen::Map<const Mattype> data(mat.vals, 
-			Mattype::IsRowMajor ? mat.browptr[mat.nbrows]*bs : bs,
-			Mattype::IsRowMajor ? bs : mat.browptr[mat.nbrows]*bs
-		);
-	Eigen::Map<const Mattype> dblks(dblocks, 
-			Mattype::IsRowMajor ? mat.nbrows*bs : bs,
-			Mattype::IsRowMajor ? bs : mat.nbrows*bs
-		);
+	const Blk *mvals = reinterpret_cast<const Blk*>(mat.vals);
+	const Blk *dblks = reinterpret_cast<const Blk*>(dblocks);
+	const Seg *b = reinterpret_cast<const Seg*>(bb);
+	// the solution vector is wrapped in both a pointer to const segment and one to mutable segment
+	const Seg *x = reinterpret_cast<const Seg*>(xx);
+	Seg *xmut = reinterpret_cast<Seg*>(xx);
 
 #pragma omp parallel default(shared)
 	{
-	for(int step = 0; step < sp.maxits; step++)
-	{
-#pragma omp for schedule(dynamic, thread_chunk_size) nowait
-		for(index irow = 0; irow < mat.nbrows; irow++)
+		for(int step = 0; step < solveparams.maxits; step++)
 		{
-			block_relax<scalar,index,bs,Mattype,Vector<scalar>>
-				(data, mat.bcolind, irow, mat.browptr[irow], mat.diagind[irow], mat.browptr[irow+1],
-				 dblks, b, x, x, xmut);
+#pragma omp for schedule(dynamic, thread_chunk_size) nowait
+			for(index irow = 0; irow < mat.nbrows; irow++)
+			{
+				block_relax_kernel<scalar,index,bs,stor>
+					(mvals, mat.bcolind, irow, mat.browptr[irow], mat.diagind[irow], mat.browptr[irow+1],
+					 dblks[irow], b[irow], x, x, xmut[irow]);
+			}
 		}
 	}
-	}
-}
-
-template<typename scalar, typename index, int bs, StorageOptions stor>
-void ChaoticBlockRelaxation<scalar,index,bs,stor>::apply(const scalar *const b, 
-		scalar *const __restrict x) const
-{
-	if(stor == RowMajor)
-		chaotic_block_relax<scalar,index,bs,Matrix<scalar,Dynamic,bs,RowMajor>>
-			( solveparams, mat, dblocks, thread_chunk_size, b, x);
-	else
-		chaotic_block_relax<scalar,index,bs,Matrix<scalar,bs,Dynamic,ColMajor>>
-			( solveparams, mat, dblocks, thread_chunk_size, b, x);
 }
 
 template class ChaoticBlockRelaxation<double,int,4,RowMajor>;
@@ -82,24 +62,24 @@ void chaotic_relax(const SolveParams<scalar>& sp,
 		const int thread_chunk_size,
 		const scalar *const bb, scalar *const __restrict xx)
 {
+}
+
+template<typename scalar, typename index>
+void ChaoticRelaxation<scalar,index>::apply(const scalar *const bb, 
+		scalar *const __restrict xx) const
+{
 #pragma omp parallel default(shared)
-	for(int step = 0; step < sp.maxits; step++)
+	for(int step = 0; step < solveparams.maxits; step++)
 	{
 #pragma omp for schedule(dynamic, thread_chunk_size) nowait		
 		for(index irow = 0; irow < mat.nbrows; irow++)
 		{
-			xx[irow] = scalar_relax<scalar,index>(mat.vals, mat.bcolind, 
-				mat.browptr[irow], mat.diagind[irow], mat.browptr[irow+1],
-				dblocks[irow], bb[irow], xx, xx);
+			xx[irow] = scalar_relax<scalar,index>
+				           (mat.vals, mat.bcolind, 
+				            mat.browptr[irow], mat.diagind[irow], mat.browptr[irow+1],
+				            dblocks[irow], bb[irow], xx, xx);
 		}
 	}
-}
-
-template<typename scalar, typename index>
-void ChaoticRelaxation<scalar,index>::apply(const scalar *const b, 
-		scalar *const __restrict x) const
-{
-	chaotic_relax<scalar,index> ( solveparams, mat, dblocks, thread_chunk_size, b, x);
 }
 
 template class ChaoticRelaxation<double,int>;

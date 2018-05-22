@@ -2,6 +2,20 @@
  * \brief Implementation of async symmetric Gauss-Seidel relaxations
  * \author Aditya Kashi
  * \date 2018-05
+ * 
+ * This file is part of BLASTed.
+ *   BLASTed is free software: you can redistribute it and/or modify
+ *   it under the terms of the GNU General Public License as published by
+ *   the Free Software Foundation, either version 3 of the License, or
+ *   (at your option) any later version.
+ *
+ *   BLASTed is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with BLASTed.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "relaxation_async_sgs.hpp"
@@ -14,59 +28,11 @@ template<typename scalar, typename index, int bs, StorageOptions stor>
 AsyncBlockSGS_Relaxation<scalar,index,bs,stor>::AsyncBlockSGS_Relaxation()
 	: thread_chunk_size{400}
 { }
-	
-template<typename scalar, typename index, int bs, class Mattype>
-void chaotic_blockSGS_relax(const SolveParams<scalar>& sp,
-                   const CRawBSRMatrix<scalar,index>& mat, const scalar *const dblocks,
-                   const int thread_chunk_size,
-                   const scalar *const bb, scalar *const __restrict xx)
-{
-	Eigen::Map<const Vector<scalar>> b(bb, mat.nbrows*bs);
-	Eigen::Map<Vector<scalar>> xmut(xx, mat.nbrows*bs);
-	Eigen::Map<const Vector<scalar>> x(xx, mat.nbrows*bs);
-	
-	Eigen::Map<const Mattype> data(mat.vals, 
-			Mattype::IsRowMajor ? mat.browptr[mat.nbrows]*bs : bs,
-			Mattype::IsRowMajor ? bs : mat.browptr[mat.nbrows]*bs
-		);
-	Eigen::Map<const Mattype> dblks(dblocks, 
-			Mattype::IsRowMajor ? mat.nbrows*bs : bs,
-			Mattype::IsRowMajor ? bs : mat.nbrows*bs
-		);
-
-#pragma omp parallel default(shared)
-	{
-	for(int step = 0; step < sp.maxits; step++)
-	{
-#pragma omp for schedule(dynamic, thread_chunk_size) nowait
-		for(index irow = 0; irow < mat.nbrows; irow++)
-		{
-			block_relax<scalar,index,bs,Mattype,Vector<scalar>>
-				(data, mat.bcolind, irow, mat.browptr[irow], mat.diagind[irow], mat.browptr[irow+1],
-				 dblks, b, x, x, xmut);
-		}
-#pragma omp for schedule(dynamic, thread_chunk_size) nowait
-		for(index irow = mat.nbrows-1; irow >= 0; irow--)
-		{
-			block_relax<scalar,index,bs,Mattype,Vector<scalar>>
-				(data, mat.bcolind, irow, mat.browptr[irow], mat.diagind[irow], mat.browptr[irow+1],
-				 dblks, b, x, x, xmut);
-		}
-	}
-	}
-}
 
 template<typename scalar, typename index, int bs, StorageOptions stor>
 void AsyncBlockSGS_Relaxation<scalar,index,bs,stor>::apply(const scalar *const bb, 
 		scalar *const __restrict xx) const
 {
-	/*if(stor == RowMajor)
-		chaotic_blockSGS_relax<scalar,index,bs,Matrix<scalar,Dynamic,bs,RowMajor>>
-			( solveparams, mat, dblocks, thread_chunk_size, b, x);
-	else
-		chaotic_blockSGS_relax<scalar,index,bs,Matrix<scalar,bs,Dynamic,ColMajor>>
-		( solveparams, mat, dblocks, thread_chunk_size, b, x);*/
-
 	const Blk *mvals = reinterpret_cast<const Blk*>(mat.vals);
 	const Blk *dblks = reinterpret_cast<const Blk*>(dblocks);
 	const Seg *b = reinterpret_cast<const Seg*>(bb);
@@ -112,36 +78,29 @@ AsyncSGS_Relaxation<scalar,index>::AsyncSGS_Relaxation()
 { }
 
 template<typename scalar, typename index>
-void chaotic_SGS_relax(const SolveParams<scalar>& sp,
-		const CRawBSRMatrix<scalar,index>& mat, const scalar *const dblocks,
-		const int thread_chunk_size,
-		const scalar *const bb, scalar *const __restrict xx)
+void AsyncSGS_Relaxation<scalar,index>::apply(const scalar *const b, 
+		scalar *const __restrict x) const
 {
 #pragma omp parallel default(shared)
-	for(int step = 0; step < sp.maxits; step++)
+	for(int step = 0; step < solveparams.maxits; step++)
 	{
 #pragma omp for schedule(dynamic, thread_chunk_size) nowait		
 		for(index irow = 0; irow < mat.nbrows; irow++)
 		{
-			xx[irow] = scalar_relax<scalar,index>(mat.vals, mat.bcolind, 
-				mat.browptr[irow], mat.diagind[irow], mat.browptr[irow+1],
-				dblocks[irow], bb[irow], xx, xx);
+			x[irow] = scalar_relax<scalar,index>
+			             (mat.vals, mat.bcolind,
+			              mat.browptr[irow], mat.diagind[irow], mat.browptr[irow+1],
+			              dblocks[irow], b[irow], x, x);
 		}
 #pragma omp for schedule(dynamic, thread_chunk_size) nowait		
 		for(index irow = mat.nbrows-1; irow >= 0; irow--)
 		{
-			xx[irow] = scalar_relax<scalar,index>(mat.vals, mat.bcolind, 
-				mat.browptr[irow], mat.diagind[irow], mat.browptr[irow+1],
-				dblocks[irow], bb[irow], xx, xx);
+			x[irow] = scalar_relax<scalar,index>
+				               (mat.vals, mat.bcolind, 
+				                mat.browptr[irow], mat.diagind[irow], mat.browptr[irow+1],
+				                dblocks[irow], b[irow], x, x);
 		}		
 	}
-}
-
-template<typename scalar, typename index>
-void AsyncSGS_Relaxation<scalar,index>::apply(const scalar *const b, 
-		scalar *const __restrict x) const
-{
-	chaotic_SGS_relax<scalar,index> ( solveparams, mat, dblocks, thread_chunk_size, b, x);
 }
 
 template class AsyncSGS_Relaxation<double,int>;	

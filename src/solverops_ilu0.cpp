@@ -5,6 +5,7 @@
 
 #include <type_traits>
 #include <iostream>
+#include <Eigen/LU>
 #include "solverops_ilu0.hpp"
 #include "kernels/kernels_ilu0.hpp"
 
@@ -65,10 +66,10 @@ void block_ilu0_setup(const CRawBSRMatrix<scalar,index> *const mat,
 		scalar *const __restrict iluvals
 	)
 {
-	constexpr StorageOptions nstor = static_cast<StorageOptions>(stor|Eigen::DontAlign);
-	using Blk = Block_t<scalar,bs,nstor>;
+	using NABlk = Block_t<scalar,bs,static_cast<StorageOptions>(stor|Eigen::DontAlign)>;
+	using Blk = Block_t<scalar,bs,stor>;
 	
-	const Blk *mvals = reinterpret_cast<const Blk*>(mat->vals);
+	const NABlk *mvals = reinterpret_cast<const NABlk*>(mat->vals);
 	Blk *ilu = reinterpret_cast<Blk*>(iluvals);
 
 	// compute L and U
@@ -160,8 +161,7 @@ void block_ilu0_apply( const CRawBSRMatrix<scalar,index> *const mat,
         scalar *const __restrict zz
 	)
 {
-	constexpr StorageOptions nstor = static_cast<StorageOptions>(stor|Eigen::DontAlign);
-	using Blk = Block_t<scalar,bs,nstor>;
+	using Blk = Block_t<scalar,bs,stor>;
 	using Seg = Segment_t<scalar,bs>;
 	
 	const Blk *ilu = reinterpret_cast<const Blk*>(iluvals);
@@ -179,7 +179,7 @@ void block_ilu0_apply( const CRawBSRMatrix<scalar,index> *const mat,
 #pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size) if(usethreads)
 		for(index i = 0; i < mat->nbrows; i++)
 		{
-			block_unit_lower_triangular<scalar,index,bs,nstor>
+			block_unit_lower_triangular<scalar,index,bs,stor>
 			  (ilu, mat->bcolind, mat->browptr[i], mat->diagind[i], r[i], i, y);
 		}
 	}
@@ -192,7 +192,7 @@ void block_ilu0_apply( const CRawBSRMatrix<scalar,index> *const mat,
 #pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size) if(usethreads)
 		for(index i = mat->nbrows-1; i >= 0; i--)
 		{
-			block_upper_triangular<scalar,index,bs,nstor>
+			block_upper_triangular<scalar,index,bs,stor>
 			  (ilu, mat->bcolind, mat->diagind[i], mat->browptr[i+1], y[i], i, z);
 		}
 	}

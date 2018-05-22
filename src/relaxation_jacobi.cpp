@@ -83,20 +83,26 @@ void jacobi_relax(const SolveParams<scalar>& sp,
 		const CRawBSRMatrix<scalar,index>& mat, const scalar *const dblocks,
 		const scalar *const bb, scalar *const __restrict xx)
 {
+}
+
+template<typename scalar, typename index>
+void JacobiRelaxation<scalar,index>::apply(const scalar *const bb, 
+		scalar *const __restrict xx) const
+{
 	scalar* xtemp = new scalar[mat.nbrows];
 	scalar refdiffnorm = 1;
 	
-	for(int step = 0; step < sp.maxits; step++)
+	for(int step = 0; step < solveparams.maxits; step++)
 	{
 #pragma omp parallel for default(shared)
 		for(index irow = 0; irow < mat.nbrows; irow++)
 		{
 			xtemp[irow] = scalar_relax<scalar,index>(mat.vals, mat.bcolind, 
-				mat.browptr[irow], mat.diagind[irow], mat.browptr[irow+1],
-				dblocks[irow], bb[irow], xx, xx);
+			                                         mat.browptr[irow], mat.diagind[irow], mat.browptr[irow+1],
+			                                         dblocks[irow], bb[irow], xx, xx);
 		}
 
-		if(sp.ctol)
+		if(solveparams.ctol)
 		{
 			scalar diffnorm = 0;
 #pragma omp parallel for simd default(shared) reduction(+:diffnorm)
@@ -111,8 +117,8 @@ void jacobi_relax(const SolveParams<scalar>& sp,
 			if(step == 0)
 				refdiffnorm = diffnorm;
 
-			if(diffnorm < sp.atol || diffnorm/refdiffnorm < sp.rtol ||
-			   diffnorm/refdiffnorm > sp.dtol)
+			if(diffnorm < solveparams.atol || diffnorm/refdiffnorm < solveparams.rtol ||
+			   diffnorm/refdiffnorm > solveparams.dtol)
 				break;
 		}
 		else
@@ -127,14 +133,6 @@ void jacobi_relax(const SolveParams<scalar>& sp,
 	delete [] xtemp;
 }
 
-template<typename scalar, typename index>
-void JacobiRelaxation<scalar,index>::apply(const scalar *const b, 
-		scalar *const __restrict x) const
-{
-	jacobi_relax<scalar,index> ( solveparams, mat, dblocks, b, x);
-}
-
 template class JacobiRelaxation<double,int>;
-
 
 }

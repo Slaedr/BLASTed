@@ -28,52 +28,29 @@
 
 namespace blasted {
 
-/// Shorthand for dependent templates for Eigen segment function for vectors
-#define SEG template segment
-/// Shorthand for dependent templates for Eigen block function for matrices
-#define BLK template block
-
 /// Matrix-vector product for BSR matrices
-/** The template parameter Mattype is the type of the Eigen Matrix that the array of non-zero entries
- * of the matrix should be mapped to.
- * The reason this is a template parameter is that this type changes depending on whether
- * the array of non-zero entries CRawBSRMatrix::vals is arragned row-major or column-major within
- * each block. If it's row-major, the type should be Eigen::Matrix<scalar,Dynamic,bs,RowMajor> but
- * if it's column-major, Mattype should be Eigen::Matrix<scalar,bs,Dynamic,ColMajor>.
- */
-template <typename scalar, typename index, int bs, class Mattype>
+template <typename scalar, typename index, int bs, StorageOptions stor>
 inline
 void block_matrix_apply(const CRawBSRMatrix<scalar,index> *const mat,
 		const scalar *const xx, scalar *const __restrict yy)
 {
-	Eigen::Map<const Vector<scalar>> x(xx, mat->nbrows*bs);
-	Eigen::Map<Vector<scalar>> y(yy, mat->nbrows*bs);
-
-	static_assert(std::is_same<Mattype, Matrix<scalar,Dynamic,bs,RowMajor>>::value 
-			|| std::is_same<Mattype, Matrix<scalar,bs,Dynamic,ColMajor>>::value,
-		"Invalid matrix type!");
-
-	Eigen::Map<const Mattype> data(mat->vals, 
-			Mattype::IsRowMajor ? mat->browptr[mat->nbrows]*bs : bs,
-			Mattype::IsRowMajor ? bs : mat->browptr[mat->nbrows]*bs
-		);
+	using Blk = Block_t<scalar,bs,stor>;
+	using Seg = Segment_t<scalar,bs>;
+	const Blk *data = reinterpret_cast<const Blk*>(mat->vals);
+	const Seg *x = reinterpret_cast<const Seg*>(xx);
+	Seg *y = reinterpret_cast<Seg*>(yy);
 
 #pragma omp parallel for default(shared)
 	for(index irow = 0; irow < mat->nbrows; irow++)
 	{
-		y.SEG<bs>(irow*bs) = Vector<scalar>::Zero(bs);
+		y[irow] = Vector<scalar>::Zero(bs);
 
 		// loop over non-zero blocks of this block-row
 		for(index jj = mat->browptr[irow]; jj < mat->browptr[irow+1]; jj++)
 		{
 			// multiply the blocks with corresponding sub-vectors
 			const index jcol = mat->bcolind[jj];
-			if(Mattype::IsRowMajor)	
-				y.SEG<bs>(irow*bs).noalias() 
-					+= data.BLK<bs,bs>(jj*bs,0) * x.SEG<bs>(jcol*bs);
-			else
-				y.SEG<bs>(irow*bs).noalias() 
-					+= data.BLK<bs,bs>(0,jj*bs) * x.SEG<bs>(jcol*bs);
+			y[irow].noalias() += data[jj] * x[jcol];
 		}
 	}
 }
@@ -83,40 +60,29 @@ void block_matrix_apply(const CRawBSRMatrix<scalar,index> *const mat,
  * \param[in] mat The BSR matrix
  * \warning xx must not alias zz.
  */
-template <typename scalar, typename index, int bs, class Mattype>
+template <typename scalar, typename index, int bs, StorageOptions stor>
 inline
 void block_gemv3(const CRawBSRMatrix<scalar,index> *const mat,
 		const scalar a, const scalar *const __restrict xx, 
 		const scalar b, const scalar *const yy, scalar *const zz)
 {
-	Eigen::Map<const Vector<scalar>> x(xx, mat->nbrows*bs);
-	Eigen::Map<const Vector<scalar>> y(yy, mat->nbrows*bs);
-	Eigen::Map<Vector<scalar>> z(zz, mat->nbrows*bs);
-
-	static_assert(std::is_same<Mattype, Matrix<scalar,Dynamic,bs,RowMajor>>::value 
-			|| std::is_same<Mattype, Matrix<scalar,bs,Dynamic,ColMajor>>::value,
-		"Invalid matrix type!");
-	
-	Eigen::Map<const Mattype> data(mat->vals, 
-			Mattype::IsRowMajor ? mat->browptr[mat->nbrows]*bs : bs,
-			Mattype::IsRowMajor ? bs : mat->browptr[mat->nbrows]*bs
-		);
+	using Blk = Block_t<scalar,bs,stor>;
+	using Seg = Segment_t<scalar,bs>;
+	const Blk *data = reinterpret_cast<const Blk*>(mat->vals);
+	const Seg *x = reinterpret_cast<const Seg*>(xx);
+	const Seg *y = reinterpret_cast<const Seg*>(yy);
+	Seg *z = reinterpret_cast<Seg*>(zz);
 
 #pragma omp parallel for default(shared)
 	for(index irow = 0; irow < mat->nbrows; irow++)
 	{
-		z.SEG<bs>(irow*bs) = b * y.SEG<bs>(irow*bs);
+		z[irow] = b * y[irow];
 
 		// loop over non-zero blocks of this block-row
 		for(index jj = mat->browptr[irow]; jj < mat->browptr[irow+1]; jj++)
 		{
 			const index jcol = mat->bcolind[jj];
-			if(Mattype::IsRowMajor)	
-				z.SEG<bs>(irow*bs).noalias() += 
-					a * data.BLK<bs,bs>(jj*bs,0) * x.SEG<bs>(jcol*bs);
-			else
-				z.SEG<bs>(irow*bs).noalias() += 
-					a * data.BLK<bs,bs>(0,jj*bs) * x.SEG<bs>(jcol*bs);
+			z[irow].noalias() += a * data[jj] * x[jcol];
 		}
 	}
 }
@@ -199,20 +165,14 @@ template <typename scalar, typename index, int bs, StorageOptions stor>
 void BSRMatrixView<scalar,index,bs,stor>::apply(const scalar *const xx,
                                        scalar *const __restrict yy) const
 {
-	if(stor == RowMajor)
-		block_matrix_apply<scalar,index,bs,Matrix<scalar,Dynamic,bs,RowMajor>>(&mat, xx, yy);
-	else
-		block_matrix_apply<scalar,index,bs,Matrix<scalar,bs,Dynamic,ColMajor>>(&mat, xx, yy);
+	block_matrix_apply<scalar,index,bs,stor>(&mat, xx, yy);
 }
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
 void BSRMatrixView<scalar,index,bs,stor>::gemv3(const scalar a, const scalar *const __restrict xx, 
 		const scalar b, const scalar *const yy, scalar *const zz) const
 {
-	if(stor == RowMajor)
-		block_gemv3<scalar,index,bs,Matrix<scalar,Dynamic,bs,RowMajor>>(&mat, a, xx, b, yy, zz);
-	else
-		block_gemv3<scalar,index,bs,Matrix<scalar,bs,Dynamic,ColMajor>>(&mat, a, xx, b, yy, zz);
+	block_gemv3<scalar,index,bs,stor>(&mat, a, xx, b, yy, zz);
 }
 
 template <typename scalar, typename index>
@@ -437,7 +397,7 @@ template <typename scalar, typename index, int bs>
 void BSRMatrix<scalar,index,bs>::apply(const scalar *const xx,
                                        scalar *const __restrict yy) const
 {
-	block_matrix_apply<scalar,index,bs,Matrix<scalar,Dynamic,bs,RowMajor>>(
+	block_matrix_apply<scalar,index,bs,RowMajor>(
 			reinterpret_cast<const CRawBSRMatrix<scalar,index>*>(&mat), xx, yy);
 }
 
@@ -445,7 +405,7 @@ template <typename scalar, typename index, int bs>
 void BSRMatrix<scalar,index,bs>::gemv3(const scalar a, const scalar *const __restrict xx, 
 		const scalar b, const scalar *const yy, scalar *const zz) const
 {
-	block_gemv3<scalar,index,bs,Matrix<scalar,Dynamic,bs,RowMajor>>(
+	block_gemv3<scalar,index,bs,RowMajor>(
 			reinterpret_cast<const CRawBSRMatrix<scalar,index>*>(&mat), 
 			a, xx, b, yy, zz);
 }
