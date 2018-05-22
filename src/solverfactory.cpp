@@ -47,16 +47,16 @@ SRPreconditioner<scalar,index> *create_srpreconditioner_of_type
 	}
 	else if(precstr == ilu0str) {
 		if(relax) {
-			std::cout << "WARNING: Solverfactory: ILU relaxation is not possible.";
-			std::cout << " Using the preconditioner instead.\n";
+			std::cout << "Solverfactory: ILU relaxation is not possible.";
+			std::cout << " Using the preconditioner.\n";
 		}
 		return new AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>
 			(intlist.at(nbuildsweeps), intlist.at(napplysweeps), true, true);
 	}
 	else if(precstr == sapilu0str) {
 		if(relax) {
-			std::cout << "WARNING: Solverfactory: ILU relaxation is not possible.";
-			std::cout << " Using the preconditioner instead.\n";
+			std::cout << "Solverfactory: ILU relaxation is not possible.";
+			std::cout << " Using the preconditioner.\n";
 		}
 		return new AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>(intlist.at(nbuildsweeps),
 				intlist.at(napplysweeps),true,false);
