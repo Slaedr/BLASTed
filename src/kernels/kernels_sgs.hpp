@@ -36,7 +36,7 @@ scalar scalar_bgs(const scalar *const __restrict vals, const index *const __rest
 	for(index jj = diagind+1; jj < nextrowstart; jj++)
 		inter += vals[jj]*x[colind[jj]];
 
-	return diag_entry_inv * (diag_entry*rhs - inter);
+	return rhs - diag_entry_inv*inter;
 }
 
 /// Forward block Gauss-Seidel kernel
@@ -55,8 +55,6 @@ void block_fgs(const Block_t<scalar,bs,stor> *const vals, const index *const bco
 }
 
 /// Backward block Gauss-Seidel kernel
-/** \todo FIXME: Change this brain-dead update for x[irow]!!
- */
 template <typename scalar, typename index, int bs, StorageOptions stor> inline
 void block_bgs(const Block_t<scalar,bs,stor> *const vals, const index *const bcolind,
 		const index irow, const index bdiagind, const index nextbrowstart,
@@ -70,7 +68,7 @@ void block_bgs(const Block_t<scalar,bs,stor> *const vals, const index *const bco
 		inter += vals[jj] * x[bcolind[jj]];
 
 	// compute z =  (y - D^(-1)*U z) for the irow-th block-segment of z
-	x[irow] = diaginv * ( vals[bdiagind]*rhs - inter );
+	x[irow] = rhs - diaginv*inter;
 }
 
 }

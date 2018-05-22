@@ -21,10 +21,8 @@
 
 #include <type_traits>
 #include <blockmatrices.hpp>
-#include "kernels/kernels_sgs.hpp"
-#include "kernels/kernels_ilu0.hpp"
 
-#include <Eigen/LU>
+#include <Eigen/Core>
 
 namespace blasted {
 

@@ -18,7 +18,6 @@
 
 #include <iostream>
 #include <limits>
-#include <Eigen/Core>
 
 namespace blasted {
 
