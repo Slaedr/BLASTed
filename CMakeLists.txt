@@ -127,9 +127,8 @@ if(PROFILE)
 endif()
 
 # Boost
-if(BOOST_ROOT)
-	include_directories(${BOOST_ROOT})
-endif()
+find_package(Boost 1.60 REQUIRED)
+include_directories(${Boost_INCLUDE_DIRS})
 
 # Eigen
 include_directories($ENV{EIGEN_DIR})
@@ -137,6 +136,11 @@ set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DEIGEN_DONT_PARALLELIZE")
 
 # PETSc
 if(WITH_PETSC)
+	find_package(MPI REQUIRED)
+	message(STATUS "Found MPI include: ${MPI_C_INCLUDE_PATH}, ${MPI_CXX_INCLUDE_PATH}")
+	message(STATUS "Found MPI libraries: ${MPI_C_COMPILE_FLAGS}, ${MPI_C_LINK_FLAGS}, ${MPI_C_LIBRARIES}")
+	include_directories(${MPI_C_INCLUDE_PATH} ${MPI_CXX_INCLUDE_PATH})
+
 	find_library(PETSC_LIB NAMES petsc PATHS $ENV{PETSC_DIR}/$ENV{PETSC_ARCH}/lib)
 	include_directories($ENV{PETSC_DIR}/include $ENV{PETSC_DIR}/$ENV{PETSC_ARCH}/include)
 	message(STATUS "Building with PETSc found at ${PETSC_LIB}")

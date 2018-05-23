@@ -10,10 +10,10 @@ if(WITH_PETSC)
 	#find_package(MPI REQUIRED)
 
 	add_library(blasted_petsc SHARED blasted_petsc.cpp)
-	target_link_libraries(blasted_petsc ${PETSC_LIB} solverops)
+	target_link_libraries(blasted_petsc ${PETSC_LIB} solverops ${MPI_C_LIBRARIES} ${MPI_C_LINK_FLAGS})
 	
 	add_executable(util_petsc_io util_petsc_io.c blasted_petsc_io.cpp)
-	target_link_libraries(util_petsc_io coomatrix blockmatrices ${PETSC_LIB})
+	target_link_libraries(util_petsc_io coomatrix blockmatrices ${PETSC_LIB} ${MPI_C_LIBRARIES} ${MPI_C_LINK_FLAGS})
 	
 endif()
 
