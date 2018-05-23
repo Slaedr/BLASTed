@@ -290,13 +290,15 @@ void scalar_ilu0_setup(const CRawBSRMatrix<scalar,index> *const mat,
 	/** initial guess
 	 * We choose the initial guess such that the preconditioner reduces to SGS in the worst case.
 	 */
-/*#pragma omp parallel for simd default (shared)
-	for(index i = 0; i < mat->browptr[mat->nbrows]; i++)
-		iluvals[i] = mat->vals[i];
 #pragma omp parallel for default (shared)
 	for(index i = 0; i < mat->nbrows; i++)
-		for(index j = mat->browptr[i]; j < mat->diagind[j]; j++)
-			iluvals[j] *= mat->vals[mat->diagind[mat->bcolind[j]]];*/
+	{
+		for(index j = mat->browptr[i]; j < mat->browptr[i+1]; j++)
+			iluvals[j] = scale[i]*mat->vals[j]*scale[mat->bcolind[j]];
+		/*for(index j = mat->browptr[i]; j < mat->diagind[i]; j++)
+			iluvals[j] *= 1.0/mat->vals[mat->diagind[mat->bcolind[j]]];
+		*/
+	}
 
 	// compute L and U
 	/** Note that in the factorization loop, the variable pos is initially set negative.
@@ -371,6 +373,7 @@ void scalar_ilu0_apply(const CRawBSRMatrix<scalar,index> *const mat,
 #pragma omp parallel for simd default(shared)
 	for(index i = 0; i < mat->nbrows; i++) {
 		za[i] = scale[i]*ra[i];
+		ytemp[i] = 0;
 	}
 	
 	/** solves Ly = Sr by asynchronous Jacobi iterations.
@@ -386,6 +389,11 @@ void scalar_ilu0_apply(const CRawBSRMatrix<scalar,index> *const mat,
 		}
 	}
 
+#pragma omp parallel for simd default(shared)
+	for(index i = 0; i < mat->nbrows; i++) {
+		za[i] = ytemp[i];
+	}
+	
 	/* Solves Uz = y by asynchronous Jacobi iteration.
 	 * If done serially, this is a back-substitution.
 	 */
