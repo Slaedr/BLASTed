@@ -72,6 +72,29 @@ void block_ilu0_setup(const CRawBSRMatrix<scalar,index> *const mat,
 	const NABlk *mvals = reinterpret_cast<const NABlk*>(mat->vals);
 	Blk *ilu = reinterpret_cast<Blk*>(iluvals);
 
+	// Initial guess for LU factors
+
+	Eigen::aligned_allocator<Blk> alloc;
+	Blk *dblks = alloc.allocate(mat->nbrows);
+
+	// Initialize ilu to original matrix
+#pragma omp parallel for default (shared)
+	for(index i = 0; i < mat->nbrows; i++) {
+		dblks[i].noalias() = mvals[mat->diagind[i]].inverse();
+		for(index j = mat->browptr[i]; j < mat->browptr[i+1]; j++)
+			ilu[j] = mvals[j];
+	}
+
+	// Scale the (strictly) lower block-triangular part
+	//  by the inverses of the diagonal blocks from the right
+#pragma omp parallel for default (shared)
+	for(index i = 0; i < mat->nbrows; i++) {
+		for(index j = mat->browptr[i]; j < mat->diagind[i]; j++)
+			ilu[j] = ilu[j]*dblks[mat->bcolind[j]].eval();
+	}
+
+	alloc.deallocate(dblks, mat->nbrows);
+
 	// compute L and U
 	/** Note that in the factorization loop, the variable pos is initially set negative.
 	 * If index is an unsigned type, that might be a problem. However,
@@ -171,6 +194,12 @@ void block_ilu0_apply( const CRawBSRMatrix<scalar,index> *const mat,
 
 	// No scaling like z := Sr done here
 	
+#pragma omp parallel for simd default(shared)
+	for(index i = 0; i < mat->nbrows*bs; i++)
+	{
+		y_temp[i] = 0;
+	}
+	
 	/** solves Ly = Sr by asynchronous Jacobi iterations.
 	 * Note that if done serially, this is a forward-substitution.
 	 */
@@ -182,6 +211,12 @@ void block_ilu0_apply( const CRawBSRMatrix<scalar,index> *const mat,
 			block_unit_lower_triangular<scalar,index,bs,stor>
 			  (ilu, mat->bcolind, mat->browptr[i], mat->diagind[i], r[i], i, y);
 		}
+	}
+
+#pragma omp parallel for simd default(shared)
+	for(index i = 0; i < mat->nbrows*bs; i++)
+	{
+		zz[i] = y_temp[i];
 	}
 
 	/* Solves Uz = y by asynchronous Jacobi iteration.

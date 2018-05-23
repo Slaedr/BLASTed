@@ -112,6 +112,15 @@ int main(int argc, char* argv[])
 		strcpy(testtype,"convergence");
 	}
 
+	// Get error check tolerance
+	PetscReal error_tol;
+	set = PETSC_FALSE;
+	ierr = PetscOptionsGetReal(NULL, NULL, "-error_tolerance_factor", &error_tol, &set);
+	if(!set) {
+		printf("Error tolerance factor not set; using the default 1e6.");
+		error_tol = 1e6;
+	}
+
 	PetscInt cmdnumruns;
 	ierr = PetscOptionsGetInt(NULL,NULL,"-num_runs",&cmdnumruns,&set); CHKERRQ(ierr);
 	if(set)
@@ -265,7 +274,7 @@ int main(int argc, char* argv[])
 	// the following test is probably not workable..
 	printf("Difference in error norm = %.16f.\n", std::fabs(errnorm-errnormref));
 	if(!strcmp(testtype,"compare_error"))
-		assert(std::fabs(errnorm/nruns-errnormref) < 1e6*DBL_EPSILON);
+		assert(std::fabs(errnorm/nruns-errnormref) < error_tol*DBL_EPSILON);
 
 
 	VecDestroy(&u);
