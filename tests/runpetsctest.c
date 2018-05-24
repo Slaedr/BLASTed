@@ -70,6 +70,9 @@ int main(int argc, char* argv[])
 		error_tol = 100.0;
 	}
 
+	// Error tolerance for PETSc matmult test
+	PetscReal error_tol_matmult = 5e2;
+
 	PetscViewer matreader;
 	PetscViewerBinaryOpen(comm, matfile, FILE_MODE_READ, &matreader);
 	PetscViewer bvecreader;
@@ -109,7 +112,7 @@ int main(int argc, char* argv[])
 	PetscReal multerrnorm = 0;
 	ierr = VecNorm(test, NORM_2, &multerrnorm); CHKERRQ(ierr);
 	printf(" Mult error = %16.16e\n", multerrnorm);
-	TASSERT(multerrnorm < 400*DBL_EPSILON);
+	TASSERT(multerrnorm < error_tol_matmult*DBL_EPSILON);
 	VecDestroy(&test);
 
 	// compute reference solution using a preconditioner from PETSc
