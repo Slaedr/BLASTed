@@ -15,6 +15,7 @@ cmake_minimum_required(VERSION 3.0)
 # - -DKNL=1 to compile for Xeon Phi Knights Landing
 # - -DMICKNC=1 to compile for Xeon Phi Knights Corner (deprecated).
 # - -DPROFILE=1 for profiling with gprof.
+# - -DSLURM=1 for running the automated tests on a system managed by SLURM
 #
 # - -DBUILD_BLOCK_SIZE=<n> for some integer n, to build the block solver operations for
 #     an additional block size of <n>. By default, block sizes 4 and 5 are supported.
@@ -209,6 +210,14 @@ include_directories(${Boost_INCLUDE_DIRS})
 # Eigen
 include_directories($ENV{EIGEN_DIR})
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DEIGEN_DONT_PARALLELIZE")
+	
+if(SLURM)
+	set(SEQEXEC "srun")
+	set(SEQTASKS "-n 1")
+else()
+	set(SEQEXEC "")
+	set(SEQTASKS "")
+endif(SLURM)
 
 # PETSc
 if(WITH_PETSC)
@@ -216,6 +225,11 @@ if(WITH_PETSC)
 	#message(STATUS "Found MPI include: ${MPI_C_INCLUDE_PATH}, ${MPI_CXX_INCLUDE_PATH}")
 	#message(STATUS "Found MPI libraries: ${MPI_C_COMPILE_FLAGS}, ${MPI_C_LINK_FLAGS}, ${MPI_C_LIBRARIES}")
 	include_directories(${MPI_C_INCLUDE_PATH} ${MPI_CXX_INCLUDE_PATH})
+	if(SLURM)
+		set(MPIEXEC "srun")
+	else()
+		set(MPIEXEC "mpirun")
+	endif(SLURM)
 
 	find_library(PETSC_LIB NAMES petsc PATHS $ENV{PETSC_DIR}/$ENV{PETSC_ARCH}/lib)
 	include_directories($ENV{PETSC_DIR}/include $ENV{PETSC_DIR}/$ENV{PETSC_ARCH}/include)
