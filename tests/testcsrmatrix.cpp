@@ -11,10 +11,10 @@
 #include <coomatrix.hpp>
 #include "testcsrmatrix.hpp"
 
-template <typename scalar>
+/*template <typename scalar>
 TestCSRMatrix<scalar>::TestCSRMatrix(const int nbuildsweeps, const int napplysweeps)
 	: BSRMatrix<scalar,int,1>(nbuildsweeps, napplysweeps)
-{ }
+{ }*/
 
 /** The file containing the data to check against has
  * line 1: nrows ncols nnz
@@ -24,7 +24,7 @@ TestCSRMatrix<scalar>::TestCSRMatrix(const int nbuildsweeps, const int napplyswe
  * line 5: non-zero values
  * line 6: diagonal pointers
  */
-template <typename scalar>
+/*template <typename scalar>
 int TestCSRMatrix<scalar>::testStorage(const std::string compare_file)
 {
 	// Read file and compare with internal storage
@@ -93,7 +93,7 @@ int TestCSRMatrix<scalar>::writeCOO(const std::string outfile)
 	return 0;
 }
 
-template class TestCSRMatrix<double>;
+template class TestCSRMatrix<double>;*/
 
 int testCSRMatMult(const std::string type,
 		const std::string matfile, const std::string xvec, const std::string prodvec)

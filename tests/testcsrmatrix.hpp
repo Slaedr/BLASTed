@@ -24,7 +24,7 @@
 
 using namespace blasted;
 
-template <typename scalar>
+/*template <typename scalar>
 class TestCSRMatrix : public BSRMatrix<scalar,int,1>
 {
 public:
@@ -38,7 +38,7 @@ public:
 
 protected:
 	using BSRMatrix<scalar,int,1>::mat;
-};
+};*/
 
 /// Tests matrix vector product for CSR matrices and views
 /** \param type "view" or "matrix" depending on what you want to test
