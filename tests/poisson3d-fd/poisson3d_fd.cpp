@@ -7,6 +7,7 @@
 
 #include "poisson3d_fd.hpp"
 
+#if 0
 /// Gives the index of a point in the point grid collapsed to 1D
 static inline PetscInt getFlattenedIndex(const CartMesh *const m, 
 		const PetscInt i, const PetscInt j, const PetscInt k)
@@ -32,6 +33,7 @@ static inline PetscInt getFlattenedInteriorIndex(const CartMesh *const m,
 	}
 	return retval;
 }
+#endif
 
 /// Set RHS = 12*pi^2*sin(2pi*x)sin(2pi*y)sin(2pi*z) for u_exact = sin(2pi*x)sin(2pi*y)sin(2pi*z)
 /** Note that the values are only set for interior points.

@@ -2,6 +2,9 @@
 
 add_library(solvers solvers.cpp)
 target_link_libraries(solvers solverops blockmatrices)
+if(CXX_COMPILER_CLANG)
+  target_compile_options(solvers PRIVATE "-Wno-error=pass-failed")
+endif()
 
 add_executable(testbsrmatrix runbsrmatrixtest.cpp testbsrmatrix.cpp)
 target_link_libraries(testbsrmatrix coomatrix blockmatrices)
