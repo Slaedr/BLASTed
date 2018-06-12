@@ -190,6 +190,7 @@ if(WITH_PETSC)
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.pmat 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.pmat
 	-options_file ${CMAKE_CURRENT_SOURCE_DIR}/input/2dcyl1_ilu0.perc -mat_type baij
+	-error_tolerance_factor 1e3
 	)
 
   add_test(NAME SerialPetsc-CSR-ILU0 COMMAND env OMP_NUM_THREADS=1 ${MPIEXEC} -n 1 ${CMAKE_CURRENT_BINARY_DIR}/testpetscsolver
