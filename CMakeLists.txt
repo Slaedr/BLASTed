@@ -11,6 +11,7 @@ cmake_minimum_required(VERSION 3.0)
 # - -DSSE=1 to compile with SSE 4.2 instructions (default)
 # - -DAVX=1 to compile with AVX instructions.
 # - -DAVX_2=1 to compile with AVX 2.0.
+# - -DZEN=1 to compiler for AMD Zen with AVX 2.0.
 # - -DSKYLAKE=1 to compile with AVX-512 instructions for Xeon Skylake CPUs.
 # - -DKNL=1 to compile for Xeon Phi Knights Landing
 # - -DMICKNC=1 to compile for Xeon Phi Knights Corner (deprecated).
