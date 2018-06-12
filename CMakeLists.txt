@@ -2,15 +2,15 @@ cmake_minimum_required(VERSION 3.0)
 
 # Variables that can/must be passed to the cmake command:
 #
-# - The environment variable EIGEN_DIR needs to be set to the path of the Eigen top-level directory.
-#
+# - EIGEN3_ROOT needs to be set to the path of the Eigen top-level directory.
 # - -DWITH_PETSC=1 to compile with PETSc support; in which case
-#     make sure PETSC_LIB and PETSC_ARCH envonment variables have been set.
-#     Note that in this case, MPI is required.
-# - -DNOOMP=1 to compile without OpenMP
-# - -DSSE=1 to compile with SSE 4.2 instructions; ignored when compiling for KNC.
+#     PETSC_LIB and PETSC_ARCH variables are required.
+#     Note that in this case, MPI is required too.
+#     It is best to pass MPI wrappers as C and CXX compilers to CMake.
+# - -DNOOMP=1 to compile without OpenMP (default build is with OpenMP)
+# - -DSSE=1 to compile with SSE 4.2 instructions (default)
 # - -DAVX=1 to compile with AVX instructions.
-# - -DBROADWELL=1 to compile for Intel Xeon Broadwell CPUs.
+# - -DAVX_2=1 to compile with AVX 2.0.
 # - -DSKYLAKE=1 to compile with AVX-512 instructions for Xeon Skylake CPUs.
 # - -DKNL=1 to compile for Xeon Phi Knights Landing
 # - -DMICKNC=1 to compile for Xeon Phi Knights Corner (deprecated).
@@ -143,26 +143,28 @@ else()
 	  set (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -mavx")
 	elseif(CXX_COMPILER_PGI)
 	  set (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -tp=sandybridge")
+	  add_definitions(-DEIGEN_VECTORIZE_AVX)
 	elseif(CXX_COMPILER_CRAY)
 	  add_definitions(-DEIGEN_VECTORIZE_AVX)
 	endif()
 	if("${CMAKE_BUILD_TYPE}" STREQUAL "Release")
 	  message(STATUS "Compiling with AVX")
 	endif()
-  elseif(BROADWELL)
+  elseif(AVX_2)
 	if(CXX_COMPILER_INTEL)
 	  set (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -xcore-avx2")
 	elseif(CXX_COMPILER_GNUCLANG)
-	  set (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -march=broadwell")
+	  set (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -mavx2")
 	elseif(CXX_COMPILER_PGI)
 	  set (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -tp=haswell")
+	  add_definitions(-DEIGEN_VECTORIZE_AVX2 -DEIGEN_VECTORIZE_FMA)
 	elseif(CXX_COMPILER_CRAY)
 	  add_definitions(-DEIGEN_VECTORIZE_AVX2 -DEIGEN_VECTORIZE_FMA)
 	else()
 	  message(SEND_ERROR "Don't know/require option for this compiler!")
 	endif()
 	if("${CMAKE_BUILD_TYPE}" STREQUAL "Release")
-	  message(STATUS "Compiling with AVX-2 for Broadwell")
+	  message(STATUS "Compiling with AVX-2")
 	endif()
   elseif(SKYLAKE)
 	if(CXX_COMPILER_INTEL)
@@ -171,6 +173,7 @@ else()
 	  set (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -march=skylake-avx512")
 	elseif(CXX_COMPILER_PGI)
 	  set (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -tp=skylake")
+	  add_definitions(-DEIGEN_VECTORIZE_AVX512 -DEIGEN_VECTORIZE_FMA)
 	elseif(CXX_COMPILER_CRAY)
 	  message(STATUS "Architecture options for Cray are to be set by the compiler wrapper.")
 	  # But we need to tell Eigen something
@@ -188,11 +191,33 @@ else()
 	  set (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -march=knl")
 	elseif(CXX_COMPILER_PGI)
 	  set (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -tp=knl")
+	  add_definitions(-DEIGEN_VECTORIZE_AVX512 -DEIGEN_VECTORIZE_FMA)
+	elseif(CXX_COMPILER_CRAY)
+	  message(STATUS "Architecture options for Cray are to be set by the compiler wrapper.")
+	  add_definitions(-DEIGEN_VECTORIZE_AVX512 -DEIGEN_VECTORIZE_FMA)
 	else()
 	  message(SEND_ERROR "Don't know/require option for this compiler!")
 	endif()
 	if("${CMAKE_BUILD_TYPE}" STREQUAL "Release")
 	  message(STATUS "Compiling with AVX-512 for KNL")
+	endif()
+  elseif(ZEN)
+	if(CXX_COMPILER_INTEL)
+	  set (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -xcore-avx2")
+	elseif(CXX_COMPILER_GNUCLANG)
+	  set (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -march=znver1")
+	elseif(CXX_COMPILER_PGI)
+	  set (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -tp=zen")
+	  add_definitions(-DEIGEN_VECTORIZE_AVX2 -DEIGEN_VECTORIZE_FMA)
+	elseif(CXX_COMPILER_CRAY)
+	  message(STATUS "Architecture options for Cray are to be set by the compiler wrapper.")
+	  # But we need to tell Eigen something
+	  add_definitions(-DEIGEN_VECTORIZE_AVX2 -DEIGEN_VECTORIZE_FMA)
+	else()
+	  message(SEND_ERROR "Don't know option for this compiler!")
+	endif()
+	if("${CMAKE_BUILD_TYPE}" STREQUAL "Release")
+	  message(STATUS "Compiling with AVX 2.0 for AMD Zen")
 	endif()
   else()
 	if(CXX_COMPILER_GNUCLANG OR CXX_COMPILER_INTEL)
