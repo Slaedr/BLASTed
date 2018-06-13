@@ -11,7 +11,7 @@ namespace blasted {
 
 template<typename scalar, typename index, int bs, StorageOptions stor>
 void BJacobiRelaxation<scalar,index,bs,stor>::apply(const scalar *const bb, 
-		scalar *const __restrict xx) const
+                                                    scalar *const __restrict xx) const
 {
 	using Blk = Block_t<scalar,bs,stor>;
 	using Seg = Segment_t<scalar,bs>;
