@@ -196,6 +196,13 @@ int main(int argc, char* argv[])
 
 		ierr = KSPGetConvergedReason(ksp, &reason); CHKERRQ(ierr);
 		assert(reason > 0);
+		
+		// rudimentary test for time-totaller
+		computeTotalTimes(&bctx);
+		assert(bctx.factorwalltime > DBL_EPSILON);
+		assert(bctx.applywalltime > DBL_EPSILON);
+		assert(bctx.factorcputime > DBL_EPSILON);
+		assert(bctx.applycputime > DBL_EPSILON);
 
 		ierr = KSPDestroy(&ksp); CHKERRQ(ierr);
 		destroyBlastedDataList(&bctx);
