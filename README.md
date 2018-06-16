@@ -7,12 +7,12 @@ Building
 --------
 The following programs and libraries are required:
 - [CMake](https://cmake.org/) version 3.0 or later
-- [Eigen](http://eigen.tuxfamily.org) version 3.3.4 or later (an even more recent version is needed for the GCC 7 series)
-- [Boost](http://www.boost.org/)
-- [PETSc](http://www.mcs.anl.gov/petsc/) 3.8 or above and MPI are required to build the PETSc interface.
+- [Eigen](http://eigen.tuxfamily.org) version 3.3.4 or later (an even more recent version is needed for the GCC 7 series) [`EIGEN3_ROOT`]
+- [Boost](http://www.boost.org/) [`BOOST_ROOT`]
+- [PETSc](http://www.mcs.anl.gov/petsc/) 3.8 or above and MPI are required to build the PETSc interface. [`PETSC_DIR`, `PETSC_ARCH`]
 
 Quick-build:
-Assuming the programs and libraries mentioned above are in standard locations, in your `PATH` or `LD_LIBRARY_PATH` environment variables, or you have otherwise made them available (for instance `PETSC_DIR` and `PETSC_ARCH` environment variables for PETSc), `cd` to the top-level directory of the BLASTed sources and try:
+Assuming the programs and libraries mentioned above are in standard locations, in your `PATH` or `LD_LIBRARY_PATH` environment variables, or you have otherwise made them available by setting the environment variables mentioned in square brackets above, `cd` to the top-level directory of the BLASTed sources and try:
 
     mkdir build && cd build
 	../common_build.sh
@@ -34,7 +34,7 @@ and to run the tests,
 
 	make test
 
-A C++ compiler with C++ 14 support is required; the build is known to work with GCC 5.4, 6.4, 7.2 and Intel 2017 in a GNU/Linux environment. To build in other enviroments, tweaking the CMakeLists.txt file will be required.
+A C++ compiler with C++ 14 support is required; the build is known to work with GCC 5.4, 6.4, 7.x, 8.1, Intel 2017, 2018 and Clang 6.0 in a GNU/Linux environment. To build in other enviroments, tweaking the CMakeLists.txt file will be required.
 
 To build the [Doxygen](http://www.stack.nl/~dimitri/doxygen/) documentation,
 
