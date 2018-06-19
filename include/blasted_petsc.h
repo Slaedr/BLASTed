@@ -69,8 +69,6 @@ typedef struct
 
 } Blasted_data_list;
 
-typedef struct Blasted_node Blasted_data;
-
 /// Create a new list of BLASTed data contexts
 Blasted_data_list newBlastedDataList();
 
