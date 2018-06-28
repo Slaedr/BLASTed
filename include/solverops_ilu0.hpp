@@ -37,7 +37,7 @@ public:
 	/// Returns the number of rows of the operator
 	index dim() const { return mat.nbrows*bs; }
 	
-	/// Compute the preconditioner
+	/// Compute the preconditioner \sa block_ilu0_setup
 	void compute();
 
 	/// Applies a block LU factorization L U z = r

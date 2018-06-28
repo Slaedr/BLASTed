@@ -51,6 +51,9 @@ static inline void inner_search(const index *const aind,
 /** There is currently no pre-scaling of the original matrix A, unlike the scalar ILU0.
  * It will probably be too expensive to carry out a row-column scaling like in the point case.
  *
+ * The initial values of the factorization are set such that the preconditioner is SGS at worst.
+ * We set L' to (I+LD^(-1)) and U' to (D+U) so that L'U' = (D+L)D^(-1)(D+U).
+ *
  * \param[in] mat The BSR matrix
  * \param[in] nbuildsweeps Number of asynchronous sweeps to use for parallel builds
  * \param[in] thread_chunk_size The number of work-items to assign to thread-contexts in one batch
@@ -96,7 +99,7 @@ void block_ilu0_setup(const CRawBSRMatrix<scalar,index> *const mat,
 	alloc.deallocate(dblks, mat->nbrows);
 
 	// compute L and U
-	/** Note that in the factorization loop, the variable pos is initially set negative.
+	/* Note that in the factorization loop, the variable pos is initially set negative.
 	 * If index is an unsigned type, that might be a problem. However,
 	 * it should usually be okay as we are only comparing equality later.
 	 */
