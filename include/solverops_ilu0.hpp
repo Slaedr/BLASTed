@@ -105,11 +105,54 @@ protected:
 	/// Temporary storage for result of application of L
 	scalar *ytemp;
 
-	const bool threadedfactor;                      ///< True for thread-parallel ILU0 factorization
-	const bool threadedapply;                       ///< True for thread-parallel LU application
-	const int nbuildsweeps;
-	const int napplysweeps;
+	const bool threadedfactor;                   ///< True for thread-parallel ILU0 factorization
+	const bool threadedapply;                    ///< True for thread-parallel LU application
+	const int nbuildsweeps;                      ///< Number of async sweeps for building ILU factors
+	const int napplysweeps;                      ///< Number of async sweeps for applying ILU factors
+
+	/// Number of work-items in each dynamic job assigned to a thread
 	const int thread_chunk_size;
+};
+
+/// Asynchronous scalar ILU(0) that uses an external (re-)ordering and scaling before factorization
+/** The reordering and scaling are updated every time the preconditioner is computed.
+ */
+template <typename scalar, typename index>
+class RSAsyncILU0_SRPreconditioner : public AsyncILU0_SRPreconditioner<scalar,index>
+{
+public:
+	/** \param nbuildsweeps Number of asynchronous sweeps used to compute the LU factors
+	 * \param napplysweeps Number of asynchronous sweeps used to apply the preconditioner
+	 * \param threadedfactor If false, the preconditioner is computed sequentially
+	 * \param threadedapply If false, the preconditioner is applied sequentially
+	 */
+	ReorderedAsyncILU0_SRPreconditioner(const int nbuildsweeps, const int napplysweeps,
+	                                    const bool threadedfactor=true, const bool threadedapply=true);
+
+	~ReorderedAsyncILU0_SRPreconditioner();
+
+	/// Apply the ordering and scaling and then compute the preconditioner
+	void compute();
+
+	/// Apply the preconditioner and apply ordering and scaling to the output
+	void apply(const scalar *const x, scalar *const __restrict y) const;
+
+protected:
+	using SRPreconditioner<scalar,index>::mat;
+	using AsyncILU0_SRPreconditioner<scalar,index>::iluvals;
+	using AsyncILU0_SRPreconditioner<scalar,index>::scale;
+	using AsyncILU0_SRPreconditioner<scalar,index>::ytemp;
+	using AsyncILU0_SRPreconditioner<scalar,index>::threadedfactor;
+	using AsyncILU0_SRPreconditioner<scalar,index>::threadedapply;
+	using AsyncILU0_SRPreconditioner<scalar,index>::nbuildsweeps;
+	using AsyncILU0_SRPreconditioner<scalar,index>::napplysweeps;
+	using AsyncILU0_SRPreconditioner<scalar,index>::thread_chunk_size;
+
+	/// Computes a reordering and a scaling, in this case, whenever the matrix \ref mat is changed
+	const ReorderingScalingComputer<index> *const ro;
+
+	/// Column permutation
+	std::vector<index> col_perm;
 };
 
 } // end namespace
