@@ -46,3 +46,28 @@ Reordering<scalar,index>::setOrdering(const index *const rord, const index *cons
 }
 
 }
+
+#ifdef HAVE_MC64
+extern "C" {
+
+extern void mc64a_(const int *const job, const int *const n, const int *const ne,
+                   const int *const colptr, const int *const rowind, const float *const A,
+                   int *const num_diag, int *const cperm,
+                   const int *const len_workvec, int *const workvec,
+                   const int *const len_scalevec, float *const scalevec,
+                   int icntl[10], int info[10]);
+
+extern void mc64ad_(const int *const job, const int *const n, const int *const ne,
+                    const int *const colptr, const int *const rowind, const double *const A,
+                    int *const num_diag, int *const cperm,
+                    const int *const len_workvec, int *const workvec,
+                    const int *const len_scalevec, double *const scalevec,
+                    int icntl[10], int info[10]);
+}
+
+namespace blasted {
+
+}
+
+#endif
+
