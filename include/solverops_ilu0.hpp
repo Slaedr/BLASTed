@@ -7,6 +7,7 @@
 #define BLASTED_SOLVEROPS_ILU0_H
 
 #include "solverops_base.hpp"
+#include "reoderingscaling.hpp"
 
 namespace blasted {
 
@@ -126,10 +127,10 @@ public:
 	 * \param threadedfactor If false, the preconditioner is computed sequentially
 	 * \param threadedapply If false, the preconditioner is applied sequentially
 	 */
-	ReorderedAsyncILU0_SRPreconditioner(const int nbuildsweeps, const int napplysweeps,
-	                                    const bool threadedfactor=true, const bool threadedapply=true);
+	RSAsyncILU0_SRPreconditioner(const int nbuildsweeps, const int napplysweeps,
+	                             const bool threadedfactor=true, const bool threadedapply=true);
 
-	~ReorderedAsyncILU0_SRPreconditioner();
+	~RSAsyncILU0_SRPreconditioner();
 
 	/// Apply the ordering and scaling and then compute the preconditioner
 	void compute();
@@ -149,10 +150,7 @@ protected:
 	using AsyncILU0_SRPreconditioner<scalar,index>::thread_chunk_size;
 
 	/// Computes a reordering and a scaling, in this case, whenever the matrix \ref mat is changed
-	const ReorderingScalingComputer<index> *const ro;
-
-	/// Column permutation
-	std::vector<index> col_perm;
+	const ReorderingScaling<scalar,index> *const ro;
 };
 
 } // end namespace
