@@ -18,6 +18,9 @@
  *   along with BLASTed.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <utility>
+#include <vector>
+#include <algorithm>
 #include "scmatrixdefs.hpp"
 
 namespace blasted {
@@ -28,14 +31,53 @@ RawBSCMatrix<scalar,index> convert_BSR_to_BSC(const CRawBSRMatrix<scalar,index> 
 	static_assert(bs == 1, "Block version of conversion to BSC not implemented yet!");
 
 	RawBSCMatrix<scalar,index> cmat;
-	const index bnnz = rmat.browptr[rmat.nbrows];
-	cmat.nbcols = rmat.nbrows;
-	cmat.bcolptr = new index[cmat.nbcols+1];
+	const index bnnz = rmat->browptr[rmat->nbrows];
+	const index N = rmat->nbrows;
+	cmat.nbcols = N;
+	cmat.bcolptr = new index[N+1];
 	cmat.browind = new index[bnnz];
 	cmat.vals = new scalar[bnnz];
-	cmat.diagind = new index[cmat.nbcols];
+	cmat.diagind = new index[N];
 
-	// TODO
+	// copy the values into a temporary column-wise storage
+
+	using CSEntry = std::pair<index,scalar>;
+	std::vector<std::vector<CSEntry>> cv(N);
+	const index expected_nnz_per_column = 30;
+	for(auto it = cv.begin(); it != cv.end(); it++)
+		it->reserve(expected_nnz_per_column);
+
+	for(index irow = 0; irow < N; irow++) {
+		for(index jj = rmat->browptr[irow]; jj < rmat->browptr[irow+1]; jj++) {
+			cv[rmat->bcolind[jj]].push_back(std::make_pair(irow,rmat->vals[jj]));
+		}
+	}
+
+	// sort each of the columns
+
+	//#pragma omp parallel for default(shared) schedule(dynamic, 100)
+	for(index icol = 0; icol < N; icol++) {
+		std::sort(cv[icol].begin(), cv[icol].end(),
+		          [](CSEntry i, CSEntry j) { return i.first < j.first; });
+	}
+
+	// copy into output
+	index iz = 0;
+	for(index icol = 0; icol < N; icol++) {
+		cmat.bcolptr[icol] = iz;
+		for(auto it = cv[icol].begin(); it != cv[icol].end(); it++) {
+			cmat.browind[iz] = it->first;
+			cmat.vals[iz] = it->second;
+
+			if(icol == cmat.browind[iz])
+				cmat.diagind[icol] = iz;
+
+			iz++;
+		}
+	}
+
+	assert(iz == bnnz);
+	cmat.bcolptr[N] = bnnz;
 
 	return cmat;
 }

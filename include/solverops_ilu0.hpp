@@ -7,7 +7,7 @@
 #define BLASTED_SOLVEROPS_ILU0_H
 
 #include "solverops_base.hpp"
-#include "reoderingscaling.hpp"
+//#include "reoderingscaling.hpp"
 
 namespace blasted {
 
@@ -118,40 +118,40 @@ protected:
 /// Asynchronous scalar ILU(0) that uses an external (re-)ordering and scaling before factorization
 /** The reordering and scaling are updated every time the preconditioner is computed.
  */
-template <typename scalar, typename index>
-class RSAsyncILU0_SRPreconditioner : public AsyncILU0_SRPreconditioner<scalar,index>
-{
-public:
-	/** \param nbuildsweeps Number of asynchronous sweeps used to compute the LU factors
-	 * \param napplysweeps Number of asynchronous sweeps used to apply the preconditioner
-	 * \param threadedfactor If false, the preconditioner is computed sequentially
-	 * \param threadedapply If false, the preconditioner is applied sequentially
-	 */
-	RSAsyncILU0_SRPreconditioner(const int nbuildsweeps, const int napplysweeps,
-	                             const bool threadedfactor=true, const bool threadedapply=true);
+// template <typename scalar, typename index>
+// class RSAsyncILU0_SRPreconditioner : public AsyncILU0_SRPreconditioner<scalar,index>
+// {
+// public:
+// 	/** \param nbuildsweeps Number of asynchronous sweeps used to compute the LU factors
+// 	 * \param napplysweeps Number of asynchronous sweeps used to apply the preconditioner
+// 	 * \param threadedfactor If false, the preconditioner is computed sequentially
+// 	 * \param threadedapply If false, the preconditioner is applied sequentially
+// 	 */
+// 	RSAsyncILU0_SRPreconditioner(const int nbuildsweeps, const int napplysweeps,
+// 	                             const bool threadedfactor=true, const bool threadedapply=true);
 
-	~RSAsyncILU0_SRPreconditioner();
+// 	~RSAsyncILU0_SRPreconditioner();
 
-	/// Apply the ordering and scaling and then compute the preconditioner
-	void compute();
+// 	/// Apply the ordering and scaling and then compute the preconditioner
+// 	void compute();
 
-	/// Apply the preconditioner and apply ordering and scaling to the output
-	void apply(const scalar *const x, scalar *const __restrict y) const;
+// 	/// Apply the preconditioner and apply ordering and scaling to the output
+// 	void apply(const scalar *const x, scalar *const __restrict y) const;
 
-protected:
-	using SRPreconditioner<scalar,index>::mat;
-	using AsyncILU0_SRPreconditioner<scalar,index>::iluvals;
-	using AsyncILU0_SRPreconditioner<scalar,index>::scale;
-	using AsyncILU0_SRPreconditioner<scalar,index>::ytemp;
-	using AsyncILU0_SRPreconditioner<scalar,index>::threadedfactor;
-	using AsyncILU0_SRPreconditioner<scalar,index>::threadedapply;
-	using AsyncILU0_SRPreconditioner<scalar,index>::nbuildsweeps;
-	using AsyncILU0_SRPreconditioner<scalar,index>::napplysweeps;
-	using AsyncILU0_SRPreconditioner<scalar,index>::thread_chunk_size;
+// protected:
+// 	using SRPreconditioner<scalar,index>::mat;
+// 	using AsyncILU0_SRPreconditioner<scalar,index>::iluvals;
+// 	using AsyncILU0_SRPreconditioner<scalar,index>::scale;
+// 	using AsyncILU0_SRPreconditioner<scalar,index>::ytemp;
+// 	using AsyncILU0_SRPreconditioner<scalar,index>::threadedfactor;
+// 	using AsyncILU0_SRPreconditioner<scalar,index>::threadedapply;
+// 	using AsyncILU0_SRPreconditioner<scalar,index>::nbuildsweeps;
+// 	using AsyncILU0_SRPreconditioner<scalar,index>::napplysweeps;
+// 	using AsyncILU0_SRPreconditioner<scalar,index>::thread_chunk_size;
 
-	/// Computes a reordering and a scaling, in this case, whenever the matrix \ref mat is changed
-	const ReorderingScaling<scalar,index> *const ro;
-};
+// 	/// Computes a reordering and a scaling, in this case, whenever the matrix \ref mat is changed
+// 	const ReorderingScaling<scalar,index> *const ro;
+// };
 
 } // end namespace
 
