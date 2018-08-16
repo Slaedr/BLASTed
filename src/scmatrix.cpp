@@ -26,9 +26,33 @@ template <typename scalar, typename index, int bs>
 RawBSCMatrix<scalar,index> convert_BSR_to_BSC(const CRawBSRMatrix<scalar,index> *const rmat)
 {
 	static_assert(bs == 1, "Block version of conversion to BSC not implemented yet!");
+
+	RawBSCMatrix<scalar,index> cmat;
+	const index bnnz = rmat.browptr[rmat.nbrows];
+	cmat.nbcols = rmat.nbrows;
+	cmat.bcolptr = new index[cmat.nbcols+1];
+	cmat.browind = new index[bnnz];
+	cmat.vals = new scalar[bnnz];
+	cmat.diagind = new index[cmat.nbcols];
+
+	// TODO
+
+	return cmat;
 }
 
 template RawBSCMatrix<double,int>
 convert_BSR_to_BSC<double,int,1>(const CRawBSRMatrix<double,int> *const rmat);
+
+template <typename scalar, typename index>
+void destroyRawBSCMatrix(RawBSCMatrix<scalar,index>& mat)
+{
+	delete [] mat.bcolptr;
+	delete [] mat.browind;
+	delete [] mat.vals;
+	delete [] mat.diagind;
+	mat.nbcols = 0;
+}
+
+template void destroyRawBSCMatrix<double,int>(RawBSCMatrix<double,int>& mat);
 
 }

@@ -31,8 +31,14 @@ struct RawBSCMatrix
 };
 
 /// Converts a (block-) sparse-row matrix to a (block-) sparse-column matrix
+/** Assumes a square matrix.
+ */
 template <typename scalar, typename index, int bs>
 RawBSCMatrix<scalar,index> convert_BSR_to_BSC(const CRawBSRMatrix<scalar,index> *const rmat);
+
+/// Frees storage
+template <typename scalar, typename index>
+void destroyRawBSCMatrix(RawBSCMatrix<scalar,index>& mat);
 
 }
 #endif
