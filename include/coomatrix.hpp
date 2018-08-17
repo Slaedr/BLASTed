@@ -83,6 +83,8 @@ public:
 
 	/// Converts to a raw CSR struct \ref RawBSRMatrix
 	/** Member nbrows of RawBSRMatrix is set to the total number of rows.
+	 * The necessary memory allocation is done in this function. It is necessary to manually
+	 * [destroy](\ref destroyRawBSRMatrix) the RawBSRMatrix later.
 	 */
 	void convertToCSR(RawBSRMatrix<scalar,index> *const cmat) const;
 

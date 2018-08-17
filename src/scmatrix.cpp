@@ -65,6 +65,7 @@ RawBSCMatrix<scalar,index> convert_BSR_to_BSC(const CRawBSRMatrix<scalar,index> 
 	index iz = 0;
 	for(index icol = 0; icol < N; icol++) {
 		cmat.bcolptr[icol] = iz;
+		cmat.diagind[icol] = -1;             // if there's no diagonal entry, we leave this as -1
 		for(auto it = cv[icol].begin(); it != cv[icol].end(); it++) {
 			cmat.browind[iz] = it->first;
 			cmat.vals[iz] = it->second;
