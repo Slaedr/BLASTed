@@ -5,8 +5,11 @@
 
 #undef NDEBUG
 
-#include "srmatrixdefs.hpp"
+#include <fstream>
+#include "scmatrixdefs.hpp"
 #include "coomatrix.hpp"
+
+using namespace blasted;
 
 /// Compares a CSC matrix with one read from a file in CSC format
 /** The function returns iff the two matrices are the same.
@@ -18,12 +21,12 @@ int checkCSCMatrix(const RawBSCMatrix<double,int>& cmat, const std::string cfile
 	RawBSCMatrix<double,int> fmat;
 
 	infile >> fmat.nbcols;
-	assert(fmat.nbcols == cmat.nbols);
+	assert(fmat.nbcols == cmat.nbcols);
 	infile >> dumi;
 	assert(fmat.nbcols == dumi);
 	fmat.bcolptr = new int[fmat.nbcols+1];
 	int fnnz; infile >> fnnz;
-	for(int i = 0; i < fmat.nbols+1; i++) {
+	for(int i = 0; i < fmat.nbcols+1; i++) {
 		infile >> fmat.bcolptr[i];
 		assert(fmat.bcolptr[i] == cmat.bcolptr[i]);
 	}
@@ -31,7 +34,7 @@ int checkCSCMatrix(const RawBSCMatrix<double,int>& cmat, const std::string cfile
 
 	fmat.browind = new int[fnnz];
 	fmat.vals = new double[fnnz];
-	fmat.diagind = new int[fmat.nbols];
+	fmat.diagind = new int[fmat.nbcols];
 
 	for(int i = 0; i < fnnz; i++) {
 		infile >> fmat.browind[i];
@@ -63,11 +66,21 @@ int testConvertCSRToCSC(const std::string mfile, const std::string solnfile)
 	RawBSRMatrix<double,int> rmat;
 	coomat.convertToCSR(&rmat);
 
-	RawBSCMatrix<double,int> cmat = convert_BSR_to_BSC(reinterpret_cast<CRawBSRMatrix*>(&rmat));
+	RawBSCMatrix<double,int> cmat =
+		convert_BSR_to_BSC<double,int,1>(reinterpret_cast<const CRawBSRMatrix<double,int>*>(&rmat));
 
 	int ierr = checkCSCMatrix(cmat, solnfile);
 
 	destroyRawBSRMatrix(rmat);
 	destroyRawBSCMatrix(cmat);
 	return ierr;
+}
+
+int main(int argc, char *argv[])
+{
+	assert(argc >= 3);
+	const std::string mfile = argv[1];
+	const std::string solnfile = argv[2];
+
+	return testConvertCSRToCSC(mfile, solnfile);
 }

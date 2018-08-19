@@ -9,6 +9,9 @@ target_link_libraries(testcsrmatrix coomatrix blockmatrices)
 add_executable(testcoomatrix runcoomatrixtest.cpp testcoomatrix.cpp testcsrmatrix.cpp)
 target_link_libraries(testcoomatrix coomatrix blockmatrices)
 
+add_executable(testcscmatrix scmatrixtest.cpp)
+target_link_libraries(testcscmatrix blockmatrices coomatrix)
+
 # Tests
 
 add_test(NAME COORead COMMAND ${SEQEXEC} ${SEQTASKS} testcoomatrix read
@@ -55,3 +58,7 @@ add_test(NAME BSR7ColViewMatMul COMMAND ${SEQEXEC} ${SEQTASKS} ${CMAKE_CURRENT_B
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fluorem-dk01r/DK01R_x.mtx 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fluorem-dk01r/DK01R_b.mtx
 )
+
+add_test(NAME ConvertCSRToCSC COMMAND ${SEQEXEC} ${SEQTASKS} testcscmatrix 
+	${CMAKE_CURRENT_SOURCE_DIR}/input/small_block3_matrix.mtx 
+	${CMAKE_CURRENT_SOURCE_DIR}/input/small_block3_matrix.csc)

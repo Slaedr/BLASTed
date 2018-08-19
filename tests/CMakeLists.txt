@@ -2,12 +2,14 @@
 
 add_library(solvers solvers.cpp)
 target_link_libraries(solvers solverops blockmatrices)
+set_property(TARGET solvers PROPERTY POSITION_INDEPENDENT_CODE ON)
 if(CXX_COMPILER_CLANG)
   target_compile_options(solvers PRIVATE "-Wno-error=pass-failed")
 endif()
 
 add_executable(testsolve runsolvetest.cpp testsolve.cpp)
 target_link_libraries(testsolve solvers solverops coomatrix )
+set_property(TARGET testsolve PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 # Tests
 

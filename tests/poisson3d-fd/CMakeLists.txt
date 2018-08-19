@@ -2,9 +2,11 @@
 if(WITH_PETSC)
   add_executable(testcsr_poisson poisson3d.cpp poisson3d_fd.cpp cartmesh.cpp)
   target_link_libraries(testcsr_poisson blasted_petsc)
+  set_property(TARGET testcsr_poisson PROPERTY POSITION_INDEPENDENT_CODE ON)
   
   add_executable(testcsr_poisson_threaded poisson3d-threaded.cpp poisson3d_fd.cpp cartmesh.cpp)
   target_link_libraries(testcsr_poisson_threaded blasted_petsc)
+  set_property(TARGET testcsr_poisson_threaded PROPERTY POSITION_INDEPENDENT_CODE ON)
 
   # Tests
   #add_test(NAME SerialPoissonCSRPetscILU0 COMMAND env OMP_NUM_THREADS=1 ${MPIEXEC} -n 1 ./testcsr_poisson 
