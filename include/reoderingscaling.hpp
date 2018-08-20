@@ -31,7 +31,7 @@ enum RSApplyMode {FORWARD, INVERSE};
 enum RSApplyDir {ROW, COLUMN, BOTH};
 
 /// Abstract handler for computing a reordering of a matrix stored in a sparse-row format
-template <typename scalar, typename index>
+template <typename scalar, typename index, int bs>
 class Reordering
 {
 public:
@@ -44,27 +44,31 @@ public:
 	/// Set an ordering from a permutation vector
 	/** \param rord Row ordering vector (can be nullptr, in which case it's ignored)
 	 * \param cord Column ordering vector (can be nullptr, in which case it's ignored)
-	 * \param length Length of the vector (dimension of the vector space)
+	 * \param length Length of the ordering vectors
 	 */
 	void setOrdering(const index *const rord, const index *const cord, const index length);
 
 	/// Compute an ordering
 	/** \param mat The matrix on which some algorithm is applied to compute the ordering
+	 *
+	 * Implementations should leave the size of \ref rp as zero if a row-reordering is not to be done
+	 * (rather than explicitly setting it to identity) for efficiency, and similary for \ref cp if
+	 * column reordering is not to be done.
 	 */
 	virtual void compute(const CRawBSRMatrix<scalar,index>& mat) = 0;
 
 	/// Apply the ordering to a matrix
 	/** Either row or column reordering (or both) is done depending on the specific reordering method.
 	 */
-	virtual void applyOrdering(RawBSRMatrix<scalar,index>& mat) const = 0;
+	virtual void applyOrdering(RawBSRMatrix<scalar,index>& mat) const;
 
-	/// Apply the ordering to a vector
+	/// Apply the ordering (or its inverse) to a vector
 	/** \param vec The vector to reorder
 	 * \param mode Whether to apply the computed ordering or its inverse
 	 * \param dir Whether to apply the row ordering or the column ordering
 	 */
 	virtual void applyOrdering(scalar *const vec,
-	                           const RSApplyMode mode, const RSApplyDir dir) const = 0;
+	                           const RSApplyMode mode, const RSApplyDir dir) const;
 
 protected:
 
@@ -77,27 +81,32 @@ protected:
 /// Abstract handler for computing a reordering and a scaling of a matrix stored in sparse-row format
 /** Reordering::compute should also computes the scaling in this case.
  */
-template <typename scalar, typename index>
-class ReorderingScaling : public Reordering<scalar,index>
+template <typename scalar, typename index, int bs>
+class ReorderingScaling : public Reordering<scalar,index,bs>
 {
 public:
 	/// Do-nothing constructor
 	ReorderingScaling();
 
 	/// Apply only scaling to a matrix
-	virtual void applyScaling(RawBSRMatrix<scalar,index>& mat) = 0;
+	virtual void applyScaling(RawBSRMatrix<scalar,index>& mat) const;
 
 	/// Apply only scaling to a vector
 	/** \param vec The vector to scale
 	 * \param mode Whether to apply the scaling or its inverse
 	 * \param dir Whether to apply the row scaling or the column scaling
 	 */
-	virtual void applyScaling(scalar *const vec
-	                          const RSApplyMode mode, const RSApplyDir dir) = 0;
+	virtual void applyScaling(scalar *const vec,
+	                          const RSApplyMode mode, const RSApplyDir dir) const;
 
 protected:
-	using Reordering<scalar,index>::rp;
-	using Reordering<scalar,index>::cp;
+	using Reordering<scalar,index,bs>::rp;
+	using Reordering<scalar,index,bs>::cp;
+
+	/// Row scaling vector
+	std::vector<scalar> rowscale;
+	/// Column scaling vector
+	std::vector<scalar> colscale;
 };
 
 }

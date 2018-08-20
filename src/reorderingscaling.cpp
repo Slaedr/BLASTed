@@ -17,21 +17,22 @@
  *   along with BLASTed.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "helper_algorithms.hpp"
 #include "reorderingscaling.hpp"
 
 namespace blasted {
 
-template <typename scalar, typename index>
-Reordering<scalar,index>::Reordering()
+template <typename scalar, typename index, int bs>
+Reordering<scalar,index,bs>::Reordering()
 { }
 
-template <typename scalar, typename index>
-Reordering<scalar,index>::~Reordering()
+template <typename scalar, typename index, int bs>
+Reordering<scalar,index,bs>::~Reordering()
 { }
 
-template <typename scalar, typename index>
-Reordering<scalar,index>::setOrdering(const index *const rord, const index *const cord,
-                                      const index length)
+template <typename scalar, typename index, int bs>
+void Reordering<scalar,index,bs>::setOrdering(const index *const rord, const index *const cord,
+                                              const index length)
 {
 	if(rord) {
 		rp.resize(length);
@@ -42,6 +43,118 @@ Reordering<scalar,index>::setOrdering(const index *const rord, const index *cons
 		cp.resize(length);
 		for(index i = 0; i < length; i++)
 			cp[i] = cord[i];
+	}
+}
+
+template <typename scalar, typename index, int bs>
+void Reordering<scalar,index,bs>::applyOrdering(RawBSRMatrix<scalar,index>& mat) const
+{
+	if(rp.size() > 0) {
+		// move rows around
+		std::vector<scalar> tempval(mat.browptr[mat.nbrows]*bs);
+		std::vector<index> tempcind(mat.browptr[mat.nbrows]);
+		std::vector<index> temprptr(mat.nbrows+1);
+		temprptr[mat.nbrows] = mat.browptr[mat.nbrows];
+
+		index pos = 0;
+
+		for(index i = 0; i < mat.nbrows; i++) {
+			const index ni = rp[i];
+			temprptr[i] = pos;
+			for(index jj = mat.browptr[ni]; jj < mat.browptr[ni+1]; jj++) {
+				tempcind[pos] = mat.bcolind[jj];
+				for(int k = 0; k < bs*bs; k++)
+					tempval[pos*bs*bs + k] = mat.vals[jj*bs*bs+k];
+				pos++;
+			}
+		}
+
+		assert(pos == mat.browptr[mat.nbrows]);
+
+		// copy into original array
+		for(index i = 0; i < mat.nbrows; i++)
+			mat.browptr[i] = temprptr[i];
+		for(index jj = 0; jj < pos; jj++) {
+			mat.bcolind[jj] = tempcind[jj];
+			for(int k = 0; k < bs*bs; k++)
+				mat.vals[jj*bs*bs+k] = tempval[jj*bs*bs + k];
+		}
+	}
+
+	if(cp.size() > 0) {
+		// move columns around
+#pragma omp parallel for default(shared) schedule(dynamic,100)
+		for(index i = 0; i < mat.nbrows; i++) {
+			// switch the column indices
+			for(index jj = mat.browptr[i]; jj < mat.browptr[i+1]; jj++)
+				mat.bcolind[jj] = cp[mat.bcolind[jj]];
+			// re-sort
+			internal::sortBlockInnerDimension<scalar,index,bs>(&mat.bcolind[mat.browptr[i]],
+			                                                   &mat.vals[mat.browptr[i]*bs*bs]);
+		}
+	}
+}
+
+template <typename scalar, typename index, int bs>
+void Reordering<scalar,index,bs>::applyOrdering(scalar *const vec,
+                                                const RSApplyMode mode, const RSApplyDir dir) const
+{
+	if(mode == FORWARD) {
+		if(dir == ROW) {
+			assert(rp.size() > 0);
+			// apply row ordering
+		}
+		else {
+			assert(cp.size() > 0);
+			// apply column ordering
+		}
+	}
+	else {
+		if(dir == ROW) {
+			assert(rp.size() > 0);
+			// apply inverse row ordering
+		}
+		else {
+			assert(cp.size() > 0);
+			// apply inverse column ordering
+		}
+	}
+}
+
+template <typename scalar, typename index, int bs>
+void ReorderingScaling<scalar,index,bs>::applyScaling(RawBSRMatrix<scalar,index>& mat)
+{
+	if(rowscale.size() > 0) {
+		// scale rows
+	}
+	if(colscale.size() > 0) {
+		// scale columns
+	}
+}
+
+template <typename scalar, typename index, int bs>
+void ReorderingScaling<scalar,index>::applyScaling(scalar *const vec, const RSApplyMode mode,
+                                                   const RSApplyDir dir) const
+{
+	if(mode == FORWARD) {
+		if(dir == ROW) {
+			assert(rowscale.size() > 0);
+			// apply row scaling
+		}
+		else {
+			assert(colscale.size() > 0);
+			// apply column scaling
+		}
+	}
+	else {
+		if(dir == ROW) {
+			assert(rowscale.size() > 0);
+			// apply inverse row scaling
+		}
+		else {
+			assert(colscale.size() > 0);
+			// apply inverse column scaling
+		}
 	}
 }
 
