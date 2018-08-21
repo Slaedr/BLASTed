@@ -13,6 +13,7 @@ set_property(TARGET testsolve PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 # Tests
 
+add_subdirectory(helper_algs)
 add_subdirectory(mat_ops)
 
 # valgrind --leak-check=full 

@@ -1,6 +1,10 @@
 add_library(coomatrix coomatrix.cpp)
+
 add_library(blockmatrices csrmatrix.cpp bsrmatrix.cpp scmatrix.cpp)
 set_property(TARGET blockmatrices PROPERTY POSITION_INDEPENDENT_CODE ON)
+
+add_library(helper helper_algorithms.cpp)
+set_property(TARGET helper PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 # For some reason, CMake can't figure out PIC flag for Cray
 if(CXX_COMPILER_CRAY)

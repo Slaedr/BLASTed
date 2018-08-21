@@ -17,17 +17,52 @@
  *   along with BLASTed.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-
+#include <iostream>
+#include <algorithm>
 #include "helper_algorithms.hpp"
 
 namespace blasted {
 namespace internal {
 
+/** Currently, this uses a simple O(N^2) algorithm because we don't expect one row or column
+ * to have a lot of non-zeros. In fact, for PDEs on grids, we expect N = O(1).
+ */
 template <typename scalar, typename index, int bs>
-void sortBlockInnerDimension(index *const colind, scalar *const vals)
+void sortBlockInnerDimension(const index N, index *const colind, scalar *const vals)
 {
-	/// \todo Implement a simple sort
+	for(index i = 0; i < N-1; i++) {
+
+		std::cout << "Array: ";
+		for(index i = 0; i < N; i++)
+			std::cout << colind[i] << " ";
+		std::cout << std::endl;
+
+		// find the max inner index (eg. column index) in the outer index entity (eg. row)
+		index *const it = std::max_element(colind,colind+N-i);
+		// find position of the max index in this outer index entity (eg. row)
+		const ptrdiff_t max_pos = it - colind;
+
+		// swap the max and the last
+		const index tempi = colind[N-1-i];
+		colind[N-1] = *it;
+		*it = tempi;
+		// swap non-zero blocks
+		scalar tempv[bs*bs];
+		for(int k = 0; k < bs*bs; k++)
+			tempv[k] = vals[(N-1-i)*bs*bs + k];
+		for(int k = 0; k < bs*bs; k++) {
+			vals[(N-1-i)*bs*bs + k] = vals[max_pos*bs*bs + k];
+			vals[max_pos*bs*bs + k] = tempv[k];
+		}
+	}
 }
+
+// for testing
+template void sortBlockInnerDimension<double,int,2>(const int N,
+                                                    int *const colind, double *const vals);
+
+template void sortBlockInnerDimension<double,int,1>(const int N,
+                                                    int *const colind, double *const vals);
 
 }
 }
