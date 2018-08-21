@@ -59,6 +59,7 @@ public:
 
 	/// Apply the ordering to a matrix
 	/** Either row or column reordering (or both) is done depending on the specific reordering method.
+	 * Always applies the forward (original) ordering.
 	 */
 	virtual void applyOrdering(RawBSRMatrix<scalar,index>& mat) const;
 

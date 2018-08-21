@@ -29,7 +29,7 @@ namespace internal {
 /** This is meant for sorting the array of 'inner' indices and the array of non-zero values for
  * on particular outer index. This means, for example, sorting by columns within a row of a sparse-
  * row matrix. The non-zero values are sorted accordingly. The arrays are sorted in place.
- * \param N Size of the arrays to be sorted. See below for more details.
+ * \param N Size of the index array to be sorted. See below for more details.
  * \param colind The array of inner indices. This has length N.
  * \param vals The array of non-zero values corresponding to inner indices in \ref colind.
  *   However, each inner index is assumed to be associated with a bs X bs block of non-zeros. Thus,

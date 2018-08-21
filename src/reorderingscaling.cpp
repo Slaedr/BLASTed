@@ -85,11 +85,13 @@ void Reordering<scalar,index,bs>::applyOrdering(RawBSRMatrix<scalar,index>& mat)
 		// move columns around
 #pragma omp parallel for default(shared) schedule(dynamic,100)
 		for(index i = 0; i < mat.nbrows; i++) {
-			// switch the column indices
+
+			// switch the column indices WRONG! This is the inverse map
 			for(index jj = mat.browptr[i]; jj < mat.browptr[i+1]; jj++)
 				mat.bcolind[jj] = cp[mat.bcolind[jj]];
 			// re-sort
-			internal::sortBlockInnerDimension<scalar,index,bs>(&mat.bcolind[mat.browptr[i]],
+			const index colsz = mat.browptr[i+1]-mat.browptr[i];
+			internal::sortBlockInnerDimension<scalar,index,bs>(colsz, &mat.bcolind[mat.browptr[i]],
 			                                                   &mat.vals[mat.browptr[i]*bs*bs]);
 		}
 	}
