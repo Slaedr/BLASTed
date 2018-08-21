@@ -5,7 +5,6 @@
 
 #undef NDEBUG
 
-#include <iostream>
 #include <cassert>
 #include <vector>
 #include <fstream>
@@ -50,7 +49,6 @@ int testSortBlockInnerDimension(std::string testfile, std::string solnfile)
 	blasted::internal::sortBlockInnerDimension<double,int,bs>(N, &cind[0], &vals[0]);
 
 	for(int i = 0; i < N; i++) {
-		std::cout << cind[i] << " " << scind[i] << std::endl;
 		assert(cind[i] == scind[i]);
 		for(int k = 0; k < bs*bs; k++)
 			assert(vals[i*bs*bs+k] == svals[i*bs*bs+k]);

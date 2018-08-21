@@ -17,7 +17,6 @@
  *   along with BLASTed.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <iostream>
 #include <algorithm>
 #include "helper_algorithms.hpp"
 
@@ -32,11 +31,6 @@ void sortBlockInnerDimension(const index N, index *const colind, scalar *const v
 {
 	for(index i = 0; i < N-1; i++) {
 
-		std::cout << "Array: ";
-		for(index i = 0; i < N; i++)
-			std::cout << colind[i] << " ";
-		std::cout << std::endl;
-
 		// find the max inner index (eg. column index) in the outer index entity (eg. row)
 		index *const it = std::max_element(colind,colind+N-i);
 		// find position of the max index in this outer index entity (eg. row)
@@ -44,7 +38,7 @@ void sortBlockInnerDimension(const index N, index *const colind, scalar *const v
 
 		// swap the max and the last
 		const index tempi = colind[N-1-i];
-		colind[N-1] = *it;
+		colind[N-1-i] = *it;
 		*it = tempi;
 		// swap non-zero blocks
 		scalar tempv[bs*bs];
