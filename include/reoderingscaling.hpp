@@ -30,7 +30,9 @@ enum RSApplyMode {FORWARD, INVERSE};
 /// For a reordering or scaling, whether to apply it to rows or columns of a matrix, or both
 enum RSApplyDir {ROW, COLUMN, BOTH};
 
-/// Abstract handler for computing a reordering of a matrix stored in a sparse-row format
+/// Handler for computing a reordering of a matrix stored in a sparse-(block-)row format
+/** The ordering of entries within a small dense block is not altered.
+ */
 template <typename scalar, typename index, int bs>
 class Reordering
 {

@@ -87,38 +87,83 @@ void Reordering<scalar,index,bs>::applyOrdering(RawBSRMatrix<scalar,index>& mat)
 		for(index i = 0; i < mat.nbrows; i++) {
 
 			// switch the column indices WRONG! This is the inverse map
-			for(index jj = mat.browptr[i]; jj < mat.browptr[i+1]; jj++)
-				mat.bcolind[jj] = cp[mat.bcolind[jj]];
-			// re-sort
-			const index colsz = mat.browptr[i+1]-mat.browptr[i];
-			internal::sortBlockInnerDimension<scalar,index,bs>(colsz, &mat.bcolind[mat.browptr[i]],
-			                                                   &mat.vals[mat.browptr[i]*bs*bs]);
+			// for(index jj = mat.browptr[i]; jj < mat.browptr[i+1]; jj++)
+			// 	//mat.bcolind[jj] = cp[mat.bcolind[jj]];
+			// 	mat.bcolind[cp[mat.bcolind[jj]]] = mat.bcolind[jj];
+			// // re-sort
+			// const index colsz = mat.browptr[i+1]-mat.browptr[i];
+			// internal::sortBlockInnerDimension<scalar,index,bs>(colsz, &mat.bcolind[mat.browptr[i]],
+			//                                                    &mat.vals[mat.browptr[i]*bs*bs]);
+
+			const index browsz = (mat.browptr[i+1]-mat.browptr[i]);
+			std::vector<scalar> tbr(browsz*bs*bs);
+
+			// copy the block-row values into temporary location
+			for(index jj = mat.browptr[i]; jj < mat.browptr[i+1]; jj++) {
+				for(int k = 0; k < bs*bs; k++)
+					tbr[(jj-mat.browptr[i])*bs*bs + k] = mat.vals[jj*bs*bs + k];
+			}
+
+			// copy back in new order
+			for(index jj = mat.browptr[i]; jj < mat.browptr[i+1]; jj++) {
+				for(int k = 0; k < bs*bs; k++) {
+				}
+			}
 		}
 	}
 }
 
+/** This is most likely not the best way to do it. The vector is first copied into a local
+ * temporary storage which is freed in the end.
+ */
 template <typename scalar, typename index, int bs>
 void Reordering<scalar,index,bs>::applyOrdering(scalar *const vec,
                                                 const RSApplyMode mode, const RSApplyDir dir) const
 {
+	const index size = dir == ROW ? rp.size() : cp.size();
+	assert(size > 0);
+
+	// copy vector to temp location
+	std::vector<scalar> tv(size*bs);
+#pragma omp parallel for simd default(shared)
+	for(index i = 0; i < size*bs; i++)
+		tv[i] = vec[i];
+
 	if(mode == FORWARD) {
+
 		if(dir == ROW) {
-			assert(rp.size() > 0);
+
 			// apply row ordering
+#pragma omp parallel for default(shared)
+			for(index i = 0; i < size; i++)
+				for(int k = 0; k < bs; k++)
+					vec[i*bs+k] = tv[rp[i]*bs+k];
 		}
 		else {
-			assert(cp.size() > 0);
-			// apply column ordering
+
+#pragma omp parallel for default(shared)
+			for(index i = 0; i < size; i++)
+				for(int k = 0; k < bs; k++)
+					vec[i*bs+k] = tv[cp[i]*bs+k];
 		}
 	}
 	else {
+
 		if(dir == ROW) {
-			assert(rp.size() > 0);
+
 			// apply inverse row ordering
+#pragma omp parallel for default(shared)
+			for(index i = 0; i < size; i++)
+				for(int k = 0; k < bs; k++)
+					vec[rp[i]*bs+k] = tv[i*bs+k];
 		}
 		else {
-			assert(cp.size() > 0);
+
 			// apply inverse column ordering
+#pragma omp parallel for default(shared)
+			for(index i = 0; i < size; i++)
+				for(int k = 0; k < bs; k++)
+					vec[cp[i]*bs+k] = tv[i*bs+k];
 		}
 	}
 }
