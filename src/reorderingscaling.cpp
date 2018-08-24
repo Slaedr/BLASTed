@@ -86,7 +86,7 @@ void Reordering<scalar,index,bs>::applyOrdering(RawBSRMatrix<scalar,index>& mat)
 #pragma omp parallel for default(shared) schedule(dynamic,100)
 		for(index i = 0; i < mat.nbrows; i++) {
 
-			// switch the column indices WRONG! This is the inverse map
+			// switch the column indices. WRONG! This is the inverse map!
 			// for(index jj = mat.browptr[i]; jj < mat.browptr[i+1]; jj++)
 			// 	//mat.bcolind[jj] = cp[mat.bcolind[jj]];
 			// 	mat.bcolind[cp[mat.bcolind[jj]]] = mat.bcolind[jj];
