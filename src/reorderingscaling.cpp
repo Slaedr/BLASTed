@@ -17,6 +17,7 @@
  *   along with BLASTed.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <algorithm>
 #include "helper_algorithms.hpp"
 #include "reorderingscaling.hpp"
 
@@ -49,7 +50,8 @@ void Reordering<scalar,index,bs>::setOrdering(const index *const rord, const ind
 template <typename scalar, typename index, int bs>
 void Reordering<scalar,index,bs>::applyOrdering(RawBSRMatrix<scalar,index>& mat) const
 {
-	if(rp.size() > 0) {
+	if(rp.size() > 0)
+	{
 		// move rows around
 		std::vector<scalar> tempval(mat.browptr[mat.nbrows]*bs);
 		std::vector<index> tempcind(mat.browptr[mat.nbrows]);
@@ -58,7 +60,8 @@ void Reordering<scalar,index,bs>::applyOrdering(RawBSRMatrix<scalar,index>& mat)
 
 		index pos = 0;
 
-		for(index i = 0; i < mat.nbrows; i++) {
+		for(index i = 0; i < mat.nbrows; i++)
+		{
 			const index ni = rp[i];
 			temprptr[i] = pos;
 			for(index jj = mat.browptr[ni]; jj < mat.browptr[ni+1]; jj++) {
@@ -81,34 +84,33 @@ void Reordering<scalar,index,bs>::applyOrdering(RawBSRMatrix<scalar,index>& mat)
 		}
 	}
 
-	if(cp.size() > 0) {
+	if(cp.size() > 0)
+	{
 		// move columns around
 #pragma omp parallel for default(shared) schedule(dynamic,100)
-		for(index i = 0; i < mat.nbrows; i++) {
-
-			// switch the column indices. WRONG! This is the inverse map!
-			// for(index jj = mat.browptr[i]; jj < mat.browptr[i+1]; jj++)
-			// 	//mat.bcolind[jj] = cp[mat.bcolind[jj]];
-			// 	mat.bcolind[cp[mat.bcolind[jj]]] = mat.bcolind[jj];
-			// // re-sort
-			// const index colsz = mat.browptr[i+1]-mat.browptr[i];
-			// internal::sortBlockInnerDimension<scalar,index,bs>(colsz, &mat.bcolind[mat.browptr[i]],
-			//                                                    &mat.vals[mat.browptr[i]*bs*bs]);
-
+		for(index i = 0; i < mat.nbrows; i++)
+		{
+			scalar *const mvals = &mat.vals[mat.browptr[i]*bs*bs];
+			index *const mcolind = &mat.bcolind[mat.browptr[i]];
 			const index browsz = (mat.browptr[i+1]-mat.browptr[i]);
-			std::vector<scalar> tbr(browsz*bs*bs);
 
-			// copy the block-row values into temporary location
-			for(index jj = mat.browptr[i]; jj < mat.browptr[i+1]; jj++) {
-				for(int k = 0; k < bs*bs; k++)
-					tbr[(jj-mat.browptr[i])*bs*bs + k] = mat.vals[jj*bs*bs + k];
+			std::vector<index> cind(browsz);
+
+			// copy the column indices into a temporary location
+			for(index jj = 0; jj < browsz; jj++)
+				cind[jj] = mcolind[jj];
+
+			// Change column indices to reflect the new ordering
+			for(index jj = 0; jj < browsz; jj++)
+			{
+				const index pcind = cp[cind[jj]];
+				auto it = std::find(cind.begin(), cind.end(), pcind);
+				const index pos = it - cind.begin();
+				mcolind[pos] = cind[jj];
 			}
 
-			// copy back in new order
-			for(index jj = mat.browptr[i]; jj < mat.browptr[i+1]; jj++) {
-				for(int k = 0; k < bs*bs; k++) {
-				}
-			}
+			// Sort both the column indices and the non-zero values according to the column indices
+			internal::sortBlockInnerDimension<scalar,index,bs>(browsz, mcolind, mvals);
 		}
 	}
 }
