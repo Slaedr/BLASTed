@@ -131,10 +131,10 @@ void Reordering<scalar,index,bs>::applyOrdering(scalar *const vec,
 	for(index i = 0; i < size*bs; i++)
 		tv[i] = vec[i];
 
-	if(mode == FORWARD) {
-
-		if(dir == ROW) {
-
+	if(mode == FORWARD)
+	{
+		if(dir == ROW)
+		{
 			// apply row ordering
 #pragma omp parallel for default(shared)
 			for(index i = 0; i < size; i++)
@@ -142,7 +142,6 @@ void Reordering<scalar,index,bs>::applyOrdering(scalar *const vec,
 					vec[i*bs+k] = tv[rp[i]*bs+k];
 		}
 		else {
-
 #pragma omp parallel for default(shared)
 			for(index i = 0; i < size; i++)
 				for(int k = 0; k < bs; k++)
@@ -150,9 +149,8 @@ void Reordering<scalar,index,bs>::applyOrdering(scalar *const vec,
 		}
 	}
 	else {
-
-		if(dir == ROW) {
-
+		if(dir == ROW)
+		{
 			// apply inverse row ordering
 #pragma omp parallel for default(shared)
 			for(index i = 0; i < size; i++)
@@ -160,7 +158,6 @@ void Reordering<scalar,index,bs>::applyOrdering(scalar *const vec,
 					vec[rp[i]*bs+k] = tv[i*bs+k];
 		}
 		else {
-
 			// apply inverse column ordering
 #pragma omp parallel for default(shared)
 			for(index i = 0; i < size; i++)
@@ -173,11 +170,30 @@ void Reordering<scalar,index,bs>::applyOrdering(scalar *const vec,
 template <typename scalar, typename index, int bs>
 void ReorderingScaling<scalar,index,bs>::applyScaling(RawBSRMatrix<scalar,index>& mat)
 {
-	if(rowscale.size() > 0) {
+	if(rowscale.size() > 0)
+	{
 		// scale rows
+#pragma omp parallel for default(shared) schedule(dynamic, 200)
+		for(index irow = 0; irow < mat.nbrows; irow++)
+		{
+			for(index jj = mat.browptr[irow]; jj < mat.browptr[irow+1]; jj++)
+				for(int k = 0; k < bs*bs; k++)
+					mat.vals[jj*bs*bs + k] *= rowscale[irow];
+		}
 	}
-	if(colscale.size() > 0) {
+
+	if(colscale.size() > 0)
+	{
 		// scale columns
+#pragma omp parallel for default(shared) schedule(dynamic, 200)
+		for(index irow = 0; irow < mat.nbrows; irow++)
+		{
+			for(index jj = mat.browptr[irow]; jj < mat.browptr[irow+1]; jj++) {
+				const index column_index = mat.bcolind[jj];
+				for(int k = 0; k < bs*bs; k++)
+					mat.vals[jj*bs*bs + k] *= colscale[column_index];
+			}
+		}
 	}
 }
 
@@ -185,24 +201,44 @@ template <typename scalar, typename index, int bs>
 void ReorderingScaling<scalar,index>::applyScaling(scalar *const vec, const RSApplyMode mode,
                                                    const RSApplyDir dir) const
 {
-	if(mode == FORWARD) {
-		if(dir == ROW) {
+	if(mode == FORWARD)
+	{
+		if(dir == ROW)
+		{
 			assert(rowscale.size() > 0);
 			// apply row scaling
+#pragma omp parallel for default(shared)
+			for(index i = 0; i < static_cast<index>(rowscale.size()); i++)
+				for(int k = 0; k < bs; k++)
+					vec[i*bs+k] *= rowscale[i];
 		}
-		else {
+		else
+		{
 			assert(colscale.size() > 0);
 			// apply column scaling
+#pragma omp parallel for default(shared)
+			for(index i = 0; i < static_cast<index>(colscale.size()); i++)
+				for(int k = 0; k < bs; k++)
+					vec[i*bs+k] *= colscale[i];
 		}
 	}
 	else {
-		if(dir == ROW) {
+		if(dir == ROW)
+		{
 			assert(rowscale.size() > 0);
 			// apply inverse row scaling
+#pragma omp parallel for default(shared)
+			for(index i = 0; i < static_cast<index>(rowscale.size()); i++)
+				for(int k = 0; k < bs; k++)
+					vec[i*bs+k] /= rowscale[i];
 		}
 		else {
 			assert(colscale.size() > 0);
 			// apply inverse column scaling
+#pragma omp parallel for default(shared)
+			for(index i = 0; i < static_cast<index>(colscale.size()); i++)
+				for(int k = 0; k < bs; k++)
+					vec[i*bs+k] /= colscale[i];
 		}
 	}
 }

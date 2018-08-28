@@ -83,6 +83,7 @@ protected:
 
 /// Abstract handler for computing a reordering and a scaling of a matrix stored in sparse-row format
 /** Reordering::compute should also computes the scaling in this case.
+ * Note that this is a block-wise scaling, that is, entire blocks get scaled by a single number.
  */
 template <typename scalar, typename index, int bs>
 class ReorderingScaling : public Reordering<scalar,index,bs>
@@ -106,9 +107,9 @@ protected:
 	using Reordering<scalar,index,bs>::rp;
 	using Reordering<scalar,index,bs>::cp;
 
-	/// Row scaling vector
+	/// Block-row scaling vector
 	std::vector<scalar> rowscale;
-	/// Column scaling vector
+	/// Block-column scaling vector
 	std::vector<scalar> colscale;
 };
 
