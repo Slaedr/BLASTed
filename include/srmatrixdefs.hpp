@@ -9,6 +9,8 @@
 #ifndef BLASTED_SRMATRIXDEFS_H
 #define BLASTED_SRMATRIXDEFS_H
 
+#define CACHE_LINE_ALIGNMENT 64
+
 namespace blasted {
 
 using Eigen::Dynamic;

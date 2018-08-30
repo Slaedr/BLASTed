@@ -5,10 +5,14 @@
 
 #include <type_traits>
 #include <iostream>
+#include <boost/align/aligned_alloc.hpp>
 #include <Eigen/LU>
 #include "solverops_jacobi.hpp"
 
 namespace blasted {
+
+using boost::alignment::aligned_alloc;
+using boost::alignment::aligned_free;
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
 BJacobiSRPreconditioner<scalar,index,bs,stor>::BJacobiSRPreconditioner()
@@ -19,8 +23,9 @@ template <typename scalar, typename index, int bs, StorageOptions stor>
 BJacobiSRPreconditioner<scalar,index,bs,stor>::~BJacobiSRPreconditioner()
 {
 	// delete [] dblocks;
-	Eigen::aligned_allocator<scalar> aa;
-	aa.deallocate(dblocks, mat.nbrows*bs*bs);
+	//Eigen::aligned_allocator<scalar> aa;
+	//aa.deallocate(dblocks, mat.nbrows*bs*bs);
+	aligned_free(dblocks);
 }
 	
 template <typename scalar, typename index, int bs, StorageOptions stor>
@@ -28,8 +33,10 @@ void BJacobiSRPreconditioner<scalar,index,bs,stor>::compute()
 {
 	if(!dblocks) {
 		// dblocks = new scalar[mat.nbrows*bs*bs];
-		Eigen::aligned_allocator<scalar> aa;
-		dblocks = aa.allocate(mat.nbrows*bs*bs);
+		// Eigen::aligned_allocator<scalar> aa;
+		// dblocks = aa.allocate(mat.nbrows*bs*bs);
+		dblocks = (scalar*)aligned_alloc(CACHE_LINE_ALIGNMENT,
+		                                 mat.nbrows*bs*bs*sizeof(scalar));
 #ifdef DEBUG
 		std::cout << " precJacobiSetup(): Allocating.\n";
 #endif
