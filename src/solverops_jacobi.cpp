@@ -35,8 +35,8 @@ void BJacobiSRPreconditioner<scalar,index,bs,stor>::compute()
 		// dblocks = new scalar[mat.nbrows*bs*bs];
 		// Eigen::aligned_allocator<scalar> aa;
 		// dblocks = aa.allocate(mat.nbrows*bs*bs);
-		dblocks = (scalar*)aligned_alloc(CACHE_LINE_ALIGNMENT,
-		                                 mat.nbrows*bs*bs*sizeof(scalar));
+		dblocks = static_cast<scalar*>(aligned_alloc(CACHE_LINE_ALIGNMENT,
+		                                             mat.nbrows*bs*bs*sizeof(scalar)));
 #ifdef DEBUG
 		std::cout << " precJacobiSetup(): Allocating.\n";
 #endif
