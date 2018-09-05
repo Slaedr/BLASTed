@@ -22,13 +22,25 @@ std::vector<int> generateOrdering(const int N)
 {
 	std::vector<int> ord(N);
 
-	// TODO: Fill with permuted integers between 0 and N-1 (inclusive)
+	for(int i = 0; i < N; i++)
+		ord[i] = N-i-1;
+	std::swap(ord[N/4], ord[3*N/4]);
+	std::swap(ord[N/8], ord[7*N/8]);
 
 	return ord;
 }
 
+template <int bs>
 int testReordering(const std::string matfile)
 {
 	COOMatrix<double,int> cmat;
 	cmat.readMatrixMarket(matfile);
+	RawBSRMatrix<double,int> bmat;
+	cmat.template convertToBSR<bs,ColMajor>(&bmat);
+
+	std::vector<int> ord = generateOrdering(bmat.nbrows);
+
+	RawBSRMatrix<double,int> mat1, mat2;
+
+	TrivialRS<bs> rs;
 }
