@@ -1,7 +1,10 @@
-add_library(coomatrix coomatrix.cpp)
 
 add_library(blockmatrices csrmatrix.cpp bsrmatrix.cpp scmatrix.cpp)
 set_property(TARGET blockmatrices PROPERTY POSITION_INDEPENDENT_CODE ON)
+
+add_library(coomatrix coomatrix.cpp)
+target_link_libraries(coomatrix blockmatrices)
+set_property(TARGET coomatrix PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 add_library(helper helper_algorithms.cpp)
 set_property(TARGET helper PROPERTY POSITION_INDEPENDENT_CODE ON)

@@ -260,6 +260,15 @@ BSRMatrix<scalar,index,bs>::BSRMatrix(const index n_brows, index *const brptrs, 
 { }
 
 template <typename scalar, typename index, int bs>
+BSRMatrix<scalar,index,bs>::BSRMatrix(RawBSRMatrix<scalar,index>& rmat)
+	: AbstractMatrix<scalar,index>(BSR), owner{true}, mat{rmat.browptr, rmat.bcolind, rmat.vals,
+			                                                  rmat.diagind, rmat.nbrows}
+{
+	rmat.nbrows=0;
+	rmat.browptr = rmat.bcolind = rmat.diagind = nullptr; rmat.vals = nullptr;
+}
+
+template <typename scalar, typename index, int bs>
 BSRMatrix<scalar, index, bs>::~BSRMatrix()
 {
 	if(owner) {

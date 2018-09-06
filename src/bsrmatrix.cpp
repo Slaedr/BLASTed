@@ -35,6 +35,7 @@ template class BSRMatrixView<double,int,5,ColMajor>;
 template class BSRMatrixView<double,int,7,ColMajor>;
 
 #ifdef BUILD_BLOCK_SIZE
+template class BSRMatrix<double,int,BUILD_BLOCK_SIZE>;
 template class BSRMatrixView<double,int,BUILD_BLOCK_SIZE,ColMajor>;
 #endif
 

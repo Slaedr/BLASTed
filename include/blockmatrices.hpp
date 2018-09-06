@@ -181,7 +181,7 @@ protected:
 };
 
 /// Block sparse row matrix
-/** Dense blocks stored in a (block-) row-major storage order.
+/** Scalars inside each dense block are stored in a row-major order.
  * Unsigned types cannot be used as index; that will cause SGS and ILU preconditioners to fail.
  */
 template <typename scalar, typename index, int bs>
@@ -208,13 +208,14 @@ public:
 	 * \param[in] bcinds Array of block-column indices
 	 * \param[in] values Non-zero values
 	 * \param[in] dinds Array of diagonal entry pointers
-	 * \param[in] n_buildsweeps Number of asynchronous preconditioner build sweeps
-	 * \param[in] n_applysweeps Number of asynchronous preconditioner apply sweeps
 	 *
 	 * Does not take ownership of the 4 arrays; they are not cleaned up in the destructor either.
 	 */
 	BSRMatrix(const index n_brows, index *const brptrs,
 	          index *const bcinds, scalar *const values, index *const dinds);
+
+	/// Transfers the arrays of a raw BSR matrix to itself and nulls the raw matrix
+	BSRMatrix(RawBSRMatrix<scalar,index>& rmat);
 
 	/// De-allocates memory
 	virtual ~BSRMatrix();

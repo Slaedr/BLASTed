@@ -31,16 +31,15 @@ std::vector<int> generateOrdering(const int N)
 }
 
 template <int bs>
-int testReordering(const std::string matfile)
+int testMatrixReordering(const std::string matfile)
 {
-	COOMatrix<double,int> cmat;
-	cmat.readMatrixMarket(matfile);
-	RawBSRMatrix<double,int> bmat;
-	cmat.template convertToBSR<bs,ColMajor>(&bmat);
+	BSRMatrix<double,int,bs> omat = constructBSRMatrixFromMatrixMarketFile(matfile);
+	const int nbrows = omat.dim()/bs;
 
-	std::vector<int> ord = generateOrdering(bmat.nbrows);
+	std::vector<int> ord = generateOrdering(nbrows);
 
 	RawBSRMatrix<double,int> mat1, mat2;
 
 	TrivialRS<bs> rs;
+	rs.setOrdering(&ord[0],&ord[0],nbrows);
 }

@@ -381,6 +381,17 @@ void COOMatrix<scalar,index>::convertToBSR(RawBSRMatrix<scalar,index> *const bma
 	}
 }
 
+template <typename scalar, typename index, int bs>
+BSRMatrix<scalar,index,bs> constructBSRMatrixFromMatrixMarketFile(const std::string file)
+{
+	COOMatrix<scalar,index> coomat;
+	coomat.readMatrixMarket(file);
+	RawBSRMatrix<scalar,index> rmat;
+	coomat.template convertToBSR<bs,RowMajor>(&rmat);
+	BSRMatrix<scalar,index,bs> bmat(rmat);
+	return bmat;
+}
+
 template class COOMatrix<double,int>;
 template class COOMatrix<float,int>;
 
@@ -432,5 +443,16 @@ template
 void COOMatrix<float,int>::convertToBSR<6,ColMajor>(RawBSRMatrix<float,int> *const bmat) const;
 template
 void COOMatrix<float,int>::convertToBSR<7,ColMajor>(RawBSRMatrix<float,int> *const bmat) const;
+
+template 
+BSRMatrix<double,int,3> constructBSRMatrixFromMatrixMarketFile(const std::string file);
+template 
+BSRMatrix<double,int,7> constructBSRMatrixFromMatrixMarketFile(const std::string file);
+
+#ifdef BUILD_BLOCK_SIZE
+template 
+BSRMatrix<double,int,BUILD_BLOCK_SIZE>
+constructBSRMatrixFromMatrixMarketFile(const std::string file);
+#endif
 
 }

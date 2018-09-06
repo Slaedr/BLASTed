@@ -32,6 +32,11 @@ enum RSApplyDir {ROW, COLUMN, BOTH};
 
 /// Handler for computing a reordering of a matrix stored in a sparse-(block-)row format
 /** The ordering of entries within a small dense block is not altered.
+ *
+ * The reordering convention is as follows, assuming rp is the row permutation array. In case of the
+ * 'forward' operation, block-row rp[i] of the original matrix is block-row i of the reordered matrix.
+ * Similarly for columns. For a 'reverse' operation, block-row i of the original matrix is the
+ * block-row rp[i] of the permuted matrix.
  */
 template <typename scalar, typename index, int bs>
 class Reordering

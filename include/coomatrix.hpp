@@ -108,6 +108,10 @@ protected:
 	std::vector<index> rowptr;                    ///< Vector of row pointers into \ref entries
 };
 
+/// Build a BSR (row-major blocks) or CSR matrix from a Matrix Market file in COO format
+template <typename scalar, typename index, int bs>
+BSRMatrix<scalar,index,bs> constructBSRMatrixFromMatrixMarketFile(const std::string file);
+
 }
 
 #endif
