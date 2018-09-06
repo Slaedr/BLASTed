@@ -110,11 +110,10 @@ int testCSRMatMult(const std::string type,
 	AbstractLinearOperator<double,int>* testmat = nullptr;
 	if(type == "view") {
 		testmat = new CSRMatrixView<double,int>(rm.nbrows,
-				rm.browptr,rm.bcolind,rm.vals,rm.diagind,1,1);
+				rm.browptr,rm.bcolind,rm.vals,rm.diagind);
 	}
 	else
-		testmat = new BSRMatrix<double,int,1>(rm.nbrows,
-				rm.browptr,rm.bcolind,rm.vals,rm.diagind,1,1);
+		testmat = new BSRMatrix<double,int,1>(rm.nbrows,rm.browptr,rm.bcolind,rm.vals,rm.diagind);
 	
 
 	testmat->apply(x.data(), y.data());

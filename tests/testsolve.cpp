@@ -52,14 +52,14 @@ int testSolve(const std::string solvertype, const std::string precontype,
 	//if(mattype == "csr")
 	if (bs==1)
 		mat = new CSRMatrixView<double,int>(rm.nbrows,
-				rm.browptr,rm.bcolind,rm.vals,rm.diagind,nbuildswps,napplyswps);
+				rm.browptr,rm.bcolind,rm.vals,rm.diagind);
 	else
 		if(storageorder == "rowmajor")
 			mat = new BSRMatrixView<double,int,bs,RowMajor>(rm.nbrows,
-					rm.browptr,rm.bcolind,rm.vals,rm.diagind,nbuildswps,napplyswps);
+					rm.browptr,rm.bcolind,rm.vals,rm.diagind);
 		else
 			mat = new BSRMatrixView<double,int,bs,ColMajor>(rm.nbrows,
-					rm.browptr,rm.bcolind,rm.vals,rm.diagind,nbuildswps,napplyswps);
+					rm.browptr,rm.bcolind,rm.vals,rm.diagind);
 
 	// construct preconditioner context
 	

@@ -13,11 +13,12 @@
 #ifndef BLOCKMATRICES_H
 #define BLOCKMATRICES_H
 
-#include "linearoperator.hpp"
-#include "srmatrixdefs.hpp"
-
 #include <iostream>
 #include <limits>
+
+#include "linearoperator.hpp"
+#include "srmatrixdefs.hpp"
+#include "reorderingscaling.hpp"
 
 namespace blasted {
 
@@ -84,14 +85,11 @@ public:
 	 * \param[in] bcinds Array of block-column indices
 	 * \param[in] values Non-zero values
 	 * \param[in] dinds Array of pointers to diagonal blocks
-	 * \param[in] n_buildsweeps Number of asynchronous preconditioner build sweeps
-	 * \param[in] n_applysweeps Number of asynchronous preconditioner apply sweeps
 	 *
 	 * Does not take ownership of the 4 arrays; they are not cleaned up in the destructor either.
 	 */
 	BSRMatrixView(const index n_brows, const index *const brptrs,
-		const index *const bcinds, const scalar *const values, const index *const dinds,
-		const int n_buildsweeps, const int n_applysweeps);
+	              const index *const bcinds, const scalar *const values, const index *const dinds);
 
 	/// Cleans up temporary data needed for preconditioning operations
 	virtual ~BSRMatrixView();
@@ -144,14 +142,11 @@ public:
 	 * \param[in] cinds Array of column indices
 	 * \param[in] values Non-zero values
 	 * \param[in] dinds Array of diagonal entry pointers
-	 * \param[in] n_buildsweeps Number of asynchronous preconditioner build sweeps
-	 * \param[in] n_applysweeps Number of asynchronous preconditioner apply sweeps
 	 *
 	 * Does not take ownership of the 4 arrays; they are not cleaned up in the destructor either.
 	 */
 	CSRMatrixView(const index nrows, const index *const rptrs,
-		const index *const cinds, const scalar *const values, const index *const dinds,
-		const int n_buildsweeps, const int n_applysweeps);
+	              const index *const cinds, const scalar *const values, const index *const dinds);
 
 	/// De-allocates temporary storage only, not the matrix storage itself
 	virtual ~CSRMatrixView();
@@ -198,15 +193,14 @@ class BSRMatrix : public AbstractMatrix<scalar, index>
 
 public:
 	/// Initialization without pre-allocation of any storage
-	BSRMatrix(const int nbuildsweeps, const int napplysweeps);
+	BSRMatrix();
 
 	/// Allocates space for the matrix based on the supplied non-zero structure
 	/** \param[in] n_brows Total number of block rows
 	 * \param[in] bcinds Column indices, simply (deep) copied over into \ref bcolind
 	 * \param[in] brptrs Row pointers, simply (deep) copied into \ref browptr
 	 */
-	BSRMatrix(const index n_brows, const index *const bcinds, const index *const brptrs,
-	         const int nbuildsweeps, const int napplysweeps);
+	BSRMatrix(const index n_brows, const index *const bcinds, const index *const brptrs);
 	
 	/// A constructor which just wraps a BSR matrix described by 4 arrays
 	/** \param[in] n_brows Number of block-rows
@@ -220,8 +214,7 @@ public:
 	 * Does not take ownership of the 4 arrays; they are not cleaned up in the destructor either.
 	 */
 	BSRMatrix(const index n_brows, index *const brptrs,
-		index *const bcinds, scalar *const values, index *const dinds,
-		const int n_buildsweeps, const int n_applysweeps);
+	          index *const bcinds, scalar *const values, index *const dinds);
 
 	/// De-allocates memory
 	virtual ~BSRMatrix();
@@ -286,6 +279,14 @@ public:
 	virtual void gemv3(const scalar a, const scalar *const __restrict x, 
 			const scalar b, const scalar *const y,
 			scalar *const z) const;
+
+	/// Compute some ordering and/or scaling using this matrix
+	void computeOrderingScaling(ReorderingScaling<scalar,index,bs>& rs) const;
+
+	/// Apply some ordering/scaling to this matrix
+	/** First applies the ordering, and then the scaling.
+	 */
+	void reorderScale(const ReorderingScaling<scalar,index,bs>& rs);
 	
 	/// Returns the dimension (number of rows) of the square matrix
 	index dim() const { return mat.nbrows*bs; }
@@ -313,15 +314,14 @@ class BSRMatrix<scalar,index,1> : public AbstractMatrix<scalar, index>
 public:
 	
 	/// Minimal initialzation; just sets number of async sweeps	
-	BSRMatrix(const int n_buildsweeps, const int n_applysweeps);
+	BSRMatrix();
 
 	/// Allocates space for the matrix based on the supplied non-zero structure
 	/** \param[in] n_brows Total number of rows
 	 * \param[in] bcinds Column indices, simply copied over into \ref bcolind
 	 * \param[in] brptrs Row pointers, simply copied into \ref browptr
 	 */
-	BSRMatrix(const index n_brows, const index *const bcinds, const index *const brptrs,
-	         const int nbuildsweeps, const int napplysweeps);
+	BSRMatrix(const index n_brows, const index *const bcinds, const index *const brptrs);
 	
 	/// A constructor which just wraps a CSR matrix described by 4 arrays
 	/** \param[in] nrows Number of rows
@@ -335,8 +335,7 @@ public:
 	 * Does not take ownership of the 4 arrays; they are not cleaned up in the destructor either.
 	 */
 	BSRMatrix(const index nrows, index *const rptrs,
-		index *const cinds, scalar *const values, index *const dinds,
-		const int n_buildsweeps, const int n_applysweeps);
+	          index *const cinds, scalar *const values, index *const dinds);
 
 	/// De-allocates memory
 	virtual ~BSRMatrix();
@@ -399,6 +398,14 @@ public:
 	
 	/// Returns the number of rows in the matrix
 	index dim() const { return mat.nbrows; }
+	
+	/// Compute some ordering and/or scaling using this matrix
+	void computeOrderingScaling(ReorderingScaling<scalar,index,1>& rs) const;
+
+	/// Apply some ordering/scaling to this matrix
+	/** First applies the ordering, and then the scaling.
+	 */
+	void reorderScale(const ReorderingScaling<scalar,index,1>& rs);
 	
 protected:
 	

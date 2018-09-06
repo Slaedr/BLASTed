@@ -134,8 +134,9 @@ SRMatrixView<scalar,index>::SRMatrixView(const index n_brows,
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
 BSRMatrixView<scalar,index,bs,stor>::BSRMatrixView(const index n_brows, const index *const brptrs,
-		const index *const bcinds, const scalar *const values, const index *const diaginds,
-		const int n_buildsweeps, const int n_applysweeps)
+                                                   const index *const bcinds,
+                                                   const scalar *const values,
+                                                   const index *const diaginds)
 	: SRMatrixView<scalar,index>(n_brows, brptrs, bcinds, values, diaginds, VIEWBSR)
 { }
 
@@ -175,8 +176,8 @@ void BSRMatrixView<scalar,index,bs,stor>::gemv3(const scalar a, const scalar *co
 
 template <typename scalar, typename index>
 CSRMatrixView<scalar,index>::CSRMatrixView(const index nrows, const index *const brptrs,
-		const index *const bcinds, const scalar *const values, const index *const diaginds,
-		const int n_buildsweeps, const int n_applysweeps)
+                                           const index *const bcinds, const scalar *const values,
+                                           const index *const diaginds)
 	: SRMatrixView<scalar,index>(nrows, brptrs, bcinds, values, diaginds, VIEWCSR)
 { }
 
@@ -217,7 +218,7 @@ void CSRMatrixView<scalar,index>::gemv3(const scalar a, const scalar *const __re
 ////////////////////////////////////////////////////////////////////////////////////////////////
 
 template <typename scalar, typename index, int bs>
-BSRMatrix<scalar,index,bs>::BSRMatrix(const int n_buildsweeps, const int n_applysweeps)
+BSRMatrix<scalar,index,bs>::BSRMatrix()
 	: AbstractMatrix<scalar,index>(BSR), mat{nullptr, nullptr, nullptr, nullptr, 0}
 {
 	std::cout << "BSRMatrix: Initialized matrix without allocation.\n";
@@ -225,8 +226,7 @@ BSRMatrix<scalar,index,bs>::BSRMatrix(const int n_buildsweeps, const int n_apply
 
 template <typename scalar, typename index, int bs>
 BSRMatrix<scalar,index,bs>::BSRMatrix(const index n_brows,
-		const index *const bcinds, const index *const brptrs,
-		const int n_buildsweeps, const int n_applysweeps)
+                                      const index *const bcinds, const index *const brptrs)
 	: AbstractMatrix<scalar,index>(BSR), owner{true}, 
 	mat{nullptr, nullptr, nullptr, nullptr, n_brows}
 {
@@ -253,9 +253,8 @@ BSRMatrix<scalar,index,bs>::BSRMatrix(const index n_brows,
 }
 
 template <typename scalar, typename index, int bs>
-BSRMatrix<scalar,index,bs>::BSRMatrix(const index n_brows, index *const brptrs,
-		index *const bcinds, scalar *const values, index *const diaginds,
-		const int n_buildsweeps, const int n_applysweeps)
+BSRMatrix<scalar,index,bs>::BSRMatrix(const index n_brows, index *const brptrs, index *const bcinds,
+                                      scalar *const values, index *const diaginds)
 	: AbstractMatrix<scalar,index>(BSR), owner{false},
 	  mat{brptrs, bcinds, values, diaginds, n_brows}
 { }
@@ -408,11 +407,26 @@ void BSRMatrix<scalar,index,bs>::gemv3(const scalar a, const scalar *const __res
 			a, xx, b, yy, zz);
 }
 
+template <typename scalar, typename index, int bs>
+void BSRMatrix<scalar,index,bs>::computeOrderingScaling(ReorderingScaling<scalar,index,bs>& rs) const
+{
+	const CRawBSRMatrix<scalar,index>* cmat
+		= reinterpret_cast<const CRawBSRMatrix<scalar,index>*>(&mat);
+	rs.compute(*cmat);
+}
+
+template <typename scalar, typename index, int bs>
+void BSRMatrix<scalar,index,bs>::reorderScale(const ReorderingScaling<scalar,index,bs>& rs)
+{
+	rs.applyOrdering(mat);
+	rs.applyScaling(mat);
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////
 
 template <typename scalar, typename index>
 inline
-BSRMatrix<scalar,index,1>::BSRMatrix(const int n_buildsweeps, const int n_applysweeps)
+BSRMatrix<scalar,index,1>::BSRMatrix()
 	: AbstractMatrix<scalar,index>(CSR), mat{nullptr,nullptr,nullptr,nullptr,0}
 {
 #ifdef DEBUG
@@ -423,8 +437,7 @@ BSRMatrix<scalar,index,1>::BSRMatrix(const int n_buildsweeps, const int n_applys
 template <typename scalar, typename index>
 inline
 BSRMatrix<scalar,index,1>::BSRMatrix(const index n_brows,
-		const index *const bcinds, const index *const brptrs,
-		const int n_buildsweeps, const int n_applysweeps)
+                                     const index *const bcinds, const index *const brptrs)
 	: AbstractMatrix<scalar,index>(CSR), owner{true},
 	mat{nullptr,nullptr,nullptr,nullptr,n_brows}
 {
@@ -451,8 +464,7 @@ BSRMatrix<scalar,index,1>::BSRMatrix(const index n_brows,
 
 template <typename scalar, typename index>
 BSRMatrix<scalar,index,1>::BSRMatrix(const index nrows, index *const brptrs,
-		index *const bcinds, scalar *const values, index *const diaginds,
-		const int n_buildsweeps, const int n_applysweeps)
+                                     index *const bcinds, scalar *const values, index *const diaginds)
 	: AbstractMatrix<scalar,index>(CSR), owner{false}, mat{brptrs,bcinds,values,diaginds,nrows}
 { }
 
@@ -617,6 +629,21 @@ void BSRMatrix<scalar,index,1>::gemv3(const scalar a, const scalar *const __rest
 		const scalar b, const scalar *const yy, scalar *const zz) const
 {
 	scalar_gemv3(reinterpret_cast<const CRawBSRMatrix<scalar,index>*>(&mat), a, xx, b, yy, zz);
+}
+
+template <typename scalar, typename index>
+void BSRMatrix<scalar,index,1>::computeOrderingScaling(ReorderingScaling<scalar,index,1>& rs) const
+{
+	const CRawBSRMatrix<scalar,index>* cmat
+		= reinterpret_cast<const CRawBSRMatrix<scalar,index>*>(&mat);
+	rs.compute(*cmat);
+}
+
+template <typename scalar, typename index>
+void BSRMatrix<scalar,index,1>::reorderScale(const ReorderingScaling<scalar,index,1>& rs)
+{
+	rs.applyOrdering(mat);
+	rs.applyScaling(mat);
 }
 
 }

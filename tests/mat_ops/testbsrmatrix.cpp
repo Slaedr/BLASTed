@@ -35,14 +35,14 @@ int testBSRMatMult(const std::string type, const std::string storageorder,
 	if(type == "view") {
 		if(storageorder == "rowmajor")
 			testmat = new BSRMatrixView<double,int,bs,RowMajor>(rm.nbrows,
-					rm.browptr,rm.bcolind,rm.vals,rm.diagind,1,1);
+					rm.browptr,rm.bcolind,rm.vals,rm.diagind);
 		else
 			testmat = new BSRMatrixView<double,int,bs,ColMajor>(rm.nbrows,
-					rm.browptr,rm.bcolind,rm.vals,rm.diagind,1,1);
+					rm.browptr,rm.bcolind,rm.vals,rm.diagind);
 	}
 	else
 		testmat = new BSRMatrix<double,int,bs>(rm.nbrows,
-				rm.browptr,rm.bcolind,rm.vals,rm.diagind,1,1);
+				rm.browptr,rm.bcolind,rm.vals,rm.diagind);
 	
 	testmat->apply(x.data(), y.data());
 
