@@ -68,7 +68,7 @@ public:
 	/** Either row or column reordering (or both) is done depending on the specific reordering method.
 	 * Always applies the forward (original) ordering.
 	 */
-	virtual void applyOrdering(RawBSRMatrix<scalar,index>& mat) const;
+	virtual void applyOrdering(RawBSRMatrix<scalar,index>& mat, const RSApplyMode mode) const;
 
 	/// Apply the ordering (or its inverse) to a vector
 	/** \param vec The vector to reorder
