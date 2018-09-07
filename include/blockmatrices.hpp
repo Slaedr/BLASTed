@@ -287,7 +287,7 @@ public:
 	/// Apply some ordering/scaling to this matrix
 	/** First applies the ordering, and then the scaling.
 	 */
-	void reorderScale(const ReorderingScaling<scalar,index,bs>& rs);
+	void reorderScale(const ReorderingScaling<scalar,index,bs>& rs, const RSApplyMode mode);
 	
 	/// Returns the dimension (number of rows) of the square matrix
 	index dim() const { return mat.nbrows*bs; }
@@ -406,7 +406,7 @@ public:
 	/// Apply some ordering/scaling to this matrix
 	/** First applies the ordering, and then the scaling.
 	 */
-	void reorderScale(const ReorderingScaling<scalar,index,1>& rs);
+	void reorderScale(const ReorderingScaling<scalar,index,1>& rs, const RSApplyMode mode);
 	
 protected:
 	

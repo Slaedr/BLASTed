@@ -25,10 +25,10 @@
 
 namespace blasted {
 
-/// For a reordering or scaling, whether to apply it or its inverse
+/// For a reordering or scaling, whether to apply it directly or apply its inverse
 enum RSApplyMode {FORWARD, INVERSE};
-/// For a reordering or scaling, whether to apply it to rows or columns of a matrix, or both
-enum RSApplyDir {ROW, COLUMN, BOTH};
+/// For a reordering or scaling, whether to apply it to rows or columns of a matrix 
+enum RSApplyDir {ROW, COLUMN};
 
 /// Handler for computing a reordering of a matrix stored in a sparse-(block-)row format
 /** The ordering of entries within a small dense block is not altered.
@@ -98,7 +98,7 @@ public:
 	ReorderingScaling();
 
 	/// Apply only scaling to a matrix
-	virtual void applyScaling(RawBSRMatrix<scalar,index>& mat) const;
+	virtual void applyScaling(RawBSRMatrix<scalar,index>& mat, const RSApplyMode mode) const;
 
 	/// Apply only scaling to a vector
 	/** \param vec The vector to scale

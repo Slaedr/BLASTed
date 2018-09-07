@@ -425,10 +425,11 @@ void BSRMatrix<scalar,index,bs>::computeOrderingScaling(ReorderingScaling<scalar
 }
 
 template <typename scalar, typename index, int bs>
-void BSRMatrix<scalar,index,bs>::reorderScale(const ReorderingScaling<scalar,index,bs>& rs)
+void BSRMatrix<scalar,index,bs>::reorderScale(const ReorderingScaling<scalar,index,bs>& rs,
+                                              const RSApplyMode mode)
 {
-	rs.applyOrdering(mat);
-	rs.applyScaling(mat);
+	rs.applyOrdering(mat,mode);
+	rs.applyScaling(mat,mode);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////
@@ -649,10 +650,11 @@ void BSRMatrix<scalar,index,1>::computeOrderingScaling(ReorderingScaling<scalar,
 }
 
 template <typename scalar, typename index>
-void BSRMatrix<scalar,index,1>::reorderScale(const ReorderingScaling<scalar,index,1>& rs)
+void BSRMatrix<scalar,index,1>::reorderScale(const ReorderingScaling<scalar,index,1>& rs,
+                                             const RSApplyMode mode)
 {
-	rs.applyOrdering(mat);
-	rs.applyScaling(mat);
+	rs.applyOrdering(mat, mode);
+	rs.applyScaling(mat, mode);
 }
 
 }

@@ -18,6 +18,7 @@
  */
 
 #include <algorithm>
+#include <utility>
 #include "helper_algorithms.hpp"
 #include "reorderingscaling.hpp"
 
@@ -55,7 +56,7 @@ void Reordering<scalar,index,bs>::applyOrdering(RawBSRMatrix<scalar,index>& mat,
 		if(rp.size() > 0)
 		{
 			// move rows around
-			std::vector<scalar> tempval(mat.browptr[mat.nbrows]*bs);
+			std::vector<scalar> tempval(mat.browptr[mat.nbrows]*bs*bs);
 			std::vector<index> tempcind(mat.browptr[mat.nbrows]);
 			std::vector<index> temprptr(mat.nbrows+1);
 			temprptr[mat.nbrows] = mat.browptr[mat.nbrows];
@@ -97,10 +98,7 @@ void Reordering<scalar,index,bs>::applyOrdering(RawBSRMatrix<scalar,index>& mat,
 				const index browsz = (mat.browptr[i+1]-mat.browptr[i]);
 
 				std::vector<index> cind(browsz);
-
-				// copy the column indices into a temporary location
-				for(index jj = 0; jj < browsz; jj++)
-					cind[jj] = mcolind[jj];
+				std::copy(mcolind, mcolind+browsz, cind.begin());
 
 				// Change column indices to reflect the new ordering
 				for(index jj = 0; jj < browsz; jj++)
@@ -121,7 +119,40 @@ void Reordering<scalar,index,bs>::applyOrdering(RawBSRMatrix<scalar,index>& mat,
 
 		if(rp.size() > 0)
 		{
-			// move rows
+			// copy the matrix to a list of rows
+			using CSEntry = std::pair<index,scalar[bs*bs]>;
+			std::vector<std::vector<CSEntry>> brows(mat.nbrows);
+
+			// can be parallelized
+			for(index i = 0; i < mat.nbrows; i++)
+			{
+				// Row rp[i] in the permuted matrix gets the i-th row of the original matrix
+				const index destr = rp[i];
+				assert(brows[destr].size() == 0);
+				brows[destr].resize(mat.browptr[i+1]-mat.browptr[i]);
+
+				for(index jj = mat.browptr[i]; jj < mat.browptr[i+1]; jj++)
+				{
+					const index dj = jj-mat.browptr[i];
+					brows[destr][dj].first = mat.bcolind[jj];
+					for(int k = 0; k < bs*bs; k++)
+						brows[destr][dj].second[k] = mat.vals[jj*bs*bs+k];
+				}
+			}
+
+			// copy back
+			mat.browptr[0] = 0;
+			for(index i = 0; i < mat.nbrows; i++)
+			{
+				mat.browptr[i+1] = static_cast<index>(brows[i].size()) + mat.browptr[i];
+				for(index jj = mat.browptr[i]; jj < mat.browptr[i+1]; jj++)
+				{
+					const index dj = jj-mat.browptr[i];
+					mat.bcolind[jj] = brows[i][dj].first;
+					for(int k = 0; k < bs*bs; k++)
+						mat.vals[jj*bs*bs+k] = brows[i][dj].second[k];
+				}
+			}
 		}
 
 		if(cp.size() > 0)
@@ -139,9 +170,7 @@ void Reordering<scalar,index,bs>::applyOrdering(RawBSRMatrix<scalar,index>& mat,
 				// transform column indices with the forward permutation, so that
 				//  the actual matrix is transformed with the inverse permutation.
 				for(index jj = rstart; jj < rend; jj++)
-				{
 					mat.bcolind[jj] = cp[ocinds[jj-rstart]];
-				}
 
 				internal::sortBlockInnerDimension<scalar,index,bs>(rend-rstart,
 				                                                   &mat.bcolind[rstart],
@@ -204,30 +233,55 @@ void Reordering<scalar,index,bs>::applyOrdering(scalar *const vec,
 }
 
 template <typename scalar, typename index, int bs>
-void ReorderingScaling<scalar,index,bs>::applyScaling(RawBSRMatrix<scalar,index>& mat)
+void ReorderingScaling<scalar,index,bs>::applyScaling(RawBSRMatrix<scalar,index>& mat,
+                                                      const RSApplyMode mode)
 {
 	if(rowscale.size() > 0)
 	{
 		// scale rows
+		if(mode == FORWARD) {
 #pragma omp parallel for default(shared) schedule(dynamic, 200)
-		for(index irow = 0; irow < mat.nbrows; irow++)
-		{
-			for(index jj = mat.browptr[irow]; jj < mat.browptr[irow+1]; jj++)
-				for(int k = 0; k < bs*bs; k++)
-					mat.vals[jj*bs*bs + k] *= rowscale[irow];
+			for(index irow = 0; irow < mat.nbrows; irow++)
+			{
+				for(index jj = mat.browptr[irow]; jj < mat.browptr[irow+1]; jj++)
+					for(int k = 0; k < bs*bs; k++)
+						mat.vals[jj*bs*bs + k] *= rowscale[irow];
+			}
+		}
+		else {
+#pragma omp parallel for default(shared) schedule(dynamic, 200)
+			for(index irow = 0; irow < mat.nbrows; irow++)
+			{
+				for(index jj = mat.browptr[irow]; jj < mat.browptr[irow+1]; jj++)
+					for(int k = 0; k < bs*bs; k++)
+						mat.vals[jj*bs*bs + k] /= rowscale[irow];
+			}
 		}
 	}
 
 	if(colscale.size() > 0)
 	{
 		// scale columns
+		if(mode == FORWARD) {
 #pragma omp parallel for default(shared) schedule(dynamic, 200)
-		for(index irow = 0; irow < mat.nbrows; irow++)
-		{
-			for(index jj = mat.browptr[irow]; jj < mat.browptr[irow+1]; jj++) {
-				const index column_index = mat.bcolind[jj];
-				for(int k = 0; k < bs*bs; k++)
-					mat.vals[jj*bs*bs + k] *= colscale[column_index];
+			for(index irow = 0; irow < mat.nbrows; irow++)
+			{
+				for(index jj = mat.browptr[irow]; jj < mat.browptr[irow+1]; jj++) {
+					const index column_index = mat.bcolind[jj];
+					for(int k = 0; k < bs*bs; k++)
+						mat.vals[jj*bs*bs + k] *= colscale[column_index];
+				}
+			}
+		}
+		else {
+#pragma omp parallel for default(shared) schedule(dynamic, 200)
+			for(index irow = 0; irow < mat.nbrows; irow++)
+			{
+				for(index jj = mat.browptr[irow]; jj < mat.browptr[irow+1]; jj++) {
+					const index column_index = mat.bcolind[jj];
+					for(int k = 0; k < bs*bs; k++)
+						mat.vals[jj*bs*bs + k] /= colscale[column_index];
+				}
 			}
 		}
 	}
