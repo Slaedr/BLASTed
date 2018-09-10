@@ -52,10 +52,15 @@ void sortBlockInnerDimension(const index N, index *const colind, scalar *const v
 }
 
 // for testing
+template void sortBlockInnerDimension<double,int,1>(const int N,
+                                                    int *const colind, double *const vals);
 template void sortBlockInnerDimension<double,int,2>(const int N,
                                                     int *const colind, double *const vals);
-
-template void sortBlockInnerDimension<double,int,1>(const int N,
+template void sortBlockInnerDimension<double,int,4>(const int N,
+                                                    int *const colind, double *const vals);
+template void sortBlockInnerDimension<double,int,5>(const int N,
+                                                    int *const colind, double *const vals);
+template void sortBlockInnerDimension<double,int,7>(const int N,
                                                     int *const colind, double *const vals);
 
 }

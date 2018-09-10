@@ -5,10 +5,11 @@
 
 #include <vector>
 #include <string>
+#include <iostream>
 #include "coomatrix.hpp"
-#include "reordering.hpp"
+#include "reorderingscaling.hpp"
 
-using namespace fvens;
+using namespace blasted;
 
 template <int bs>
 class TrivialRS : public ReorderingScaling<double,int,bs>
@@ -33,13 +34,42 @@ std::vector<int> generateOrdering(const int N)
 template <int bs>
 int testMatrixReordering(const std::string matfile)
 {
-	BSRMatrix<double,int,bs> omat = constructBSRMatrixFromMatrixMarketFile(matfile);
+	BSRMatrix<double,int,bs> omat = constructBSRMatrixFromMatrixMarketFile<double,int,bs>(matfile);
 	const int nbrows = omat.dim()/bs;
 
 	std::vector<int> ord = generateOrdering(nbrows);
 
-	RawBSRMatrix<double,int> mat1, mat2;
+	BSRMatrix<double,int,bs> mat1(omat);
 
 	TrivialRS<bs> rs;
 	rs.setOrdering(&ord[0],&ord[0],nbrows);
+
+	mat1.reorderScale(rs, FORWARD);
+	mat1.reorderScale(rs, INVERSE);
+
+	return 0;
+}
+
+int main(int argc, char *argv[])
+{
+	if(argc < 3) {
+		std::cout << "Need mtx file name and block size!\n";
+		std::exit(-1);
+	}
+
+	std::string matfile = argv[1];
+	const int blocksize = std::stoi(argv[2]);
+
+	switch(blocksize) {
+	case(1):
+		testMatrixReordering<1>(matfile);
+		break;
+	case(7):
+		testMatrixReordering<7>(matfile);
+		break;
+	default:
+		throw "Block size not supported!";
+	}
+
+	return 0;
 }

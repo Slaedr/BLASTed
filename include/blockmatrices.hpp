@@ -10,8 +10,8 @@
  * \date 2017-07-29
  */
 
-#ifndef BLOCKMATRICES_H
-#define BLOCKMATRICES_H
+#ifndef BLASTED_BLOCKMATRICES_H
+#define BLASTED_BLOCKMATRICES_H
 
 #include <iostream>
 #include <limits>
@@ -195,6 +195,9 @@ public:
 	/// Initialization without pre-allocation of any storage
 	BSRMatrix();
 
+	/// Deep copy another BSR matrix of the same block-size
+	BSRMatrix(const BSRMatrix<scalar,index,bs>& mat);
+
 	/// Allocates space for the matrix based on the supplied non-zero structure
 	/** \param[in] n_brows Total number of block rows
 	 * \param[in] bcinds Column indices, simply (deep) copied over into \ref bcolind
@@ -317,6 +320,9 @@ public:
 	/// Minimal initialzation; just sets number of async sweeps	
 	BSRMatrix();
 
+	/// Deep copy another CSR matrix
+	BSRMatrix(const BSRMatrix<scalar,index,1>& mat);
+
 	/// Allocates space for the matrix based on the supplied non-zero structure
 	/** \param[in] n_brows Total number of rows
 	 * \param[in] bcinds Column indices, simply copied over into \ref bcolind
@@ -337,6 +343,9 @@ public:
 	 */
 	BSRMatrix(const index nrows, index *const rptrs,
 	          index *const cinds, scalar *const values, index *const dinds);
+
+	/// Transfers the arrays of a raw CSR matrix to itself and nulls the raw matrix
+	BSRMatrix(RawBSRMatrix<scalar,index>& rmat);
 
 	/// De-allocates memory
 	virtual ~BSRMatrix();

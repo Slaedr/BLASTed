@@ -103,24 +103,6 @@ public:
 	virtual void gemv3(const scalar a, const scalar *const __restrict x, 
 			const scalar b, const scalar *const y,
 			scalar *const z) const = 0;
-
-	/*/// Meant to compute needed data for applying the Jacobi preconditioner
-	virtual void precJacobiSetup() = 0;
-	
-	/// Applies any of a class of Jacobi-type preconditioners
-	virtual void precJacobiApply(const scalar *const r, scalar *const __restrict z) const = 0;
-
-	/// Inverts diagonal blocks and allocates temporary array needed for Gauss-Seidel
-	virtual void precSGSSetup() = 0;
-
-	/// Applies a symmetric Gauss-Seidel type preconditioner
-	virtual void precSGSApply(const scalar *const r, scalar *const __restrict z) const = 0;
-
-	/// Computes a incomplete lower-upper factorization
-	virtual void precILUSetup() = 0;
-
-	/// Applies an LU factorization
-	virtual void precILUApply(const scalar *const r, scalar *const __restrict__ z) const = 0;*/
 };
 	
 /// Interface for a view of a matrix

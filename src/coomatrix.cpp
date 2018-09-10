@@ -445,7 +445,7 @@ template
 void COOMatrix<float,int>::convertToBSR<7,ColMajor>(RawBSRMatrix<float,int> *const bmat) const;
 
 template 
-BSRMatrix<double,int,3> constructBSRMatrixFromMatrixMarketFile(const std::string file);
+BSRMatrix<double,int,1> constructBSRMatrixFromMatrixMarketFile(const std::string file);
 template 
 BSRMatrix<double,int,7> constructBSRMatrixFromMatrixMarketFile(const std::string file);
 

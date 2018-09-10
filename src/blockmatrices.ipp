@@ -20,109 +20,12 @@
  */
 
 #include <type_traits>
-#include <blockmatrices.hpp>
-
 #include <Eigen/Core>
 
+#include <blockmatrices.hpp>
+#include "matvec_kernels.hpp"
+
 namespace blasted {
-
-/// Matrix-vector product for BSR matrices
-template <typename scalar, typename index, int bs, StorageOptions stor>
-inline
-void block_matrix_apply(const CRawBSRMatrix<scalar,index> *const mat,
-		const scalar *const xx, scalar *const __restrict yy)
-{
-	using Blk = Block_t<scalar,bs,stor>;
-	using Seg = Segment_t<scalar,bs>;
-	const Blk *data = reinterpret_cast<const Blk*>(mat->vals);
-	const Seg *x = reinterpret_cast<const Seg*>(xx);
-	Seg *y = reinterpret_cast<Seg*>(yy);
-
-#pragma omp parallel for default(shared)
-	for(index irow = 0; irow < mat->nbrows; irow++)
-	{
-		y[irow] = Vector<scalar>::Zero(bs);
-
-		// loop over non-zero blocks of this block-row
-		for(index jj = mat->browptr[irow]; jj < mat->browptr[irow+1]; jj++)
-		{
-			// multiply the blocks with corresponding sub-vectors
-			const index jcol = mat->bcolind[jj];
-			y[irow].noalias() += data[jj] * x[jcol];
-		}
-	}
-}
-
-/// Computes z := a Ax + by for  scalars a and b and vectors x and y
-/** 
- * \param[in] mat The BSR matrix
- * \warning xx must not alias zz.
- */
-template <typename scalar, typename index, int bs, StorageOptions stor>
-inline
-void block_gemv3(const CRawBSRMatrix<scalar,index> *const mat,
-		const scalar a, const scalar *const __restrict xx, 
-		const scalar b, const scalar *const yy, scalar *const zz)
-{
-	using Blk = Block_t<scalar,bs,stor>;
-	using Seg = Segment_t<scalar,bs>;
-	const Blk *data = reinterpret_cast<const Blk*>(mat->vals);
-	const Seg *x = reinterpret_cast<const Seg*>(xx);
-	const Seg *y = reinterpret_cast<const Seg*>(yy);
-	Seg *z = reinterpret_cast<Seg*>(zz);
-
-#pragma omp parallel for default(shared)
-	for(index irow = 0; irow < mat->nbrows; irow++)
-	{
-		z[irow] = b * y[irow];
-
-		// loop over non-zero blocks of this block-row
-		for(index jj = mat->browptr[irow]; jj < mat->browptr[irow+1]; jj++)
-		{
-			const index jcol = mat->bcolind[jj];
-			z[irow].noalias() += a * data[jj] * x[jcol];
-		}
-	}
-}
-
-/// Matrix-vector product for CSR matrices
-template <typename scalar, typename index>
-inline
-void matrix_apply(const CRawBSRMatrix<scalar,index> *const mat,
-		const scalar *const xx, scalar *const __restrict yy) 
-{
-#pragma omp parallel for default(shared)
-	for(index irow = 0; irow < mat->nbrows; irow++)
-	{
-		yy[irow] = 0;
-
-		for(index jj = mat->browptr[irow]; jj < mat->browptr[irow+1]; jj++)
-		{
-			yy[irow] += mat->vals[jj] * xx[mat->bcolind[jj]];
-		}
-	}
-}
-
-/// Computes z := a Ax + by for CSR matrix A, scalars a and b and vectors x and y
-template <typename scalar, typename index>
-inline
-void scalar_gemv3(const CRawBSRMatrix<scalar,index> *const mat,
-		const scalar a, const scalar *const __restrict xx, 
-		const scalar b, const scalar *const yy, scalar *const zz)
-{
-#pragma omp parallel for default(shared)
-	for(index irow = 0; irow < mat->nbrows; irow++)
-	{
-		zz[irow] = b * yy[irow];
-
-		for(index jj = mat->browptr[irow]; jj < mat->browptr[irow+1]; jj++)
-		{
-			zz[irow] += a * mat->vals[jj] * xx[mat->bcolind[jj]];
-		}
-	}
-}
-
-////////////////////////////////////////////////////////////////////////////////////////
 
 template<typename scalar, typename index>
 SRMatrixView<scalar,index>::SRMatrixView(const index n_brows, 
@@ -164,14 +67,14 @@ template <typename scalar, typename index, int bs, StorageOptions stor>
 void BSRMatrixView<scalar,index,bs,stor>::apply(const scalar *const xx,
                                        scalar *const __restrict yy) const
 {
-	block_matrix_apply<scalar,index,bs,stor>(&mat, xx, yy);
+	bsr_matrix_apply<scalar,index,bs,stor>(&mat, xx, yy);
 }
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
 void BSRMatrixView<scalar,index,bs,stor>::gemv3(const scalar a, const scalar *const __restrict xx, 
 		const scalar b, const scalar *const yy, scalar *const zz) const
 {
-	block_gemv3<scalar,index,bs,stor>(&mat, a, xx, b, yy, zz);
+	bsr_gemv3<scalar,index,bs,stor>(&mat, a, xx, b, yy, zz);
 }
 
 template <typename scalar, typename index>
@@ -205,14 +108,14 @@ template <typename scalar, typename index>
 void CSRMatrixView<scalar,index>::apply(const scalar *const xx,
                                        scalar *const __restrict yy) const
 {
-	matrix_apply(&mat, xx, yy);
+	csr_matrix_apply(&mat, xx, yy);
 }
 
 template <typename scalar, typename index>
 void CSRMatrixView<scalar,index>::gemv3(const scalar a, const scalar *const __restrict__ xx, 
 		const scalar b, const scalar *const yy, scalar *const zz) const
 {
-	scalar_gemv3(&mat, a, xx, b, yy, zz);
+	csr_gemv3(&mat, a, xx, b, yy, zz);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -266,6 +169,30 @@ BSRMatrix<scalar,index,bs>::BSRMatrix(RawBSRMatrix<scalar,index>& rmat)
 {
 	rmat.nbrows=0;
 	rmat.browptr = rmat.bcolind = rmat.diagind = nullptr; rmat.vals = nullptr;
+}
+
+template <typename scalar, typename index, int bs>
+BSRMatrix<scalar,index,bs>::BSRMatrix(const BSRMatrix<scalar,index,bs>& other)
+	: AbstractMatrix<scalar,index>(BSR), owner{true}
+{
+	constexpr int bs2 = bs*bs;
+	mat.nbrows = other.mat.nbrows;
+	mat.browptr = new index[mat.nbrows+1];
+	mat.bcolind = new index[other.mat.browptr[mat.nbrows]];
+	mat.diagind = new index[mat.nbrows];
+	mat.vals = new scalar[other.mat.browptr[mat.nbrows]*bs2];
+
+	for(index i = 0; i < mat.nbrows+1; i++)
+		mat.browptr[i] = other.mat.browptr[i];
+
+	for(index i = 0; i < mat.browptr[mat.nbrows]; i++) {
+		mat.bcolind[i] = other.mat.bcolind[i];
+		for(int k = 0; k < bs2; k++)
+			mat.vals[i*bs2 + k] = other.mat.vals[i*bs2+k];
+	}
+
+	for(index irow = 0; irow < mat.nbrows; irow++) 
+		mat.diagind[irow] = other.mat.diagind[irow];
 }
 
 template <typename scalar, typename index, int bs>
@@ -403,7 +330,7 @@ template <typename scalar, typename index, int bs>
 void BSRMatrix<scalar,index,bs>::apply(const scalar *const xx,
                                        scalar *const __restrict yy) const
 {
-	block_matrix_apply<scalar,index,bs,RowMajor>(
+	bsr_matrix_apply<scalar,index,bs,RowMajor>(
 			reinterpret_cast<const CRawBSRMatrix<scalar,index>*>(&mat), xx, yy);
 }
 
@@ -411,7 +338,7 @@ template <typename scalar, typename index, int bs>
 void BSRMatrix<scalar,index,bs>::gemv3(const scalar a, const scalar *const __restrict xx, 
 		const scalar b, const scalar *const yy, scalar *const zz) const
 {
-	block_gemv3<scalar,index,bs,RowMajor>(
+	bsr_gemv3<scalar,index,bs,RowMajor>(
 			reinterpret_cast<const CRawBSRMatrix<scalar,index>*>(&mat), 
 			a, xx, b, yy, zz);
 }
@@ -477,6 +404,36 @@ BSRMatrix<scalar,index,1>::BSRMatrix(const index nrows, index *const brptrs,
                                      index *const bcinds, scalar *const values, index *const diaginds)
 	: AbstractMatrix<scalar,index>(CSR), owner{false}, mat{brptrs,bcinds,values,diaginds,nrows}
 { }
+
+template <typename scalar, typename index>
+BSRMatrix<scalar,index,1>::BSRMatrix(RawBSRMatrix<scalar,index>& rmat)
+	: AbstractMatrix<scalar,index>(CSR), owner{true}, mat{rmat.browptr, rmat.bcolind, rmat.vals,
+			                                                  rmat.diagind, rmat.nbrows}
+{
+	rmat.nbrows=0;
+	rmat.browptr = rmat.bcolind = rmat.diagind = nullptr; rmat.vals = nullptr;
+}
+
+template <typename scalar, typename index>
+BSRMatrix<scalar,index,1>::BSRMatrix(const BSRMatrix<scalar,index,1>& other)
+	: AbstractMatrix<scalar,index>(CSR), owner{true}
+{
+	mat.nbrows = other.mat.nbrows;
+	mat.browptr = new index[mat.nbrows+1];
+	mat.bcolind = new index[other.mat.browptr[mat.nbrows]];
+	mat.diagind = new index[mat.nbrows];
+	mat.vals = new scalar[other.mat.browptr[mat.nbrows]];
+
+	for(index i = 0; i < mat.nbrows+1; i++)
+		mat.browptr[i] = other.mat.browptr[i];
+	for(index i = 0; i < mat.browptr[mat.nbrows]; i++) {
+		mat.bcolind[i] = other.mat.bcolind[i];
+		mat.vals[i] = other.mat.vals[i];
+	}
+
+	for(index irow = 0; irow < mat.nbrows; irow++) 
+		mat.diagind[irow] = other.mat.diagind[irow];
+}
 
 template <typename scalar, typename index>
 BSRMatrix<scalar,index,1>::~BSRMatrix()
@@ -631,14 +588,14 @@ template <typename scalar, typename index>
 void BSRMatrix<scalar,index,1>::apply(const scalar *const xx,
                                        scalar *const __restrict yy) const
 {
-	matrix_apply(reinterpret_cast<const CRawBSRMatrix<scalar,index>*>(&mat), xx, yy);
+	csr_matrix_apply(reinterpret_cast<const CRawBSRMatrix<scalar,index>*>(&mat), xx, yy);
 }
 
 template <typename scalar, typename index>
 void BSRMatrix<scalar,index,1>::gemv3(const scalar a, const scalar *const __restrict__ xx, 
 		const scalar b, const scalar *const yy, scalar *const zz) const
 {
-	scalar_gemv3(reinterpret_cast<const CRawBSRMatrix<scalar,index>*>(&mat), a, xx, b, yy, zz);
+	csr_gemv3(reinterpret_cast<const CRawBSRMatrix<scalar,index>*>(&mat), a, xx, b, yy, zz);
 }
 
 template <typename scalar, typename index>

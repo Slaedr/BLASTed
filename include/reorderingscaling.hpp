@@ -97,10 +97,12 @@ public:
 	/// Do-nothing constructor
 	ReorderingScaling();
 
-	/// Apply only scaling to a matrix
+	virtual ~ReorderingScaling();
+
+	/// Apply scaling to a matrix iff the scaling vectors (eg. \ref rowscale) have been allocated
 	virtual void applyScaling(RawBSRMatrix<scalar,index>& mat, const RSApplyMode mode) const;
 
-	/// Apply only scaling to a vector
+	/// Apply scaling to a vector only if \ref rowscale or \ref colscale have been allocated
 	/** \param vec The vector to scale
 	 * \param mode Whether to apply the scaling or its inverse
 	 * \param dir Whether to apply the row scaling or the column scaling
