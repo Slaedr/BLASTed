@@ -291,6 +291,16 @@ public:
 	/** First applies the ordering, and then the scaling.
 	 */
 	void reorderScale(const ReorderingScaling<scalar,index,bs>& rs, const RSApplyMode mode);
+
+	/// Checks equality with another BSR matrix
+	/** \return Returns 5 booleans corresponding to equality of, in order,
+	 * - Number of block-rows
+	 * - Block-row pointers (including total number of non-zero blocks)
+	 * - Block-column indices
+	 * - Non-zero values
+	 * - Positions of diaginal blocks
+	 */
+	std::array<bool,5> isEqual(const BSRMatrix<scalar,index,bs>& other) const;
 	
 	/// Returns the dimension (number of rows) of the square matrix
 	index dim() const { return mat.nbrows*bs; }
@@ -416,6 +426,16 @@ public:
 	/** First applies the ordering, and then the scaling.
 	 */
 	void reorderScale(const ReorderingScaling<scalar,index,1>& rs, const RSApplyMode mode);
+
+	/// Checks equality with another CSR matrix
+	/** \return Returns 5 booleans corresponding to equality of, in order,
+	 * - Number of rows
+	 * - row pointers (including total number of non-zero blocks)
+	 * - column indices
+	 * - Non-zero values
+	 * - Positions of diaginal entries
+	 */
+	std::array<bool,5> isEqual(const BSRMatrix<scalar,index,1>& other) const;
 	
 protected:
 	

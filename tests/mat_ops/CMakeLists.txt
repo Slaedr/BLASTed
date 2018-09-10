@@ -66,6 +66,9 @@ add_test(NAME ConvertCSRToCSC COMMAND ${SEQEXEC} ${SEQTASKS} testcscmatrix
   ${CMAKE_CURRENT_SOURCE_DIR}/input/small_block3_matrix.mtx 
   ${CMAKE_CURRENT_SOURCE_DIR}/input/small_block3_matrix.csc)
 
-add_test(NAME BSR7ApplyReordering COMMAND ${SEQEXEC} ${SEQTASKS} testreordering
-  ${CMAKE_CURRENT_SOURCE_DIR}/input/fluorem-dk01r/DK01R.mtx 7
+add_test(NAME BSR7ApplyRowReordering COMMAND ${SEQEXEC} ${SEQTASKS} testreordering
+  ${CMAKE_CURRENT_SOURCE_DIR}/input/fluorem-dk01r/DK01R.mtx 7 row
+  )
+add_test(NAME BSR7ApplyColReordering COMMAND ${SEQEXEC} ${SEQTASKS} testreordering
+  ${CMAKE_CURRENT_SOURCE_DIR}/input/fluorem-dk01r/DK01R.mtx 7 column
   )

@@ -20,12 +20,61 @@
  */
 
 #include <type_traits>
+#include <array>
 #include <Eigen/Core>
 
 #include <blockmatrices.hpp>
 #include "matvec_kernels.hpp"
 
 namespace blasted {
+
+/// Checks equality of two BSR/CSR matrices of the same block size
+/** \return Returns 5 booleans corresponding to equality of, in order,
+ * - Number of block-rows
+ * - Block-row pointers (including total number of non-zero blocks)
+ * - Block-column indices
+ * - Non-zero values
+ * - Positions of diaginal blocks
+ *
+ * \warning May fail if the two arguments have different block sizes.
+ */
+template<typename scalar, typename index, int bs>
+static std::array<bool,5> areEqual(const CRawBSRMatrix<scalar,index>& mat1,
+                                  const CRawBSRMatrix<scalar,index>& mat2)
+{
+	std::array<bool,5> isar;
+	for(int j = 0; j < 5; j++)
+		isar[j] = true;
+
+	if(mat1.nbrows != mat2.nbrows) {
+		isar[0] = false;
+		return isar;
+	}
+
+	if(mat1.browptr[mat1.nbrows] != mat2.browptr[mat2.nbrows]) {
+		isar[1] = false;
+		return isar;
+	}
+
+	for(index i = 0; i < mat1.nbrows; i++)
+	{
+		if(mat1.browptr[i] != mat2.browptr[i])
+			isar[1] = false;
+		if(mat1.diagind[i] != mat2.diagind[i])
+			isar[4] = false;
+	}
+
+	for(index jj = 0; jj < mat1.browptr[mat1.nbrows]; jj++)
+	{
+		if(mat1.bcolind[jj] != mat2.bcolind[jj])
+			isar[2] = false;
+		for(int k = 0; k < bs*bs; k++)
+			if(mat1.vals[jj*bs*bs+k] != mat2.vals[jj*bs*bs+k])
+				isar[3] = false;
+	}
+
+	return isar;
+}
 
 template<typename scalar, typename index>
 SRMatrixView<scalar,index>::SRMatrixView(const index n_brows, 
@@ -359,6 +408,13 @@ void BSRMatrix<scalar,index,bs>::reorderScale(const ReorderingScaling<scalar,ind
 	rs.applyScaling(mat,mode);
 }
 
+template <typename scalar, typename index, int bs>
+std::array<bool,5> BSRMatrix<scalar,index,bs>::isEqual(const BSRMatrix<scalar,index,bs>& other) const
+{
+	return areEqual<scalar,index,bs>(reinterpret_cast<const CRawBSRMatrix<scalar,index>&>(mat),
+	                                 reinterpret_cast<const CRawBSRMatrix<scalar,index>&>(other.mat));
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////
 
 template <typename scalar, typename index>
@@ -612,6 +668,13 @@ void BSRMatrix<scalar,index,1>::reorderScale(const ReorderingScaling<scalar,inde
 {
 	rs.applyOrdering(mat, mode);
 	rs.applyScaling(mat, mode);
+}
+
+template <typename scalar, typename index>
+std::array<bool,5> BSRMatrix<scalar,index,1>::isEqual(const BSRMatrix<scalar,index,1>& other) const
+{
+	return areEqual<scalar,index,1>(reinterpret_cast<const CRawBSRMatrix<scalar,index>&>(mat),
+	                                reinterpret_cast<const CRawBSRMatrix<scalar,index>&>(other.mat));
 }
 
 }
