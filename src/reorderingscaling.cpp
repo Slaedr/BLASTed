@@ -90,7 +90,7 @@ void Reordering<scalar,index,bs>::applyOrdering(RawBSRMatrix<scalar,index>& mat,
 		if(cp.size() > 0)
 		{
 			// move columns around
-#pragma omp parallel for default(shared) schedule(dynamic,200)
+			//#pragma omp parallel for default(shared) schedule(dynamic,200)
 			for(index i = 0; i < mat.nbrows; i++)
 			{
 				scalar *const mvals = &mat.vals[mat.browptr[i]*bs*bs];
@@ -105,6 +105,14 @@ void Reordering<scalar,index,bs>::applyOrdering(RawBSRMatrix<scalar,index>& mat,
 				{
 					const index pcind = cp[cind[jj]];
 					auto it = std::find(cind.begin(), cind.end(), pcind);
+
+					// If the transformed column index was not found, the new matrix has a zero
+					//  at the current column index (cind[jj]).
+					if(it == cind.end())
+						continue;
+
+					// If the transformed column index is found, the value at that index
+					//  needs to move to the current column index cind[jj].
 					const index pos = it - cind.begin();
 					mcolind[pos] = cind[jj];
 				}
@@ -158,23 +166,22 @@ void Reordering<scalar,index,bs>::applyOrdering(RawBSRMatrix<scalar,index>& mat,
 		if(cp.size() > 0)
 		{
 			// rename columns
-#pragma omp parallel for default(shared) schedule(dynamic,200)
+			//#pragma omp parallel for default(shared) schedule(dynamic,200)
 			for(index i = 0; i < mat.nbrows; i++)
 			{
-				const index rstart = mat.browptr[i];
-				const index rend = mat.browptr[i+1];
+				index *const rcolind = &mat.bcolind[mat.browptr[i]];
+				scalar *const rvals = &mat.vals[mat.browptr[i]*bs*bs];
+				const index rsize = mat.browptr[i+1]-mat.browptr[i];
 
-				std::vector<index> ocinds(rend-rstart); 
-				std::copy(&mat.bcolind[rstart], &mat.bcolind[rend], ocinds.begin());
+				// copy column indices of this row into a temp vector
+				const std::vector<index> ocinds(rcolind, rcolind+rsize);
 
 				// transform column indices with the forward permutation, so that
 				//  the actual matrix is transformed with the inverse permutation.
-				for(index jj = rstart; jj < rend; jj++)
-					mat.bcolind[jj] = cp[ocinds[jj-rstart]];
+				for(index jj = 0; jj < rsize; jj++)
+					rcolind[jj] = cp[ocinds[jj]];
 
-				internal::sortBlockInnerDimension<scalar,index,bs>(rend-rstart,
-				                                                   &mat.bcolind[rstart],
-				                                                   &mat.vals[rstart*bs*bs]);
+				internal::sortBlockInnerDimension<scalar,index,bs>(rsize, rcolind, rvals);
 			}
 		}
 	}
