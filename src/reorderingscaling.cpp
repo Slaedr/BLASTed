@@ -93,15 +93,14 @@ void Reordering<scalar,index,bs>::applyOrdering(RawBSRMatrix<scalar,index>& mat,
 			//#pragma omp parallel for default(shared) schedule(dynamic,200)
 			for(index i = 0; i < mat.nbrows; i++)
 			{
-				scalar *const mvals = &mat.vals[mat.browptr[i]*bs*bs];
-				index *const mcolind = &mat.bcolind[mat.browptr[i]];
-				const index browsz = (mat.browptr[i+1]-mat.browptr[i]);
+				scalar *const rvals = &mat.vals[mat.browptr[i]*bs*bs];
+				index *const rcolind = &mat.bcolind[mat.browptr[i]];
+				const index rowsz = (mat.browptr[i+1]-mat.browptr[i]);
 
-				std::vector<index> cind(browsz);
-				std::copy(mcolind, mcolind+browsz, cind.begin());
+				std::vector<index> cind(rcolind, rcolind+rowsz);
 
 				// Change column indices to reflect the new ordering
-				for(index jj = 0; jj < browsz; jj++)
+				for(index jj = 0; jj < rowsz; jj++)
 				{
 					const index pcind = cp[cind[jj]];
 					auto it = std::find(cind.begin(), cind.end(), pcind);
@@ -114,11 +113,11 @@ void Reordering<scalar,index,bs>::applyOrdering(RawBSRMatrix<scalar,index>& mat,
 					// If the transformed column index is found, the value at that index
 					//  needs to move to the current column index cind[jj].
 					const index pos = it - cind.begin();
-					mcolind[pos] = cind[jj];
+					rcolind[pos] = cind[jj];
 				}
 
 				// Sort both the column indices and the non-zero values according to the column indices
-				internal::sortBlockInnerDimension<scalar,index,bs>(browsz, mcolind, mvals);
+				internal::sortBlockInnerDimension<scalar,index,bs>(rowsz, rcolind, rvals);
 			}
 		}
 	}
