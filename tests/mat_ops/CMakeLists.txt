@@ -66,9 +66,22 @@ add_test(NAME ConvertCSRToCSC COMMAND ${SEQEXEC} ${SEQTASKS} testcscmatrix
   ${CMAKE_CURRENT_SOURCE_DIR}/input/small_block3_matrix.mtx 
   ${CMAKE_CURRENT_SOURCE_DIR}/input/small_block3_matrix.csc)
 
+add_test(NAME B7VecApplyRowReordering COMMAND ${SEQEXEC} ${SEQTASKS} testreordering
+  ${CMAKE_CURRENT_SOURCE_DIR}/input/fluorem-dk01r/DK01R_b.mtx 7 row vector
+  )
+add_test(NAME B7VecApplyColReordering COMMAND ${SEQEXEC} ${SEQTASKS} testreordering
+  ${CMAKE_CURRENT_SOURCE_DIR}/input/fluorem-dk01r/DK01R_b.mtx 7 column vector
+  )
+add_test(NAME B1VecApplyRowReordering COMMAND ${SEQEXEC} ${SEQTASKS} testreordering
+  ${CMAKE_CURRENT_SOURCE_DIR}/input/fluorem-dk01r/DK01R_x.mtx 1 row vector
+  )
+add_test(NAME B1VecApplyColReordering COMMAND ${SEQEXEC} ${SEQTASKS} testreordering
+  ${CMAKE_CURRENT_SOURCE_DIR}/input/fluorem-dk01r/DK01R_x.mtx 1 column vector
+  )
+
 add_test(NAME BSR7ApplyRowReordering COMMAND ${SEQEXEC} ${SEQTASKS} testreordering
-  ${CMAKE_CURRENT_SOURCE_DIR}/input/fluorem-dk01r/DK01R.mtx 7 row
+  ${CMAKE_CURRENT_SOURCE_DIR}/input/fluorem-dk01r/DK01R.mtx 7 row matrix
   )
 add_test(NAME BSR7ApplyColReordering COMMAND ${SEQEXEC} ${SEQTASKS} testreordering
-  ${CMAKE_CURRENT_SOURCE_DIR}/input/fluorem-dk01r/DK01R.mtx 7 column
+  ${CMAKE_CURRENT_SOURCE_DIR}/input/fluorem-dk01r/DK01R.mtx 7 column matrix
   )

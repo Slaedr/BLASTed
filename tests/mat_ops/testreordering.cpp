@@ -35,6 +35,38 @@ std::vector<int> generateOrdering(const int N)
 	return ord;
 }
 
+template <int bs>
+int testVectorReordering(const std::string vecfile, const std::string rsdir)
+{
+	const std::vector<double> ovec = readDenseMatrixMarket<double>(vecfile);
+	const int nbrows = static_cast<int>(ovec.size())/bs;
+
+	std::vector<int> ord1 = generateOrdering(nbrows);
+	std::vector<int> ord2(nbrows);
+	for(int i = 0; i < nbrows; i++)
+		ord2[i] = i;
+
+	std::vector<double> vec1(ovec);
+
+	TrivialRS<bs> rs;
+	if(rsdir == "row")
+		rs.setOrdering(&ord1[0],&ord2[0],nbrows);
+	else if(rsdir == "column")
+		rs.setOrdering(&ord2[0],&ord1[0],nbrows);
+	else if(rsdir == "both")
+		rs.setOrdering(&ord1[0],&ord1[0],nbrows);
+
+	const RSApplyDir dir = rsdir == "row" ? ROW : COLUMN;
+
+	rs.applyOrdering(&vec1[0], FORWARD, dir);
+	rs.applyOrdering(&vec1[0], INVERSE, dir);
+
+	for(int i = 0; i < nbrows*bs; i++)
+		assert(vec1[i] == ovec[i]);
+
+	return 0;
+}
+
 /** Verify an ordering by applying it followed by applying its inverse
  * and checking if the result is equal to the original matrix.
  */
@@ -75,24 +107,38 @@ int testMatrixReordering(const std::string matfile, const std::string rsdir)
 
 int main(int argc, char *argv[])
 {
-	if(argc < 4) {
-		std::cout << "Need mtx file name and block size!\n";
+	if(argc < 5) {
+		std::cout << "Need mtx file name, block size, transform direction and matrix/vector.\n";
 		std::exit(-1);
 	}
 
 	std::string matfile = argv[1];
 	const int blocksize = std::stoi(argv[2]);
 	const std::string rsdir = argv[3];
+	const std::string matorvec = argv[4];
 
-	switch(blocksize) {
-	case(1):
-		testMatrixReordering<1>(matfile, rsdir);
-		break;
-	case(7):
-		testMatrixReordering<7>(matfile, rsdir);
-		break;
-	default:
-		throw "Block size not supported!";
+	if(matorvec == "matrix")
+		switch(blocksize) {
+		case(1):
+			testMatrixReordering<1>(matfile, rsdir);
+			break;
+		case(7):
+			testMatrixReordering<7>(matfile, rsdir);
+			break;
+		default:
+			throw "Block size not supported!";
+		}
+	else {
+		switch(blocksize) {
+		case(1):
+			testVectorReordering<1>(matfile, rsdir);
+			break;
+		case(7):
+			testVectorReordering<7>(matfile, rsdir);
+			break;
+		default:
+			throw "Block size not supported!";
+		}
 	}
 
 	return 0;

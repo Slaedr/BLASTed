@@ -97,7 +97,7 @@ void Reordering<scalar,index,bs>::applyOrdering(RawBSRMatrix<scalar,index>& mat,
 				index *const rcolind = &mat.bcolind[mat.browptr[i]];
 				const index rowsz = (mat.browptr[i+1]-mat.browptr[i]);
 
-				std::vector<index> cind(rcolind, rcolind+rowsz);
+				const std::vector<index> cind(rcolind, rcolind+rowsz);
 
 				// Change column indices to reflect the new ordering
 				for(index jj = 0; jj < rowsz; jj++)
