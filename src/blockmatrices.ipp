@@ -39,37 +39,37 @@ namespace blasted {
  * \warning May fail if the two arguments have different block sizes.
  */
 template<typename scalar, typename index, int bs>
-static std::array<bool,5> areEqual(const CRawBSRMatrix<scalar,index>& mat1,
-                                  const CRawBSRMatrix<scalar,index>& mat2)
+static std::array<bool,5> areEqual(const CRawBSRMatrix<scalar,index> *const mat1,
+                                  const CRawBSRMatrix<scalar,index> *const mat2)
 {
 	std::array<bool,5> isar;
 	for(int j = 0; j < 5; j++)
 		isar[j] = true;
 
-	if(mat1.nbrows != mat2.nbrows) {
+	if(mat1->nbrows != mat2->nbrows) {
 		isar[0] = false;
 		return isar;
 	}
 
-	if(mat1.browptr[mat1.nbrows] != mat2.browptr[mat2.nbrows]) {
+	if(mat1->browptr[mat1->nbrows] != mat2->browptr[mat2->nbrows]) {
 		isar[1] = false;
 		return isar;
 	}
 
-	for(index i = 0; i < mat1.nbrows; i++)
+	for(index i = 0; i < mat1->nbrows; i++)
 	{
-		if(mat1.browptr[i] != mat2.browptr[i])
+		if(mat1->browptr[i] != mat2->browptr[i])
 			isar[1] = false;
-		if(mat1.diagind[i] != mat2.diagind[i])
+		if(mat1->diagind[i] != mat2->diagind[i])
 			isar[4] = false;
 	}
 
-	for(index jj = 0; jj < mat1.browptr[mat1.nbrows]; jj++)
+	for(index jj = 0; jj < mat1->browptr[mat1->nbrows]; jj++)
 	{
-		if(mat1.bcolind[jj] != mat2.bcolind[jj])
+		if(mat1->bcolind[jj] != mat2->bcolind[jj])
 			isar[2] = false;
 		for(int k = 0; k < bs*bs; k++)
-			if(mat1.vals[jj*bs*bs+k] != mat2.vals[jj*bs*bs+k])
+			if(mat1->vals[jj*bs*bs+k] != mat2->vals[jj*bs*bs+k])
 				isar[3] = false;
 	}
 
@@ -411,8 +411,8 @@ void BSRMatrix<scalar,index,bs>::reorderScale(const ReorderingScaling<scalar,ind
 template <typename scalar, typename index, int bs>
 std::array<bool,5> BSRMatrix<scalar,index,bs>::isEqual(const BSRMatrix<scalar,index,bs>& other) const
 {
-	return areEqual<scalar,index,bs>(reinterpret_cast<const CRawBSRMatrix<scalar,index>&>(mat),
-	                                 reinterpret_cast<const CRawBSRMatrix<scalar,index>&>(other.mat));
+	return areEqual<scalar,index,bs>(reinterpret_cast<const CRawBSRMatrix<scalar,index>*>(&mat),
+	                                 reinterpret_cast<const CRawBSRMatrix<scalar,index>*>(&other.mat));
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////
@@ -673,8 +673,8 @@ void BSRMatrix<scalar,index,1>::reorderScale(const ReorderingScaling<scalar,inde
 template <typename scalar, typename index>
 std::array<bool,5> BSRMatrix<scalar,index,1>::isEqual(const BSRMatrix<scalar,index,1>& other) const
 {
-	return areEqual<scalar,index,1>(reinterpret_cast<const CRawBSRMatrix<scalar,index>&>(mat),
-	                                reinterpret_cast<const CRawBSRMatrix<scalar,index>&>(other.mat));
+	return areEqual<scalar,index,1>(reinterpret_cast<const CRawBSRMatrix<scalar,index>*>(&mat),
+	                                reinterpret_cast<const CRawBSRMatrix<scalar,index>*>(&other.mat));
 }
 
 }
