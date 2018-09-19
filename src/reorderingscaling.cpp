@@ -235,9 +235,9 @@ void Reordering<scalar,index,bs>::applyOrdering(scalar *const vec,
 	}
 }
 
-template class ReorderingScaling<double,int,1>;
-template class ReorderingScaling<double,int,4>;
-template class ReorderingScaling<double,int,7>;
+template class Reordering<double,int,1>;
+template class Reordering<double,int,4>;
+template class Reordering<double,int,7>;
 
 template <typename scalar, typename index, int bs>
 ReorderingScaling<scalar,index,bs>::ReorderingScaling()
@@ -259,18 +259,20 @@ void ReorderingScaling<scalar,index,bs>::applyScaling(RawBSRMatrix<scalar,index>
 #pragma omp parallel for default(shared) schedule(dynamic, 200)
 			for(index irow = 0; irow < mat.nbrows; irow++)
 			{
+				const scalar rowscaler = rowscale[irow];
 				for(index jj = mat.browptr[irow]; jj < mat.browptr[irow+1]; jj++)
 					for(int k = 0; k < bs*bs; k++)
-						mat.vals[jj*bs*bs + k] *= rowscale[irow];
+						mat.vals[jj*bs*bs + k] *= rowscaler;
 			}
 		}
 		else {
 #pragma omp parallel for default(shared) schedule(dynamic, 200)
 			for(index irow = 0; irow < mat.nbrows; irow++)
 			{
+				const scalar rowscaler = rowscale[irow];
 				for(index jj = mat.browptr[irow]; jj < mat.browptr[irow+1]; jj++)
 					for(int k = 0; k < bs*bs; k++)
-						mat.vals[jj*bs*bs + k] /= rowscale[irow];
+						mat.vals[jj*bs*bs + k] /= rowscaler;
 			}
 		}
 	}
@@ -283,9 +285,9 @@ void ReorderingScaling<scalar,index,bs>::applyScaling(RawBSRMatrix<scalar,index>
 			for(index irow = 0; irow < mat.nbrows; irow++)
 			{
 				for(index jj = mat.browptr[irow]; jj < mat.browptr[irow+1]; jj++) {
-					const index column_index = mat.bcolind[jj];
+					const scalar colscaler = colscale[mat.bcolind[jj]];
 					for(int k = 0; k < bs*bs; k++)
-						mat.vals[jj*bs*bs + k] *= colscale[column_index];
+						mat.vals[jj*bs*bs + k] *= colscaler;
 				}
 			}
 		}
@@ -294,9 +296,9 @@ void ReorderingScaling<scalar,index,bs>::applyScaling(RawBSRMatrix<scalar,index>
 			for(index irow = 0; irow < mat.nbrows; irow++)
 			{
 				for(index jj = mat.browptr[irow]; jj < mat.browptr[irow+1]; jj++) {
-					const index column_index = mat.bcolind[jj];
+					const scalar colscaler = colscale[mat.bcolind[jj]];
 					for(int k = 0; k < bs*bs; k++)
-						mat.vals[jj*bs*bs + k] /= colscale[column_index];
+						mat.vals[jj*bs*bs + k] /= colscaler;
 				}
 			}
 		}
@@ -349,9 +351,9 @@ void ReorderingScaling<scalar,index,bs>::applyScaling(scalar *const vec, const R
 	}
 }
 
-template class Reordering<double,int,1>;
-template class Reordering<double,int,4>;
-template class Reordering<double,int,7>;
+template class ReorderingScaling<double,int,1>;
+template class ReorderingScaling<double,int,4>;
+template class ReorderingScaling<double,int,7>;
 
 }
 
