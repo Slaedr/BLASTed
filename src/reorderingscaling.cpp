@@ -99,8 +99,7 @@ void Reordering<scalar,index,bs>::applyOrdering(RawBSRMatrix<scalar,index>& mat,
 
 		if(cp.size() > 0)
 		{
-			// move columns around
-			//#pragma omp parallel for default(shared) schedule(dynamic,200)
+#pragma omp parallel for default(shared) schedule(dynamic,200)
 			for(index i = 0; i < mat.nbrows; i++)
 			{
 				index *const rcolind = &mat.bcolind[mat.browptr[i]];
@@ -111,7 +110,7 @@ void Reordering<scalar,index,bs>::applyOrdering(RawBSRMatrix<scalar,index>& mat,
 				const std::vector<index> ocinds(rcolind, rcolind+rsize);
 
 				// transform column indices with the inverse permutation, so that
-				//  the actual matrix is transformed with the forward permutation.
+				//  the non-zero values transformed with the forward permutation.
 				for(index jj = 0; jj < rsize; jj++)
 					rcolind[jj] = icp[ocinds[jj]];
 
@@ -145,7 +144,7 @@ void Reordering<scalar,index,bs>::applyOrdering(RawBSRMatrix<scalar,index>& mat,
 				}
 			}
 
-			// copy back
+			// copy back - NOT parallel
 			mat.browptr[0] = 0;
 			for(index i = 0; i < mat.nbrows; i++)
 			{
@@ -163,7 +162,7 @@ void Reordering<scalar,index,bs>::applyOrdering(RawBSRMatrix<scalar,index>& mat,
 		if(cp.size() > 0)
 		{
 			// rename columns
-			//#pragma omp parallel for default(shared) schedule(dynamic,200)
+#pragma omp parallel for default(shared) schedule(dynamic,200)
 			for(index i = 0; i < mat.nbrows; i++)
 			{
 				index *const rcolind = &mat.bcolind[mat.browptr[i]];
