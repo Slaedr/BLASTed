@@ -238,6 +238,41 @@ void block_ilu0_apply( const CRawBSRMatrix<scalar,index> *const mat,
 	// No correction of z needed because no scaling
 }
 
+template <typename scalar, typename index, int bs, StorageOptions stor>
+void AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>::setup_storage()
+{
+#ifdef DEBUG
+	std::printf(" BSRMatrixView: precILUSetup(): First-time setup\n");
+#endif
+
+	// Allocate lu
+	Eigen::aligned_allocator<scalar> alloc;
+	iluvals = alloc.allocate(mat.browptr[mat.nbrows]*bs*bs);
+#pragma omp parallel for simd default(shared)
+	for(index j = 0; j < mat.browptr[mat.nbrows]*bs*bs; j++) {
+		iluvals[j] = mat.vals[j];
+	}
+
+	// intermediate array for the solve part
+	if(!ytemp) {
+		ytemp = new scalar[mat.nbrows*bs];
+#pragma omp parallel for simd default(shared)
+		for(index i = 0; i < mat.nbrows*bs; i++)
+		{
+			ytemp[i] = 0;
+		}
+	}
+	else
+		std::cout << "! AsyncBlockILU0_SRPreconditioner: Temp vector is already allocated!\n";
+
+	if(rowscale) {
+		if(!scale)
+			scale = new scalar[mat.nbrows*bs*bs];
+		else
+			std::cout << "! AsyncBlockILU0_SRPreconditioner: scale was already allocated!\n";
+	}
+}
+
 /** There is currently no pre-scaling of the original matrix A, unlike the point ILU0.
  * It will probably be too expensive to carry out a row-column scaling like in the point case.
  * However, we could try a row scaling.
@@ -246,38 +281,7 @@ template <typename scalar, typename index, int bs, StorageOptions stor>
 void AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>::compute()
 {
 	if(!iluvals)
-	{
-#ifdef DEBUG
-		std::printf(" BSRMatrixView: precILUSetup(): First-time setup\n");
-#endif
-
-		// Allocate lu
-		Eigen::aligned_allocator<scalar> alloc;
-		iluvals = alloc.allocate(mat.browptr[mat.nbrows]*bs*bs);
-#pragma omp parallel for simd default(shared)
-		for(index j = 0; j < mat.browptr[mat.nbrows]*bs*bs; j++) {
-			iluvals[j] = mat.vals[j];
-		}
-
-		// intermediate array for the solve part
-		if(!ytemp) {
-			ytemp = new scalar[mat.nbrows*bs];
-#pragma omp parallel for simd default(shared)
-			for(index i = 0; i < mat.nbrows*bs; i++)
-			{
-				ytemp[i] = 0;
-			}
-		}
-		else
-			std::cout << "! AsyncBlockILU0_SRPreconditioner: Temp vector is already allocated!\n";
-
-		if(rowscale) {
-			if(!scale)
-				scale = new scalar[mat.nbrows*bs*bs];
-			else
-				std::cout << "! AsyncBlockILU0_SRPreconditioner: scale was already allocated!\n";
-		}
-	}
+		setup_storage();
 
 	block_ilu0_setup<scalar,index,bs,stor>
 	  (&mat, nbuildsweeps, thread_chunk_size, threadedfactor, iluvals);
@@ -452,38 +456,44 @@ void scalar_ilu0_apply(const CRawBSRMatrix<scalar,index> *const mat,
 }
 
 template <typename scalar, typename index>
-void AsyncILU0_SRPreconditioner<scalar,index>::compute()
+void AsyncILU0_SRPreconditioner<scalar,index>::setup_storage(const bool scaling)
 {
-	if(!iluvals)
-	{
 #ifdef DEBUG
-		std::printf(" AsyncILU0 (scalar): First-time setup\n");
+	std::printf(" AsyncILU0 (scalar): First-time setup\n");
 #endif
 
-		// Allocate lu
-		iluvals = new scalar[mat.browptr[mat.nbrows]];
+	// Allocate lu
+	iluvals = new scalar[mat.browptr[mat.nbrows]];
 #pragma omp parallel for simd default(shared)
-		for(int j = 0; j < mat.browptr[mat.nbrows]; j++) {
-			iluvals[j] = mat.vals[j];
-		}
+	for(int j = 0; j < mat.browptr[mat.nbrows]; j++) {
+		iluvals[j] = mat.vals[j];
+	}
 
-		// intermediate array for the solve part
-		if(!ytemp) {
-			ytemp = new scalar[mat.nbrows];
+	// intermediate array for the solve part
+	if(!ytemp) {
+		ytemp = new scalar[mat.nbrows];
 #pragma omp parallel for simd default(shared)
-			for(index i = 0; i < mat.nbrows; i++)
-			{
-				ytemp[i] = 0;
-			}
+		for(index i = 0; i < mat.nbrows; i++)
+		{
+			ytemp[i] = 0;
 		}
-		else
-			std::cout << "! BSRMatrixView<1>: precILUSetup(): Temp vector is already allocated!\n";
-		
+	}
+	else
+		std::cout << "! AsyncILU0: setup_storage(): Temp vector is already allocated!\n";
+
+	if(scaling) {
 		if(!scale)
 			scale = new scalar[mat.nbrows];	
 		else
-			std::cout << "! BSRMatrixView<1>: precILUSetup(): Scale vector is already allocated!\n";
+			std::cout << "! AsyncILU0: setup_storage(): Scale vector is already allocated!\n";
 	}
+}
+
+template <typename scalar, typename index>
+void AsyncILU0_SRPreconditioner<scalar,index>::compute()
+{
+	if(!iluvals)
+		setup_storage(true);
 
 	scalar_ilu0_setup(&mat, nbuildsweeps, thread_chunk_size, threadedfactor, iluvals, scale);
 }
@@ -494,6 +504,32 @@ void AsyncILU0_SRPreconditioner<scalar,index>::apply(const scalar *const __restr
 {
 	scalar_ilu0_apply(&mat, iluvals, scale, ytemp, napplysweeps, thread_chunk_size, threadedapply,
 	                  ra, za);
+}
+
+template <typename scalar, typename index>
+RSAsyncILU0_SRPreconditioner<scalar,index>::
+RSAsyncILU0_SRPreconditioner(const ReorderingScaling<scalar,index,1>& reorderscale,
+                             const int nbuildsweeps, const int napplysweeps,
+                             const bool threadedfactor, const bool threadedapply)
+	: AsyncILU0_SRPreconditioner<scalar,index>(nbuildsweeps,napplysweeps,threadedfactor, threadedapply),
+	rs{reorderscale}
+{ }
+
+template <typename scalar, typename index>
+RSAsyncILU0_SRPreconditioner<scalar,index>::~RSAsyncILU0_SRPreconditioner()
+{ }
+
+template <typename scalar, typename index>
+void RSAsyncILU0_SRPreconditioner<scalar,index>::compute()
+{
+	if(!iluvals)
+		setup_storage(false);
+}
+
+template <typename scalar, typename index>
+void RSAsyncILU0_SRPreconditioner<scalar,index>::apply(const scalar *const x,
+                                                       scalar *const __restrict y) const
+{
 }
 
 // instantiations
