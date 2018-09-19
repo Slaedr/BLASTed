@@ -84,6 +84,10 @@ protected:
 	std::vector<index> rp;
 	/// Column permutation vector
 	std::vector<index> cp;
+	/// Inverse row permutation vector
+	std::vector<index> irp;
+	/// Inverse column permutation vector
+	std::vector<index> icp;
 };
 
 /// Abstract handler for computing a reordering and a scaling of a matrix stored in sparse-row format

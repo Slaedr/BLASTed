@@ -40,11 +40,21 @@ void Reordering<scalar,index,bs>::setOrdering(const index *const rord, const ind
 		rp.resize(length);
 		for(index i = 0; i < length; i++)
 			rp[i] = rord[i];
+
+		// compute inverse ordering
+		irp.resize(length);
+		for(index i = 0; i < length; i++)
+			irp[rord[i]] = i;
 	}
+
 	if(cord) {
 		cp.resize(length);
 		for(index i = 0; i < length; i++)
 			cp[i] = cord[i];
+
+		icp.resize(length);
+		for(index i = 0; i < length; i++)
+			icp[cord[i]] = i;
 	}
 }
 
@@ -93,31 +103,19 @@ void Reordering<scalar,index,bs>::applyOrdering(RawBSRMatrix<scalar,index>& mat,
 			//#pragma omp parallel for default(shared) schedule(dynamic,200)
 			for(index i = 0; i < mat.nbrows; i++)
 			{
-				scalar *const rvals = &mat.vals[mat.browptr[i]*bs*bs];
 				index *const rcolind = &mat.bcolind[mat.browptr[i]];
-				const index rowsz = (mat.browptr[i+1]-mat.browptr[i]);
+				scalar *const rvals = &mat.vals[mat.browptr[i]*bs*bs];
+				const index rsize = mat.browptr[i+1]-mat.browptr[i];
 
-				const std::vector<index> cind(rcolind, rcolind+rowsz);
+				// copy column indices of this row into a temp vector
+				const std::vector<index> ocinds(rcolind, rcolind+rsize);
 
-				// Change column indices to reflect the new ordering
-				for(index jj = 0; jj < rowsz; jj++)
-				{
-					const index pcind = cp[cind[jj]];
-					auto it = std::find(cind.begin(), cind.end(), pcind);
+				// transform column indices with the inverse permutation, so that
+				//  the actual matrix is transformed with the forward permutation.
+				for(index jj = 0; jj < rsize; jj++)
+					rcolind[jj] = icp[ocinds[jj]];
 
-					// If the transformed column index was not found, the new matrix has a zero
-					//  at the current column index (cind[jj]).
-					if(it == cind.end())
-						continue;
-
-					// If the transformed column index is found, the value at that index
-					//  needs to move to the current column index cind[jj].
-					const index pos = it - cind.begin();
-					rcolind[pos] = cind[jj];
-				}
-
-				// Sort both the column indices and the non-zero values according to the column indices
-				internal::sortBlockInnerDimension<scalar,index,bs>(rowsz, rcolind, rvals);
+				internal::sortBlockInnerDimension<scalar,index,bs>(rsize, rcolind, rvals);
 			}
 		}
 	}
