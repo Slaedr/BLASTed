@@ -1,0 +1,150 @@
+/** \file
+ * \brief Implementation(s) of asynchronous block-ILU factorization
+ * \author Aditya Kashi
+ * 
+ * This file is part of BLASTed.
+ *   BLASTed is free software: you can redistribute it and/or modify
+ *   it under the terms of the GNU General Public License as published by
+ *   the Free Software Foundation, either version 3 of the License, or
+ *   (at your option) any later version.
+ *
+ *   BLASTed is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with BLASTed.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include <Eigen/LU>
+#include "async_blockilu_factor.hpp"
+#include "helper_algorithms.hpp"
+
+namespace blasted {
+
+template <typename scalar, typename index, int bs, StorageOptions stor>
+void block_ilu0_factorize(const CRawBSRMatrix<scalar,index> *const mat,
+                          const int nbuildsweeps, const int thread_chunk_size, const bool usethreads,
+                          scalar *const __restrict iluvals)
+{
+	using NABlk = Block_t<scalar,bs,static_cast<StorageOptions>(stor|Eigen::DontAlign)>;
+	using Blk = Block_t<scalar,bs,stor>;
+	
+	const NABlk *mvals = reinterpret_cast<const NABlk*>(mat->vals);
+	Blk *ilu = reinterpret_cast<Blk*>(iluvals);
+
+	// Initial guess for LU factors
+
+	Eigen::aligned_allocator<Blk> alloc;
+	Blk *dblks = alloc.allocate(mat->nbrows);
+
+	// Initialize ilu to original matrix
+#pragma omp parallel for default (shared)
+	for(index i = 0; i < mat->nbrows; i++) {
+		dblks[i].noalias() = mvals[mat->diagind[i]].inverse();
+		for(index j = mat->browptr[i]; j < mat->browptr[i+1]; j++)
+			ilu[j] = mvals[j];
+	}
+
+	// Scale the (strictly) lower block-triangular part
+	//  by the inverses of the diagonal blocks from the right
+#pragma omp parallel for default (shared)
+	for(index i = 0; i < mat->nbrows; i++) {
+		for(index j = mat->browptr[i]; j < mat->diagind[i]; j++)
+			ilu[j] = ilu[j]*dblks[mat->bcolind[j]].eval();
+	}
+
+	alloc.deallocate(dblks, mat->nbrows);
+
+	// compute L and U
+	/* Note that in the factorization loop, the variable pos is initially set negative.
+	 * If index is an unsigned type, that might be a problem. However,
+	 * it should usually be okay as we are only comparing equality later.
+	 */
+	
+	for(int isweep = 0; isweep < nbuildsweeps; isweep++)
+	{
+#pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size) if(usethreads)
+		for(index irow = 0; irow < mat->nbrows; irow++)
+		{
+			for(index j = mat->browptr[irow]; j < mat->browptr[irow+1]; j++)
+			{
+				if(irow > mat->bcolind[j])
+				{
+					Matrix<scalar,bs,bs> sum = mvals[j];
+
+					for( index k = mat->browptr[irow]; 
+						 (k < mat->browptr[irow+1]) && (mat->bcolind[k] < mat->bcolind[j]); 
+						 k++
+					   ) 
+					{
+						index pos = -1;
+						internal::inner_search<index>(mat->bcolind,
+						                              mat->diagind[mat->bcolind[k]],
+						                              mat->browptr[mat->bcolind[k]+1],
+						                              mat->bcolind[j], &pos );
+
+						if(pos == -1) continue;
+
+						sum.noalias() -= ilu[k]*ilu[pos];
+					}
+
+					ilu[j].noalias() = sum * ilu[mat->diagind[mat->bcolind[j]]].inverse();
+				}
+				else
+				{
+					// compute u_ij
+					ilu[j] = mvals[j];
+
+					for(index k = mat->browptr[irow]; 
+							(k < mat->browptr[irow+1]) && (mat->bcolind[k] < irow); k++) 
+					{
+						index pos = -1;
+
+						/* search for column index mat->bcolind[j],
+						 * between the diagonal index of row mat->bcolind[k] 
+						 * and the last index of row bcolind[k]
+						 */
+						internal::inner_search(mat->bcolind, mat->diagind[mat->bcolind[k]], 
+						                       mat->browptr[mat->bcolind[k]+1], mat->bcolind[j], &pos);
+
+						if(pos == -1) continue;
+
+						ilu[j].noalias() -= ilu[k]*ilu[pos];
+					}
+				}
+			}
+		}
+	}
+
+	// invert diagonal blocks
+#pragma omp parallel for default(shared)
+	for(index irow = 0; irow < mat->nbrows; irow++)
+		ilu[mat->diagind[irow]] = ilu[mat->diagind[irow]].inverse().eval();
+}
+
+template void
+block_ilu0_factorize<double,int,4,ColMajor> (const CRawBSRMatrix<double,int> *const mat,
+                                             const int nbuildsweeps, const int thread_chunk_size,
+                                             const bool usethreads,
+                                             double *const __restrict iluvals);
+template void
+block_ilu0_factorize<double,int,5,ColMajor> (const CRawBSRMatrix<double,int> *const mat,
+                                             const int nbuildsweeps, const int thread_chunk_size,
+                                             const bool usethreads,
+                                             double *const __restrict iluvals);
+template void
+block_ilu0_factorize<double,int,4,RowMajor> (const CRawBSRMatrix<double,int> *const mat,
+                                             const int nbuildsweeps, const int thread_chunk_size,
+                                             const bool usethreads,
+                                             double *const __restrict iluvals);
+
+#ifdef BUILD_BLOCK_SIZE
+template void block_ilu0_factorize<double,int,BUILD_BLOCK_SIZE,ColMajor>
+(const CRawBSRMatrix<double,int> *const mat,
+ const int nbuildsweeps, const int thread_chunk_size, const bool usethreads,
+ double *const __restrict iluvals);
+#endif
+
+}

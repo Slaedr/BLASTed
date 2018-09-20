@@ -1,10 +1,10 @@
 /** \file
- * \brief Kernels for matrix-vector products etc
+ * \brief Functions for matrix-vector products etc
  * \author Aditya Kashi
  */
 
-#ifndef BLASTED_MATVEC_KERNELS_H
-#define BLASTED_MATVEC_KERNELS_H
+#ifndef BLASTED_MATVECS_H
+#define BLASTED_MATVECS_H
 
 #include <Eigen/Core>
 #include "srmatrixdefs.hpp"

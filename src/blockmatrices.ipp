@@ -24,7 +24,7 @@
 #include <Eigen/Core>
 
 #include <blockmatrices.hpp>
-#include "matvec_kernels.hpp"
+#include "matvecs.hpp"
 
 namespace blasted {
 

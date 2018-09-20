@@ -1,11 +1,11 @@
-/** \file kernels_ilu0.hpp
- * \brief Kernels for ILU0 preconditioning operations
+/** \file kernels_ilu_apply.hpp
+ * \brief Kernels for ILU application operations
  * \author Aditya Kashi
  * \date 2018-03
  */
 
-#ifndef BLASTED_KERNELS_ILU0_H
-#define BLASTED_KERNELS_ILU0_H
+#ifndef BLASTED_KERNELS_ILU_APPLY_H
+#define BLASTED_KERNELS_ILU_APPLY_H
 
 #include <Eigen/Core>
 

@@ -17,7 +17,7 @@
  *   along with BLASTed.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "matvec_kernels.hpp"
+#include "matvecs.hpp"
 
 namespace blasted {
 

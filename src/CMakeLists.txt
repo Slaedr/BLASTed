@@ -9,15 +9,18 @@ set_property(TARGET helper PROPERTY POSITION_INDEPENDENT_CODE ON)
 add_library(orderingscaling reorderingscaling.cpp)
 set_property(TARGET orderingscaling PROPERTY POSITION_INDEPENDENT_CODE ON)
 
-add_library(blockmatrices csrmatrix.cpp bsrmatrix.cpp matvec_kernels.cpp scmatrix.cpp)
+add_library(blockmatrices csrmatrix.cpp bsrmatrix.cpp matvecs.cpp scmatrix.cpp)
 set_property(TARGET blockmatrices PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 add_library(coomatrix coomatrix.cpp)
 target_link_libraries(coomatrix blockmatrices)
 set_property(TARGET coomatrix PROPERTY POSITION_INDEPENDENT_CODE ON)
 
-add_library(solverops solverfactory.cpp relaxation_jacobi.cpp relaxation_chaotic.cpp relaxation_async_sgs.cpp
-	solverops_jacobi.cpp solverops_sgs.cpp solverops_ilu0.cpp solverops_base.cpp )
+add_library(solverops
+  solverfactory.cpp
+  relaxation_jacobi.cpp relaxation_chaotic.cpp relaxation_async_sgs.cpp
+  solverops_jacobi.cpp solverops_sgs.cpp solverops_ilu0.cpp solverops_base.cpp
+  async_blockilu_factor.cpp async_ilu_factor.cpp)
 set_property(TARGET solverops PROPERTY POSITION_INDEPENDENT_CODE ON)
 if(CXX_COMPILER_CLANG)
   target_compile_options(solverops PRIVATE "-Wno-error=pass-failed")

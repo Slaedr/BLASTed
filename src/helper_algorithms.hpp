@@ -25,6 +25,27 @@ namespace blasted {
 /// Functionality only used in implementation(s); not part of the public interface of the library
 namespace internal {
 
+/// Search through inner indices
+/** Finds the position in
+ * \param[in] aind the index array that
+ * \param[in] indtofind has value indtofind, between positions
+ * \param[in] start and
+ * \param[in] end
+ */
+template <typename index>
+inline void inner_search(const index *const aind, 
+                         const index start, const index end, 
+                         const index indtofind, index *const pos)
+{
+	for(index j = start; j < end; j++) {
+		if(aind[j] == indtofind) {
+			*pos = j;
+			break;
+		}
+	}
+}
+
+
 /// Sorts two "corresponding" arrays according to the first array
 /** This is meant for sorting the array of 'inner' indices and the array of non-zero values for
  * on particular outer index. This means, for example, sorting by columns within a row of a sparse-
