@@ -162,6 +162,9 @@ protected:
 
 	/// Computes a reordering and a scaling, in this case, whenever the matrix \ref mat is changed
 	const ReorderingScaling<scalar,index,1>& rs;
+
+	/// Reordered and scaled form of the original preconditioning matrix
+	RawBSRMatrix<scalar,index> rsmat;
 };
 
 } // end namespace

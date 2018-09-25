@@ -20,7 +20,7 @@ add_library(solverops
   solverfactory.cpp
   relaxation_jacobi.cpp relaxation_chaotic.cpp relaxation_async_sgs.cpp
   solverops_jacobi.cpp solverops_sgs.cpp solverops_ilu0.cpp solverops_base.cpp
-  async_blockilu_factor.cpp async_ilu_factor.cpp)
+  async_blockilu_factor.cpp async_ilu_factor.cpp rawsrmatrixutils.cpp)
 set_property(TARGET solverops PROPERTY POSITION_INDEPENDENT_CODE ON)
 if(CXX_COMPILER_CLANG)
   target_compile_options(solverops PRIVATE "-Wno-error=pass-failed")

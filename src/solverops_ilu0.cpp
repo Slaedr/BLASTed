@@ -296,6 +296,8 @@ void RSAsyncILU0_SRPreconditioner<scalar,index>::compute()
 {
 	if(!iluvals)
 		setup_storage(false);
+
+	scalar_ilu0_factorize(&rsmat, nbuildsweeps, thread_chunk_size, threadedfactor, iluvals);
 }
 
 template <typename scalar, typename index>

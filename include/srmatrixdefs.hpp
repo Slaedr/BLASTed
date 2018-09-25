@@ -93,5 +93,9 @@ void alignedDestroyRawBSRMatrix(RawBSRMatrix<scalar,index>& rmat) {
 	alignedDestroyCRawBSRMatrix(reinterpret_cast<CRawBSRMatrix<scalar,index>&>(rmat));
 }
 
+/// Allocates memory for a new BSR matrix, copies a matrix into it and returns it
+template <typename scalar, typename index, int bs>
+RawBSRMatrix<scalar,index> copyRawBSRMatrix(const CRawBSRMatrix<scalar,index>& mat);
+
 }
 #endif
