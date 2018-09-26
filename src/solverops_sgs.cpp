@@ -4,10 +4,14 @@
  */
 
 #include <type_traits>
+#include <boost/align/aligned_alloc.hpp>
 #include "solverops_sgs.hpp"
 #include "kernels/kernels_sgs.hpp"
 
 namespace blasted {
+
+using boost::alignment::aligned_alloc;
+using boost::alignment::aligned_free;
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
 AsyncBlockSGS_SRPreconditioner<scalar,index,bs,stor>::AsyncBlockSGS_SRPreconditioner(const int naswps)
@@ -17,7 +21,8 @@ AsyncBlockSGS_SRPreconditioner<scalar,index,bs,stor>::AsyncBlockSGS_SRPreconditi
 template <typename scalar, typename index, int bs, StorageOptions stor>
 AsyncBlockSGS_SRPreconditioner<scalar,index,bs,stor>::~AsyncBlockSGS_SRPreconditioner()
 {
-	delete [] ytemp;
+	//delete [] ytemp;
+	aligned_free(ytemp);
 }
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
@@ -25,7 +30,8 @@ void AsyncBlockSGS_SRPreconditioner<scalar,index,bs,stor>::compute()
 {
 	BJacobiSRPreconditioner<scalar,index,bs,stor>::compute();
 	if(!ytemp) {
-		ytemp = new scalar[mat.nbrows*bs];
+		//ytemp = new scalar[mat.nbrows*bs];
+		ytemp = (scalar*)aligned_alloc(CACHE_LINE_LEN,mat.nbrows*bs*sizeof(scalar));
 	}
 }
 
@@ -84,7 +90,8 @@ AsyncSGS_SRPreconditioner<scalar,index>::AsyncSGS_SRPreconditioner(const int nas
 template <typename scalar, typename index>
 AsyncSGS_SRPreconditioner<scalar,index>::~AsyncSGS_SRPreconditioner()
 {
-	delete [] ytemp;
+	//delete [] ytemp;
+	aligned_free(ytemp);
 }
 
 template <typename scalar, typename index>
@@ -92,7 +99,8 @@ void AsyncSGS_SRPreconditioner<scalar,index>::compute()
 {
 	JacobiSRPreconditioner<scalar,index>::compute();
 	if(!ytemp) {
-		ytemp = new scalar[mat.nbrows];
+		//ytemp = new scalar[mat.nbrows];
+		ytemp = (scalar*)aligned_alloc(CACHE_LINE_LEN,mat.nbrows*sizeof(scalar));
 	}
 }
 

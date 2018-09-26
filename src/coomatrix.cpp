@@ -21,9 +21,13 @@
 #include <algorithm>
 #include <fstream>
 #include <boost/algorithm/string.hpp>
+#include <boost/align/aligned_alloc.hpp>
 #include <coomatrix.hpp>
 
 namespace blasted {
+
+using boost::alignment::aligned_alloc;
+using boost::alignment::aligned_free;
 
 /// Returns a [description](\ref MMDescription) of the matrix if it's in Matrix Market format
 inline
@@ -257,10 +261,10 @@ template <typename scalar, typename index>
 void COOMatrix<scalar,index>::convertToCSR(RawBSRMatrix<scalar,index> *const cmat) const
 { 
 	cmat->nbrows = nrows;
-	cmat->browptr = new index[nrows+1];
-	cmat->bcolind = new index[nnz];
-	cmat->vals = new scalar[nnz];
-	cmat->diagind = new index[nrows];
+	cmat->browptr = (index*)aligned_alloc(CACHE_LINE_LEN,(nrows+1)*sizeof(index));
+	cmat->bcolind = (index*)aligned_alloc(CACHE_LINE_LEN,nnz*sizeof(index));
+	cmat->vals = (scalar*)aligned_alloc(CACHE_LINE_LEN,nnz*sizeof(scalar));
+	cmat->diagind = (index*)aligned_alloc(CACHE_LINE_LEN,nrows*sizeof(index));
 
 	for(index i = 0; i < nnz; i++) {
 		cmat->bcolind[i] = entries[i].colind;
@@ -293,8 +297,8 @@ void COOMatrix<scalar,index>::convertToBSR(RawBSRMatrix<scalar,index> *const bma
 	assert(nrows % bs == 0);
 
 	bmat->nbrows = nrows/bs;
-	bmat->browptr = new index[bmat->nbrows+1];
-	bmat->diagind = new index[bmat->nbrows];
+	bmat->browptr = (index*)aligned_alloc(CACHE_LINE_LEN,(bmat->nbrows+1)*sizeof(index));
+	bmat->diagind = (index*)aligned_alloc(CACHE_LINE_LEN,bmat->nbrows*sizeof(index));
 	for(index i = 0; i < bmat->nbrows; i++)
 		bmat->diagind[i] = -1;
 	for(index i = 0; i < bmat->nbrows+1; i++)
@@ -343,10 +347,8 @@ void COOMatrix<scalar,index>::convertToBSR(RawBSRMatrix<scalar,index> *const bma
 		if(bmat->browptr[i] == 0)
 			bmat->browptr[i] = bmat->browptr[i+1];
 
-	bmat->bcolind = new index[bnnz];
-	bmat->vals = new scalar[bnnz*bs*bs];
-	//Eigen::aligned_allocator<scalar> alloc;
-	//alloc.allocate(bnnz*bs*bs);
+	bmat->bcolind = (index*)aligned_alloc(CACHE_LINE_LEN, bnnz*sizeof(index));
+	bmat->vals = (scalar*)aligned_alloc(CACHE_LINE_LEN, bnnz*bs*bs*sizeof(scalar));
 
 	for(index i = 0; i < bnnz*bs*bs; i++)
 		bmat->vals[i] = 0;

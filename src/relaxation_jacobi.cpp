@@ -4,10 +4,14 @@
  * \date 2018-04
  */
 
+#include <boost/align/aligned_alloc.hpp>
 #include "relaxation_jacobi.hpp"
 #include "kernels/kernels_relaxation.hpp"
 
 namespace blasted {
+
+using boost::alignment::aligned_alloc;
+using boost::alignment::aligned_free;
 
 template<typename scalar, typename index, int bs, StorageOptions stor>
 void BJacobiRelaxation<scalar,index,bs,stor>::apply(const scalar *const bb, 
@@ -16,13 +20,15 @@ void BJacobiRelaxation<scalar,index,bs,stor>::apply(const scalar *const bb,
 	using Blk = Block_t<scalar,bs,stor>;
 	using Seg = Segment_t<scalar,bs>;
 
-	Eigen::aligned_allocator<Seg> ea;
-	Seg* xtemp = ea.allocate(mat.nbrows);
+	//Eigen::aligned_allocator<Seg> ea;
+	//Seg* xtemp = ea.allocate(mat.nbrows);
+	scalar *xtempr = (scalar*)aligned_alloc(CACHE_LINE_LEN, mat.nbrows*bs*sizeof(scalar));
 
 	const Blk *data = reinterpret_cast<const Blk*>(mat.vals);
 	const Blk *dblks = reinterpret_cast<const Blk*>(dblocks);
 	const Seg *b = reinterpret_cast<const Seg*>(bb);
 	const Seg *x = reinterpret_cast<const Seg*>(xx);
+	Seg *xtemp = reinterpret_cast<Seg*>(xtempr);
 	scalar refdiffnorm = 1;
 
 	for(int step = 0; step < solveparams.maxits; step++)
@@ -35,7 +41,7 @@ void BJacobiRelaxation<scalar,index,bs,stor>::apply(const scalar *const bb,
 				dblks[irow], b[irow], x, x, xtemp[irow]);
 		}
 
-		const scalar *xtempr = reinterpret_cast<const scalar*>(xtemp);
+		//const scalar *xtempr = reinterpret_cast<const scalar*>(xtemp);
 
 		if(solveparams.ctol)
 		{
@@ -65,7 +71,8 @@ void BJacobiRelaxation<scalar,index,bs,stor>::apply(const scalar *const bb,
 		}
 	}
 
-	ea.deallocate(xtemp,mat.nbrows);
+	//ea.deallocate(xtemp,mat.nbrows);
+	aligned_free(xtempr);
 }
 
 template class BJacobiRelaxation<double,int,4,RowMajor>;
@@ -89,7 +96,8 @@ template<typename scalar, typename index>
 void JacobiRelaxation<scalar,index>::apply(const scalar *const bb, 
 		scalar *const __restrict xx) const
 {
-	scalar* xtemp = new scalar[mat.nbrows];
+	//scalar* xtemp = new scalar[mat.nbrows];
+	scalar *xtemp = (scalar*)aligned_alloc(CACHE_LINE_LEN,mat.nbrows*sizeof(scalar));
 	scalar refdiffnorm = 1;
 	
 	for(int step = 0; step < solveparams.maxits; step++)
@@ -130,7 +138,8 @@ void JacobiRelaxation<scalar,index>::apply(const scalar *const bb,
 		}
 	}
 
-	delete [] xtemp;
+	//delete [] xtemp;
+	aligned_free(xtemp);
 }
 
 template class JacobiRelaxation<double,int>;

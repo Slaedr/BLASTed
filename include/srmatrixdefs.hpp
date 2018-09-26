@@ -3,11 +3,14 @@
  * \author Aditya Kashi
  */
 
+#ifndef BLASTED_SRMATRIXDEFS_H
+#define BLASTED_SRMATRIXDEFS_H
+
 #include <limits>
 #include <Eigen/Core>
 
-#ifndef BLASTED_SRMATRIXDEFS_H
-#define BLASTED_SRMATRIXDEFS_H
+/// Cache line length in bytes, used for aligned allocation
+#define CACHE_LINE_LEN 64
 
 namespace blasted {
 
@@ -67,33 +70,18 @@ struct RawBSRMatrix
 };
 
 template <typename scalar, typename index>
-void destroyCRawBSRMatrix(CRawBSRMatrix<scalar,index>& rmat) {
-	delete [] rmat.browptr;
-	delete [] rmat.bcolind;
-	delete [] rmat.vals;
-	delete [] rmat.diagind;
-}
+void destroyCRawBSRMatrix(CRawBSRMatrix<scalar,index>& rmat);
 
 template <typename scalar, typename index>
-void destroyRawBSRMatrix(RawBSRMatrix<scalar,index>& rmat) {
-	destroyCRawBSRMatrix(reinterpret_cast<CRawBSRMatrix<scalar,index>&>(rmat));
-}
+void destroyRawBSRMatrix(RawBSRMatrix<scalar,index>& rmat);
 
 template <typename scalar, typename index>
-void alignedDestroyCRawBSRMatrix(CRawBSRMatrix<scalar,index>& rmat) {
-	delete [] rmat.browptr;
-	delete [] rmat.bcolind;
-	delete [] rmat.diagind;
-	Eigen::aligned_allocator<scalar> alloc;
-	alloc.deallocate(const_cast<scalar*>(rmat.vals),0);
-}
+void alignedDestroyCRawBSRMatrix(CRawBSRMatrix<scalar,index>& rmat);
 
 template <typename scalar, typename index>
-void alignedDestroyRawBSRMatrix(RawBSRMatrix<scalar,index>& rmat) {
-	alignedDestroyCRawBSRMatrix(reinterpret_cast<CRawBSRMatrix<scalar,index>&>(rmat));
-}
+void alignedDestroyRawBSRMatrix(RawBSRMatrix<scalar,index>& rmat);
 
-/// Allocates memory for a new BSR matrix, copies a matrix into it and returns it
+/// Allocates (aligned) memory for a new BSR matrix, copies a matrix into it and returns it
 template <typename scalar, typename index, int bs>
 RawBSRMatrix<scalar,index> copyRawBSRMatrix(const CRawBSRMatrix<scalar,index>& mat);
 

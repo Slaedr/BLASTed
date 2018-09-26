@@ -100,8 +100,7 @@ int testSolve(const std::string solvertype, const std::string precontype,
 	delete solver;
 	delete prec;
 	delete mat;
-	//alignedDestroyRawBSRMatrix(rm);
-	destroyRawBSRMatrix(rm);
+	alignedDestroyRawBSRMatrix(rm);
 
 	return 0;
 }

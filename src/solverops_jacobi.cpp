@@ -5,10 +5,14 @@
 
 #include <type_traits>
 #include <iostream>
+#include <boost/align/aligned_alloc.hpp>
 #include <Eigen/LU>
 #include "solverops_jacobi.hpp"
 
 namespace blasted {
+
+using boost::alignment::aligned_alloc;
+using boost::alignment::aligned_free;
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
 BJacobiSRPreconditioner<scalar,index,bs,stor>::BJacobiSRPreconditioner()
@@ -18,9 +22,9 @@ BJacobiSRPreconditioner<scalar,index,bs,stor>::BJacobiSRPreconditioner()
 template <typename scalar, typename index, int bs, StorageOptions stor>
 BJacobiSRPreconditioner<scalar,index,bs,stor>::~BJacobiSRPreconditioner()
 {
-	// delete [] dblocks;
-	Eigen::aligned_allocator<scalar> aa;
-	aa.deallocate(dblocks, mat.nbrows*bs*bs);
+	//Eigen::aligned_allocator<scalar> aa;
+	//aa.deallocate(dblocks, mat.nbrows*bs*bs);
+	boost::alignment::aligned_free(dblocks);
 }
 	
 template <typename scalar, typename index, int bs, StorageOptions stor>
@@ -28,8 +32,9 @@ void BJacobiSRPreconditioner<scalar,index,bs,stor>::compute()
 {
 	if(!dblocks) {
 		// dblocks = new scalar[mat.nbrows*bs*bs];
-		Eigen::aligned_allocator<scalar> aa;
-		dblocks = aa.allocate(mat.nbrows*bs*bs);
+		//Eigen::aligned_allocator<scalar> aa;
+		//dblocks = aa.allocate(mat.nbrows*bs*bs);
+		dblocks = (scalar*)aligned_alloc(CACHE_LINE_LEN, mat.nbrows*bs*bs*sizeof(scalar));
 #ifdef DEBUG
 		std::cout << " precJacobiSetup(): Allocating.\n";
 #endif
@@ -66,7 +71,8 @@ JacobiSRPreconditioner<scalar,index>::JacobiSRPreconditioner()
 template <typename scalar, typename index>
 JacobiSRPreconditioner<scalar,index>::~JacobiSRPreconditioner()
 {
-	delete [] dblocks;
+	//delete [] dblocks;
+	boost::alignment::aligned_free(dblocks);
 }
 	
 /// Inverts diagonal entries
@@ -76,7 +82,7 @@ JacobiSRPreconditioner<scalar,index>::~JacobiSRPreconditioner()
 template <typename scalar, typename index>
 static inline
 void scalar_jacobi_setup(const CRawBSRMatrix<scalar,index> *const mat,
-		scalar *const dblocks)
+                         scalar *const dblocks)
 {
 #pragma omp parallel for simd default(shared)
 	for(index irow = 0; irow < mat->nbrows; irow++)
@@ -87,7 +93,8 @@ template <typename scalar, typename index>
 void JacobiSRPreconditioner<scalar,index>::compute()
 {
 	if(!dblocks) {
-		dblocks = new scalar[mat.nbrows];
+		//dblocks = new scalar[mat.nbrows];
+		dblocks = (scalar*)boost::alignment::aligned_alloc(CACHE_LINE_LEN,mat.nbrows*sizeof(scalar));
 #ifdef DEBUG
 		std::cout << " CSR MatrixView: precJacobiSetup(): Initial setup.\n";
 #endif
