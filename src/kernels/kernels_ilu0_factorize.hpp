@@ -11,7 +11,8 @@
 namespace blasted {
 
 /// Computes one row of an asynchronous ILU(0) factorization
-/** Actually factorizes a scaled matrix, though the original matrix is not modified.
+/** Depending on template parameters, it can
+ * factorize a scaled matrix, though the original matrix is not modified.
  * \note In the factorization loop, the variable pos is initially set negative.
  * If index is an unsigned type, that might be a problem. However,
  * it should usually be okay as we are only comparing equality later.

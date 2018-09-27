@@ -27,10 +27,15 @@ class AsyncBlockILU0_SRPreconditioner : public SRPreconditioner<scalar,index>
 public:
 	/** \param nbuildsweeps Number of asynchronous sweeps used to compute the LU factors
 	 * \param napplysweeps Number of asynchronous sweeps used to apply the preconditioner
+	 * \param thread_chunk_size Size of thread chunks in dynamically parallel loops
+	 * \param fact_inittype Type of initialization to use for factorization
+	 * \param apply_inittype Type of initialization to use for application
 	 * \param threadedfactor If false, the preconditioner is computed sequentially
 	 * \param threadedapply If false, the preconditioner is applied sequentially
 	 */
 	AsyncBlockILU0_SRPreconditioner(const int nbuildsweeps, const int napplysweeps,
+	                                const int thread_chunk_size,
+	                                const FactInit fact_inittype, const ApplyInit apply_inittype,
 	                                const bool threadedfactor=true, const bool threadedapply=true);
 
 	~AsyncBlockILU0_SRPreconditioner();
@@ -68,6 +73,8 @@ protected:
 	const int nbuildsweeps;
 	const int napplysweeps;
 	const int thread_chunk_size;
+	const FactInit factinittype;
+	const ApplyInit applyinittype;
 
 	void setup_storage();
 };
@@ -79,11 +86,16 @@ class AsyncILU0_SRPreconditioner : public SRPreconditioner<scalar,index>
 public:
 	/** \param nbuildsweeps Number of asynchronous sweeps used to compute the LU factors
 	 * \param napplysweeps Number of asynchronous sweeps used to apply the preconditioner
+	 * \param thread_chunk_size Size of thread chunks in dynamically parallel loops
+	 * \param fact_inittype Type of initialization to use for factorization
+	 * \param apply_inittype Type of initialization to use for application
 	 * \param threadedfactor If false, the preconditioner is computed sequentially
 	 * \param threadedapply If false, the preconditioner is applied sequentially
 	 */
 	AsyncILU0_SRPreconditioner(const int nbuildsweeps, const int napplysweeps,
-	                       const bool threadedfactor=true, const bool threadedapply=true);
+	                           const int thread_chunk_size,
+	                           const FactInit fact_inittype, const ApplyInit apply_inittype,
+	                           const bool threadedfactor=true, const bool threadedapply=true);
 
 	virtual ~AsyncILU0_SRPreconditioner();
 
@@ -116,6 +128,9 @@ protected:
 	/// Number of work-items in each dynamic job assigned to a thread
 	const int thread_chunk_size;
 
+	const FactInit factinittype;
+	const ApplyInit applyinittype;
+
 	/// Allocates memory for storing LU factors and initializes it, as well as temporary data
 	/** \param scaling Set to true to allocate storage for the scaling vector that's applied to
 	 * the matrix A before computing the ILU factors.
@@ -130,14 +145,13 @@ template <typename scalar, typename index>
 class RSAsyncILU0_SRPreconditioner : public AsyncILU0_SRPreconditioner<scalar,index>
 {
 public:
-	/** \param reorderscale The reordering and scaling object use at every iteration
-	 * \param nbuildsweeps Number of asynchronous sweeps used to compute the LU factors
-	 * \param napplysweeps Number of asynchronous sweeps used to apply the preconditioner
-	 * \param threadedfactor If false, the preconditioner is computed sequentially
-	 * \param threadedapply If false, the preconditioner is applied sequentially
+	/** \see AsyncILU0_SRPreconditioner
+	 * \param reorderscale The reordering and scaling object use at every iteration
 	 */
 	RSAsyncILU0_SRPreconditioner(const ReorderingScaling<scalar,index,1>& reorderscale,
 	                             const int nbuildsweeps, const int napplysweeps,
+	                             const int thread_chunk_size,
+	                             const FactInit fact_init_type, const ApplyInit apply_init_type,
 	                             const bool threadedfactor=true, const bool threadedapply=true);
 
 	~RSAsyncILU0_SRPreconditioner();

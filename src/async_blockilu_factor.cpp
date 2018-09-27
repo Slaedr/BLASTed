@@ -23,18 +23,18 @@
 
 namespace blasted {
 
-template <typename scalar, typename index, int bs, StorageOptions stor>
-void block_ilu0_factorize(const CRawBSRMatrix<scalar,index> *const mat,
-                          const int nbuildsweeps, const int thread_chunk_size, const bool usethreads,
-                          scalar *const __restrict iluvals)
-{
-	using NABlk = Block_t<scalar,bs,static_cast<StorageOptions>(stor|Eigen::DontAlign)>;
-	using Blk = Block_t<scalar,bs,stor>;
+using NABlk = Block_t<scalar,bs,static_cast<StorageOptions>(stor|Eigen::DontAlign)>;
+using Blk = Block_t<scalar,bs,stor>;
 	
+/// Initialize the factorization such that async. ILU(0) factorization gives async. SGS at worst
+/**
+ * We set L' to (I+LD^(-1)) and U' to (D+U) so that L'U' = (D+L)D^(-1)(D+U).
+ */
+template <typename scalar, typename index, int bs> static
+void fact_init_sgs(const CRawBSRMatrix<scalar,index> *const mat, scalar *const __restrict iluvals)
+{
 	const NABlk *mvals = reinterpret_cast<const NABlk*>(mat->vals);
 	Blk *ilu = reinterpret_cast<Blk*>(iluvals);
-
-	// Initial guess for LU factors
 
 	Eigen::aligned_allocator<Blk> alloc;
 	Blk *dblks = alloc.allocate(mat->nbrows);
@@ -56,6 +56,35 @@ void block_ilu0_factorize(const CRawBSRMatrix<scalar,index> *const mat,
 	}
 
 	alloc.deallocate(dblks, mat->nbrows);
+}
+
+/** \todo Revisit the requirement for non-aligned block types for the original matrix
+ */
+template <typename scalar, typename index, int bs, StorageOptions stor>
+void block_ilu0_factorize(const CRawBSRMatrix<scalar,index> *const mat,
+                          const int nbuildsweeps, const int thread_chunk_size, const bool usethreads,
+                          const FactInit init_type,
+                          scalar *const __restrict iluvals)
+{
+	const NABlk *mvals = reinterpret_cast<const NABlk*>(mat->vals);
+	Blk *ilu = reinterpret_cast<Blk*>(iluvals);
+
+	switch(init_type)
+	{
+	case INIT_F_ZERO:
+#pragma omp parallel for simd default(shared)
+		for(index i = 0; i < mat->browptr[mat->nbrows]*bs*bs; i++)
+			iluvals[i] = 0;
+		break;
+	case INIT_F_ORIGINAL:
+#pragma omp parallel for simd default(shared)
+		for(index i = 0; i < mat->browptr[mat->nbrows]*bs*bs; i++)
+			iluvals[i] = mat->vals[i];
+		break;
+	case INIT_F_SGS:
+		block_fact_init_sgs<scalar,index,bs>(mat, iluvals);
+		break;
+	}
 
 	// compute L and U
 	/* Note that in the factorization loop, the variable pos is initially set negative.
