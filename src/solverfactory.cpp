@@ -47,19 +47,21 @@ SRPreconditioner<scalar,index> *create_srpreconditioner_of_type
 	}
 	else if(precstr == ilu0str) {
 		if(relax) {
-			std::cout << "Solverfactory: ILU relaxation is not possible.";
+			std::cout << "Solverfactory: ILU relaxation is not implemented.";
 			std::cout << " Using the preconditioner.\n";
 		}
 		return new AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>
-			(intlist.at(nbuildsweeps), intlist.at(napplysweeps), true, true);
+			(intlist.at(nbuildsweeps), intlist.at(napplysweeps), intlist.at(thread_chunk_size),
+			 intlist.at(fact_inittype), intlist.at(apply_inittype), true, true);
 	}
 	else if(precstr == sapilu0str) {
 		if(relax) {
-			std::cout << "Solverfactory: ILU relaxation is not possible.";
+			std::cout << "Solverfactory: ILU relaxation is not implemented.";
 			std::cout << " Using the preconditioner.\n";
 		}
-		return new AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>(intlist.at(nbuildsweeps),
-				intlist.at(napplysweeps),true,false);
+		return new AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>
+			(intlist.at(nbuildsweeps), intlist.at(napplysweeps), intlist.at(thread_chunk_size),
+			 intlist.at(fact_inittype), intlist.at(apply_inittype), true, false);
 	}
 	else if(precstr == noprecstr) {
 		if(relax) {
@@ -102,11 +104,15 @@ SRPreconditioner<scalar,index> *create_sr_preconditioner
 				p = new AsyncSGS_SRPreconditioner<scalar,index>(intParamList.at(napplysweeps));
 		}
 		else if(precstr == ilu0str)
-			p = new AsyncILU0_SRPreconditioner<scalar,index>(intParamList.at(nbuildsweeps),
-					intParamList.at(napplysweeps),true,true);
+			p = new AsyncILU0_SRPreconditioner<scalar,index>
+				(intParamList.at(nbuildsweeps), intParamList.at(napplysweeps),
+				 intParamList.at(thread_chunk_size),
+				 intParamList.at(fact_inittype), intParamList.at(apply_inittype), true,true);
 		else if(precstr == sapilu0str)
-			return new AsyncILU0_SRPreconditioner<scalar,index>(intParamList.at(nbuildsweeps),
-					intParamList.at(napplysweeps),true,false);
+			return new AsyncILU0_SRPreconditioner<scalar,index>
+				(intParamList.at(nbuildsweeps), intParamList.at(napplysweeps),
+				 intParamList.at(thread_chunk_size),
+				 intParamList.at(fact_inittype), intParamList.at(apply_inittype), true,false);
 		else if(precstr == noprecstr)
 			return new NoPreconditioner<scalar,index>(intParamList.at(ndimstr));
 		else

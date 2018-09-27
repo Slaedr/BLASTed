@@ -16,13 +16,14 @@
 #include "solverops_sgs.hpp"
 #include "solverops_ilu0.hpp"
 #include "solverfactory.hpp"
+#include "async_initialization_decl.hpp"
 #include "blasted_petsc.h"
 
 using namespace blasted;
 
 typedef SRPreconditioner<PetscReal,PetscInt> BlastedPreconditioner;
 
-#define PETSCOPTION_STR_LEN 10
+#define PETSCOPTION_STR_LEN 20
 
 static Prec_type precTypeFromString(const std::string precstr2)
 {
@@ -44,6 +45,38 @@ static Prec_type precTypeFromString(const std::string precstr2)
 	return ptype;
 }
 
+/// Reads an int option from the PETSc options database
+static int get_int_petscoptions(const char *const option_tag)
+{
+	PetscBool set = PETSC_FALSE;
+	int val = 0;
+	PetscOptionsGetInt(NULL, NULL, option_tag, &val, &set);
+	if(!set) {
+		printf("BLASTed: %s not set!\n", option_tag);
+		abort();
+	}
+	return val;
+}
+
+/// Read a string option from the PETSc options database
+/** \note Aborts the program if the option was not found
+ */
+static void get_string_petscoptions(const char *const option_tag, char **const outstr)
+{
+	// Prec type
+	char precstr[PETSCOPTION_STR_LEN];
+	PetscBool flag = PETSC_FALSE;
+	PetscOptionsGetString(NULL, NULL, option_tag, precstr, PETSCOPTION_STR_LEN, &flag);
+	if(flag == PETSC_FALSE) {
+		printf("BLASTed: %s not set!\n", option_tag);
+		abort();
+	}
+
+	const size_t len = std::strlen(precstr);
+	*outstr = new char[len+1];
+	std::strcpy(*outstr, precstr);
+}
+
 /// Sets options from PETSc options
 static PetscErrorCode setupDataFromOptions(PC pc)
 {
@@ -51,6 +84,7 @@ static PetscErrorCode setupDataFromOptions(PC pc)
 	Blasted_data* ctx;
 	ierr = PCShellGetContext(pc, (void**)&ctx); CHKERRQ(ierr);
 
+	// Prec type
 	char precstr[PETSCOPTION_STR_LEN];
 	PetscBool flag = PETSC_FALSE;
 	PetscOptionsGetString(NULL, NULL, "-blasted_pc_type", 
@@ -65,10 +99,13 @@ static PetscErrorCode setupDataFromOptions(PC pc)
 	std::strcpy(ctx->prectypestr, precstr);
 	
 	const Prec_type ptype = precTypeFromString(ctx->prectypestr);
-	
+
 	PetscInt sweeps[2];
 	if(ptype != JACOBI)
 	{
+		// Params for async iterations
+
+		// sweeps
 		PetscBool flag = PETSC_FALSE;
 		PetscInt nmax = 2;
 		PetscOptionsGetIntArray(NULL, NULL, "-blasted_async_sweeps", sweeps, &nmax, &flag);
@@ -77,14 +114,23 @@ static PetscErrorCode setupDataFromOptions(PC pc)
 			printf("BLASTed: Number of async sweeps not set properly!\n");
 			abort();
 		}
+
+		get_string_petscoptions("-basted_async_fact_init_type", &ctx->factinittype);
+		get_string_petscoptions("-basted_async_apply_init_type", &ctx->applyinittype);
+		ctx->threadchunksize = get_int_petscoptions("-blasted_thread_chunk_size");
+#ifdef DEBUG
+		std::printf("BLASTed: setupDataFromOptions:\n");
+		std::printf(" fact init type = %s, apply init type = %s", ctx->factinittype, ctx->applyinittype);
+		std::printf(" Thread chunk size = %d.\n", ctx->threadchunksize);
+#endif
 	}
 	else {
 		sweeps[0] = 1; sweeps[1] = 1;
 	}
 
 #ifdef DEBUG
-	std::printf("BLASTed: newDataFromOptions: Setting up preconditioner with\n");
-	std::printf("ptype = %d and sweeps = %d,%d.\n", ptype, sweeps[0], sweeps[1]);
+	std::printf("BLASTed: setupDataFromOptions: Setting up preconditioner with\n");
+	std::printf(" ptype = %d and sweeps = %d,%d.\n", ptype, sweeps[0], sweeps[1]);
 #endif
 
 	ctx->bprec = nullptr; 
@@ -147,6 +193,9 @@ PetscErrorCode createNewPreconditioner(PC pc)
 	std::map<std::string,int> iparamlist;
 	iparamlist[blasted::nbuildsweeps] = ctx->nbuildsweeps;
 	iparamlist[blasted::napplysweeps] = ctx->napplysweeps;
+	iparamlist[blasted::thread_chunk_size] = ctx->threadchunksize;
+	iparamlist[blasted::fact_inittype] = getFactInitFromString(ctx->factinittype);
+	iparamlist[blasted::apply_inittype] = getFactInitFromString(ctx->applyinittype);
 	std::map<std::string,double> fparamlist;
 	precop = create_sr_preconditioner<PetscReal,PetscInt>(ctx->prectypestr, ctx->bs, "colmajor", 
 	                                                      false, iparamlist, fparamlist);
@@ -263,6 +312,8 @@ PetscErrorCode cleanup_blasted(PC pc)
 	delete relx;
 
 	delete [] ctx->prectypestr;
+	delete [] ctx->factinittype;
+	delete [] ctx->applyinittype;
 
 	return ierr;
 }

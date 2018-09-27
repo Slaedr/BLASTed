@@ -35,6 +35,9 @@ struct Blasted_node
 	Prec_type prectype;       ///< The preconditioner to use
 	int nbuildsweeps;         ///< Number of async build sweeps
 	int napplysweeps;         ///< Number of async apply sweeps
+	int threadchunksize;      ///< Number of work-items assigned to a thread at a time
+	char *factinittype;       ///< Type of initialization for asynchronous factorization
+	char *applyinittype;      ///< Type of initialization for asynchronous application
 
 	/// True if the initial one-time setup has been done
 	/** MUST be set to false initially.

@@ -30,6 +30,28 @@ enum ApplyInit {
 	INIT_A_NONE
 };
 
+/// Converts a string into an initialization type enum. \ref INIT_F_NONE is default.
+inline const FactInit getFactInitFromString(const std::string itype) {
+	if(itype == "init_zero")
+		return INIT_F_ZERO;
+	else if(itype == "init_original")
+		return INIT_F_ORIGINAL;
+	else if(itype == "init_sgs")
+		return INIT_F_SGS;
+	else
+		return INIT_F_NONE;
+}
+
+/// Converts a string into an initialization type enum. \ref INIT_A_NONE is default.
+inline const ApplyInit getApplyInitFromString(const std::string itype) {
+	if(itype == "init_zero")
+		return INIT_A_ZERO;
+	else if(itype == "init_jacobi")
+		return INIT_A_JACOBI;
+	else
+		return INIT_A_NONE;
+}
+
 }
 
 #endif

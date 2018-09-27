@@ -44,6 +44,9 @@ const std::string colmajorstr = "colmajor";
 const std::string ndimstr = "ndim";
 const std::string nbuildsweeps = "nbuildsweeps";
 const std::string napplysweeps = "napplysweeps";
+const std::string thread_chunk_size = "thread_chunk_size"
+const std::string fact_inittype = "fact_inittype";
+const std::string apply_inittype = "apply_inittype";
 /** @} */
 
 /// Creates a preconditioner or relaxation object, for matrices stored by sparse rows
