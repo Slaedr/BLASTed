@@ -16,6 +16,25 @@
 
 namespace blasted {
 
+Prec_type precTypeFromString(const std::string precstr2)
+{
+	Prec_type ptype;
+	if(precstr2 == "jacobi")
+		ptype = JACOBI;
+	else if(precstr2 == "gs")
+		ptype = GS;
+	else if(precstr2 == "sgs")
+		ptype = SGS;
+	else if(precstr2 == "ilu0")
+		ptype = ILU0;
+	else if(precstr2 == "sapilu0")
+		ptype = SAPILU0;
+	else {
+		throw invalid_argument("BLASTed: Preconditioner type not available!");
+	}
+	return ptype;
+}
+
 /// Creates the correct preconditioner or relaxation from the arguments for the template
 /** Note that if a relaxation is requested for an algorithm got which relaxation is not implemented,
  * the corresponding preconditioner is returned instead after printing a warning.
@@ -75,13 +94,11 @@ SRPreconditioner<scalar,index> *create_srpreconditioner_of_type
 }
 
 template <typename scalar, typename index>
-SRPreconditioner<scalar,index> *create_sr_preconditioner
-    (const std::string precstr, const int bs,
-     const std::string blockstorage, const bool relax,
-     const std::map<std::string,int>& intParamList,
-     const std::map<std::string,double>& floatParamList)
+SRPreconditioner<scalar,index> *create_sr_preconditioner(const index ndim, const SolverSettings& set)
 {
 	SRPreconditioner<scalar,index> *p = nullptr;
+
+	const AsyncSolverSettings& aset = reinterpret_cast<const AsyncSolverSettings&>(set);
 		
 	if(bs == 1) {
 		if(precstr == jacobistr) {

@@ -44,31 +44,46 @@ const std::string colmajorstr = "colmajor";
 const std::string ndimstr = "ndim";
 const std::string nbuildsweeps = "nbuildsweeps";
 const std::string napplysweeps = "napplysweeps";
-const std::string thread_chunk_size = "thread_chunk_size"
+const std::string thread_chunk_size = "thread_chunk_size";
 const std::string fact_inittype = "fact_inittype";
 const std::string apply_inittype = "apply_inittype";
 /** @} */
 
+/// Basic settings needed for most iterations
+struct SolverSettings {
+	Prec_type prectype;                   ///< The type of preconditioner to use
+	int bs;                               ///< Size of small dense blocks in the system matrix
+	StorageOptions blockstorage;          ///< Layout within individual blocks - RowMajor or ColMajor
+	/// Set to true if relaxation is desired instead of preconditioning
+	/** This is not possible for some methods, in which case preconditioning will be used anyway.
+	 */
+	bool relax;
+	int thread_chunk_size;                ///< Number of work-items (iterations) in each thread chunk
+};
+
+/// Settings needed for most asynchronous iterations
+struct AsyncSolverSettings : public SolverSettings {
+	int nbuildsweeps;                     ///< Number of build sweeps
+	int napplysweeps;                     ///< Number of apply sweeps
+	FactInit fact_inittype;               ///< Initialization type for asynchronous factorization
+	ApplyInit apply_inittype;             ///< Initialization type for asynchronous triangular solves
+};
+
 /// Creates a preconditioner or relaxation object, for matrices stored by sparse rows
-/** \param precstr A string describing what preconditioner is needed \sa prectypelabels
- * \param bs Block size to create a dense block preconditioner
- * \param blockstorage String decsribing the layout within a dense block \sa blockorderlabels
- * \param relaxation True if the relaxation form of the algorithm is required.
- * \param intParamList A parameter list of integer parameters. The keys needed depends on the type of
- *  preconditioner requested in \ref precstr. \sa integerkeys
- * \param floatParamList A parameter list of integer parameters. What keys are needed depends on 
- *  the type of preconditioner requested in \ref precstr
- *
- * Throws an instance of invalid_argument in case of invalid argument(s). Throws out_of_range if a
- * required key does not exist in the parameter lists.
- */
+/** \param ndim Number of rows in the matrix; the dimension of the problem
+ * \param settings Solver settings
+ * 
+ * Throws an instance of invalid_argument in case of invalid argument(s). */
 template <typename scalar, typename index>
-SRPreconditioner<scalar,index> *create_sr_preconditioner
-	(const std::string precstr, const int bs, const std::string blockstorage,
-	 const bool relaxation,
-	 const std::map<std::string,int>& intParamList,
-	 const std::map<std::string,double>& floatParamList);
+SRPreconditioner<scalar,index> *create_sr_preconditioner(const index ndim,
+                                                         const SolverSettings& settings);
+	// (const std::string precstr, const int bs, const std::string blockstorage,
+	//  const bool relaxation,
+	//  const std::map<std::string,int>& intParamList,
+	//  const std::map<std::string,double>& floatParamList);
+
+/// Convert a string into a preconditioner type if possible. Throws a invalid_argument if not possible.
+Prec_type precTypeFromString(const std::string precstr);
 
 }
-
 #endif

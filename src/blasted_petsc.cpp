@@ -25,26 +25,6 @@ typedef SRPreconditioner<PetscReal,PetscInt> BlastedPreconditioner;
 
 #define PETSCOPTION_STR_LEN 20
 
-static Prec_type precTypeFromString(const std::string precstr2)
-{
-	Prec_type ptype;
-	if(precstr2 == "jacobi")
-		ptype = JACOBI;
-	else if(precstr2 == "gs")
-		ptype = GS;
-	else if(precstr2 == "sgs")
-		ptype = SGS;
-	else if(precstr2 == "ilu0")
-		ptype = ILU0;
-	else if(precstr2 == "sapilu0")
-		ptype = SAPILU0;
-	else {
-		printf("BLASTed: Preconditioner type not available!\n");
-		abort();
-	}
-	return ptype;
-}
-
 /// Reads an int option from the PETSc options database
 static int get_int_petscoptions(const char *const option_tag)
 {

@@ -8,6 +8,7 @@
 
 #include "srmatrixdefs.hpp"
 #include "reorderingscaling.hpp"
+#include "async_initialization_decl.hpp"
 
 namespace blasted {
 

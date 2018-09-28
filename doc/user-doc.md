@@ -12,6 +12,16 @@ There are three main PETSc options controlling the use of BLASTed. These options
 
 * `-blasted_async_sweeps` An integer array specifying the number of asynchronous iterations ("sweeps") to use each time the preconditioner is built and applied. Eg.: `-blasted_async_sweeps 4,3` means the preconditioner is built using 4 asynchronous iterations (sweeps) while it is applied using 3 asynchronous sweeps. If not specified, the default of 1 sweep is used.
 
+* `-blasted_async_fact_init_type` A string specifying what type of initialization to use for asynchronous factorizations. Options: 
+  - `init_zero`
+  - `init_original`
+  - `init_sgs`
+* `-blasted_async_apply_init_type` A string specifying what type of initialization to use for asynchronous triangular solves. Options: 
+  - `init_zero`
+  - `init_jacobi`
+
+* `-blasted_thread_chunk_size` An integer specifying the number of work-items assigned at a time to a thread in a dynamically-scheduled loop.
+
 * `-mat_type` "aij" (default, if not mentioned) and "baij". If "aij", scalar versions of the algorithms are applied. For example, the preconditioner for Jacobi will be the diagonal of the matrix. If "baij" is specified, point-block versions of the algorithms are carried out. In case of Jacobi, for instance, the preconditioner will be the block-diagonal part of the matrix with the blocks inverted exactly. **NOTE**: this can also affect several other things in your code apart from the behaviour of BLASTed.
 
 In case of algorithms that have both preconditioning and relaxation forms (Jacobi and Gauss-Seidel), which form is applied depends on the PETSc solver structure being used. Specifically, if the local KSP (for which BLASTed is the PC) is KSPRICHARDSON, relaxation is usually applied. The exception is that if either the Richardson damping factor is NOT 1.0, or `-ksp_monitor` is specified, then the preconditioning form is used even with KSPRICHARDSON. For all other local KSPs including PREONLY, only the preconditioning form is used.

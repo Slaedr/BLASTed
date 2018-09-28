@@ -8,6 +8,7 @@
 
 #include "solverops_base.hpp"
 #include "reorderingscaling.hpp"
+#include "async_initialization_decl.hpp"
 
 namespace blasted {
 
@@ -172,6 +173,8 @@ protected:
 	using AsyncILU0_SRPreconditioner<scalar,index>::nbuildsweeps;
 	using AsyncILU0_SRPreconditioner<scalar,index>::napplysweeps;
 	using AsyncILU0_SRPreconditioner<scalar,index>::thread_chunk_size;
+	using AsyncILU0_SRPreconditioner<scalar,index>::factinittype;
+	using AsyncILU0_SRPreconditioner<scalar,index>::applyinittype;
 	using AsyncILU0_SRPreconditioner<scalar,index>::setup_storage;
 
 	/// Computes a reordering and a scaling, in this case, whenever the matrix \ref mat is changed

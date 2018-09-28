@@ -7,6 +7,7 @@
 #define BLASTED_ASYNC_BLOCKILU_FACTOR_H
 
 #include "srmatrixdefs.hpp"
+#include "async_initialization_decl.hpp"
 
 namespace blasted {
 

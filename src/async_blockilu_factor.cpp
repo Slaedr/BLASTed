@@ -23,16 +23,16 @@
 
 namespace blasted {
 
-using NABlk = Block_t<scalar,bs,static_cast<StorageOptions>(stor|Eigen::DontAlign)>;
-using Blk = Block_t<scalar,bs,stor>;
-	
 /// Initialize the factorization such that async. ILU(0) factorization gives async. SGS at worst
 /**
  * We set L' to (I+LD^(-1)) and U' to (D+U) so that L'U' = (D+L)D^(-1)(D+U).
  */
-template <typename scalar, typename index, int bs> static
+template <typename scalar, typename index, int bs, StorageOptions stor> static
 void fact_init_sgs(const CRawBSRMatrix<scalar,index> *const mat, scalar *const __restrict iluvals)
 {
+	using NABlk = Block_t<scalar,bs,static_cast<StorageOptions>(stor|Eigen::DontAlign)>;
+	using Blk = Block_t<scalar,bs,stor>;
+	
 	const NABlk *mvals = reinterpret_cast<const NABlk*>(mat->vals);
 	Blk *ilu = reinterpret_cast<Blk*>(iluvals);
 
@@ -66,6 +66,9 @@ void block_ilu0_factorize(const CRawBSRMatrix<scalar,index> *const mat,
                           const FactInit init_type,
                           scalar *const __restrict iluvals)
 {
+	using NABlk = Block_t<scalar,bs,static_cast<StorageOptions>(stor|Eigen::DontAlign)>;
+	using Blk = Block_t<scalar,bs,stor>;
+	
 	const NABlk *mvals = reinterpret_cast<const NABlk*>(mat->vals);
 	Blk *ilu = reinterpret_cast<Blk*>(iluvals);
 
@@ -82,8 +85,10 @@ void block_ilu0_factorize(const CRawBSRMatrix<scalar,index> *const mat,
 			iluvals[i] = mat->vals[i];
 		break;
 	case INIT_F_SGS:
-		block_fact_init_sgs<scalar,index,bs>(mat, iluvals);
+		fact_init_sgs<scalar,index,bs,stor>(mat, iluvals);
 		break;
+	default:;
+		// do nothing
 	}
 
 	// compute L and U
@@ -156,23 +161,23 @@ void block_ilu0_factorize(const CRawBSRMatrix<scalar,index> *const mat,
 template void
 block_ilu0_factorize<double,int,4,ColMajor> (const CRawBSRMatrix<double,int> *const mat,
                                              const int nbuildsweeps, const int thread_chunk_size,
-                                             const bool usethreads,
+                                             const bool usethreads, const FactInit inittype,
                                              double *const __restrict iluvals);
 template void
 block_ilu0_factorize<double,int,5,ColMajor> (const CRawBSRMatrix<double,int> *const mat,
                                              const int nbuildsweeps, const int thread_chunk_size,
-                                             const bool usethreads,
+                                             const bool usethreads, const FactInit inittype,
                                              double *const __restrict iluvals);
 template void
 block_ilu0_factorize<double,int,4,RowMajor> (const CRawBSRMatrix<double,int> *const mat,
                                              const int nbuildsweeps, const int thread_chunk_size,
-                                             const bool usethreads,
+                                             const bool usethreads, const FactInit inittype,
                                              double *const __restrict iluvals);
 
 #ifdef BUILD_BLOCK_SIZE
 template void block_ilu0_factorize<double,int,BUILD_BLOCK_SIZE,ColMajor>
 (const CRawBSRMatrix<double,int> *const mat,
- const int nbuildsweeps, const int thread_chunk_size, const bool usethreads,
+ const int nbuildsweeps, const int thread_chunk_size, const bool usethreads, const FactInit inittype,
  double *const __restrict iluvals);
 #endif
 

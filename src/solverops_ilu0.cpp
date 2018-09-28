@@ -77,6 +77,8 @@ void block_ilu0_apply(const CRawBSRMatrix<scalar,index> *const mat,
 			y_temp[i] = 0;
 		}
 		break;
+	default:
+		;
 	}
 	
 	/** solves Ly = Sr by asynchronous Jacobi iterations.
@@ -106,6 +108,8 @@ void block_ilu0_apply(const CRawBSRMatrix<scalar,index> *const mat,
 		{
 			zz[i] = 0;
 		}
+	default:
+		;
 	}
 
 	/* Solves Uz = y by asynchronous Jacobi iteration.
@@ -219,6 +223,8 @@ void scalar_ilu0_apply(const CRawBSRMatrix<scalar,index> *const mat,
 			ytemp[i] = 0;
 		}
 	break;
+	default:
+		;
 	}
 	
 	/** solves Ly = Sr by asynchronous Jacobi iterations.
@@ -247,6 +253,8 @@ void scalar_ilu0_apply(const CRawBSRMatrix<scalar,index> *const mat,
 			za[i] = 0;
 		}
 		break;
+	default:
+		;
 	}
 	
 	/* Solves Uz = y by asynchronous Jacobi iteration.
