@@ -78,10 +78,10 @@ static PetscErrorCode setupDataFromOptions(PC pc)
 	ctx->prectypestr = new char[len+1];
 	std::strcpy(ctx->prectypestr, precstr);
 	
-	const Prec_type ptype = precTypeFromString(ctx->prectypestr);
+	const BlastedSolverType ptype = solverTypeFromString(ctx->prectypestr);
 
 	PetscInt sweeps[2];
-	if(ptype != JACOBI)
+	if(ptype != BLASTED_JACOBI)
 	{
 		// Params for async iterations
 

@@ -14,12 +14,11 @@
 #include <stdbool.h>
 #include <petscksp.h>
 
+#include "solvertypes.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-/// The types of preconditioners that BLASTed provides
-typedef enum {JACOBI, GS, SGS, ILU0, SAPILU0} Prec_type;
 
 /** It has two operators - one for preconditioning and the other for relaxation.
  * The relaxation operator is only used when the local KSP is richardson. For all other local KSPs
@@ -27,17 +26,17 @@ typedef enum {JACOBI, GS, SGS, ILU0, SAPILU0} Prec_type;
  */
 struct Blasted_node
 {
-	void* bprec;              ///< BLASTed preconditioning object
-	void *brelax;             ///< BLASTed relaxation object
+	void* bprec;                ///< BLASTed preconditioning object
+	void *brelax;               ///< BLASTed relaxation object
 	
-	int bs;                   ///< Block size of dense blocks
-	char *prectypestr;        ///< String identifier of the preconditioner type to use
-	Prec_type prectype;       ///< The preconditioner to use
-	int nbuildsweeps;         ///< Number of async build sweeps
-	int napplysweeps;         ///< Number of async apply sweeps
-	int threadchunksize;      ///< Number of work-items assigned to a thread at a time
-	char *factinittype;       ///< Type of initialization for asynchronous factorization
-	char *applyinittype;      ///< Type of initialization for asynchronous application
+	int bs;                     ///< Block size of dense blocks
+	char *prectypestr;          ///< String identifier of the preconditioner type to use
+	BlastedSolverType prectype; ///< The preconditioner/iteration to use
+	int nbuildsweeps;           ///< Number of async build sweeps
+	int napplysweeps;           ///< Number of async apply sweeps
+	int threadchunksize;        ///< Number of work-items assigned to a thread at a time
+	char *factinittype;         ///< Type of initialization for asynchronous factorization
+	char *applyinittype;        ///< Type of initialization for asynchronous application
 
 	/// True if the initial one-time setup has been done
 	/** MUST be set to false initially.

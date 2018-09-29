@@ -10,6 +10,7 @@
 #include <string>
 #include <map>
 
+#include "solvertypes.h"
 #include "solverops_base.hpp"
 
 namespace blasted {
@@ -51,7 +52,7 @@ const std::string apply_inittype = "apply_inittype";
 
 /// Basic settings needed for most iterations
 struct SolverSettings {
-	Prec_type prectype;                   ///< The type of preconditioner to use
+	BlastedSolverType prectype;           ///< The type of preconditioner to use
 	int bs;                               ///< Size of small dense blocks in the system matrix
 	StorageOptions blockstorage;          ///< Layout within individual blocks - RowMajor or ColMajor
 	/// Set to true if relaxation is desired instead of preconditioning
@@ -83,7 +84,7 @@ SRPreconditioner<scalar,index> *create_sr_preconditioner(const index ndim,
 	//  const std::map<std::string,double>& floatParamList);
 
 /// Convert a string into a preconditioner type if possible. Throws a invalid_argument if not possible.
-Prec_type precTypeFromString(const std::string precstr);
+BlastedSolverType solverTypeFromString(const std::string precstr);
 
 }
 #endif

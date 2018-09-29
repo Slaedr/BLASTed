@@ -16,19 +16,19 @@
 
 namespace blasted {
 
-Prec_type precTypeFromString(const std::string precstr2)
+BlastedSolverType solverTypeFromString(const std::string precstr2)
 {
-	Prec_type ptype;
-	if(precstr2 == "jacobi")
-		ptype = JACOBI;
-	else if(precstr2 == "gs")
-		ptype = GS;
-	else if(precstr2 == "sgs")
-		ptype = SGS;
-	else if(precstr2 == "ilu0")
-		ptype = ILU0;
-	else if(precstr2 == "sapilu0")
-		ptype = SAPILU0;
+	BlastedSolverType ptype;
+	if(precstr2 == jacobistr)
+		ptype = BLASTED_JACOBI;
+	else if(precstr2 == gsstr)
+		ptype = BLASTED_GS;
+	else if(precstr2 == sgsstr)
+		ptype = BLASTED_SGS;
+	else if(precstr2 == ilu0str)
+		ptype = BLASTED_ILU0;
+	else if(precstr2 == sapilu0str)
+		ptype = BLASTED_SAPILU0;
 	else {
 		throw invalid_argument("BLASTed: Preconditioner type not available!");
 	}
@@ -40,54 +40,53 @@ Prec_type precTypeFromString(const std::string precstr2)
  * the corresponding preconditioner is returned instead after printing a warning.
  */
 template <typename scalar, typename index, int bs, StorageOptions stor>
-static inline
-SRPreconditioner<scalar,index> *create_srpreconditioner_of_type
-	(const std::string precstr, const bool relax,
-	 const std::map<std::string,int>& intlist, const std::map<std::string,double>& floatlist)
+static
+SRPreconditioner<scalar,index> *create_srpreconditioner_of_type(const int ndim,
+                                                                const AsyncSolverSettings& opts)
 {
-	if(precstr == jacobistr)
-		if(relax)
+	if(opts.prectype == BLASTED_JACOBI)
+		if(opts.relax)
 			return new BJacobiRelaxation<scalar,index,bs,stor>();
 		else
 			return new BJacobiSRPreconditioner<scalar,index,bs,stor>();
-	else if(precstr == gsstr) {
-		if(!relax) {
+	else if(opts.prectype == BLASTED_GS) {
+		if(!opts.relax) {
 			std::cout << "WARNING: SolverFactory: GS preconditioner not yet implemented.";
 			std::cout << " Using the relaxation instead.\n";
 		}
 		return new ChaoticBlockRelaxation<scalar,index,bs,stor>();
 	}
-	else if(precstr == sgsstr) {
-		if(relax) {
+	else if(opts.prectype == BLASTED_SGS) {
+		if(opts.relax) {
 			return new AsyncBlockSGS_Relaxation<scalar,index,bs,stor>();
 		}
 		else
-			return new AsyncBlockSGS_SRPreconditioner<scalar,index,bs,stor>(intlist.at(napplysweeps));
+			return new AsyncBlockSGS_SRPreconditioner<scalar,index,bs,stor>(opts.napplysweeps);
 	}
-	else if(precstr == ilu0str) {
-		if(relax) {
+	else if(opts.prectype == BLASTED_ILU0) {
+		if(opts.relax) {
 			std::cout << "Solverfactory: ILU relaxation is not implemented.";
 			std::cout << " Using the preconditioner.\n";
 		}
 		return new AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>
-			(intlist.at(nbuildsweeps), intlist.at(napplysweeps), intlist.at(thread_chunk_size),
-			 intlist.at(fact_inittype), intlist.at(apply_inittype), true, true);
+			(opts.nbuildsweeps, opts.napplysweeps, opts.thread_chunk_size,
+			 opts.fact_inittype, opts.apply_inittype, true, true);
 	}
-	else if(precstr == sapilu0str) {
-		if(relax) {
+	else if(opts.prectype == BLASTED_SAPILU0) {
+		if(opts.relax) {
 			std::cout << "Solverfactory: ILU relaxation is not implemented.";
 			std::cout << " Using the preconditioner.\n";
 		}
 		return new AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>
-			(intlist.at(nbuildsweeps), intlist.at(napplysweeps), intlist.at(thread_chunk_size),
-			 intlist.at(fact_inittype), intlist.at(apply_inittype), true, false);
+			(opts.nbuildsweeps, opts.napplysweeps, opts.thread_chunk_size,
+			 opts.fact_inittype, opts.apply_inittype, true, false);
 	}
-	else if(precstr == noprecstr) {
-		if(relax) {
+	else if(opts.prectype == BLASTED_NO_PREC) {
+		if(opts.relax) {
 			std::cout << "WARNING: Solverfactory: ILU relaxation is not possible.";
 			std::cout << " Using the preconditioner instead.\n";
 		}
-		return new NoPreconditioner<scalar,index>(intlist.at(ndimstr));
+		return new NoPreconditioner<scalar,index>(ndim);
 	}
 	else
 		throw std::invalid_argument("Invalid preconditioner!");
@@ -98,53 +97,51 @@ SRPreconditioner<scalar,index> *create_sr_preconditioner(const index ndim, const
 {
 	SRPreconditioner<scalar,index> *p = nullptr;
 
-	const AsyncSolverSettings& aset = reinterpret_cast<const AsyncSolverSettings&>(set);
+	const AsyncSolverSettings& opts = reinterpret_cast<const AsyncSolverSettings&>(set);
 		
-	if(bs == 1) {
-		if(precstr == jacobistr) {
-			if(relax)
+	if(opts.bs == 1) {
+		if(opts.prectype == BLASTED_JACOBI) {
+			if(opts.relax)
 				p = new JacobiRelaxation<scalar,index>();
 			else
 				p = new JacobiSRPreconditioner<scalar,index>();
 		}
-		else if(precstr == gsstr) {
+		else if(opts.prectype == BLASTED_GS) {
 			p = new ChaoticRelaxation<scalar,index>();
-			if(!relax) {
+			if(!opts.relax) {
 				std::cout << "solverfactory(): Warning: Forward Gauss-Seidel preconditioner ";
 				std::cout << "is not implemented; using relaxation instead.\n";
 			}
 		}
-		else if(precstr == sgsstr) {
-			if(relax)
+		else if(opts.prectype == BLASTED_SGS) {
+			if(opts.relax)
 				p = new AsyncSGS_Relaxation<scalar,index>();
 			else
-				p = new AsyncSGS_SRPreconditioner<scalar,index>(intParamList.at(napplysweeps));
+				p = new AsyncSGS_SRPreconditioner<scalar,index>(opts.napplysweeps);
 		}
-		else if(precstr == ilu0str)
+		else if(opts.prectype == BLASTED_ILU0)
 			p = new AsyncILU0_SRPreconditioner<scalar,index>
-				(intParamList.at(nbuildsweeps), intParamList.at(napplysweeps),
-				 intParamList.at(thread_chunk_size),
-				 intParamList.at(fact_inittype), intParamList.at(apply_inittype), true,true);
-		else if(precstr == sapilu0str)
+				(opts.nbuildsweeps, opts.napplysweeps,
+				 opts.thread_chunk_size,
+				 opts.fact_inittype, opts.apply_inittype, true,true);
+		else if(opts.prectype == BLASTED_SAPILU0)
 			return new AsyncILU0_SRPreconditioner<scalar,index>
-				(intParamList.at(nbuildsweeps), intParamList.at(napplysweeps),
-				 intParamList.at(thread_chunk_size),
-				 intParamList.at(fact_inittype), intParamList.at(apply_inittype), true,false);
-		else if(precstr == noprecstr)
-			return new NoPreconditioner<scalar,index>(intParamList.at(ndimstr));
+				(opts.nbuildsweeps, opts.napplysweeps,
+				 opts.thread_chunk_size,
+				 opts.fact_inittype, opts.apply_inittype, true,false);
+		else if(opts.prectype == noprecstr)
+			return new NoPreconditioner<scalar,index>(ndim);
 		else
 			throw std::invalid_argument("Invalid preconditioner!");
 	}
-	else if(blockstorage == rowmajorstr) 
+	else if(opts.blockstorage == rowmajorstr) 
 	{
-		if(bs == 4) {
-			p = create_srpreconditioner_of_type<scalar,index,4,RowMajor>(precstr, relax,
-					intParamList, floatParamList);
+		if(opts.bs == 4) {
+			p = create_srpreconditioner_of_type<scalar,index,4,RowMajor>(ndim,opts);
 		}
 #ifdef BUILD_BLOCK_SIZE
-		else if(bs == BUILD_BLOCK_SIZE) {
-			p = create_srpreconditioner_of_type<scalar,index,BUILD_BLOCK_SIZE,RowMajor>(precstr, 
-				      relax, intParamList, floatParamList);
+		else if(opts.bs == BUILD_BLOCK_SIZE) {
+			p = create_srpreconditioner_of_type<scalar,index,BUILD_BLOCK_SIZE,RowMajor>(ndim,opts);
 		}
 #endif
 		else {
@@ -152,19 +149,16 @@ SRPreconditioner<scalar,index> *create_sr_preconditioner(const index ndim, const
 					" not supported for row major!");
 		}
 	}
-	else if(blockstorage == colmajorstr)
+	else if(opts.blockstorage == colmajorstr)
 	{
-		if(bs==4)
-			p = create_srpreconditioner_of_type<scalar,index,4,ColMajor>(precstr, relax,
-					intParamList, floatParamList);
-		else if(bs == 5) {
-			p = create_srpreconditioner_of_type<scalar,index,5,ColMajor>(precstr, relax,
-					intParamList, floatParamList);
+		if(opts.bs==4)
+			p = create_srpreconditioner_of_type<scalar,index,4,ColMajor>(ndim,opts);
+		else if(opts.bs == 5) {
+			p = create_srpreconditioner_of_type<scalar,index,5,ColMajor>(ndim,opts);
 		}
 #ifdef BUILD_BLOCK_SIZE
-		else if(bs == BUILD_BLOCK_SIZE) {
-			p = create_srpreconditioner_of_type<scalar,index,BUILD_BLOCK_SIZE,ColMajor>(precstr, 
-				      relax, intParamList, floatParamList);
+		else if(opts.bs == BUILD_BLOCK_SIZE) {
+			p = create_srpreconditioner_of_type<scalar,index,BUILD_BLOCK_SIZE,ColMajor>(ndim,opts);
 		}
 #endif
 		else {
@@ -173,15 +167,13 @@ SRPreconditioner<scalar,index> *create_sr_preconditioner(const index ndim, const
 		}
 	}
 	else {
-		throw std::invalid_argument("Block ordering must be either " + rowmajorstr + " or " +
-				colmajorstr);
+		throw std::invalid_argument("Block ordering must be either rowmajor or colmajor!");
 	}
 
 	return p;
 }
 
 template SRPreconditioner<double,int>* create_sr_preconditioner<double,int>
-( const std::string precstr, const int bs, const std::string blockstorage, const bool relax,
-  const std::map<std::string,int>& intParamList, const std::map<std::string,double>& floatParamList);
+(const int ndim, const SolverSettings& opts);
 
 }
