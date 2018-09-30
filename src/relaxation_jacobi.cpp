@@ -20,8 +20,6 @@ void BJacobiRelaxation<scalar,index,bs,stor>::apply(const scalar *const bb,
 	using Blk = Block_t<scalar,bs,stor>;
 	using Seg = Segment_t<scalar,bs>;
 
-	//Eigen::aligned_allocator<Seg> ea;
-	//Seg* xtemp = ea.allocate(mat.nbrows);
 	scalar *xtempr = (scalar*)aligned_alloc(CACHE_LINE_LEN, mat.nbrows*bs*sizeof(scalar));
 
 	const Blk *data = reinterpret_cast<const Blk*>(mat.vals);

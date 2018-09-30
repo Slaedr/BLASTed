@@ -25,8 +25,8 @@
 namespace blasted {
 
 template<typename scalar, typename index, int bs, StorageOptions stor>
-AsyncBlockSGS_Relaxation<scalar,index,bs,stor>::AsyncBlockSGS_Relaxation()
-	: thread_chunk_size{400}
+AsyncBlockSGS_Relaxation<scalar,index,bs,stor>::AsyncBlockSGS_Relaxation(const int threadchunksize)
+	: thread_chunk_size{threadchunksize}
 { }
 
 template<typename scalar, typename index, int bs, StorageOptions stor>
@@ -73,8 +73,8 @@ template class AsyncBlockSGS_Relaxation<double,int,BUILD_BLOCK_SIZE,RowMajor>;
 #endif
 
 template<typename scalar, typename index>
-AsyncSGS_Relaxation<scalar,index>::AsyncSGS_Relaxation()
-	: thread_chunk_size{800}
+AsyncSGS_Relaxation<scalar,index>::AsyncSGS_Relaxation(const int threadchunksize)
+	: thread_chunk_size{threadchunksize}
 { }
 
 template<typename scalar, typename index>

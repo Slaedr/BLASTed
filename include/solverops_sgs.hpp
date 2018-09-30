@@ -6,6 +6,7 @@
 #ifndef BLASTED_SOLVEROPS_SGS_H
 #define BLASTED_SOLVEROPS_SGS_H
 
+#include "async_initialization_decl.hpp"
 #include "solverops_jacobi.hpp"
 
 namespace blasted {
@@ -26,8 +27,11 @@ class AsyncBlockSGS_SRPreconditioner : public BJacobiSRPreconditioner<scalar,ind
 public:
 	/// Create block SGS preconditioner
 	/** \param napplysweeps Number of asynchronous application sweeps
+	 * \param apply_inittype Type of initialization to use for temporary and output vectors
+	 * \param threadchunksize Number of iterations assigned to a thread at a time
 	 */
-	AsyncBlockSGS_SRPreconditioner(const int napplysweeps);
+	AsyncBlockSGS_SRPreconditioner(const int napplysweeps, const ApplyInit apply_inittype,
+	                               const int threadchunksize);
 
 	~AsyncBlockSGS_SRPreconditioner();
 
@@ -51,6 +55,7 @@ protected:
 	mutable scalar *ytemp;
 
 	const int napplysweeps;
+	const ApplyInit ainit;
 	const int thread_chunk_size;
 };
 
@@ -61,8 +66,11 @@ class AsyncSGS_SRPreconditioner : public JacobiSRPreconditioner<scalar,index>
 public:
 	/// Create asynchronous scalar SGS preconditioner
 	/** \param napplysweeps Number of asynchronous application sweeps
+	 * \param apply_inittype Type of initialization to use for temporary and output vectors
+	 * \param threadchunksize Number of iterations assigned to a thread at a time
 	 */
-	AsyncSGS_SRPreconditioner(const int napplysweeps);
+	AsyncSGS_SRPreconditioner(const int napplysweeps, const ApplyInit apply_inittype,
+	                          const int threadchunksize);
 
 	~AsyncSGS_SRPreconditioner();
 
@@ -83,6 +91,7 @@ protected:
 	mutable scalar *ytemp;
 
 	const int napplysweeps;
+	const ApplyInit ainit;
 	const int thread_chunk_size;
 };
 

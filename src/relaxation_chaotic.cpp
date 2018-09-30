@@ -11,8 +11,8 @@
 namespace blasted {
 
 template<typename scalar, typename index, int bs, StorageOptions stor>
-ChaoticBlockRelaxation<scalar,index,bs,stor>::ChaoticBlockRelaxation()
-	: thread_chunk_size{400}
+ChaoticBlockRelaxation<scalar,index,bs,stor>::ChaoticBlockRelaxation(const int tcs)
+	: thread_chunk_size{tcs}
 { }
 	
 template<typename scalar, typename index, int bs, StorageOptions stor>
@@ -52,8 +52,8 @@ template class ChaoticBlockRelaxation<double,int,BUILD_BLOCK_SIZE,RowMajor>;
 #endif
 
 template<typename scalar, typename index>
-ChaoticRelaxation<scalar,index>::ChaoticRelaxation()
-	: thread_chunk_size{800}
+ChaoticRelaxation<scalar,index>::ChaoticRelaxation(const int threadchunksize)
+	: thread_chunk_size{threadchunksize}
 { }
 
 template<typename scalar, typename index>

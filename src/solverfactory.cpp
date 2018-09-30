@@ -56,14 +56,15 @@ SRPreconditioner<scalar,index> *create_srpreconditioner_of_type(const int ndim,
 			std::cout << "WARNING: SolverFactory: GS preconditioner not yet implemented.";
 			std::cout << " Using the relaxation instead.\n";
 		}
-		return new ChaoticBlockRelaxation<scalar,index,bs,stor>();
+		return new ChaoticBlockRelaxation<scalar,index,bs,stor>(opts.thread_chunk_size);
 	}
 	else if(opts.prectype == BLASTED_SGS) {
 		if(opts.relax) {
-			return new AsyncBlockSGS_Relaxation<scalar,index,bs,stor>();
+			return new AsyncBlockSGS_Relaxation<scalar,index,bs,stor>(opts.thread_chunk_size);
 		}
 		else
-			return new AsyncBlockSGS_SRPreconditioner<scalar,index,bs,stor>(opts.napplysweeps);
+			return new AsyncBlockSGS_SRPreconditioner<scalar,index,bs,stor>
+				(opts.napplysweeps, opts.apply_inittype, opts.thread_chunk_size);
 	}
 	else if(opts.prectype == BLASTED_ILU0) {
 		if(opts.relax) {
@@ -109,7 +110,7 @@ SRPreconditioner<scalar,index> *create_sr_preconditioner(const index ndim, const
 				p = new JacobiSRPreconditioner<scalar,index>();
 		}
 		else if(opts.prectype == BLASTED_GS) {
-			p = new ChaoticRelaxation<scalar,index>();
+			p = new ChaoticRelaxation<scalar,index>(opts.thread_chunk_size);
 			if(!opts.relax) {
 				std::cout << "solverfactory(): Warning: Forward Gauss-Seidel preconditioner ";
 				std::cout << "is not implemented; using relaxation instead.\n";
@@ -117,9 +118,10 @@ SRPreconditioner<scalar,index> *create_sr_preconditioner(const index ndim, const
 		}
 		else if(opts.prectype == BLASTED_SGS) {
 			if(opts.relax)
-				p = new AsyncSGS_Relaxation<scalar,index>();
+				p = new AsyncSGS_Relaxation<scalar,index>(opts.thread_chunk_size);
 			else
-				p = new AsyncSGS_SRPreconditioner<scalar,index>(opts.napplysweeps);
+				p = new AsyncSGS_SRPreconditioner<scalar,index>
+					(opts.napplysweeps, opts.apply_inittype, opts.thread_chunk_size);
 		}
 		else if(opts.prectype == BLASTED_ILU0)
 			p = new AsyncILU0_SRPreconditioner<scalar,index>

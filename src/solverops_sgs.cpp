@@ -14,8 +14,9 @@ using boost::alignment::aligned_alloc;
 using boost::alignment::aligned_free;
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
-AsyncBlockSGS_SRPreconditioner<scalar,index,bs,stor>::AsyncBlockSGS_SRPreconditioner(const int naswps)
-	: ytemp{nullptr}, napplysweeps{naswps}, thread_chunk_size{400}
+AsyncBlockSGS_SRPreconditioner<scalar,index,bs,stor>::AsyncBlockSGS_SRPreconditioner
+(const int naswps, const ApplyInit apply_inittype, const int threadchunksize)
+	: ytemp{nullptr}, napplysweeps{naswps}, ainit{apply_inittype}, thread_chunk_size{threadchunksize}
 { }
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
@@ -48,11 +49,10 @@ void AsyncBlockSGS_SRPreconditioner<scalar,index,bs,stor>::apply(const scalar *c
 	Seg *z = reinterpret_cast<Seg*>(zz);
 	Seg *y = reinterpret_cast<Seg*>(ytemp);
 
+	if(ainit == INIT_A_JACOBI || ainit == INIT_A_ZERO)
 #pragma omp parallel for simd default(shared)
-	for(index i = 0; i < mat.nbrows*bs; i++)
-	{
-		ytemp[i] = 0;
-	}
+		for(index i = 0; i < mat.nbrows*bs; i++)
+			ytemp[i] = 0;
 	
 	for(int isweep = 0; isweep < napplysweeps; isweep++)
 	{
@@ -66,11 +66,14 @@ void AsyncBlockSGS_SRPreconditioner<scalar,index,bs,stor>::apply(const scalar *c
 		}
 	}
 
+	if(ainit == INIT_A_JACOBI)
 #pragma omp parallel for simd default(shared)
-	for(index i = 0; i < mat.nbrows*bs; i++)
-	{
-		zz[i] = ytemp[i];
-	}
+		for(index i = 0; i < mat.nbrows*bs; i++)
+			zz[i] = ytemp[i];
+	else if(ainit == INIT_A_ZERO)
+#pragma omp parallel for simd default(shared)
+		for(index i = 0; i < mat.nbrows*bs; i++)
+			zz[i] = 0;
 
 	for(int isweep = 0; isweep < napplysweeps; isweep++)
 	{
@@ -86,8 +89,10 @@ void AsyncBlockSGS_SRPreconditioner<scalar,index,bs,stor>::apply(const scalar *c
 }
 
 template <typename scalar, typename index>
-AsyncSGS_SRPreconditioner<scalar,index>::AsyncSGS_SRPreconditioner(const int naswps)
-	: ytemp{nullptr}, napplysweeps{naswps}, thread_chunk_size{800}
+AsyncSGS_SRPreconditioner<scalar,index>::AsyncSGS_SRPreconditioner(const int naswps,
+                                                                   const ApplyInit apply_inittype,
+                                                                   const int threadchunksize)
+	: ytemp{nullptr}, napplysweeps{naswps}, ainit{apply_inittype}, thread_chunk_size{threadchunksize}
 { }
 
 template <typename scalar, typename index>
@@ -114,9 +119,10 @@ template <typename scalar, typename index>
 void AsyncSGS_SRPreconditioner<scalar,index>::apply(const scalar *const rr,
                                                         scalar *const __restrict zz) const
 {
+	if(ainit == INIT_A_JACOBI || ainit == INIT_A_ZERO)
 #pragma omp parallel for simd default(shared)
-	for(index i = 0; i < mat.nbrows; i++)
-		ytemp[i] = 0;
+		for(index i = 0; i < mat.nbrows; i++)
+			ytemp[i] = 0;
 
 	for(int isweep = 0; isweep < napplysweeps; isweep++)
 	{
@@ -130,9 +136,14 @@ void AsyncSGS_SRPreconditioner<scalar,index>::apply(const scalar *const rr,
 		}
 	}
 
+	if(ainit == INIT_A_JACOBI)
 #pragma omp parallel for simd default(shared)
-	for(index i = 0; i < mat.nbrows; i++)
-		zz[i] = ytemp[i];
+		for(index i = 0; i < mat.nbrows; i++)
+			zz[i] = ytemp[i];
+	else if(ainit == INIT_A_ZERO)
+#pragma omp parallel for simd default(shared)
+		for(index i = 0; i < mat.nbrows; i++)
+			zz[i] = 0;
 
 	for(int isweep = 0; isweep < napplysweeps; isweep++)
 	{

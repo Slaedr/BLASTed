@@ -6,6 +6,9 @@
 #ifndef BLASTED_ASYNC_INITIALIZATION_TYPES
 #define BLASTED_ASYNC_INITIALIZATION_TYPES
 
+#include <string>
+#include <stdexcept>
+
 namespace blasted {
 
 /// Types of initialization (initial guess) for asynchronous ILU factorization

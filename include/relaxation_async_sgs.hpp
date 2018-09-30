@@ -20,7 +20,7 @@ template<typename scalar, typename index, int bs, StorageOptions stor>
 class AsyncBlockSGS_Relaxation : public BJacobiSRPreconditioner<scalar,index,bs,stor>
 {
 public:
-	AsyncBlockSGS_Relaxation();
+	AsyncBlockSGS_Relaxation(const int threadchunksize);
 
 	/// Carry out chaotic block SGS relaxation
 	/** For this solver, tolerance checking is never done irrespective of
@@ -50,7 +50,7 @@ template<typename scalar, typename index>
 class AsyncSGS_Relaxation : public JacobiSRPreconditioner<scalar,index>
 {
 public:
-	AsyncSGS_Relaxation();
+	AsyncSGS_Relaxation(const int threadchunksize);
 
 	/// Carry out chaotic block SGS relaxation
 	/** For this solver, tolerance checking is never done irrespective of

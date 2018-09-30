@@ -18,7 +18,10 @@ template<typename scalar, typename index, int bs, StorageOptions stor>
 class ChaoticBlockRelaxation : public BJacobiSRPreconditioner<scalar,index,bs,stor>
 {
 public:
-	ChaoticBlockRelaxation();
+	/// Assigns thread chunk size
+	/** \param threadchunksize Number of iterations to assign to a thread at a time
+	 */
+	ChaoticBlockRelaxation(const int threadchunksize);
 
 	/// Carry out chaotic block relaxation
 	/** For this solver, tolerance checking is never done irrespective of
@@ -48,7 +51,10 @@ template<typename scalar, typename index>
 class ChaoticRelaxation : public JacobiSRPreconditioner<scalar,index>
 {
 public:
-	ChaoticRelaxation();
+	/// Assigns thread chunk size
+	/** \param threadchunksize Number of iterations to assign to a thread at a time
+	 */
+	ChaoticRelaxation(const int threadchunksize);
 
 	/// Carry out chaotic relaxation
 	/** For this solver, tolerance checking is never done irrespective of
