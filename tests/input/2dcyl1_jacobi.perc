@@ -31,3 +31,6 @@
 -blasted_pc_type jacobi
 -blasted_async_sweeps 1,1
 
+-blasted_thread_chunk_size 320
+-blasted_async_fact_init_type init_zero
+-blasted_async_apply_init_type init_zero

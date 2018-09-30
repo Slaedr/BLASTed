@@ -117,7 +117,7 @@ int main(int argc, char* argv[])
 	set = PETSC_FALSE;
 	ierr = PetscOptionsGetReal(NULL, NULL, "-error_tolerance_factor", &error_tol, &set);
 	if(!set) {
-		printf("Error tolerance factor not set; using the default 1e6.");
+		printf("Error tolerance factor not set; using the default 1e6.\n");
 		error_tol = 1e6;
 	}
 

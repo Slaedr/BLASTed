@@ -95,8 +95,8 @@ static PetscErrorCode setupDataFromOptions(PC pc)
 			abort();
 		}
 
-		get_string_petscoptions("-basted_async_fact_init_type", &ctx->factinittype);
-		get_string_petscoptions("-basted_async_apply_init_type", &ctx->applyinittype);
+		get_string_petscoptions("-blasted_async_fact_init_type", &ctx->factinittype);
+		get_string_petscoptions("-blasted_async_apply_init_type", &ctx->applyinittype);
 		ctx->threadchunksize = get_int_petscoptions("-blasted_thread_chunk_size");
 #ifdef DEBUG
 		std::printf("BLASTed: setupDataFromOptions:\n");
@@ -179,8 +179,10 @@ PetscErrorCode createNewPreconditioner(PC pc)
 	settings.nbuildsweeps = ctx->nbuildsweeps;
 	settings.napplysweeps = ctx->napplysweeps;
 	settings.thread_chunk_size = ctx->threadchunksize;
-	settings.fact_inittype = getFactInitFromString(ctx->factinittype);
-	settings.apply_inittype = getApplyInitFromString(ctx->applyinittype);
+	if(settings.prectype != BLASTED_JACOBI) {
+		settings.fact_inittype = getFactInitFromString(ctx->factinittype);
+		settings.apply_inittype = getApplyInitFromString(ctx->applyinittype);
+	}
 
 	settings.relax = false;
 	precop = create_sr_preconditioner<PetscReal,PetscInt>(ndim, settings);

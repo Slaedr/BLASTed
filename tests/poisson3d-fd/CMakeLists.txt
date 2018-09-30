@@ -58,7 +58,7 @@ if(WITH_PETSC)
   add_test(NAME ThreadedPoissonCSRPetscILU0 COMMAND ${MPIEXEC} -n 1 ./testcsr_poisson_threaded 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/poisson.control
 	-options_file  ${CMAKE_CURRENT_SOURCE_DIR}/input/thread_poisson_csr.perc
-	-ref_sub_pc_type ilu -blasted_pc_type ilu0 -test_type compare_error -error_tolerance_factor 1e7)
+	-ref_sub_pc_type ilu -blasted_pc_type ilu0 -test_type compare_error -error_tolerance_factor 1e6)
 
   add_test(NAME ThreadedPoissonCSRPetscSAPILU0 COMMAND ${MPIEXEC} -n 1 ./testcsr_poisson_threaded 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/poisson.control 

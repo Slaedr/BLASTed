@@ -30,8 +30,11 @@ void AsyncBlockSGS_SRPreconditioner<scalar,index,bs,stor>::compute()
 {
 	BJacobiSRPreconditioner<scalar,index,bs,stor>::compute();
 	if(!ytemp) {
-		//ytemp = new scalar[mat.nbrows*bs];
 		ytemp = (scalar*)aligned_alloc(CACHE_LINE_LEN,mat.nbrows*bs*sizeof(scalar));
+
+#pragma omp parallel for simd default(shared)
+		for(index i = 0; i < mat.nbrows*bs; i++)
+			ytemp[i] = 0;
 	}
 }
 
@@ -99,8 +102,11 @@ void AsyncSGS_SRPreconditioner<scalar,index>::compute()
 {
 	JacobiSRPreconditioner<scalar,index>::compute();
 	if(!ytemp) {
-		//ytemp = new scalar[mat.nbrows];
 		ytemp = (scalar*)aligned_alloc(CACHE_LINE_LEN,mat.nbrows*sizeof(scalar));
+
+#pragma omp parallel for simd default(shared)
+		for(index i = 0; i < mat.nbrows; i++)
+			ytemp[i] = 0;
 	}
 }
 
@@ -108,7 +114,6 @@ template <typename scalar, typename index>
 void AsyncSGS_SRPreconditioner<scalar,index>::apply(const scalar *const rr,
                                                         scalar *const __restrict zz) const
 {
-	//scalar_sgs_apply(&mat, dblocks, ytemp, napplysweeps, thread_chunk_size, true, rr, zz);
 #pragma omp parallel for simd default(shared)
 	for(index i = 0; i < mat.nbrows; i++)
 		ytemp[i] = 0;
