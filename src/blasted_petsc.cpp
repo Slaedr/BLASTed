@@ -12,11 +12,11 @@
 #include <../src/mat/impls/aij/mpi/mpiaij.h>
 #include <../src/mat/impls/baij/mpi/mpibaij.h>
 
+#include "solvertypes.h"
 #include "solverops_jacobi.hpp"
 #include "solverops_sgs.hpp"
 #include "solverops_ilu0.hpp"
 #include "solverfactory.hpp"
-#include "async_initialization_decl.hpp"
 #include "blasted_petsc.h"
 
 using namespace blasted;
@@ -159,6 +159,8 @@ PetscErrorCode createNewPreconditioner(PC pc)
 	ierr = MatGetSize(A, &globalrows, &globalcols); CHKERRQ(ierr);
 	assert(localrows == localcols);
 	assert(globalrows == globalcols);
+
+	const int ndim = localrows;
 	
 	// ensure diagonal entry locations have been computed; this is necessary for BAIJ matrices
 	// as a bonus, check for singular diagonals
@@ -170,17 +172,21 @@ PetscErrorCode createNewPreconditioner(PC pc)
 	}
 
 	// create appropriate preconditioner and relaxation objects
-	std::map<std::string,int> iparamlist;
-	iparamlist[blasted::nbuildsweeps] = ctx->nbuildsweeps;
-	iparamlist[blasted::napplysweeps] = ctx->napplysweeps;
-	iparamlist[blasted::thread_chunk_size] = ctx->threadchunksize;
-	iparamlist[blasted::fact_inittype] = getFactInitFromString(ctx->factinittype);
-	iparamlist[blasted::apply_inittype] = getFactInitFromString(ctx->applyinittype);
-	std::map<std::string,double> fparamlist;
-	precop = create_sr_preconditioner<PetscReal,PetscInt>(ctx->prectypestr, ctx->bs, "colmajor", 
-	                                                      false, iparamlist, fparamlist);
-	relop = create_sr_preconditioner<PetscReal,PetscInt>(ctx->prectypestr, ctx->bs, "colmajor", 
-	                                                      true, iparamlist, fparamlist);
+	AsyncSolverSettings settings;
+	settings.prectype = solverTypeFromString(ctx->prectypestr);
+	settings.bs = ctx->bs;  // set in setup_localpreconditioner_blasted below
+	settings.blockstorage = ColMajor;   // required for PETSc
+	settings.nbuildsweeps = ctx->nbuildsweeps;
+	settings.napplysweeps = ctx->napplysweeps;
+	settings.thread_chunk_size = ctx->threadchunksize;
+	settings.fact_inittype = getFactInitFromString(ctx->factinittype);
+	settings.apply_inittype = getApplyInitFromString(ctx->applyinittype);
+
+	settings.relax = false;
+	precop = create_sr_preconditioner<PetscReal,PetscInt>(ndim, settings);
+
+	settings.relax = true;
+	relop = create_sr_preconditioner<PetscReal,PetscInt>(ndim, settings);
 
 	ctx->bprec = reinterpret_cast<void*>(precop);
 	ctx->brelax = reinterpret_cast<void*>(relop);
@@ -227,8 +233,6 @@ PetscErrorCode updatePreconditioner(PC pc)
 		relop->wrap(localrows/ctx->bs, Abdiag->i, Abdiag->j, Abdiag->a, Abdiag->diag);
 	}
 
-	/*ctx->bprec = reinterpret_cast<void*>(precop);
-	  ctx->brelax = reinterpret_cast<void*>(relop);*/
 	return ierr;
 }
 
@@ -391,7 +395,7 @@ PetscErrorCode relax_local_blasted(PC pc, Vec rhs, Vec x, Vec w,
 	ierr = PCShellGetContext(pc, (void**)&ctx); CHKERRQ(ierr);
 
 	// ILUs are not implemented as relaxation, so just just call the preconditioner instead
-	if(ctx->prectype == ILU0 || ctx->prectype == SAPILU0) {
+	if(ctx->prectype == BLASTED_ILU0 || ctx->prectype == BLASTED_SAPILU0) {
 		const BlastedPreconditioner *const prec =
 			reinterpret_cast<const BlastedPreconditioner*>(ctx->bprec);
 		

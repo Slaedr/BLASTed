@@ -3,6 +3,7 @@
  * \author Aditya Kashi
  */
 
+#include <iostream>
 #include "async_ilu_factor.hpp"
 #include "kernels/kernels_ilu0_factorize.hpp"
 #include "helper_algorithms.hpp"
@@ -53,9 +54,11 @@ static void executeILU0Factorization(const CRawBSRMatrix<scalar,index> *const ma
 		{
 #pragma omp for schedule(dynamic, thread_chunk_size)
 			for(index irow = 0; irow < mat->nbrows; irow++)
+			{
 				async_ilu0_factorize_kernel<scalar,index,scalerow,scalecol>(mat, irow,
 				                                                            rowscale, colscale,
 				                                                            iluvals);
+			}
 		}
 	}
 }

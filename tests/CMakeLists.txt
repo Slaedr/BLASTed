@@ -16,95 +16,110 @@ set_property(TARGET testsolve PROPERTY POSITION_INDEPENDENT_CODE ON)
 add_subdirectory(helper_algs)
 add_subdirectory(mat_ops)
 
+set(TCS 300)
+
 # valgrind --leak-check=full 
 
-add_test(NAME SPDCSRJacobi COMMAND ${SEQEXEC} ${SEQTASKS} ${CMAKE_CURRENT_BINARY_DIR}/testsolve bcgs jacobi csr rowmajor
-	${CMAKE_CURRENT_SOURCE_DIR}/input/boeing-msc00726/msc00726.mtx 
-	${CMAKE_CURRENT_SOURCE_DIR}/input/boeing-msc00726/msc00726_x.mtx 
-	${CMAKE_CURRENT_SOURCE_DIR}/input/boeing-msc00726/msc00726_b.mtx
-	1e-10 1e-9 200
+add_test(NAME SPDCSRJacobi COMMAND ${SEQEXEC} ${SEQTASKS}
+  ${CMAKE_CURRENT_BINARY_DIR}/testsolve bcgs jacobi init_none init_none csr rowmajor
+  ${CMAKE_CURRENT_SOURCE_DIR}/input/boeing-msc00726/msc00726.mtx 
+  ${CMAKE_CURRENT_SOURCE_DIR}/input/boeing-msc00726/msc00726_x.mtx 
+  ${CMAKE_CURRENT_SOURCE_DIR}/input/boeing-msc00726/msc00726_b.mtx
+  1e-10 1e-9 200  ${TCS}
 )
 
-add_test(NAME SPDCSRSGS COMMAND env OMP_NUM_THREADS=1 ${SEQEXEC} ${SEQTASKS} ${CMAKE_CURRENT_BINARY_DIR}/testsolve bcgs sgs csr rowmajor
-	${CMAKE_CURRENT_SOURCE_DIR}/input/boeing-msc00726/msc00726.mtx 
-	${CMAKE_CURRENT_SOURCE_DIR}/input/boeing-msc00726/msc00726_x.mtx 
-	${CMAKE_CURRENT_SOURCE_DIR}/input/boeing-msc00726/msc00726_b.mtx
-	1e-10 1e-10 200
+add_test(NAME SPDCSRSGS COMMAND env OMP_NUM_THREADS=1 ${SEQEXEC} ${SEQTASKS}
+  ${CMAKE_CURRENT_BINARY_DIR}/testsolve bcgs sgs init_zero init_zero csr rowmajor
+  ${CMAKE_CURRENT_SOURCE_DIR}/input/boeing-msc00726/msc00726.mtx 
+  ${CMAKE_CURRENT_SOURCE_DIR}/input/boeing-msc00726/msc00726_x.mtx 
+  ${CMAKE_CURRENT_SOURCE_DIR}/input/boeing-msc00726/msc00726_b.mtx
+  1e-10 1e-10 200 ${TCS}
 )
 
-add_test(NAME SPDCSRILU0 COMMAND env OMP_NUM_THREADS=1 ${SEQEXEC} ${SEQTASKS} ${CMAKE_CURRENT_BINARY_DIR}/testsolve bcgs ilu0 csr rowmajor
-	${CMAKE_CURRENT_SOURCE_DIR}/input/boeing-msc00726/msc00726.mtx 
-	${CMAKE_CURRENT_SOURCE_DIR}/input/boeing-msc00726/msc00726_x.mtx 
-	${CMAKE_CURRENT_SOURCE_DIR}/input/boeing-msc00726/msc00726_b.mtx
-	1e-10 1e-10 200
+add_test(NAME SPDCSRILU0 COMMAND env OMP_NUM_THREADS=1 ${SEQEXEC} ${SEQTASKS}
+  ${CMAKE_CURRENT_BINARY_DIR}/testsolve bcgs ilu0 init_zero init_zero csr rowmajor
+  ${CMAKE_CURRENT_SOURCE_DIR}/input/boeing-msc00726/msc00726.mtx 
+  ${CMAKE_CURRENT_SOURCE_DIR}/input/boeing-msc00726/msc00726_x.mtx 
+  ${CMAKE_CURRENT_SOURCE_DIR}/input/boeing-msc00726/msc00726_b.mtx
+  1e-10 1e-10 200 ${TCS}
 )
 
-add_test(NAME CSRJacobi COMMAND ${SEQEXEC} ${SEQTASKS} ${CMAKE_CURRENT_BINARY_DIR}/testsolve bcgs jacobi csr rowmajor
+add_test(NAME CSRJacobi COMMAND ${SEQEXEC} ${SEQTASKS}
+  ${CMAKE_CURRENT_BINARY_DIR}/testsolve bcgs jacobi init_none init_none csr rowmajor
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.mtx 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.mtx 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.mtx
-	1e-10 1e-8 200
+	1e-10 1e-8 200  ${TCS}
 )
-add_test(NAME CSRSGS COMMAND env OMP_NUM_THREADS=1 ${SEQEXEC} ${SEQTASKS} ${CMAKE_CURRENT_BINARY_DIR}/testsolve bcgs sgs csr rowmajor
+add_test(NAME CSRSGS COMMAND env OMP_NUM_THREADS=1 ${SEQEXEC} ${SEQTASKS}
+  ${CMAKE_CURRENT_BINARY_DIR}/testsolve bcgs sgs init_zero init_zero csr rowmajor
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.mtx 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.mtx 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.mtx
-	1e-10 1e-8 200
+	1e-10 1e-8 200 ${TCS}
 )
-add_test(NAME CSRILU0 COMMAND env OMP_NUM_THREADS=1 ${SEQEXEC} ${SEQTASKS} ${CMAKE_CURRENT_BINARY_DIR}/testsolve bcgs ilu0 csr rowmajor
-	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.mtx 
-	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.mtx 
-	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.mtx
-	1e-10 1e-8 200
-)
-
-add_test(NAME BSR4JacobiRowmajor COMMAND ${SEQEXEC} ${SEQTASKS} ${CMAKE_CURRENT_BINARY_DIR}/testsolve bcgs jacobi bsr rowmajor
-	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.mtx 
-	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.mtx 
-	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.mtx
-	1e-10 1e-8 200
+add_test(NAME CSRILU0 COMMAND env OMP_NUM_THREADS=1 ${SEQEXEC} ${SEQTASKS}
+  ${CMAKE_CURRENT_BINARY_DIR}/testsolve bcgs ilu0 init_zero init_zero csr rowmajor
+  ${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.mtx 
+  ${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.mtx 
+  ${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.mtx
+  1e-10 1e-8 200 ${TCS}
 )
 
-add_test(NAME BSR4SGSRowmajor COMMAND env OMP_NUM_THREADS=1 ${SEQEXEC} ${SEQTASKS} ${CMAKE_CURRENT_BINARY_DIR}/testsolve bcgs sgs bsr rowmajor
-	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.mtx 
-	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.mtx 
-	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.mtx
-	1e-10 1e-8 200
+add_test(NAME BSR4JacobiRowmajor COMMAND ${SEQEXEC} ${SEQTASKS}
+  ${CMAKE_CURRENT_BINARY_DIR}/testsolve bcgs jacobi init_zero init_zero bsr rowmajor
+  ${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.mtx 
+  ${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.mtx 
+  ${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.mtx
+  1e-10 1e-8 200 ${TCS}
 )
 
-add_test(NAME BSR4ILU0Rowmajor COMMAND env OMP_NUM_THREADS=1 ${SEQEXEC} ${SEQTASKS} ${CMAKE_CURRENT_BINARY_DIR}/testsolve bcgs ilu0 bsr rowmajor
+add_test(NAME BSR4SGSRowmajor COMMAND env OMP_NUM_THREADS=1 ${SEQEXEC} ${SEQTASKS}
+  ${CMAKE_CURRENT_BINARY_DIR}/testsolve bcgs sgs init_zero init_zero bsr rowmajor
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.mtx 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.mtx 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.mtx
-	1e-10 1e-8 200
+	1e-10 1e-8 200 ${TCS}
 )
 
-add_test(NAME BSR4NoneColmajor COMMAND ${SEQEXEC} ${SEQTASKS} ${CMAKE_CURRENT_BINARY_DIR}/testsolve bcgs none bsr colmajor
+add_test(NAME BSR4ILU0Rowmajor COMMAND env OMP_NUM_THREADS=1 ${SEQEXEC} ${SEQTASKS}
+  ${CMAKE_CURRENT_BINARY_DIR}/testsolve bcgs ilu0 init_zero init_zero bsr rowmajor
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.mtx 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.mtx 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.mtx
-	1e-11 1e-8 1000
+	1e-10 1e-8 200 ${TCS}
 )
 
-add_test(NAME BSR4JacobiColmajor COMMAND ${SEQEXEC} ${SEQTASKS} ${CMAKE_CURRENT_BINARY_DIR}/testsolve bcgs jacobi bsr colmajor
+add_test(NAME BSR4NoneColmajor COMMAND ${SEQEXEC} ${SEQTASKS}
+  ${CMAKE_CURRENT_BINARY_DIR}/testsolve bcgs none init_zero init_zero bsr colmajor
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.mtx 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.mtx 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.mtx
-	1e-10 1e-8 200
+	1e-11 1e-8 1000 ${TCS}
 )
 
-add_test(NAME BSR4SGSColmajor COMMAND env OMP_NUM_THREADS=1 ${SEQEXEC} ${SEQTASKS} ${CMAKE_CURRENT_BINARY_DIR}/testsolve bcgs sgs bsr colmajor
+add_test(NAME BSR4JacobiColmajor COMMAND ${SEQEXEC} ${SEQTASKS}
+  ${CMAKE_CURRENT_BINARY_DIR}/testsolve bcgs jacobi init_zero init_zero bsr colmajor
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.mtx 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.mtx 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.mtx
-	1e-10 1e-8 200
+	1e-10 1e-8 200 ${TCS}
 )
 
-add_test(NAME BSR4ILU0Colmajor COMMAND env OMP_NUM_THREADS=1 ${SEQEXEC} ${SEQTASKS} ${CMAKE_CURRENT_BINARY_DIR}/testsolve bcgs ilu0 bsr colmajor
+add_test(NAME BSR4SGSColmajor COMMAND env OMP_NUM_THREADS=1 ${SEQEXEC} ${SEQTASKS}
+  ${CMAKE_CURRENT_BINARY_DIR}/testsolve bcgs sgs init_zero init_zero bsr colmajor
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.mtx 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.mtx 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.mtx
-	1e-10 1e-8 200
+	1e-10 1e-8 200 ${TCS}
+)
+
+add_test(NAME BSR4ILU0Colmajor COMMAND env OMP_NUM_THREADS=1 ${SEQEXEC} ${SEQTASKS}
+  ${CMAKE_CURRENT_BINARY_DIR}/testsolve bcgs ilu0 init_zero init_zero bsr colmajor
+	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.mtx 
+	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.mtx 
+	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.mtx
+	1e-10 1e-8 200 ${TCS}
 )
 
 if(WITH_PETSC)

@@ -29,8 +29,10 @@ BlastedSolverType solverTypeFromString(const std::string precstr2)
 		ptype = BLASTED_ILU0;
 	else if(precstr2 == sapilu0str)
 		ptype = BLASTED_SAPILU0;
+	else if(precstr2 == noprecstr)
+		ptype = BLASTED_NO_PREC;
 	else {
-		throw invalid_argument("BLASTed: Preconditioner type not available!");
+		throw std::invalid_argument("BLASTed: Preconditioner type not available!");
 	}
 	return ptype;
 }
@@ -129,12 +131,12 @@ SRPreconditioner<scalar,index> *create_sr_preconditioner(const index ndim, const
 				(opts.nbuildsweeps, opts.napplysweeps,
 				 opts.thread_chunk_size,
 				 opts.fact_inittype, opts.apply_inittype, true,false);
-		else if(opts.prectype == noprecstr)
+		else if(opts.prectype == BLASTED_NO_PREC)
 			return new NoPreconditioner<scalar,index>(ndim);
 		else
 			throw std::invalid_argument("Invalid preconditioner!");
 	}
-	else if(opts.blockstorage == rowmajorstr) 
+	else if(opts.blockstorage == RowMajor) 
 	{
 		if(opts.bs == 4) {
 			p = create_srpreconditioner_of_type<scalar,index,4,RowMajor>(ndim,opts);
@@ -145,11 +147,11 @@ SRPreconditioner<scalar,index> *create_sr_preconditioner(const index ndim, const
 		}
 #endif
 		else {
-			throw std::invalid_argument("Block size " + std::to_string(bs) + 
+			throw std::invalid_argument("Block size " + std::to_string(opts.bs) + 
 					" not supported for row major!");
 		}
 	}
-	else if(opts.blockstorage == colmajorstr)
+	else if(opts.blockstorage == ColMajor)
 	{
 		if(opts.bs==4)
 			p = create_srpreconditioner_of_type<scalar,index,4,ColMajor>(ndim,opts);
@@ -162,7 +164,7 @@ SRPreconditioner<scalar,index> *create_sr_preconditioner(const index ndim, const
 		}
 #endif
 		else {
-			throw std::invalid_argument("Block size " + std::to_string(bs) + 
+			throw std::invalid_argument("Block size " + std::to_string(opts.bs) + 
 					" not supported for column major!");
 		}
 	}

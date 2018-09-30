@@ -8,9 +8,9 @@
 #define BLASTED_SOLVERFACTORY_H
 
 #include <string>
-#include <map>
 
 #include "solvertypes.h"
+#include "async_initialization_decl.hpp"
 #include "solverops_base.hpp"
 
 namespace blasted {
@@ -30,24 +30,6 @@ const std::string sgsstr = "sgs";
 const std::string ilu0str = "ilu0";
 /// Sequentially applied ILU(0)
 const std::string sapilu0str = "sapilu0";
-/** @} */
-
-/** \defgroup blockorderlabels Strings for selecting the storage order within dense blocks
- * @{
- */
-const std::string rowmajorstr = "rowmajor";
-const std::string colmajorstr = "colmajor";
-/** @} */
-
-/** \defgroup integerkeys Strings which are keys in an integer parameter list
- * @{
- */
-const std::string ndimstr = "ndim";
-const std::string nbuildsweeps = "nbuildsweeps";
-const std::string napplysweeps = "napplysweeps";
-const std::string thread_chunk_size = "thread_chunk_size";
-const std::string fact_inittype = "fact_inittype";
-const std::string apply_inittype = "apply_inittype";
 /** @} */
 
 /// Basic settings needed for most iterations

@@ -38,8 +38,10 @@ inline const FactInit getFactInitFromString(const std::string itype) {
 		return INIT_F_ORIGINAL;
 	else if(itype == "init_sgs")
 		return INIT_F_SGS;
-	else
+	else if(itype == "init_none")
 		return INIT_F_NONE;
+	else
+		throw std::invalid_argument("Factor initialization not recongnized!");
 }
 
 /// Converts a string into an initialization type enum. \ref INIT_A_NONE is default.
@@ -48,8 +50,10 @@ inline const ApplyInit getApplyInitFromString(const std::string itype) {
 		return INIT_A_ZERO;
 	else if(itype == "init_jacobi")
 		return INIT_A_JACOBI;
-	else
+	else if(itype == "init_none")
 		return INIT_A_NONE;
+	else
+		throw std::invalid_argument("Apply initialization not recongnized!");
 }
 
 }

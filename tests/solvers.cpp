@@ -116,7 +116,8 @@ int RichardsonSolver::solve(const a_real *const res, a_real *const __restrict du
 		A.gemv3(-1.0,du, 1.0,res, s.data());
 
 		resnorm = std::sqrt(dot(N, s.data(),s.data()));
-		//std::cout << "Rel res norm = " << resnorm/bnorm << std::endl;
+		if(step % 10 == 0)
+			std::cout << "  Step " << step << ", Rel res norm = " << resnorm/bnorm << std::endl;
 		if(resnorm/bnorm < tol) break;
 
 		prec.apply(s.data(), ddu.data());
@@ -218,7 +219,8 @@ int BiCGSTAB::solve(const a_real *const res, a_real *const __restrict du) const
 
 		// check convergence or `lucky' breakdown
 		resnorm = std::sqrt( dot(N, r.data(), r.data()) );
-		//std::cout << "Rel res norm = " << resnorm/bnorm << std::endl;
+		if(step % 10 == 0)
+			std::cout << "    Step " << step << ", Rel res norm = " << resnorm/bnorm << std::endl;
 
 		if(resnorm/bnorm < tol) break;
 

@@ -22,9 +22,11 @@ using namespace blasted;
 
 template<int bs>
 int testSolve(const std::string solvertype, const std::string precontype,
-		const std::string mattype, const std::string storageorder, const double testtol,
-		const std::string matfile, const std::string xfile, const std::string bfile,
-		const double tol, const int maxiter, const int nbuildswps, const int napplyswps)
+              const std::string factinittype, const std::string applyinittype,
+              const std::string mattype, const std::string storageorder, const double testtol,
+              const std::string matfile, const std::string xfile, const std::string bfile,
+              const double tol, const int maxiter, const int nbuildswps, const int napplyswps,
+              const int threadchunksize)
 {
 	std::cout << "Inputs: Solver = " <<solvertype 
 		<< ", Prec = " << precontype
@@ -49,7 +51,6 @@ int testSolve(const std::string solvertype, const std::string precontype,
 	std::vector<double> x(rm.nbrows*bs,0.0);
 
 	MatrixView<double,int>* mat = nullptr;
-	//if(mattype == "csr")
 	if (bs==1)
 		mat = new CSRMatrixView<double,int>(rm.nbrows,
 				rm.browptr,rm.bcolind,rm.vals,rm.diagind);
@@ -64,14 +65,23 @@ int testSolve(const std::string solvertype, const std::string precontype,
 	// construct preconditioner context
 	
 	SRPreconditioner<double,int>* prec = nullptr;
-	std::map<std::string,int> iparamlist;
-	std::map<std::string,double> fparamlist;
 	// For async preconditioners
-	iparamlist[blasted::nbuildsweeps] = nbuildswps; iparamlist[blasted::napplysweeps] = napplyswps;
-	// for no preconditioner
-	iparamlist[blasted::ndimstr] = rm.nbrows*bs;
-	prec = create_sr_preconditioner<double,int>(precontype, bs, storageorder, false,
-	                                            iparamlist, fparamlist);
+	AsyncSolverSettings params;
+	params.nbuildsweeps = nbuildswps;
+	params.napplysweeps = napplyswps;
+	params.thread_chunk_size = threadchunksize;
+	params.bs = bs;
+	params.prectype = solverTypeFromString(precontype);
+	params.fact_inittype = getFactInitFromString(factinittype);
+	params.apply_inittype = getApplyInitFromString(applyinittype);
+	if(storageorder == "rowmajor")
+		params.blockstorage = RowMajor;
+	else
+		params.blockstorage = ColMajor;
+	params.relax = false;
+
+	prec = create_sr_preconditioner<double,int>(rm.nbrows*bs, params);
+
 	prec->wrap(rm.nbrows, rm.browptr, rm.bcolind, rm.vals, rm.diagind);
 
 	IterativeSolver* solver = nullptr;
@@ -84,8 +94,8 @@ int testSolve(const std::string solvertype, const std::string precontype,
 		std::abort();
 	}
 
-	//solver->setupPreconditioner();
 	solver->setParams(tol,maxiter);
+	std::cout << "Starting solve " << std::endl;
 	int iters = solver->solve(b.data(), x.data());
 	std::cout << " Num iters = " << iters << std::endl;
 
@@ -107,20 +117,26 @@ int testSolve(const std::string solvertype, const std::string precontype,
 
 template
 int testSolve<1>(const std::string solvertype, const std::string precontype,
-		const std::string mattype, const std::string storageorder, const double testtol,
-		const std::string matfile, const std::string xfile, const std::string bfile,
-		const double tol, const int maxiter, const int nbuildswps, const int napplyswps);
+                 const std::string factinittype, const std::string applyinittype,
+                 const std::string mattype, const std::string storageorder, const double testtol,
+                 const std::string matfile, const std::string xfile, const std::string bfile,
+                 const double tol, const int maxiter, const int nbuildswps, const int napplyswps,
+                 const int threadchunksize);
 
 template
 int testSolve<4>(const std::string solvertype, const std::string precontype,
-		const std::string mattype, const std::string storageorder, const double testtol,
-		const std::string matfile, const std::string xfile, const std::string bfile,
-		const double tol, const int maxiter, const int nbuildswps, const int napplyswps);
+                 const std::string factinittype, const std::string applyinittype,
+                 const std::string mattype, const std::string storageorder, const double testtol,
+                 const std::string matfile, const std::string xfile, const std::string bfile,
+                 const double tol, const int maxiter, const int nbuildswps, const int napplyswps,
+                 const int threadchunksize);
 
 /*template
 int testSolve<7>(const std::string solvertype, const std::string precontype,
-		const std::string mattype, const std::string storageorder, const double testtol,
-		const std::string matfile, const std::string xfile, const std::string bfile,
-		const double tol, const int maxiter, const int nbuildswps, const int napplyswps);
+const std::string factinittype, const std::string applyinittype,
+const std::string mattype, const std::string storageorder, const double testtol,
+const std::string matfile, const std::string xfile, const std::string bfile,
+const double tol, const int maxiter, const int nbuildswps, const int napplyswps,
+const int threadchunksize);
 */
 
