@@ -268,6 +268,8 @@ Blasted_data newBlastedDataContext()
 	ctx.bprec = NULL;
 	ctx.brelax = NULL;
 	ctx.prectypestr = NULL;
+	ctx.factinittype = NULL;
+	ctx.applyinittype = NULL;
 	ctx.first_setup_done = false;
 	ctx.cputime = ctx.walltime = ctx.factorcputime = ctx.factorwalltime
 		= ctx.applycputime = ctx.applywalltime = 0.0;
