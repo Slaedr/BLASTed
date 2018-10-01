@@ -14,6 +14,23 @@ namespace blasted {
 /** We set L' to (I+LD^(-1)) and U' to (D+U) so that L'U' = (D+L)D^(-1)(D+U).
  */
 template <typename scalar ,typename index> static
+void fact_init_sgs_noscale(const CRawBSRMatrix<scalar,index> *const mat,
+                           scalar *const __restrict iluvals)
+{
+#pragma omp parallel for default (shared)
+	for(index i = 0; i < mat->nbrows; i++)
+	{
+		for(index j = mat->browptr[i]; j < mat->browptr[i+1]; j++)
+			iluvals[j] = mat->vals[j];
+		for(index j = mat->browptr[i]; j < mat->diagind[i]; j++)
+			iluvals[j] *= 1.0/mat->vals[mat->diagind[mat->bcolind[j]]];
+	}
+}
+
+/// Initialize the factorization such that async. ILU(0) factorization gives async. SGS at worst
+/** We set L' to (I+LD^(-1)) and U' to (D+U) so that L'U' = (D+L)D^(-1)(D+U).
+ */
+template <typename scalar ,typename index> static
 void fact_init_sgs(const CRawBSRMatrix<scalar,index> *const mat, const scalar *const scale,
                    scalar *const __restrict iluvals)
 {
@@ -105,20 +122,28 @@ scalar_ilu0_factorize<double,int>(const CRawBSRMatrix<double,int> *const mat,
 template <typename scalar, typename index>
 void scalar_ilu0_factorize_noscale(const CRawBSRMatrix<scalar,index> *const mat,
                                    const int nbuildsweeps, const int thread_chunk_size,
-                                   const bool usethreads,
+                                   const bool usethreads, const FactInit factinittype,
                                    scalar *const __restrict iluvals)
 {
 	/** initial guess
 	 * We choose the initial guess such that the preconditioner reduces to SGS in the worst case.
 	 */
-#pragma omp parallel for default (shared)
-	for(index i = 0; i < mat->nbrows; i++)
-	{
-		for(index j = mat->browptr[i]; j < mat->browptr[i+1]; j++)
-			iluvals[j] = mat->vals[j];
-		/*for(index j = mat->browptr[i]; j < mat->diagind[i]; j++)
-			iluvals[j] *= 1.0/mat->vals[mat->diagind[mat->bcolind[j]]];
-		*/
+
+	switch(factinittype) {
+	case INIT_F_ZERO:
+#pragma omp parallel for simd default(shared)
+		for(index i = 0; i < mat->browptr[mat->nbrows]; i++)
+			iluvals[i] = 0;
+	case INIT_F_ORIGINAL:
+#pragma omp parallel for simd default(shared)
+		for(index i = 0; i < mat->browptr[mat->nbrows]; i++)
+			iluvals[i] = mat->vals[i];
+		break;
+	case INIT_F_SGS:
+		fact_init_sgs_noscale(mat, iluvals);
+		break;
+	default:
+		;
 	}
 
 	// compute L and U
@@ -129,7 +154,7 @@ void scalar_ilu0_factorize_noscale(const CRawBSRMatrix<scalar,index> *const mat,
 template
 void scalar_ilu0_factorize_noscale<double,int>(const CRawBSRMatrix<double,int> *const mat,
                                                const int nbuildsweeps, const int thread_chunk_size,
-                                               const bool usethreads,
+                                               const bool usethreads, const FactInit finit,
                                                double *const __restrict iluvals);
 
 }
