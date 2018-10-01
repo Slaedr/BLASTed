@@ -65,19 +65,7 @@ static PetscErrorCode setupDataFromOptions(PC pc)
 	ierr = PCShellGetContext(pc, (void**)&ctx); CHKERRQ(ierr);
 
 	// Prec type
-	char precstr[PETSCOPTION_STR_LEN];
-	PetscBool flag = PETSC_FALSE;
-	PetscOptionsGetString(NULL, NULL, "-blasted_pc_type", 
-	                      precstr, PETSCOPTION_STR_LEN, &flag);
-	if(flag == PETSC_FALSE) {
-		printf("BLASTed: Preconditioner type not set!\n");
-		abort();
-	}
-
-	const size_t len = std::strlen(precstr);
-	ctx->prectypestr = new char[len+1];
-	std::strcpy(ctx->prectypestr, precstr);
-	
+	get_string_petscoptions("-blasted_pc_type", &ctx->prectypestr);
 	const BlastedSolverType ptype = solverTypeFromString(ctx->prectypestr);
 
 	PetscInt sweeps[2];
@@ -121,7 +109,7 @@ static PetscErrorCode setupDataFromOptions(PC pc)
 	ctx->cputime = ctx->walltime = ctx->factorcputime = ctx->factorwalltime =
 		ctx->applycputime = ctx->applywalltime = 0;
 
-	std::string pcname = std::string("Blasted-") + ctx->prectypestr;
+	const std::string pcname = std::string("Blasted-") + ctx->prectypestr;
 	
 	ierr = PCShellSetName(pc, pcname.c_str()); CHKERRQ(ierr);
 	
