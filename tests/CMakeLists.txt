@@ -75,7 +75,7 @@ add_test(NAME BSR4JacobiRowmajor COMMAND ${SEQEXEC} ${SEQTASKS}
 )
 
 add_test(NAME BSR4SGSRowmajor COMMAND env OMP_NUM_THREADS=1 ${SEQEXEC} ${SEQTASKS}
-  ${CMAKE_CURRENT_BINARY_DIR}/testsolve bcgs sgs init_zero init_zero bsr rowmajor
+	${CMAKE_CURRENT_BINARY_DIR}/testsolve bcgs sgs init_zero init_zero bsr rowmajor
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.mtx 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.mtx 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.mtx
@@ -83,7 +83,7 @@ add_test(NAME BSR4SGSRowmajor COMMAND env OMP_NUM_THREADS=1 ${SEQEXEC} ${SEQTASK
 )
 
 add_test(NAME BSR4ILU0Rowmajor COMMAND env OMP_NUM_THREADS=1 ${SEQEXEC} ${SEQTASKS}
-  ${CMAKE_CURRENT_BINARY_DIR}/testsolve bcgs ilu0 init_zero init_zero bsr rowmajor
+	${CMAKE_CURRENT_BINARY_DIR}/testsolve bcgs ilu0 init_zero init_zero bsr rowmajor
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.mtx 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.mtx 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.mtx
@@ -115,7 +115,7 @@ add_test(NAME BSR4SGSColmajor COMMAND env OMP_NUM_THREADS=1 ${SEQEXEC} ${SEQTASK
 )
 
 add_test(NAME BSR4ILU0Colmajor COMMAND env OMP_NUM_THREADS=1 ${SEQEXEC} ${SEQTASKS}
-  ${CMAKE_CURRENT_BINARY_DIR}/testsolve bcgs ilu0 init_zero init_zero bsr colmajor
+	${CMAKE_CURRENT_BINARY_DIR}/testsolve bcgs ilu0 init_zero init_zero bsr colmajor
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.mtx 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.mtx 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.mtx
@@ -136,7 +136,8 @@ if(WITH_PETSC)
   #	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.pmat
   #	-options_file ${CMAKE_CURRENT_SOURCE_DIR}/input/2dcyl1_jacobi.perc
   #	)
-  add_test(NAME MPIPetsc-BSR4-Jacobi COMMAND env OMP_NUM_THREADS=1 ${MPIEXEC} -n 3 ${CMAKE_CURRENT_BINARY_DIR}/testpetscsolver
+  add_test(NAME MPIPetsc-BSR4-Jacobi 
+	COMMAND env OMP_NUM_THREADS=1 ${MPIEXEC} --cpu-bind=cores -n 3 ${CMAKE_CURRENT_BINARY_DIR}/testpetscsolver
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.pmat
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.pmat 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.pmat
@@ -144,14 +145,16 @@ if(WITH_PETSC)
 	-error_tolerance_factor 1e3
 	)
 
-  add_test(NAME MPIPetsc-BSR4-SGS COMMAND env OMP_NUM_THREADS=1 ${MPIEXEC} -n 3 ${CMAKE_CURRENT_BINARY_DIR}/testpetscsolver
+  add_test(NAME MPIPetsc-BSR4-SGS 
+	COMMAND env OMP_NUM_THREADS=1 ${MPIEXEC} --cpu-bind=cores -n 3 ${CMAKE_CURRENT_BINARY_DIR}/testpetscsolver
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.pmat 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.pmat 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.pmat
 	-options_file ${CMAKE_CURRENT_SOURCE_DIR}/input/2dcyl1_sgs.perc -mat_type baij
 	)
 
-  add_test(NAME MPIPetsc-BSR4-ILU0 COMMAND env OMP_NUM_THREADS=1 ${MPIEXEC} -n 3 ${CMAKE_CURRENT_BINARY_DIR}/testpetscsolver
+  add_test(NAME MPIPetsc-BSR4-ILU0 
+	COMMAND env OMP_NUM_THREADS=1 ${MPIEXEC} --cpu-bind=cores -n 3 ${CMAKE_CURRENT_BINARY_DIR}/testpetscsolver
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.pmat 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.pmat 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.pmat
@@ -159,21 +162,24 @@ if(WITH_PETSC)
 	-error_tolerance_factor 1e3
 	)
 
-  add_test(NAME SerialPetsc-CSR-ILU0 COMMAND env OMP_NUM_THREADS=1 ${MPIEXEC} -n 1 ${CMAKE_CURRENT_BINARY_DIR}/testpetscsolver
+  add_test(NAME SerialPetsc-CSR-ILU0 
+	COMMAND env OMP_NUM_THREADS=1 ${MPIEXEC} --cpu-bind=cores -n 1 ${CMAKE_CURRENT_BINARY_DIR}/testpetscsolver
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.pmat
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.pmat 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.pmat
 	-options_file ${CMAKE_CURRENT_SOURCE_DIR}/input/2dcyl1_ilu0.perc -mat_type aij
 	)
 
-  add_test(NAME MPIPetsc-BSR4-Jacobi-Relaxation COMMAND env OMP_NUM_THREADS=1 ${MPIEXEC} -n 3 ${CMAKE_CURRENT_BINARY_DIR}/testpetscsolver
+  add_test(NAME MPIPetsc-BSR4-Jacobi-Relaxation 
+	COMMAND env OMP_NUM_THREADS=1 ${MPIEXEC} --cpu-bind=cores -n 3 ${CMAKE_CURRENT_BINARY_DIR}/testpetscsolver
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.pmat 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.pmat 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.pmat
 	-options_file ${CMAKE_CURRENT_SOURCE_DIR}/input/block4_relaxation_compare.perc -mat_type baij
 	-ref_sub_pc_type pbjacobi -blasted_pc_type jacobi
 	)
-  add_test(NAME MPIPetsc-BSR4-GS-Relaxation COMMAND env OMP_NUM_THREADS=1 ${MPIEXEC} -n 3 ${CMAKE_CURRENT_BINARY_DIR}/testpetscsolver
+  add_test(NAME MPIPetsc-BSR4-GS-Relaxation 
+	COMMAND env OMP_NUM_THREADS=1 ${MPIEXEC} --cpu-bind=cores -n 3 ${CMAKE_CURRENT_BINARY_DIR}/testpetscsolver
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.pmat
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.pmat 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.pmat
@@ -181,7 +187,7 @@ if(WITH_PETSC)
 	-ref_sub_pc_type sor -ref_sub_pc_sor_forward -blasted_pc_type gs
 	)
   add_test(NAME MPIPetsc-BSR4-SGS-Relaxation 
-	COMMAND env OMP_NUM_THREADS=1 ${MPIEXEC} -n 3 ${CMAKE_CURRENT_BINARY_DIR}/testpetscsolver
+	COMMAND env OMP_NUM_THREADS=1 ${MPIEXEC} --cpu-bind=cores -n 3 ${CMAKE_CURRENT_BINARY_DIR}/testpetscsolver
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.pmat
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.pmat 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.pmat
@@ -190,14 +196,16 @@ if(WITH_PETSC)
 	)
 
   ## Fails! Our scalar SGS preconditioner is not the same as PETSc's.
-  #add_test(NAME MPIPetsc-CSR-SGS COMMAND env OMP_NUM_THREADS=1 ${MPIEXEC} -n 3 ${CMAKE_CURRENT_BINARY_DIR}/testpetscsolver
+  #add_test(NAME MPIPetsc-CSR-SGS 
+  # COMMAND env OMP_NUM_THREADS=1 ${MPIEXEC} -n 3 ${CMAKE_CURRENT_BINARY_DIR}/testpetscsolver
   #	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.pmat 
   #	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.pmat 
   #	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.pmat
   #	-options_file ${CMAKE_CURRENT_SOURCE_DIR}/input/2dcyl1_sgs.perc -mat_type aij
   #	)
   ## Fails! Our scalar SGS relaxation is not the same as PETSc's.
-  #add_test(NAME MPIPetsc-CSR-SGS-Relaxation COMMAND env OMP_NUM_THREADS=1 ${MPIEXEC} -n 3 ${CMAKE_CURRENT_BINARY_DIR}/testpetscsolver
+  #add_test(NAME MPIPetsc-CSR-SGS-Relaxation 
+  # COMMAND env OMP_NUM_THREADS=1 ${MPIEXEC} -n 3 ${CMAKE_CURRENT_BINARY_DIR}/testpetscsolver
   #	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.pmat
   #	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.pmat 
   #	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.pmat
@@ -222,13 +230,15 @@ if(WITH_PETSC)
 	-ref_sub_pc_type pbjacobi -blasted_pc_type sgs -test_type compare_its
 	)
   
-  #add_test(NAME MPIPetscMKL-BSR4-SGS COMMAND env OMP_NUM_THREADS=1 ${MPIEXEC} -n 3 ${CMAKE_CURRENT_BINARY_DIR}/testpetscsolver
+  #add_test(NAME MPIPetscMKL-BSR4-SGS 
+  # COMMAND env OMP_NUM_THREADS=1 ${MPIEXEC} -n 3 ${CMAKE_CURRENT_BINARY_DIR}/testpetscsolver
   #	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.pmat
   #	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.pmat 
   #	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.pmat
   #	-options_file ${CMAKE_CURRENT_SOURCE_DIR}/input/2dcyl1_sgs_mkl.perc
   #)
-  #add_test(NAME MPIPetscMKL-BSR4-ILU0 COMMAND env OMP_NUM_THREADS=1 ${MPIEXEC} -n 3 ${CMAKE_CURRENT_BINARY_DIR}/testpetscsolver
+  #add_test(NAME MPIPetscMKL-BSR4-ILU0 
+  # COMMAND env OMP_NUM_THREADS=1 ${MPIEXEC} -n 3 ${CMAKE_CURRENT_BINARY_DIR}/testpetscsolver
   #	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.pmat
   #	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.pmat 
   #	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.pmat
