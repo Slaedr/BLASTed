@@ -16,7 +16,8 @@ cmake_minimum_required(VERSION 3.0)
 # - -DKNL=1 to compile for Xeon Phi Knights Landing
 # - -DMICKNC=1 to compile for Xeon Phi Knights Corner (deprecated).
 # - -DPROFILE=1 for profiling with gprof.
-# - -DSLURM=1 for running the automated tests on a system managed by SLURM
+# - -DSLURM=1 for running the automated tests on a system managed by Slurm
+# - -DSLURMTESTTHREADS=<n> for configuring multi-threaded tests to use n threads in case of Slurm
 #
 # - -DBUILD_BLOCK_SIZE=<n> for some integer n, to build the block solver operations for
 #     an additional block size of <n>. By default, block sizes 4 and 5 are supported.
@@ -260,9 +261,15 @@ set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DEIGEN_DONT_PARALLELIZE")
 if(SLURM)
   set(SEQEXEC "srun")
   set(SEQTASKS "-n 1")
+  if(SLURMTESTTHREADS)
+	  set(THREADOPTS "--cpus-per-task=${SLURMTESTTHREADS}")
+  else()
+	  set(THREADOPTS "--cpus-per-task=4")
+  endif()
 else()
   set(SEQEXEC "")
   set(SEQTASKS "")
+  set(THREADOPTS "")
 endif(SLURM)
 
 # PETSc
@@ -271,8 +278,10 @@ if(WITH_PETSC)
   include_directories(${MPI_C_INCLUDE_PATH} ${MPI_CXX_INCLUDE_PATH})
   if(SLURM)
 	set(MPIEXEC "srun")
+	set(MPIOPTS "--cpu-bind=cores")
   else()
 	set(MPIEXEC "mpirun")
+	set(MPIOPTS "")
   endif(SLURM)
 
   # If PETSc variables were not passed to CMake, set them from environment variables

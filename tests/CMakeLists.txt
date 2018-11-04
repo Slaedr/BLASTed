@@ -137,7 +137,7 @@ if(WITH_PETSC)
   #	-options_file ${CMAKE_CURRENT_SOURCE_DIR}/input/2dcyl1_jacobi.perc
   #	)
   add_test(NAME MPIPetsc-BSR4-Jacobi 
-	COMMAND env OMP_NUM_THREADS=1 ${MPIEXEC} --cpu-bind=cores -n 3 ${CMAKE_CURRENT_BINARY_DIR}/testpetscsolver
+	COMMAND env OMP_NUM_THREADS=1 ${MPIEXEC} ${MPIOPTS} -n 3 ${CMAKE_CURRENT_BINARY_DIR}/testpetscsolver
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.pmat
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.pmat 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.pmat
@@ -146,7 +146,7 @@ if(WITH_PETSC)
 	)
 
   add_test(NAME MPIPetsc-BSR4-SGS 
-	COMMAND env OMP_NUM_THREADS=1 ${MPIEXEC} --cpu-bind=cores -n 3 ${CMAKE_CURRENT_BINARY_DIR}/testpetscsolver
+	COMMAND env OMP_NUM_THREADS=1 ${MPIEXEC} ${MPIOPTS} -n 3 ${CMAKE_CURRENT_BINARY_DIR}/testpetscsolver
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.pmat 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.pmat 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.pmat
@@ -154,7 +154,7 @@ if(WITH_PETSC)
 	)
 
   add_test(NAME MPIPetsc-BSR4-ILU0 
-	COMMAND env OMP_NUM_THREADS=1 ${MPIEXEC} --cpu-bind=cores -n 3 ${CMAKE_CURRENT_BINARY_DIR}/testpetscsolver
+	COMMAND env OMP_NUM_THREADS=1 ${MPIEXEC} ${MPIOPTS} -n 3 ${CMAKE_CURRENT_BINARY_DIR}/testpetscsolver
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.pmat 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.pmat 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.pmat
@@ -163,7 +163,7 @@ if(WITH_PETSC)
 	)
 
   add_test(NAME SerialPetsc-CSR-ILU0 
-	COMMAND env OMP_NUM_THREADS=1 ${MPIEXEC} --cpu-bind=cores -n 1 ${CMAKE_CURRENT_BINARY_DIR}/testpetscsolver
+	COMMAND env OMP_NUM_THREADS=1 ${MPIEXEC} ${MPIOPTS} -n 1 ${CMAKE_CURRENT_BINARY_DIR}/testpetscsolver
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.pmat
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.pmat 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.pmat
@@ -171,7 +171,7 @@ if(WITH_PETSC)
 	)
 
   add_test(NAME MPIPetsc-BSR4-Jacobi-Relaxation 
-	COMMAND env OMP_NUM_THREADS=1 ${MPIEXEC} --cpu-bind=cores -n 3 ${CMAKE_CURRENT_BINARY_DIR}/testpetscsolver
+	COMMAND env OMP_NUM_THREADS=1 ${MPIEXEC} ${MPIOPTS} -n 3 ${CMAKE_CURRENT_BINARY_DIR}/testpetscsolver
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.pmat 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.pmat 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.pmat
@@ -179,7 +179,7 @@ if(WITH_PETSC)
 	-ref_sub_pc_type pbjacobi -blasted_pc_type jacobi
 	)
   add_test(NAME MPIPetsc-BSR4-GS-Relaxation 
-	COMMAND env OMP_NUM_THREADS=1 ${MPIEXEC} --cpu-bind=cores -n 3 ${CMAKE_CURRENT_BINARY_DIR}/testpetscsolver
+	COMMAND env OMP_NUM_THREADS=1 ${MPIEXEC} ${MPIOPTS} -n 3 ${CMAKE_CURRENT_BINARY_DIR}/testpetscsolver
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.pmat
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.pmat 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.pmat
@@ -187,7 +187,7 @@ if(WITH_PETSC)
 	-ref_sub_pc_type sor -ref_sub_pc_sor_forward -blasted_pc_type gs
 	)
   add_test(NAME MPIPetsc-BSR4-SGS-Relaxation 
-	COMMAND env OMP_NUM_THREADS=1 ${MPIEXEC} --cpu-bind=cores -n 3 ${CMAKE_CURRENT_BINARY_DIR}/testpetscsolver
+	COMMAND env OMP_NUM_THREADS=1 ${MPIEXEC} ${MPIOPTS} -n 3 ${CMAKE_CURRENT_BINARY_DIR}/testpetscsolver
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.pmat
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.pmat 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.pmat
@@ -214,7 +214,7 @@ if(WITH_PETSC)
   #	)
 
   add_test(NAME AsyncRelaxation-Petsc-BSR4-GS-Convergence 
-	COMMAND ${SEQEXEC} ${SEQTASKS} ${CMAKE_CURRENT_BINARY_DIR}/testthreadedpetscsolver
+	COMMAND ${SEQEXEC} ${THREADOPTS} ${SEQTASKS} ${CMAKE_CURRENT_BINARY_DIR}/testthreadedpetscsolver
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.pmat
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.pmat 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.pmat
@@ -222,7 +222,7 @@ if(WITH_PETSC)
 	-ref_sub_pc_type pbjacobi -blasted_pc_type gs -test_type convergence
 	)
   add_test(NAME AsyncRelaxation-Petsc-BSR4-SGS-IterationsLowerBound 
-	COMMAND ${SEQEXEC} ${SEQTASKS} ${CMAKE_CURRENT_BINARY_DIR}/testthreadedpetscsolver
+	COMMAND ${SEQEXEC} ${THREADOPTS} ${SEQTASKS} ${CMAKE_CURRENT_BINARY_DIR}/testthreadedpetscsolver
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.pmat
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.pmat 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.pmat

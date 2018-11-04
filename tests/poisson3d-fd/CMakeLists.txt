@@ -66,13 +66,13 @@ if(WITH_PETSC)
 	-ref_sub_pc_type ilu -blasted_pc_type sapilu0 -test_type compare_error)
 
   add_test(NAME AsyncRelaxationPoissonPetsc-GS-IterationsLowerBound
-	COMMAND ${MPIEXEC} -n 1 ./testcsr_poisson_threaded
+	COMMAND ${MPIEXEC} ${THREADOPTS} -n 1 ./testcsr_poisson_threaded
 	${CMAKE_CURRENT_SOURCE_DIR}/input/poisson.control 
 	-options_file  ${CMAKE_CURRENT_SOURCE_DIR}/../input/asyncrelaxation.perc 
 	-ref_sub_pc_type jacobi -blasted_pc_type gs -test_type compare_its)
 
   add_test(NAME AsyncRelaxationPoissonPetsc-SGS-IterationsLowerBound
-	COMMAND ${MPIEXEC} -n 1 ./testcsr_poisson_threaded
+	COMMAND ${MPIEXEC} ${THREADOPTS} -n 1 ./testcsr_poisson_threaded
 	${CMAKE_CURRENT_SOURCE_DIR}/input/poisson.control 
 	-options_file  ${CMAKE_CURRENT_SOURCE_DIR}/../input/asyncrelaxation.perc 
 	-ref_sub_pc_type jacobi -blasted_pc_type sgs -test_type compare_its)
