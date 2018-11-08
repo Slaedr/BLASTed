@@ -32,13 +32,20 @@ endif()
 
 if(WITH_PETSC)
 
-	add_library(blasted_petsc SHARED blasted_petsc.cpp)
+  add_library(blasted_petsc SHARED blasted_petsc.cpp)
+
 	target_link_libraries(blasted_petsc solverops orderingscaling rawmatrixutils helper
 	  ${PETSC_LIB} ${MPI_C_LIBRARIES} ${MPI_C_LINK_FLAGS})
+
 	set_property(TARGET blasted_petsc PROPERTY POSITION_INDEPENDENT_CODE ON)
+
+	if(WITH_MC64)
+	  target_link_libraries(blasted_petsc ${MC64_LIB})
+	endif(WITH_MC64)
 	
 	add_executable(util_petsc_io util_petsc_io.c blasted_petsc_io.cpp)
-	target_link_libraries(util_petsc_io coomatrix blockmatrices ${PETSC_LIB} ${MPI_C_LIBRARIES} ${MPI_C_LINK_FLAGS})
+	target_link_libraries(util_petsc_io coomatrix blockmatrices
+	  ${PETSC_LIB} ${MPI_C_LIBRARIES} ${MPI_C_LINK_FLAGS})
 	
 endif()
 

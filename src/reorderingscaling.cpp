@@ -21,6 +21,7 @@
 #include <utility>
 #include "helper_algorithms.hpp"
 #include "reorderingscaling.hpp"
+#include "scmatrixdefs.hpp"
 
 namespace blasted {
 
@@ -358,24 +359,63 @@ template class ReorderingScaling<double,int,7>;
 }
 
 #ifdef HAVE_MC64
+
 extern "C" {
 
-extern void mc64a_(const int *const job, const int *const n, const int *const ne,
-                   const int *const colptr, const int *const rowind, const float *const A,
-                   int *const num_diag, int *const cperm,
-                   const int *const len_workvec, int *const workvec,
-                   const int *const len_scalevec, float *const scalevec,
-                   int icntl[10], int info[10]);
+	extern void mc64a_(const int *const job, const int *const n, const int *const ne,
+	                   const int *const colptr, const int *const rowind, const float *const A,
+	                   int *const num_diag, int *const cperm,
+	                   const int *const len_workvec, int *const workvec,
+	                   const int *const len_scalevec, float *const scalevec,
+	                   int icntl[10], int info[10]);
 
-extern void mc64ad_(const int *const job, const int *const n, const int *const ne,
-                    const int *const colptr, const int *const rowind, const double *const A,
-                    int *const num_diag, int *const cperm,
-                    const int *const len_workvec, int *const workvec,
-                    const int *const len_scalevec, double *const scalevec,
-                    int icntl[10], int info[10]);
+	extern void mc64ad_(const int *const job, const int *const n, const int *const ne,
+	                    const int *const colptr, const int *const rowind, const double *const A,
+	                    int *const num_diag, int *const cperm,
+	                    const int *const len_workvec, int *const workvec,
+	                    const int *const len_scalevec, double *const scalevec,
+	                    int icntl[10], int info[10]);
+
+	extern void mc64id_(int icntl[10]);
 }
 
 namespace blasted {
+
+MC64::MC64() { }
+
+void MC64::compute(const CRawBSRMatrix<double,int>& mat)
+{
+	const RawBSCMatrix<double,int> scmat = convert_BSR_to_BSC(&mat);
+	assert(mat.nbrows == scmat.nbols);
+	assert(mat.browptr[mat.brows] == scmat.bcolptr[scmat.nbcols]);
+	const int nnz = mat.browptr[mat.nbrows];
+
+	cp.resize(mat.nbrows);
+	rowscale.resize(mat.nbrows);
+	colscale.resize(mat.nbrows);
+
+	const int len_workvec = 5*mat.nbrows;
+	std::vector<double> workvec(len_workvec);
+	const int len_scalevec = 3*mat.nbrows + nnz;
+	std::vector<double> scalevec(len_scalevec);
+
+	int icntl[10];
+	mc64id_(icntl);
+
+	// TODO: Set options in icntl
+
+	int num_diag, info[10];
+
+	mc64ad_(5, &scmat.nbrows, &nnz, scmat.bcolptr, scmat.browing, scmat.vals,
+	        &num_diag, &cp[0], &len_workvec, &workvec[0], &len_scalevec, &scalevec[0], icntl, info);
+
+	// TODO: Check status flags in info
+
+	destroyRawBSCMatrix(scmat);
+
+	std::copy(scalevec.begin(), scalevec.begin()+mat.nbrows, rowscale.begin());
+	std::copy(scalevec.begin()+mat.nbrows, scalevec.begin()+2*mat.nbrows, colscale.begin());
+}
 
 }
 

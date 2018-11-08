@@ -124,6 +124,17 @@ protected:
 	std::vector<scalar> colscale;
 };
 
+#ifdef HAVE_MC64
+
+class MC64 : public ReorderingScaling<double,int,1>
+{
+public:
+	MC64();
+	void compute(const CRawBSRMatrix<scalar,index>& mat);
+};
+
+#endif
+
 }
 
 #endif

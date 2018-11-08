@@ -297,6 +297,15 @@ if(WITH_PETSC)
   message(STATUS "Building with PETSc found at ${PETSC_LIB}")
 endif()
 
+# Harwell's matrix ordering library - static library is assumed
+if(WITH_MC64)
+  if(NOT DEFINED MC64_DIR)
+	set(MC64_DIR $ENV{MC64_DIR} CACHE PATH "MC64 install directory")
+  endif()
+  find_library(MC64_LIB libmc64.a ${MC64_DIR})
+  add_definitions(-DHAVE_MC64)
+endif(WITH_MC64)
+
 # ---------------------------------------------------------------------------- #
 
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -DDEBUG=1")
