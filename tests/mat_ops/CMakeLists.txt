@@ -14,6 +14,9 @@ target_link_libraries(testcscmatrix blockmatrices coomatrix)
 
 add_executable(testreordering testreordering.cpp)
 target_link_libraries(testreordering orderingscaling blockmatrices coomatrix helper)
+if(WITH_MC64)
+  target_link_libraries(testreordering ${MC64_LIB} ${FORTLDFLAGS})
+endif(WITH_MC64)
 
 # Tests
 

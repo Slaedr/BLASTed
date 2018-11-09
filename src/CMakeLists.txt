@@ -40,7 +40,7 @@ if(WITH_PETSC)
 	set_property(TARGET blasted_petsc PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 	if(WITH_MC64)
-	  target_link_libraries(blasted_petsc ${MC64_LIB})
+	  target_link_libraries(blasted_petsc ${MC64_LIB} ${FORTLDFLAGS})
 	endif(WITH_MC64)
 	
 	add_executable(util_petsc_io util_petsc_io.c blasted_petsc_io.cpp)

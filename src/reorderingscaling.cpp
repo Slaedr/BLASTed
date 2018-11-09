@@ -385,7 +385,7 @@ MC64::MC64() { }
 
 void MC64::compute(const CRawBSRMatrix<double,int>& mat)
 {
-	const RawBSCMatrix<double,int> scmat = convert_BSR_to_BSC(&mat);
+	const RawBSCMatrix<double,int> scmat = convert_BSR_to_BSC<double,int,1>(&mat);
 	assert(mat.nbrows == scmat.nbols);
 	assert(mat.browptr[mat.brows] == scmat.bcolptr[scmat.nbcols]);
 	const int nnz = mat.browptr[mat.nbrows];
@@ -395,7 +395,7 @@ void MC64::compute(const CRawBSRMatrix<double,int>& mat)
 	colscale.resize(mat.nbrows);
 
 	const int len_workvec = 5*mat.nbrows;
-	std::vector<double> workvec(len_workvec);
+	std::vector<int> workvec(len_workvec);
 	const int len_scalevec = 3*mat.nbrows + nnz;
 	std::vector<double> scalevec(len_scalevec);
 
@@ -405,13 +405,14 @@ void MC64::compute(const CRawBSRMatrix<double,int>& mat)
 	// TODO: Set options in icntl
 
 	int num_diag, info[10];
+	const int job = 5;
 
-	mc64ad_(5, &scmat.nbrows, &nnz, scmat.bcolptr, scmat.browing, scmat.vals,
+	mc64ad_(&job, &scmat.nbcols, &nnz, scmat.bcolptr, scmat.browind, scmat.vals,
 	        &num_diag, &cp[0], &len_workvec, &workvec[0], &len_scalevec, &scalevec[0], icntl, info);
 
 	// TODO: Check status flags in info
 
-	destroyRawBSCMatrix(scmat);
+	destroyRawBSCMatrix<double,int>(scmat);
 
 	std::copy(scalevec.begin(), scalevec.begin()+mat.nbrows, rowscale.begin());
 	std::copy(scalevec.begin()+mat.nbrows, scalevec.begin()+2*mat.nbrows, colscale.begin());

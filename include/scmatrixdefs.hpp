@@ -40,5 +40,11 @@ RawBSCMatrix<scalar,index> convert_BSR_to_BSC(const CRawBSRMatrix<scalar,index> 
 template <typename scalar, typename index>
 void destroyRawBSCMatrix(RawBSCMatrix<scalar,index>& mat);
 
+/// Frees storage
+/** Deletion of const pointers is allowed!
+ */
+template <typename scalar, typename index>
+void destroyRawBSCMatrix(const RawBSCMatrix<scalar,index>& mat);
+
 }
 #endif

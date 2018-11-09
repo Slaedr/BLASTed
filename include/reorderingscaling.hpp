@@ -130,7 +130,7 @@ class MC64 : public ReorderingScaling<double,int,1>
 {
 public:
 	MC64();
-	void compute(const CRawBSRMatrix<scalar,index>& mat);
+	void compute(const CRawBSRMatrix<double,int>& mat);
 };
 
 #endif

@@ -98,4 +98,15 @@ void destroyRawBSCMatrix(RawBSCMatrix<scalar,index>& mat)
 
 template void destroyRawBSCMatrix<double,int>(RawBSCMatrix<double,int>& mat);
 
+template <typename scalar, typename index>
+void destroyRawBSCMatrix(const RawBSCMatrix<scalar,index>& mat)
+{
+	delete [] mat.bcolptr;
+	delete [] mat.browind;
+	delete [] mat.vals;
+	delete [] mat.diagind;
+}
+
+template void destroyRawBSCMatrix<double,int>(const RawBSCMatrix<double,int>& mat);
+
 }
