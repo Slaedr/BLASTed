@@ -288,7 +288,7 @@ public:
 	void computeOrderingScaling(ReorderingScaling<scalar,index,bs>& rs) const;
 
 	/// Apply some ordering/scaling to this matrix
-	/** First applies the ordering, and then the scaling.
+	/** First applies the scaling, and then the ordering.
 	 */
 	void reorderScale(const ReorderingScaling<scalar,index,bs>& rs, const RSApplyMode mode);
 
@@ -300,7 +300,7 @@ public:
 	 * - Non-zero values
 	 * - Positions of diaginal blocks
 	 */
-	std::array<bool,5> isEqual(const BSRMatrix<scalar,index,bs>& other) const;
+	std::array<bool,5> isEqual(const BSRMatrix<scalar,index,bs>& other, const scalar tol) const;
 	
 	/// Returns the dimension (number of rows) of the square matrix
 	index dim() const { return mat.nbrows*bs; }
@@ -423,7 +423,7 @@ public:
 	void computeOrderingScaling(ReorderingScaling<scalar,index,1>& rs) const;
 
 	/// Apply some ordering/scaling to this matrix
-	/** First applies the ordering, and then the scaling.
+	/** First applies the scaling, and then the ordering.
 	 */
 	void reorderScale(const ReorderingScaling<scalar,index,1>& rs, const RSApplyMode mode);
 
@@ -435,7 +435,7 @@ public:
 	 * - Non-zero values
 	 * - Positions of diaginal entries
 	 */
-	std::array<bool,5> isEqual(const BSRMatrix<scalar,index,1>& other) const;
+	std::array<bool,5> isEqual(const BSRMatrix<scalar,index,1>& other, const scalar tol) const;
 	
 protected:
 	

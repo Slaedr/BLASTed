@@ -29,7 +29,8 @@
 namespace blasted {
 
 /// Checks equality of two BSR/CSR matrices of the same block size
-/** \return Returns 5 booleans corresponding to equality of, in order,
+/** \param[in] tol Tolerance for non-zero values
+ * \return Returns 5 booleans corresponding to equality of, in order,
  * - Number of block-rows
  * - Block-row pointers (including total number of non-zero blocks)
  * - Block-column indices
@@ -40,7 +41,8 @@ namespace blasted {
  */
 template<typename scalar, typename index, int bs>
 static std::array<bool,5> areEqual(const CRawBSRMatrix<scalar,index> *const mat1,
-                                  const CRawBSRMatrix<scalar,index> *const mat2)
+                                   const CRawBSRMatrix<scalar,index> *const mat2,
+                                   const scalar tol)
 {
 	std::array<bool,5> isar;
 	for(int j = 0; j < 5; j++)
@@ -69,8 +71,11 @@ static std::array<bool,5> areEqual(const CRawBSRMatrix<scalar,index> *const mat1
 		if(mat1->bcolind[jj] != mat2->bcolind[jj])
 			isar[2] = false;
 		for(int k = 0; k < bs*bs; k++)
-			if(mat1->vals[jj*bs*bs+k] != mat2->vals[jj*bs*bs+k])
+			if(std::abs(mat1->vals[jj*bs*bs+k] - mat2->vals[jj*bs*bs+k]) > tol) {
 				isar[3] = false;
+				// std::cout << "Difference is "
+				//           << std::abs(mat1->vals[jj*bs*bs+k] - mat2->vals[jj*bs*bs+k]) << std::endl;
+			}
 	}
 
 	return isar;
@@ -404,15 +409,23 @@ template <typename scalar, typename index, int bs>
 void BSRMatrix<scalar,index,bs>::reorderScale(const ReorderingScaling<scalar,index,bs>& rs,
                                               const RSApplyMode mode)
 {
-	rs.applyOrdering(mat,mode);
-	rs.applyScaling(mat,mode);
+	if(mode == FORWARD) {
+		rs.applyScaling(mat,mode);
+		rs.applyOrdering(mat,mode);
+	}
+	else {
+		rs.applyOrdering(mat,mode);
+		rs.applyScaling(mat,mode);
+	}
 }
 
 template <typename scalar, typename index, int bs>
-std::array<bool,5> BSRMatrix<scalar,index,bs>::isEqual(const BSRMatrix<scalar,index,bs>& other) const
+std::array<bool,5> BSRMatrix<scalar,index,bs>::isEqual(const BSRMatrix<scalar,index,bs>& other,
+                                                       const scalar tol) const
 {
 	return areEqual<scalar,index,bs>(reinterpret_cast<const CRawBSRMatrix<scalar,index>*>(&mat),
-	                                 reinterpret_cast<const CRawBSRMatrix<scalar,index>*>(&other.mat));
+	                                 reinterpret_cast<const CRawBSRMatrix<scalar,index>*>(&other.mat),
+	                                 tol);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////
@@ -666,15 +679,23 @@ template <typename scalar, typename index>
 void BSRMatrix<scalar,index,1>::reorderScale(const ReorderingScaling<scalar,index,1>& rs,
                                              const RSApplyMode mode)
 {
-	rs.applyOrdering(mat, mode);
-	rs.applyScaling(mat, mode);
+	if(mode == FORWARD) {
+		rs.applyScaling(mat,mode);
+		rs.applyOrdering(mat,mode);
+	}
+	else {
+		rs.applyOrdering(mat,mode);
+		rs.applyScaling(mat,mode);
+	}
 }
 
 template <typename scalar, typename index>
-std::array<bool,5> BSRMatrix<scalar,index,1>::isEqual(const BSRMatrix<scalar,index,1>& other) const
+std::array<bool,5> BSRMatrix<scalar,index,1>::isEqual(const BSRMatrix<scalar,index,1>& other,
+                                                      const scalar tol) const
 {
 	return areEqual<scalar,index,1>(reinterpret_cast<const CRawBSRMatrix<scalar,index>*>(&mat),
-	                                reinterpret_cast<const CRawBSRMatrix<scalar,index>*>(&other.mat));
+	                                reinterpret_cast<const CRawBSRMatrix<scalar,index>*>(&other.mat),
+	                                tol);
 }
 
 }

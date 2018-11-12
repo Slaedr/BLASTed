@@ -36,6 +36,13 @@ struct RawBSCMatrix
 template <typename scalar, typename index, int bs>
 RawBSCMatrix<scalar,index> convert_BSR_to_BSC(const CRawBSRMatrix<scalar,index> *const rmat);
 
+/// Converts a 0-based (block-) sparse-row matrix to a 1-based (block-) sparse-column matrix
+/** Assumes a square matrix.
+ * Convenient for using the resulting matrix with Fortran subroutines.
+ */
+template <typename scalar, typename index, int bs>
+RawBSCMatrix<scalar,index> convert_BSR_to_BSC_1based(const CRawBSRMatrix<scalar,index> *const rmat);
+
 /// Frees storage
 template <typename scalar, typename index>
 void destroyRawBSCMatrix(RawBSCMatrix<scalar,index>& mat);

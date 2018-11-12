@@ -94,7 +94,7 @@ int testMatrixReordering(const std::string matfile, const std::string rsdir)
 	mat1.reorderScale(rs, FORWARD);
 	mat1.reorderScale(rs, INVERSE);
 
-	std::array<bool,5> reseq = omat.isEqual(mat1);
+	std::array<bool,5> reseq = omat.isEqual(mat1, 1e-16);
 
 	assert(reseq[0]);
 	assert(reseq[1]);

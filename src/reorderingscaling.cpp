@@ -25,6 +25,15 @@
 
 namespace blasted {
 
+template <typename index>
+std::vector<index> invertPermutationVector(const std::vector<index> p)
+{
+	std::vector<index> invp(p.size());
+	for(size_t i = 0; i < p.size(); i++)
+		invp[p[i]] = i;
+	return invp;
+}
+
 template <typename scalar, typename index, int bs>
 Reordering<scalar,index,bs>::Reordering()
 { }
@@ -385,9 +394,9 @@ MC64::MC64() { }
 
 void MC64::compute(const CRawBSRMatrix<double,int>& mat)
 {
-	const RawBSCMatrix<double,int> scmat = convert_BSR_to_BSC<double,int,1>(&mat);
-	assert(mat.nbrows == scmat.nbols);
-	assert(mat.browptr[mat.brows] == scmat.bcolptr[scmat.nbcols]);
+	const RawBSCMatrix<double,int> scmat = convert_BSR_to_BSC_1based<double,int,1>(&mat);
+	assert(mat.nbrows == scmat.nbcols);
+	assert(mat.browptr[mat.nbrows]+1 == scmat.bcolptr[scmat.nbcols]);
 	const int nnz = mat.browptr[mat.nbrows];
 
 	cp.resize(mat.nbrows);
@@ -402,7 +411,9 @@ void MC64::compute(const CRawBSRMatrix<double,int>& mat)
 	int icntl[10];
 	mc64id_(icntl);
 
-	// TODO: Set options in icntl
+	// Set options in icntl if needed. The only useful one is
+	//icntl[3] = 1;
+	//  which disables data-checking.
 
 	int num_diag, info[10];
 	const int job = 5;
@@ -410,12 +421,29 @@ void MC64::compute(const CRawBSRMatrix<double,int>& mat)
 	mc64ad_(&job, &scmat.nbcols, &nnz, scmat.bcolptr, scmat.browind, scmat.vals,
 	        &num_diag, &cp[0], &len_workvec, &workvec[0], &len_scalevec, &scalevec[0], icntl, info);
 
-	// TODO: Check status flags in info
+	// Check status flags in info
+	if(info[0] != 0) {
+		if(info[0] == 1)
+			throw std::runtime_error("MC64: Matrix was structurally singular!");
+		else
+			throw std::runtime_error("MC64 failed! Error code = " + std::to_string(info[0]));
+	}
 
 	destroyRawBSCMatrix<double,int>(scmat);
 
-	std::copy(scalevec.begin(), scalevec.begin()+mat.nbrows, rowscale.begin());
-	std::copy(scalevec.begin()+mat.nbrows, scalevec.begin()+2*mat.nbrows, colscale.begin());
+	// std::copy(scalevec.begin(), scalevec.begin()+mat.nbrows, rowscale.begin());
+	// std::copy(scalevec.begin()+mat.nbrows, scalevec.begin()+2*mat.nbrows, colscale.begin());
+
+	const double *const colscalevec = &scalevec[mat.nbrows];
+
+	for(int i = 0; i < mat.nbrows; i++) {
+		rowscale[i] = std::exp(scalevec[i]);
+		colscale[i] = std::exp(colscalevec[i]);
+		cp[i]--;
+	}
+
+	// compute the inverse column permutation as well
+	icp = invertPermutationVector<int>(cp);
 }
 
 }

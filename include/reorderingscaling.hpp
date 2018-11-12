@@ -135,6 +135,9 @@ public:
 
 #endif
 
+template <typename index>
+std::vector<index> invertPermutationVector(const std::vector<index> p);
+
 }
 
 #endif
