@@ -390,7 +390,46 @@ extern "C" {
 
 namespace blasted {
 
-MC64::MC64() { }
+MC64::MC64(const int jobid)
+	: job{jobid}
+{ }
+
+
+// Returns the size of the two work vectors required by MC64
+/* \return Refer to the MC64 documentation.
+ * The first entry is the size LIW of work vector IW.
+ * The second entry is the size LDW of the work vector DW.
+ */
+std::tuple<int,int> getWorkSizes(const int job, const int nrows, const int nnz)
+{
+	int liw = 0, ldw = 0;
+	switch(job) {
+	case 1:
+		liw = 5*nrows;
+		ldw = 0;
+		break;
+	case 2:
+		liw = 4*nrows;
+		ldw = nrows;
+		break;
+	case 3:
+		liw = 10*nrows + nnz;
+		ldw = nnz;
+		break;
+	case 4:
+		liw = 5*nrows;
+		ldw = 2*nrows + nnz;
+		break;
+	case 5:
+		liw = 5*nrows;
+		ldw = 3*nrows + nnz;
+		break;
+	default:
+		throw std::runtime_error("Invalid MC64 job!");
+	}
+
+	return std::make_tuple(liw, ldw);
+}
 
 void MC64::compute(const CRawBSRMatrix<double,int>& mat)
 {
@@ -400,13 +439,14 @@ void MC64::compute(const CRawBSRMatrix<double,int>& mat)
 	const int nnz = mat.browptr[mat.nbrows];
 
 	cp.resize(mat.nbrows);
-	rowscale.resize(mat.nbrows);
-	colscale.resize(mat.nbrows);
+	if(job == 5) {
+		rowscale.resize(mat.nbrows);
+		colscale.resize(mat.nbrows);
+	}
 
-	const int len_workvec = 5*mat.nbrows;
-	std::vector<int> workvec(len_workvec);
-	const int len_scalevec = 3*mat.nbrows + nnz;
-	std::vector<double> scalevec(len_scalevec);
+	const std::tuple<int,int> worklen = getWorkSizes(job, mat.nbrows, nnz);
+	std::vector<int> workvec(std::get<0>(worklen));
+	std::vector<double> scalevec(std::get<1>(worklen));
 
 	int icntl[10];
 	mc64id_(icntl);
@@ -416,10 +456,10 @@ void MC64::compute(const CRawBSRMatrix<double,int>& mat)
 	//  which disables data-checking.
 
 	int num_diag, info[10];
-	const int job = 5;
 
 	mc64ad_(&job, &scmat.nbcols, &nnz, scmat.bcolptr, scmat.browind, scmat.vals,
-	        &num_diag, &cp[0], &len_workvec, &workvec[0], &len_scalevec, &scalevec[0], icntl, info);
+	        &num_diag, &cp[0], &std::get<0>(worklen), &workvec[0],
+	        &std::get<1>(worklen), &scalevec[0], icntl, info);
 
 	// Check status flags in info
 	if(info[0] != 0) {
@@ -431,14 +471,13 @@ void MC64::compute(const CRawBSRMatrix<double,int>& mat)
 
 	destroyRawBSCMatrix<double,int>(scmat);
 
-	// std::copy(scalevec.begin(), scalevec.begin()+mat.nbrows, rowscale.begin());
-	// std::copy(scalevec.begin()+mat.nbrows, scalevec.begin()+2*mat.nbrows, colscale.begin());
-
-	const double *const colscalevec = &scalevec[mat.nbrows];
+	const double *const colscalevec = (job == 5) ? &scalevec[mat.nbrows] : nullptr;
 
 	for(int i = 0; i < mat.nbrows; i++) {
-		rowscale[i] = std::exp(scalevec[i]);
-		colscale[i] = std::exp(colscalevec[i]);
+		if(job == 5) {
+			rowscale[i] = std::exp(scalevec[i]);
+			colscale[i] = std::exp(colscalevec[i]);
+		}
 		cp[i]--;
 	}
 

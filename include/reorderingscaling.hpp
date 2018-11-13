@@ -129,8 +129,15 @@ protected:
 class MC64 : public ReorderingScaling<double,int,1>
 {
 public:
-	MC64();
+	/// Sets the MC64 job ID to perform
+	/** \param jobid Integer between 1 and 5. See the MC64 documentation for details.
+	 */
+	MC64(const int jobid);
+
 	void compute(const CRawBSRMatrix<double,int>& mat);
+
+protected:
+	const int job;                  ///< MC64 job id
 };
 
 #endif

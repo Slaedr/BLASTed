@@ -698,5 +698,49 @@ std::array<bool,5> BSRMatrix<scalar,index,1>::isEqual(const BSRMatrix<scalar,ind
 	                                tol);
 }
 
+template <typename scalar, typename index>
+scalar BSRMatrix<scalar,index,1>::getDiagonalProduct() const
+{
+	scalar prod = 1;
+	for(index i = 0; i < mat.nbrows; i++)
+		prod *= mat.vals[mat.diagind[i]];
+	return prod;
+}
+
+template <typename scalar, typename index>
+scalar BSRMatrix<scalar,index,1>::getDiagonalAbsSum() const
+{
+	scalar sum = 0;
+	for(index i = 0; i < mat.nbrows; i++)
+		sum += std::abs(mat.vals[mat.diagind[i]]);
+	return sum;
+}
+
+template <typename scalar, typename index>
+scalar BSRMatrix<scalar,index,1>::getAbsMinDiagonalEntry() const
+{
+	scalar minentry = std::numeric_limits<scalar>::infinity();
+	for(index i = 0; i < mat.nbrows; i++)
+	{
+		const scalar value = std::abs(mat.vals[mat.diagind[i]]);
+		if(value < minentry)
+			minentry = value;
+	}
+	return minentry;
+}
+
+template <typename scalar, typename index>
+scalar BSRMatrix<scalar,index,1>::getAbsMaxDiagonalEntry() const
+{
+	scalar maxentry = 0;
+	for(index i = 0; i < mat.nbrows; i++)
+	{
+		const scalar value = std::abs(mat.vals[mat.diagind[i]]);
+		if(value > maxentry)
+			maxentry = value;
+	}
+	return maxentry;
+}
+
 }
 

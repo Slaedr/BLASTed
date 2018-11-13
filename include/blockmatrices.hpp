@@ -436,6 +436,18 @@ public:
 	 * - Positions of diaginal entries
 	 */
 	std::array<bool,5> isEqual(const BSRMatrix<scalar,index,1>& other, const scalar tol) const;
+
+	/// Returns the product of diagonal entries of the matrix
+	scalar getDiagonalProduct() const;
+
+	/// Returns the sum of the absolute values of diagonal entries of the matrix
+	scalar getDiagonalAbsSum() const;
+
+	/// Returns the minimum entry on the diagonal
+	scalar getAbsMinDiagonalEntry() const;
+
+	/// Returns the maximum of absolute values of diagonal entries
+	scalar getAbsMaxDiagonalEntry() const;
 	
 protected:
 	

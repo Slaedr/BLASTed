@@ -104,7 +104,10 @@ add_test(NAME BSR7ApplyColReordering COMMAND ${SEQEXEC} ${SEQTASKS} testreorderi
   )
 
 if(WITH_MC64)
-  add_test(NAME MC64ScalarMatrixReordering COMMAND ${SEQEXEC} ${SEQTASKS} testmc64
-	${CMAKE_CURRENT_SOURCE_DIR}/input/fluorem-dk01r/DK01R.mtx
+  add_test(NAME MC64Job_2 COMMAND ${SEQEXEC} ${SEQTASKS} testmc64
+	${CMAKE_CURRENT_SOURCE_DIR}/input/fluorem-dk01r/DK01R.mtx 2
+	)
+  add_test(NAME MC64Job_5 COMMAND ${SEQEXEC} ${SEQTASKS} testmc64
+	${CMAKE_CURRENT_SOURCE_DIR}/input/fluorem-dk01r/DK01R.mtx 5
 	)
 endif(WITH_MC64)
