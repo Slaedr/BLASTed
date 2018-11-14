@@ -720,12 +720,16 @@ template <typename scalar, typename index>
 scalar BSRMatrix<scalar,index,1>::getAbsMinDiagonalEntry() const
 {
 	scalar minentry = std::numeric_limits<scalar>::infinity();
+	index minindex = 0;
 	for(index i = 0; i < mat.nbrows; i++)
 	{
 		const scalar value = std::abs(mat.vals[mat.diagind[i]]);
-		if(value < minentry)
+		if(value < minentry) {
 			minentry = value;
+			minindex = i;
+		}
 	}
+	std::cout << "Min entry = " << minentry << " at index " << minindex << std::endl;
 	return minentry;
 }
 

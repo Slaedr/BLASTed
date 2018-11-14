@@ -52,11 +52,11 @@ int main(int argc, char *argv[])
 
 	mat1.reorderScale(mc64, FORWARD);
 
-	// const double orig_perf = computePerformanceMetric(job, omat);
-	// const double reord_perf = computePerformanceMetric(job, mat1);
-	// std::cout << "Performance. Orig: " << orig_perf << ", reordered: " << reord_perf
-	//           << std::endl;
-	// assert(std::abs(reord_perf) > std::abs(orig_perf));
+	const double orig_perf = computePerformanceMetric(job, omat);
+	const double reord_perf = computePerformanceMetric(job, mat1);
+	std::cout << "Performance. Orig: " << orig_perf << ", reordered: " << reord_perf
+	          << std::endl;
+	assert(std::abs(reord_perf) > std::abs(orig_perf));
 
 	mat1.reorderScale(mc64, INVERSE);
 
