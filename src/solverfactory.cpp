@@ -83,9 +83,12 @@ SRPreconditioner<scalar,index> *create_srpreconditioner_of_type(const int ndim,
 			std::cout << "Solverfactory: ILU relaxation is not implemented.";
 			std::cout << " Using the preconditioner.\n";
 		}
+		/* Currently, the object is set to print the max norm of the ILU remainder before
+		 * and after factorization. The last argument below is responsible for it.
+		 */
 		return new AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>
 			(opts.nbuildsweeps, opts.napplysweeps, opts.thread_chunk_size,
-			 opts.fact_inittype, opts.apply_inittype, true, false);
+			 opts.fact_inittype, opts.apply_inittype, true, false, true);
 	}
 	else if(opts.prectype == BLASTED_NO_PREC) {
 		if(opts.relax) {
