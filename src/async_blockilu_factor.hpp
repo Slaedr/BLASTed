@@ -29,18 +29,19 @@ template <typename scalar, typename index, int bs, StorageOptions stor>
 void block_ilu0_factorize(const CRawBSRMatrix<scalar,index> *const mat,
                           const int nbuildsweeps, const int thread_chunk_size, const bool usethreads,
                           const FactInit init_type,
+                          const bool compute_remainder,
                           scalar *const __restrict iluvals);
 
-/// Computes the ILU residual A - LU restricted to the sparsity pattern of A
+/// Computes the ILU remainder A - LU restricted to the sparsity pattern of A
 /** \param[in] mat The matrix A
  * \param[in] iluvals The non-zero entries of the LU factorization
  * \param[in] thread_chunk_size
- * \param[in,out] resvals Pre-allocated storage for the entries of the residual
+ * \param[in,out] remvals Pre-allocated storage for the entries of the remainder matrix
  */
 template <typename scalar, typename index, int bs, StorageOptions stor>
-void compute_ILU_residual(const CRawBSRMatrix<scalar,index> *const mat, const scalar *const iluvals,
+void compute_ILU_remainder(const CRawBSRMatrix<scalar,index> *const mat, const scalar *const iluvals,
                           const int thread_chunk_size,
-                          scalar *const __restrict resvals);
+                          scalar *const __restrict remvals);
 
 }
 

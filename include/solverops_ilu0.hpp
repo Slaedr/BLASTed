@@ -37,7 +37,8 @@ public:
 	AsyncBlockILU0_SRPreconditioner(const int nbuildsweeps, const int napplysweeps,
 	                                const int thread_chunk_size,
 	                                const FactInit fact_inittype, const ApplyInit apply_inittype,
-	                                const bool threadedfactor=true, const bool threadedapply=true);
+	                                const bool threadedfactor=true, const bool threadedapply=true,
+	                                const bool compute_remainder = false);
 
 	~AsyncBlockILU0_SRPreconditioner();
 
@@ -76,6 +77,7 @@ protected:
 	const int thread_chunk_size;
 	const FactInit factinittype;
 	const ApplyInit applyinittype;
+	const bool compute_remainder;
 
 	void setup_storage();
 };

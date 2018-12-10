@@ -20,10 +20,10 @@ template <typename scalar, typename index, int bs, StorageOptions stor>
 AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>::AsyncBlockILU0_SRPreconditioner
 (const int nbuildswp, const int napplyswp, const int tcs,
  const FactInit finit, const ApplyInit ainit,
- const bool tf, const bool ta)
+ const bool tf, const bool ta, const bool comp_rem)
 	: iluvals{nullptr}, scale{nullptr}, ytemp{nullptr}, threadedfactor{tf}, threadedapply{ta},
 	  rowscale{false}, nbuildsweeps{nbuildswp}, napplysweeps{napplyswp}, thread_chunk_size{tcs},
-	  factinittype{finit}, applyinittype{ainit}
+	  factinittype{finit}, applyinittype{ainit}, compute_remainder{comp_rem}
 { }
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
@@ -172,7 +172,8 @@ void AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>::compute()
 		setup_storage();
 
 	block_ilu0_factorize<scalar,index,bs,stor>
-		(&mat, nbuildsweeps, thread_chunk_size, threadedfactor, factinittype, iluvals);
+		(&mat, nbuildsweeps, thread_chunk_size, threadedfactor, factinittype,
+		 compute_remainder, iluvals);
 }
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
