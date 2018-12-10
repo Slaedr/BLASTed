@@ -181,4 +181,82 @@ template void block_ilu0_factorize<double,int,BUILD_BLOCK_SIZE,ColMajor>
  double *const __restrict iluvals);
 #endif
 
+template <typename scalar, typename index, int bs, StorageOptions stor>
+void compute_ILU_residual(const CRawBSRMatrix<scalar,index> *const mat, const scalar *const iluvals,
+                          const int thread_chunk_size,
+                          scalar *const __restrict resvals)
+{
+	using Blk = Block_t<scalar,bs,stor>;
+
+	const Blk *const mvals = reinterpret_cast<const Blk*>(mat->vals);
+	const Blk *const ilu = reinterpret_cast<const Blk*>(iluvals);
+	Blk *const res = reinterpret_cast<Blk*>(resvals);
+
+#pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size)
+	for(index irow = 0; irow < mat->nbrows; irow++)
+	{
+		for(index j = mat->browptr[irow]; j < mat->browptr[irow+1]; j++)
+		{
+			if(irow > mat->bcolind[j])
+			{
+				res[j] = mvals[j];
+
+				for( index k = mat->browptr[irow]; 
+				     (k < mat->browptr[irow+1]) && (mat->bcolind[k] < mat->bcolind[j]); 
+				     k++
+				     ) 
+				{
+					index pos = -1;
+					internal::inner_search<index>(mat->bcolind,
+					                              mat->diagind[mat->bcolind[k]],
+					                              mat->browptr[mat->bcolind[k]+1],
+					                              mat->bcolind[j], &pos );
+
+					if(pos == -1) continue;
+
+					res[j].noalias() -= ilu[k]*ilu[pos];
+				}
+			}
+			else
+			{
+				// compute u_ij
+				res[j] = mvals[j];
+
+				for(index k = mat->browptr[irow]; 
+				    (k < mat->browptr[irow+1]) && (mat->bcolind[k] < irow); k++) 
+				{
+					index pos = -1;
+
+					/* search for column index mat->bcolind[j],
+					 * between the diagonal index of row mat->bcolind[k] 
+					 * and the last index of row bcolind[k]
+					 */
+					internal::inner_search(mat->bcolind, mat->diagind[mat->bcolind[k]], 
+					                       mat->browptr[mat->bcolind[k]+1], mat->bcolind[j], &pos);
+
+					if(pos == -1) continue;
+
+					res[j].noalias() -= ilu[k]*ilu[pos];
+				}
+			}
+		}
+	}
+}
+
+template
+void compute_ILU_residual<double,int,4,RowMajor>(const CRawBSRMatrix<double,int> *const mat,
+                                                 const double *const iluvals,
+                                                 const int thread_chunk_size,
+                                                 double *const __restrict resvals);
+template
+void compute_ILU_residual<double,int,4,ColMajor>(const CRawBSRMatrix<double,int> *const mat,
+                                                 const double *const iluvals,
+                                                 const int thread_chunk_size,
+                                                 double *const __restrict resvals);
+template
+void compute_ILU_residual<double,int,5,ColMajor>(const CRawBSRMatrix<double,int> *const mat,
+                                                 const double *const iluvals,
+                                                 const int thread_chunk_size,
+                                                 double *const __restrict resvals);
+
 }

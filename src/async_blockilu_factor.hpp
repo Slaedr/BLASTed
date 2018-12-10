@@ -31,6 +31,17 @@ void block_ilu0_factorize(const CRawBSRMatrix<scalar,index> *const mat,
                           const FactInit init_type,
                           scalar *const __restrict iluvals);
 
+/// Computes the ILU residual A - LU restricted to the sparsity pattern of A
+/** \param[in] mat The matrix A
+ * \param[in] iluvals The non-zero entries of the LU factorization
+ * \param[in] thread_chunk_size
+ * \param[in,out] resvals Pre-allocated storage for the entries of the residual
+ */
+template <typename scalar, typename index, int bs, StorageOptions stor>
+void compute_ILU_residual(const CRawBSRMatrix<scalar,index> *const mat, const scalar *const iluvals,
+                          const int thread_chunk_size,
+                          scalar *const __restrict resvals);
+
 }
 
 #endif
