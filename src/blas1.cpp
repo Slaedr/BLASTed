@@ -10,7 +10,7 @@
 namespace blasted {
 
 template <typename scalar, typename index>
-index maxnorm(const index N, const scalar *const vec)
+scalar maxnorm(const index N, const scalar *const vec)
 {
 	scalar smax = std::numeric_limits<scalar>::min();
 #pragma omp parallel for default(shared) reduction(max:smax)
@@ -21,6 +21,6 @@ index maxnorm(const index N, const scalar *const vec)
 	return smax;
 }
 
-template int maxnorm<double,int>(const int N, const double *const vec);
+template double maxnorm<double,int>(const int N, const double *const vec);
 
 }

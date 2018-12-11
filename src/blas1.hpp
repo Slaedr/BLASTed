@@ -10,7 +10,7 @@ namespace blasted {
 
 /// Returns the largest entry in absolute value
 template <typename scalar, typename index>
-index maxnorm(const index N, const scalar *const vec);
+scalar maxnorm(const index N, const scalar *const vec);
 
 }
 
