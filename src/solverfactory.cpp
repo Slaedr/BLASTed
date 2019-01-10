@@ -16,7 +16,18 @@
 
 namespace blasted {
 
-BlastedSolverType solverTypeFromString(const std::string precstr2)
+template <typename scalar, typename index>
+FactoryBase<scalar,index>::FactoryBase()
+{ }
+
+template <typename scalar, typename index>
+FactoryBase<scalar,index>::~FactoryBase()
+{ }
+
+template class FactoryBase<double,int>;
+
+template <typename scalar, typename index>
+BlastedSolverType SRFactory<scalar,index>::solverTypeFromString(const std::string precstr2) const
 {
 	BlastedSolverType ptype;
 	if(precstr2 == jacobistr)
@@ -41,10 +52,11 @@ BlastedSolverType solverTypeFromString(const std::string precstr2)
 /** Note that if a relaxation is requested for an algorithm got which relaxation is not implemented,
  * the corresponding preconditioner is returned instead after printing a warning.
  */
-template <typename scalar, typename index, int bs, StorageOptions stor>
-static
-SRPreconditioner<scalar,index> *create_srpreconditioner_of_type(const int ndim,
-                                                                const AsyncSolverSettings& opts)
+template <typename scalar, typename index>
+template <int bs, StorageOptions stor>
+SRPreconditioner<scalar,index>*
+SRFactory<scalar,index>::create_srpreconditioner_of_type(const int ndim,
+                                                         const AsyncSolverSettings& opts) const
 {
 	if(opts.prectype == BLASTED_JACOBI)
 		if(opts.relax)
@@ -102,7 +114,8 @@ SRPreconditioner<scalar,index> *create_srpreconditioner_of_type(const int ndim,
 }
 
 template <typename scalar, typename index>
-SRPreconditioner<scalar,index> *create_sr_preconditioner(const index ndim, const SolverSettings& set)
+SRPreconditioner<scalar,index>*
+SRFactory<scalar,index>::create_preconditioner(const index ndim, const SolverSettings& set) const
 {
 	SRPreconditioner<scalar,index> *p = nullptr;
 
@@ -147,7 +160,7 @@ SRPreconditioner<scalar,index> *create_sr_preconditioner(const index ndim, const
 	else if(opts.blockstorage == RowMajor) 
 	{
 		if(opts.bs == 4) {
-			p = create_srpreconditioner_of_type<scalar,index,4,RowMajor>(ndim,opts);
+			p = create_srpreconditioner_of_type<4,RowMajor>(ndim,opts);
 		}
 #ifdef BUILD_BLOCK_SIZE
 		else if(opts.bs == BUILD_BLOCK_SIZE) {
@@ -162,13 +175,13 @@ SRPreconditioner<scalar,index> *create_sr_preconditioner(const index ndim, const
 	else if(opts.blockstorage == ColMajor)
 	{
 		if(opts.bs==4)
-			p = create_srpreconditioner_of_type<scalar,index,4,ColMajor>(ndim,opts);
+			p = create_srpreconditioner_of_type<4,ColMajor>(ndim,opts);
 		else if(opts.bs == 5) {
-			p = create_srpreconditioner_of_type<scalar,index,5,ColMajor>(ndim,opts);
+			p = create_srpreconditioner_of_type<5,ColMajor>(ndim,opts);
 		}
 #ifdef BUILD_BLOCK_SIZE
 		else if(opts.bs == BUILD_BLOCK_SIZE) {
-			p = create_srpreconditioner_of_type<scalar,index,BUILD_BLOCK_SIZE,ColMajor>(ndim,opts);
+			p = create_srpreconditioner_of_type<BUILD_BLOCK_SIZE,ColMajor>(ndim,opts);
 		}
 #endif
 		else {
@@ -183,7 +196,8 @@ SRPreconditioner<scalar,index> *create_sr_preconditioner(const index ndim, const
 	return p;
 }
 
-template SRPreconditioner<double,int>* create_sr_preconditioner<double,int>
-(const int ndim, const SolverSettings& opts);
+// template SRPreconditioner<double,int>* create_sr_preconditioner<double,int>
+// (const int ndim, const SolverSettings& opts);
+template class SRFactory<double,int>;
 
 }

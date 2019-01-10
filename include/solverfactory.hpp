@@ -52,21 +52,42 @@ struct AsyncSolverSettings : public SolverSettings {
 	ApplyInit apply_inittype;             ///< Initialization type for asynchronous triangular solves
 };
 
-/// Creates a preconditioner or relaxation object, for matrices stored by sparse rows
-/** \param ndim Number of rows in the matrix; the dimension of the problem
- * \param settings Solver settings
- * 
- * Throws an instance of invalid_argument in case of invalid argument(s). */
 template <typename scalar, typename index>
-SRPreconditioner<scalar,index> *create_sr_preconditioner(const index ndim,
-                                                         const SolverSettings& settings);
-	// (const std::string precstr, const int bs, const std::string blockstorage,
-	//  const bool relaxation,
-	//  const std::map<std::string,int>& intParamList,
-	//  const std::map<std::string,double>& floatParamList);
+class FactoryBase
+{
+public:
+	FactoryBase();
+	virtual ~FactoryBase();
 
-/// Convert a string into a preconditioner type if possible. Throws a invalid_argument if not possible.
-BlastedSolverType solverTypeFromString(const std::string precstr);
+	/// Creates a preconditioner or relaxation object
+	virtual SRPreconditioner<scalar,index>*
+	create_preconditioner(const index ndim, const SolverSettings& settings) const = 0;
+
+	/// Convert a string into a preconditioner type if possible.
+	/// Should throw a invalid_argument if not possible.
+	virtual BlastedSolverType solverTypeFromString(const std::string precstr) const = 0;
+};
+
+template <typename scalar, typename index>
+class SRFactory : public FactoryBase<scalar,index>
+{
+public:
+	/// Creates a preconditioner or relaxation object, for matrices stored by sparse rows
+	/** \param ndim Number of rows in the matrix; the dimension of the problem
+	 * \param settings Solver settings
+	 * 
+	 * Throws an instance of invalid_argument in case of invalid argument(s). */
+	SRPreconditioner<scalar,index> *create_preconditioner(const index ndim,
+	                                                      const SolverSettings& settings) const;
+
+	/// Convert a string into a preconditioner type if possible. Throws a invalid_argument if not possible.
+	BlastedSolverType solverTypeFromString(const std::string precstr) const;
+
+private:
+	template <int bs, StorageOptions stor>
+	SRPreconditioner<scalar,index> *
+	create_srpreconditioner_of_type(const int ndim, const AsyncSolverSettings& opts) const;
+};
 
 }
 #endif

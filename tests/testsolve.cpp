@@ -63,7 +63,8 @@ int testSolve(const std::string solvertype, const std::string precontype,
 					rm.browptr,rm.bcolind,rm.vals,rm.diagind);
 
 	// construct preconditioner context
-	
+
+	SRFactory<double,int> fctry;
 	SRPreconditioner<double,int>* prec = nullptr;
 	// For async preconditioners
 	AsyncSolverSettings params;
@@ -71,7 +72,7 @@ int testSolve(const std::string solvertype, const std::string precontype,
 	params.napplysweeps = napplyswps;
 	params.thread_chunk_size = threadchunksize;
 	params.bs = bs;
-	params.prectype = solverTypeFromString(precontype);
+	params.prectype = fctry.solverTypeFromString(precontype);
 	params.fact_inittype = getFactInitFromString(factinittype);
 	params.apply_inittype = getApplyInitFromString(applyinittype);
 	if(storageorder == "rowmajor")
@@ -80,7 +81,7 @@ int testSolve(const std::string solvertype, const std::string precontype,
 		params.blockstorage = ColMajor;
 	params.relax = false;
 
-	prec = create_sr_preconditioner<double,int>(rm.nbrows*bs, params);
+	prec = fctry.create_preconditioner(rm.nbrows*bs, params);
 
 	prec->wrap(rm.nbrows, rm.browptr, rm.bcolind, rm.vals, rm.diagind);
 

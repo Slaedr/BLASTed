@@ -17,6 +17,7 @@ extern "C" {
 	              BLASTED_ILU0,
 	              BLASTED_SAPILU0,
 	              BLASTED_NO_PREC,
+	              BLASTED_EXTERNAL
 	} BlastedSolverType;
 
 #ifdef __cplusplus

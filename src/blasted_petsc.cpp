@@ -17,7 +17,7 @@
 #include "solverops_sgs.hpp"
 #include "solverops_ilu0.hpp"
 #include "solverfactory.hpp"
-#include "blasted_petsc.h"
+#include "blasted_petsc_ext.hpp"
 
 using namespace blasted;
 
@@ -64,9 +64,13 @@ static PetscErrorCode setupDataFromOptions(PC pc)
 	Blasted_data* ctx;
 	ierr = PCShellGetContext(pc, (void**)&ctx); CHKERRQ(ierr);
 
+
+	const FactoryBase<PetscReal,PetscInt> *const factory
+		= (const FactoryBase<PetscReal,PetscInt>*)ctx->bfactory;
+
 	// Prec type
 	get_string_petscoptions("-blasted_pc_type", &ctx->prectypestr);
-	const BlastedSolverType ptype = solverTypeFromString(ctx->prectypestr);
+	const BlastedSolverType ptype = factory->solverTypeFromString(ctx->prectypestr);
 
 	PetscInt sweeps[2];
 	if(ptype != BLASTED_JACOBI)
@@ -159,9 +163,12 @@ PetscErrorCode createNewPreconditioner(PC pc)
 		SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_LIB, "! Zero diagonal in (block-)row %d!", badrow);
 	}
 
+	const FactoryBase<PetscReal,PetscInt> *const factory
+		= (const FactoryBase<PetscReal,PetscInt>*)ctx->bfactory;
+
 	// create appropriate preconditioner and relaxation objects
 	AsyncSolverSettings settings;
-	settings.prectype = solverTypeFromString(ctx->prectypestr);
+	settings.prectype = factory->solverTypeFromString(ctx->prectypestr);
 	settings.bs = ctx->bs;  // set in setup_localpreconditioner_blasted below
 	settings.blockstorage = ColMajor;   // required for PETSc
 	settings.nbuildsweeps = ctx->nbuildsweeps;
@@ -173,10 +180,10 @@ PetscErrorCode createNewPreconditioner(PC pc)
 	}
 
 	settings.relax = false;
-	precop = create_sr_preconditioner<PetscReal,PetscInt>(ndim, settings);
+	precop = factory->create_preconditioner(ndim, settings);
 
 	settings.relax = true;
-	relop = create_sr_preconditioner<PetscReal,PetscInt>(ndim, settings);
+	relop = factory->create_preconditioner(ndim, settings);
 
 	ctx->bprec = reinterpret_cast<void*>(precop);
 	ctx->brelax = reinterpret_cast<void*>(relop);
@@ -234,11 +241,17 @@ Blasted_data_list newBlastedDataList()
 	b.ctxlist = NULL;
 	b.size = 0;
 	b.factorcputime = b.factorwalltime = b.applycputime = b.applywalltime = 0.0;
+	b._defaultfactory = 0;
 	return b;
 }
 
 void destroyBlastedDataList(Blasted_data_list *const b)
 {
+	if(b->_defaultfactory == 1) {
+		delete (FactoryBase<double,int>*)b->bfactory;
+		b->_defaultfactory = 0;
+	}
+
 	while(b->ctxlist != NULL) {
 		Blasted_data *temp = b->ctxlist;
 		b->ctxlist = b->ctxlist->next;
@@ -414,7 +427,8 @@ PetscErrorCode relax_local_blasted(PC pc, Vec rhs, Vec x, Vec w,
 	return ierr;
 }
 
-PetscErrorCode setup_blasted_stack(KSP ksp, Blasted_data_list *const bctv)
+int setup_blasted_stack_ext(KSP ksp, const FactoryBase<double,int> *const fctry,
+                            Blasted_data_list *const bctv)
 {
 	PetscErrorCode ierr = 0;
 	PC pc;
@@ -480,10 +494,22 @@ PetscErrorCode setup_blasted_stack(KSP ksp, Blasted_data_list *const bctv)
 		appendBlastedDataContext(bctv, newBlastedDataContext());
 		// The new context is appended to the head of the list,
 		// so we setup the BLASTed preconditioner using the context at the head of the list
+
+		// set the factory to use - same for each solver context in the tree
+		bctv->ctxlist->bfactory = bctv->bfactory;
+
 		ierr = setup_localpreconditioner_blasted(ksp, bctv->ctxlist); CHKERRQ(ierr);
 	}
 
 	return ierr;
+}
+
+PetscErrorCode setup_blasted_stack(KSP ksp, Blasted_data_list *const bctx)
+{
+	FactoryBase<double,int> *factory = new SRFactory<double,int>();
+	bctx->bfactory = (void*)factory;
+	bctx->_defaultfactory = 1;
+	return setup_blasted_stack_ext(ksp, factory, bctx);
 }
 
 PetscErrorCode setup_localpreconditioner_blasted(KSP ksp, Blasted_data *const bctx)

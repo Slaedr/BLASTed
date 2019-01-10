@@ -26,8 +26,9 @@ extern "C" {
  */
 struct Blasted_node
 {
-	void* bprec;                ///< BLASTed preconditioning object
+	void *bprec;                ///< BLASTed preconditioning object
 	void *brelax;               ///< BLASTed relaxation object
+	void *bfactory;             ///< BLASTed factory object
 	
 	int bs;                     ///< Block size of dense blocks
 	char *prectypestr;          ///< String identifier of the preconditioner type to use
@@ -64,6 +65,9 @@ typedef struct
 	Blasted_data *ctxlist;   ///< Linked list of BLASTed contexts for different instances
 	int size;                ///< Size of the array
 
+	void *bfactory;          ///< Factory object to generate individual solver contexts
+	int _defaultfactory;     ///< Not be set by applications. Indicates whether the default factory is used
+
 	double factorcputime;  ///< CPU time taken by factorizations by all BLASTed instances in this vector
 	double factorwalltime; ///< Walltime taken by factorizations by all BLASTed instances in this vector
 	double applycputime;   ///< CPU time taken by applications of all BLASTed instances in this vector
@@ -84,6 +88,8 @@ void destroyBlastedDataList(Blasted_data_list *const bdv);
 
 /// Recursive function to set the BLASTed preconditioner wherever possible in the entire solver stack
 /** Finds shell PCs and sets BLASTed as the preconditioner for each of them.
+ * Note that it's not mandatory to use BLASTed preconditioners after this function is called;
+ *  BLASTed preconditioners are only used in case the 'shell' preconditioner PCSHELL is requested.
  * Assumptions:
  *  - If multigrid occurs, the same smoother (and the same number of sweeps) is used for both
  *   pre- and post-smoothing.
