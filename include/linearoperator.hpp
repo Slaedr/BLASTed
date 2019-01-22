@@ -55,7 +55,7 @@ public:
 	/** See the documentation of the subclasses for requirements on the inputs.
 	 */
 	virtual void setStructure(const index n, 
-			const index *const vec1, const index *const vec2) = 0;
+	                          const index *const vec1, const index *const vec2) = 0;
 
 	/// Sets all non-zero entries to explicitly stored zeros
 	virtual void setAllZero() = 0;
@@ -71,7 +71,7 @@ public:
 	 *              Note that this must not be the block-column index for any matrix type.
 	 */
 	virtual void submitBlock(const index starti, const index startj, 
-		const scalar *const buffer, const index param1, const index param2) = 0;
+	                         const scalar *const buffer, const index param1, const index param2) = 0;
 	
 	/// Supposed to add to a contiguous block of the matrix in a thread-safe manner
 	/**
@@ -81,7 +81,7 @@ public:
 	 *              Note that this must not be the block-column index for any matrix type.
 	 */
 	virtual void updateBlock(const index starti, const index startj, 
-		const scalar *const buffer, const index param1, const index param2) = 0;
+	                         const scalar *const buffer, const index param1, const index param2) = 0;
 	
 	/// Supposed to update diagonal entries for point matrices 
 	/// and diagonal blocks for block matrices
@@ -91,7 +91,7 @@ public:
 	 * \param[in] Any parameter needed by implementations
 	 */
 	virtual void updateDiagBlock(const index starti, const scalar *const buffer,
-			const index param1) = 0;
+	                             const index param1) = 0;
 
 	/// Scales all entries of the matrix by scalar
 	virtual void scaleAll(const scalar factor) = 0;
@@ -101,8 +101,8 @@ public:
 
 	/// Almost the BLAS gemv: computes z := a Ax + by for  scalars a and b
 	virtual void gemv3(const scalar a, const scalar *const __restrict x, 
-			const scalar b, const scalar *const y,
-			scalar *const z) const = 0;
+	                   const scalar b, const scalar *const y,
+	                   scalar *const z) const = 0;
 };
 	
 /// Interface for a view of a matrix
@@ -126,8 +126,8 @@ public:
 
 	/// Almost the BLAS gemv: computes z := a Ax + by for  scalars a and b
 	virtual void gemv3(const scalar a, const scalar *const __restrict x, 
-			const scalar b, const scalar *const y,
-			scalar *const z) const = 0;
+	                   const scalar b, const scalar *const y,
+	                   scalar *const z) const = 0;
 };
 
 }

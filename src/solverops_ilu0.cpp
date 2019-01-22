@@ -17,10 +17,10 @@ using boost::alignment::aligned_alloc;
 using boost::alignment::aligned_free;
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
-AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>::AsyncBlockILU0_SRPreconditioner
-(const int nbuildswp, const int napplyswp, const int tcs,
- const FactInit finit, const ApplyInit ainit,
- const bool tf, const bool ta, const bool comp_rem)
+AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>::
+AsyncBlockILU0_SRPreconditioner(const int nbuildswp, const int napplyswp, const int tcs,
+                                const FactInit finit, const ApplyInit ainit,
+                                const bool tf, const bool ta, const bool comp_rem)
 	: iluvals{nullptr}, scale{nullptr}, ytemp{nullptr}, threadedfactor{tf}, threadedapply{ta},
 	  rowscale{false}, nbuildsweeps{nbuildswp}, napplysweeps{napplyswp}, thread_chunk_size{tcs},
 	  factinittype{finit}, applyinittype{ainit}, compute_remainder{comp_rem}
@@ -178,16 +178,17 @@ void AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>::compute()
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
 void AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>::apply(const scalar *const r, 
-                                              scalar *const __restrict z) const
+                                                                  scalar *const __restrict z) const
 {
 	block_ilu0_apply<scalar,index,bs,stor>
 		(&mat, iluvals, ytemp, napplysweeps, thread_chunk_size, threadedapply, applyinittype, r, z);
 }
 
 template <typename scalar, typename index>
-AsyncILU0_SRPreconditioner<scalar,index>::AsyncILU0_SRPreconditioner
-(const int nbuildswp, const int napplyswp, const int tcs, const FactInit fi, const ApplyInit ai,
- const bool tf, const bool ta)
+AsyncILU0_SRPreconditioner<scalar,index>::
+AsyncILU0_SRPreconditioner(const int nbuildswp, const int napplyswp, const int tcs,
+                           const FactInit fi, const ApplyInit ai,
+                           const bool tf, const bool ta)
 	: iluvals{nullptr}, scale{nullptr}, ytemp{nullptr}, threadedfactor{tf}, threadedapply{ta},
 	  nbuildsweeps{nbuildswp}, napplysweeps{napplyswp}, thread_chunk_size{tcs},
 	  factinittype{fi}, applyinittype{ai}

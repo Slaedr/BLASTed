@@ -14,15 +14,15 @@ using boost::alignment::aligned_alloc;
 using boost::alignment::aligned_free;
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
-AsyncBlockSGS_SRPreconditioner<scalar,index,bs,stor>::AsyncBlockSGS_SRPreconditioner
-(const int naswps, const ApplyInit apply_inittype, const int threadchunksize)
+AsyncBlockSGS_SRPreconditioner<scalar,index,bs,stor>::
+AsyncBlockSGS_SRPreconditioner(const int naswps, const ApplyInit apply_inittype,
+                               const int threadchunksize)
 	: ytemp{nullptr}, napplysweeps{naswps}, ainit{apply_inittype}, thread_chunk_size{threadchunksize}
 { }
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
 AsyncBlockSGS_SRPreconditioner<scalar,index,bs,stor>::~AsyncBlockSGS_SRPreconditioner()
 {
-	//delete [] ytemp;
 	aligned_free(ytemp);
 }
 
@@ -41,7 +41,7 @@ void AsyncBlockSGS_SRPreconditioner<scalar,index,bs,stor>::compute()
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
 void AsyncBlockSGS_SRPreconditioner<scalar,index,bs,stor>::apply(const scalar *const rr,
-                                                        scalar *const __restrict zz) const
+                                                                 scalar *const __restrict zz) const
 {
 	const Blk *mvals = reinterpret_cast<const Blk*>(mat.vals);
 	const Blk *dblks = reinterpret_cast<const Blk*>(dblocks);
@@ -62,7 +62,7 @@ void AsyncBlockSGS_SRPreconditioner<scalar,index,bs,stor>::apply(const scalar *c
 		for(index irow = 0; irow < mat.nbrows; irow++)
 		{
 			block_fgs<scalar, index, bs, stor>(mvals, mat.bcolind, irow, mat.browptr[irow], 
-					mat.diagind[irow], dblks[irow], r[irow], y);
+			                                   mat.diagind[irow], dblks[irow], r[irow], y);
 		}
 	}
 
@@ -83,7 +83,7 @@ void AsyncBlockSGS_SRPreconditioner<scalar,index,bs,stor>::apply(const scalar *c
 		for(index irow = mat.nbrows-1; irow >= 0; irow--)
 		{
 			block_bgs<scalar, index, bs, stor>(mvals, mat.bcolind, irow, mat.diagind[irow], 
-					mat.browptr[irow+1], dblks[irow], y[irow], z);
+			                                   mat.browptr[irow+1], dblks[irow], y[irow], z);
 		}
 	}
 }
@@ -98,7 +98,6 @@ AsyncSGS_SRPreconditioner<scalar,index>::AsyncSGS_SRPreconditioner(const int nas
 template <typename scalar, typename index>
 AsyncSGS_SRPreconditioner<scalar,index>::~AsyncSGS_SRPreconditioner()
 {
-	//delete [] ytemp;
 	aligned_free(ytemp);
 }
 
@@ -132,7 +131,7 @@ void AsyncSGS_SRPreconditioner<scalar,index>::apply(const scalar *const rr,
 		for(index irow = 0; irow < mat.nbrows; irow++)
 		{
 			ytemp[irow] = scalar_fgs(mat.vals, mat.bcolind, mat.browptr[irow], mat.diagind[irow],
-					dblocks[irow], rr[irow], ytemp);
+			                         dblocks[irow], rr[irow], ytemp);
 		}
 	}
 
@@ -153,7 +152,7 @@ void AsyncSGS_SRPreconditioner<scalar,index>::apply(const scalar *const rr,
 		for(index irow = mat.nbrows-1; irow >= 0; irow--)
 		{
 			zz[irow] = scalar_bgs(mat.vals, mat.bcolind, mat.diagind[irow], mat.browptr[irow+1],
-					mat.vals[mat.diagind[irow]], dblocks[irow], ytemp[irow], zz);
+			                      mat.vals[mat.diagind[irow]], dblocks[irow], ytemp[irow], zz);
 		}
 	}
 }

@@ -153,8 +153,9 @@ PetscErrorCode apply_local_blasted(PC pc, Vec r, Vec z);
 
 /// Applies a local asynchronous relaxation in parallel
 PetscErrorCode relax_local_blasted(PC pc, Vec rhs, Vec x, Vec w, 
-		PetscReal rtol, PetscReal abstol, PetscReal dtol, PetscInt it, PetscBool guesszero, 
-		PetscInt *outits, PCRichardsonConvergedReason *reason);
+                                   PetscReal rtol, PetscReal abstol, PetscReal dtol, PetscInt it,
+                                   PetscBool guesszero,
+                                   PetscInt *outits, PCRichardsonConvergedReason *reason);
 
 #ifdef __cplusplus
 }

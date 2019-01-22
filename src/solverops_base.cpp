@@ -23,7 +23,8 @@ SRPreconditioner<scalar,index>::SRPreconditioner()
 
 template <typename scalar, typename index>
 void SRPreconditioner<scalar,index>::wrap(const index n_brows, const index *const brptrs,
-	const index *const bcinds, const scalar *const values, const index *const dinds)
+                                          const index *const bcinds, const scalar *const values,
+                                          const index *const dinds)
 {
 	mat.nbrows = n_brows;
 	mat.browptr = brptrs;

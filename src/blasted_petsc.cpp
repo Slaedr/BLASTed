@@ -320,8 +320,6 @@ PetscErrorCode compute_preconditioner_blasted(PC pc)
 		ierr = createNewPreconditioner(pc); CHKERRQ(ierr);
 	}
 
-	//BlastedPreconditioner *const op = reinterpret_cast<BlastedPreconditioner*>(ctx->bprec);
-
 	struct timeval time1, time2;
 	gettimeofday(&time1, NULL);
 	double initialwtime = (double)time1.tv_sec + (double)time1.tv_usec * 1.0e-6;
@@ -417,7 +415,6 @@ PetscErrorCode relax_local_blasted(PC pc, Vec rhs, Vec x, Vec w,
 			ierr = VecSet(x, 0.0); CHKERRQ(ierr);
 		}
 
-		//std::printf("Applying relaxation.\n");
 		ierr = apply_local_base(ctx, relaxation, rhs, x); CHKERRQ(ierr);
 
 		*reason = PCRICHARDSON_CONVERGED_ITS;
