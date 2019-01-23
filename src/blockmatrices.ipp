@@ -699,6 +699,29 @@ std::array<bool,5> BSRMatrix<scalar,index,1>::isEqual(const BSRMatrix<scalar,ind
 }
 
 template <typename scalar, typename index>
+index BSRMatrix<scalar,index,1>::zeroDiagonalRow() const
+{
+	int zdr = -1;
+	for(index i = 0; i < mat.nbrows; i++)
+		if(std::abs(mat.vals[mat.diagind[i]]) < 100*std::numeric_limits<scalar>::epsilon()) {
+			zdr = i;
+			break;
+		}
+	return zdr;
+}
+
+template <typename scalar, typename index>
+size_t BSRMatrix<scalar,index,1>::getNumZeroDiagonals() const
+{
+	size_t num = 0;
+	for(index i = 0; i < mat.nbrows; i++) {
+		if(std::abs(mat.vals[mat.diagind[i]]) < 100*std::numeric_limits<scalar>::epsilon())
+			num++;
+	}
+	return num;
+}
+
+template <typename scalar, typename index>
 scalar BSRMatrix<scalar,index,1>::getDiagonalProduct() const
 {
 	scalar prod = 1;

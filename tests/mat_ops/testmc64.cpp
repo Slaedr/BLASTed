@@ -11,8 +11,11 @@ double computePerformanceMetric(const int job, const BSRMatrix<double,int,1>& ma
 	double perfmetric = 0;
 	switch(job) {
 	case 1:
-		std::cout << "Can't compute perf metric for job 1.\n";
-		perfmetric = 1.0;
+		// check if the matrix has a zero diagonal
+		{
+			const size_t numzerodiags = mat.getNumZeroDiagonals();
+			perfmetric = mat.dim() - numzerodiags;
+		}
 		break;
 	case 2:
 		// fallthrough
@@ -44,6 +47,7 @@ int main(int argc, char *argv[])
 	assert(job <= 5);
 
 	BSRMatrix<double,int,1> omat = constructBSRMatrixFromMatrixMarketFile<double,int,1>(matfile);
+	std::cout << "Matrix size = " << omat.dim() << std::endl;
 
 	MC64 mc64(job);
 	omat.computeOrderingScaling(mc64);
@@ -56,7 +60,7 @@ int main(int argc, char *argv[])
 	const double reord_perf = computePerformanceMetric(job, mat1);
 	std::cout << "Performance. Orig: " << orig_perf << ", reordered: " << reord_perf
 	          << std::endl;
-	assert(std::abs(reord_perf) > std::abs(orig_perf));
+	assert(std::abs(reord_perf) >= std::abs(orig_perf));
 
 	mat1.reorderScale(mc64, INVERSE);
 

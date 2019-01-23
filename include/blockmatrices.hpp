@@ -437,6 +437,11 @@ public:
 	 */
 	std::array<bool,5> isEqual(const BSRMatrix<scalar,index,1>& other, const scalar tol) const;
 
+	/// Returns the first row that has a zero diagonal, -1 if no row has zero diagonal
+	index zeroDiagonalRow() const;
+
+	size_t getNumZeroDiagonals() const;
+
 	/// Returns the product of diagonal entries of the matrix
 	scalar getDiagonalProduct() const;
 

@@ -104,10 +104,22 @@ add_test(NAME BSR7ApplyColReordering COMMAND ${SEQEXEC} ${SEQTASKS} testreorderi
   )
 
 if(WITH_MC64)
+  add_test(NAME MC64Job_1 COMMAND ${SEQEXEC} ${SEQTASKS} testmc64
+	${CMAKE_CURRENT_SOURCE_DIR}/input/fluorem-dk01r/DK01R.mtx 1
+	)
   add_test(NAME MC64Job_2 COMMAND ${SEQEXEC} ${SEQTASKS} testmc64
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fluorem-dk01r/DK01R.mtx 2
 	)
-  add_test(NAME MC64Job_5 COMMAND ${SEQEXEC} ${SEQTASKS} testmc64
-	${CMAKE_CURRENT_SOURCE_DIR}/input/fluorem-dk01r/DK01R.mtx 5
+  add_test(NAME MC64Job_2_Boeing COMMAND ${SEQEXEC} ${SEQTASKS} testmc64
+	${CMAKE_CURRENT_SOURCE_DIR}/../input/boeing-msc00726/msc00726.mtx 2
 	)
+  add_test(NAME MC64Job_3 COMMAND ${SEQEXEC} ${SEQTASKS} testmc64
+	${CMAKE_CURRENT_SOURCE_DIR}/input/fluorem-dk01r/DK01R.mtx 3
+	)
+  add_test(NAME MC64Job_3_Boeing COMMAND ${SEQEXEC} ${SEQTASKS} testmc64
+	${CMAKE_CURRENT_SOURCE_DIR}/../input/boeing-msc00726/msc00726.mtx 3
+	)
+  # add_test(NAME MC64Job_5 COMMAND ${SEQEXEC} ${SEQTASKS} testmc64
+  # 	${CMAKE_CURRENT_SOURCE_DIR}/input/fluorem-dk01r/DK01R.mtx 5
+  # 	)
 endif(WITH_MC64)
