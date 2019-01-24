@@ -33,9 +33,11 @@ struct Blasted_node
 	int bs;                     ///< Block size of dense blocks
 	char *prectypestr;          ///< String identifier of the preconditioner type to use
 	BlastedSolverType prectype; ///< The preconditioner/iteration to use
+	
+	int threadchunksize;        ///< Number of work-items assigned to a thread at a time
+
 	int nbuildsweeps;           ///< Number of async build sweeps
 	int napplysweeps;           ///< Number of async apply sweeps
-	int threadchunksize;        ///< Number of work-items assigned to a thread at a time
 	char *factinittype;         ///< Type of initialization for asynchronous factorization
 	char *applyinittype;        ///< Type of initialization for asynchronous application
 
@@ -44,8 +46,8 @@ struct Blasted_node
 	 */
 	bool first_setup_done;
 
-	double cputime;           ///< Total CPU time taken by FGPILU
-	double walltime;          ///< Total wall-clock time taken by FGPILU
+	double cputime;           ///< Total CPU time taken by this preconditioner/relaxation instance
+	double walltime;          ///< Total wall-clock time taken by the preconditioner/relaxation
 	double factorcputime;     ///< CPU time taken for factorization
 	double factorwalltime;    ///< Wall-clock time for factorization
 	double applycputime;      ///< CPU time taken for application of the preconditioner
@@ -68,10 +70,10 @@ typedef struct
 	void *bfactory;          ///< Factory object to generate individual solver contexts
 	int _defaultfactory;     ///< Not be set by applications. Indicates whether the default factory is used
 
-	double factorcputime;  ///< CPU time taken by factorizations by all BLASTed instances in this vector
-	double factorwalltime; ///< Walltime taken by factorizations by all BLASTed instances in this vector
-	double applycputime;   ///< CPU time taken by applications of all BLASTed instances in this vector
-	double applywalltime;  ///< Walltime taken by applications of all BLASTed instances in this vector
+	double factorcputime;  ///< CPU time taken by factorizations by all BLASTed instances in this list
+	double factorwalltime; ///< Walltime taken by factorizations by all BLASTed instances in this list
+	double applycputime;   ///< CPU time taken by applications of all BLASTed instances in this list
+	double applywalltime;  ///< Walltime taken by applications of all BLASTed instances in this list
 
 } Blasted_data_list;
 

@@ -22,6 +22,8 @@ namespace blasted {
  *   for dynamically scheduled threads - should not be too small or too large
  * \param[in] usethreads Whether to use asynchronous threaded (true) or serial (false) factorization
  * \param[in] init_type Type of initialization, \sa FactInit
+ * \param[in] compute_remainder Pass 'true' for computing the ILU remainder before and after the
+ *   factorization loop
  * \param[out] iluvals The ILU factorization non-zeros, accessed using the block-row pointers, 
  *   block-column indices and diagonal pointers of the original BSR matrix
  */
