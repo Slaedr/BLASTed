@@ -88,7 +88,7 @@ SRFactory<scalar,index>::create_srpreconditioner_of_type(const int ndim,
 		 */
 		return new AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>
 			(opts.nbuildsweeps, opts.napplysweeps, opts.thread_chunk_size,
-			 opts.fact_inittype, opts.apply_inittype, true, true, true);
+			 opts.fact_inittype, opts.apply_inittype, true, true, opts.compute_factorization_res);
 	}
 	else if(opts.prectype == BLASTED_SAPILU0) {
 		if(opts.relax) {

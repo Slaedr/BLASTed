@@ -38,6 +38,21 @@ static int get_int_petscoptions(const char *const option_tag)
 	return val;
 }
 
+/// Reads an optional bool option from the PETSc options database
+static int get_optional_bool_petscoptions(const char *const option_tag, const bool default_value)
+{
+	PetscBool set = PETSC_FALSE;
+	PetscBool val = default_value == true ? PETSC_TRUE : PETSC_FALSE;
+	int ierr = PetscOptionsGetBool(NULL, NULL, option_tag, &val, &set);
+	if(ierr) {
+		throw std::runtime_error("Petsc could not get optional bool option!");
+	}
+	if(!set) {
+		printf(" BLASTed: %s not set; using default value of %d\n", option_tag, default_value);
+	}
+	return (val == PETSC_TRUE ? true : false);
+}
+
 /// Read a string option from the PETSc options database
 /** \note Aborts the program if the option was not found
  */
@@ -98,6 +113,10 @@ static PetscErrorCode setupDataFromOptions(PC pc)
 	}
 	else {
 		sweeps[0] = 1; sweeps[1] = 1;
+	}
+	if(ptype == BLASTED_ILU0) {
+		ctx->compute_ilu_rem =
+			get_optional_bool_petscoptions("-blasted_compute_factorization_remainder", false);
 	}
 
 #ifdef DEBUG
@@ -177,6 +196,7 @@ PetscErrorCode createNewPreconditioner(PC pc)
 	if(settings.prectype != BLASTED_JACOBI) {
 		settings.fact_inittype = getFactInitFromString(ctx->factinittype);
 		settings.apply_inittype = getApplyInitFromString(ctx->applyinittype);
+		settings.compute_factorization_res = ctx->compute_ilu_rem;
 	}
 
 	settings.relax = false;

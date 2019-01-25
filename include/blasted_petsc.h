@@ -40,6 +40,7 @@ struct Blasted_node
 	int napplysweeps;           ///< Number of async apply sweeps
 	char *factinittype;         ///< Type of initialization for asynchronous factorization
 	char *applyinittype;        ///< Type of initialization for asynchronous application
+	bool compute_ilu_rem;       ///< Set to true to request computation of ILU remainders
 
 	/// True if the initial one-time setup has been done
 	/** MUST be set to false initially.
