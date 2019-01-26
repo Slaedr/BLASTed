@@ -174,12 +174,12 @@ int main(int argc, char* argv[])
 		//setup_localpreconditioner_blasted(ksp, &bctx);
 		Blasted_data_list bctx = newBlastedDataList();
 		ierr = setup_blasted_stack(ksp, &bctx); CHKERRQ(ierr);
-		
+
 		ierr = KSPSolve(ksp, b, u); CHKERRQ(ierr);
 
 		// post-process
 		int kspiters; PetscReal rnorm;
-		KSPGetIterationNumber(ksp, &kspiters);
+		ierr = KSPGetIterationNumber(ksp, &kspiters); CHKERRQ(ierr);
 		avgkspiters += kspiters;
 
 		if(rank == 0) {
@@ -208,12 +208,20 @@ int main(int argc, char* argv[])
 		destroyBlastedDataList(&bctx);
 	}
 
+	avgkspiters = (int)(avgkspiters/(double)nruns);
 	if(rank == 0)
-		printf("KSP Iters: Reference %d vs BLASTed %d.\n", refkspiters, avgkspiters/nruns);
+		printf("KSP Iters: Reference %d vs BLASTed %d.\n", refkspiters, avgkspiters);
 
-	// test if the second solver was better than the reference solver in terms of iterations
-	if(!strcmp(testtype, "compare_its"))
-	   assert(avgkspiters/nruns <= refkspiters);
+	if(!strcmp(testtype, "compare_its")) {
+		printf("Checking whether solvers converged in almost the same number of iterations.\n");
+		const double tol = 0.01;
+		const double reldiff = abs(avgkspiters-refkspiters)/(double)refkspiters;
+		printf("Relative difference = %f.\n", reldiff); fflush(stdout);
+		assert(reldiff <= tol);
+	}
+	else if(!strcmp(testtype, "upper_bound_its")) {
+		assert(avgkspiters <= refkspiters);
+	}
 
 	VecDestroy(&u);
 	VecDestroy(&uexact);

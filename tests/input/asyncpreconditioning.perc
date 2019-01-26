@@ -1,4 +1,4 @@
-# To use this file, specify -mat_type, -ref_sub_pc_type and -blasted_pc_type on the command line.
+# To use this file, specify -mat_type, -ref_sub_pc_type, -blasted_pc_type and -blasted_async_sweeps on the command line.
 
 # With reference PETSc preconditioner
 
@@ -11,8 +11,6 @@
 -ref_ksp_view
 
 -ref_pc_type asm
--ref_sub_ksp_type richardson
--ref_sub_ksp_max_it 10
 #-ref_sub_pc_type
 
 # With blasted preconditioner
@@ -27,12 +25,9 @@
 -ksp_view
 
 -pc_type asm
--sub_ksp_type richardson
--sub_ksp_max_it 10
 -sub_pc_type shell
 
 #-blasted_pc_type
--blasted_async_sweeps 1,1
 
 -blasted_thread_chunk_size 128
 -blasted_async_fact_init_type init_none
