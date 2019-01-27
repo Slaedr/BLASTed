@@ -12,6 +12,9 @@ target_link_libraries(testcoomatrix coomatrix blockmatrices)
 add_executable(testcscmatrix scmatrixtest.cpp)
 target_link_libraries(testcscmatrix blockmatrices coomatrix)
 
+add_executable(testbscconversion bscconversiontest.cpp)
+target_link_libraries(testbscconversion blockmatrices coomatrix)
+
 add_executable(testreordering testreordering.cpp)
 target_link_libraries(testreordering orderingscaling blockmatrices coomatrix helper)
 if(WITH_MC64)
@@ -82,6 +85,12 @@ add_test(NAME BSR7ColViewMatMul
 add_test(NAME ConvertCSRToCSC COMMAND ${SEQEXEC} ${SEQTASKS} testcscmatrix 
   ${CMAKE_CURRENT_SOURCE_DIR}/input/small_block3_matrix.mtx 
   ${CMAKE_CURRENT_SOURCE_DIR}/input/small_block3_matrix.csc)
+
+add_test(NAME ConvertBSRToBSC_3 COMMAND ${SEQEXEC} ${SEQTASKS} testbscconversion
+  ${CMAKE_CURRENT_SOURCE_DIR}/input/small_block3_matrix.mtx 3)
+
+add_test(NAME ConvertBSRToBSC_7 COMMAND ${SEQEXEC} ${SEQTASKS} testbscconversion
+  ${CMAKE_CURRENT_SOURCE_DIR}/input/fluorem-dk01r/DK01R.mtx 7)
 
 add_test(NAME B7VecApplyRowReordering COMMAND ${SEQEXEC} ${SEQTASKS} testreordering
   ${CMAKE_CURRENT_SOURCE_DIR}/input/fluorem-dk01r/DK01R_b.mtx 7 row vector

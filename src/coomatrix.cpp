@@ -41,9 +41,9 @@ MMDescription getMMDescription(std::ifstream& fin)
 	MMDescription descr;
 
 	if(typeofmatrix.size() != 5)
-		std::cout << "! Not enough terms in the header!\n";
+		throw MatrixReadException("! Not enough terms in the header!");
 	if(typeofmatrix[0] != "%%MatrixMarket")
-		std::cout << "! Not a matrix market file!\n";
+		throw MatrixReadException("! Not a matrix market file!");
 
 	if(typeofmatrix[2] == "coordinate") {
 		descr.storagetype = COORDINATE;
@@ -196,13 +196,13 @@ void COOMatrix<scalar,index>::readMatrixMarket(const std::string file)
 
 	const MMDescription descr = getMMDescription(fin);
 	if(descr.storagetype != COORDINATE) {
-		std::cout << "! COOMatrix: readMatrixMarket: Can only read coordinate storage.\n";
+		throw MatrixReadException("! COOMatrix: readMatrixMarket: Can only read coordinate storage.");
 	}
 	if(descr.scalartype == PATTERN) {
-		std::cout << "! COOMatrix: readMatrixMarket: Cannot read pattern matrices.\n";
+		throw MatrixReadException("! COOMatrix: readMatrixMarket: Cannot read pattern matrices.");
 	}
 	if(descr.matrixtype != GENERAL) {
-		std::cout << "! COOMatrix: readMatrixMarket: Can only read general matrices.\n";
+		throw MatrixReadException("! COOMatrix: readMatrixMarket: Can only read general matrices.");
 	}
 
 	std::vector<index> sizes = getSizeFromMatrixMarket<index>(fin,descr);
@@ -393,6 +393,9 @@ BSRMatrix<scalar,index,bs> constructBSRMatrixFromMatrixMarketFile(const std::str
 	BSRMatrix<scalar,index,bs> bmat(rmat);
 	return bmat;
 }
+
+MatrixReadException::MatrixReadException(const std::string& msg) : std::runtime_error(msg)
+{ }
 
 template class COOMatrix<double,int>;
 template class COOMatrix<float,int>;

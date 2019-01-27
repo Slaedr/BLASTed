@@ -18,6 +18,7 @@
  *   along with BLASTed.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <array>
 #include <utility>
 #include <vector>
 #include <algorithm>
@@ -28,7 +29,7 @@ namespace blasted {
 template <typename scalar, typename index, int bs>
 RawBSCMatrix<scalar,index> convert_BSR_to_BSC(const CRawBSRMatrix<scalar,index> *const rmat)
 {
-	static_assert(bs == 1, "Block version of conversion to BSC not implemented yet!");
+	constexpr int bs2 = bs*bs;
 
 	RawBSCMatrix<scalar,index> cmat;
 	const index bnnz = rmat->browptr[rmat->nbrows];
@@ -36,20 +37,24 @@ RawBSCMatrix<scalar,index> convert_BSR_to_BSC(const CRawBSRMatrix<scalar,index> 
 	cmat.nbcols = N;
 	cmat.bcolptr = new index[N+1];
 	cmat.browind = new index[bnnz];
-	cmat.vals = new scalar[bnnz];
+	cmat.vals = new scalar[bnnz*bs2];
 	cmat.diagind = new index[N];
 
 	// copy the values into a temporary column-wise storage
 
-	using CSEntry = std::pair<index,scalar>;
+	using CSEntry = std::pair<index,std::array<scalar,bs2>>;
 	std::vector<std::vector<CSEntry>> cv(N);
 	const index expected_nnz_per_column = 30;
 	for(auto it = cv.begin(); it != cv.end(); it++)
 		it->reserve(expected_nnz_per_column);
 
 	for(index irow = 0; irow < N; irow++) {
-		for(index jj = rmat->browptr[irow]; jj < rmat->browptr[irow+1]; jj++) {
-			cv[rmat->bcolind[jj]].push_back(std::make_pair(irow,rmat->vals[jj]));
+		for(index jj = rmat->browptr[irow]; jj < rmat->browptr[irow+1]; jj++)
+		{
+			std::array<scalar,bs2> bloc;
+			for(int i = 0; i < bs2; i++)
+				bloc[i] = rmat->vals[jj*bs2+i];
+			cv[rmat->bcolind[jj]].push_back(std::make_pair(irow,bloc));
 		}
 	}
 
@@ -68,7 +73,8 @@ RawBSCMatrix<scalar,index> convert_BSR_to_BSC(const CRawBSRMatrix<scalar,index> 
 		cmat.diagind[icol] = -1;             // if there's no diagonal entry, we leave this as -1
 		for(auto it = cv[icol].begin(); it != cv[icol].end(); it++) {
 			cmat.browind[iz] = it->first;
-			cmat.vals[iz] = it->second;
+			for(int i = 0; i < bs2; i++)
+				cmat.vals[iz*bs2+i] = it->second[i];
 
 			if(icol == cmat.browind[iz])
 				cmat.diagind[icol] = iz;
@@ -85,6 +91,14 @@ RawBSCMatrix<scalar,index> convert_BSR_to_BSC(const CRawBSRMatrix<scalar,index> 
 
 template RawBSCMatrix<double,int>
 convert_BSR_to_BSC<double,int,1>(const CRawBSRMatrix<double,int> *const rmat);
+template RawBSCMatrix<double,int>
+convert_BSR_to_BSC<double,int,3>(const CRawBSRMatrix<double,int> *const rmat);
+template RawBSCMatrix<double,int>
+convert_BSR_to_BSC<double,int,4>(const CRawBSRMatrix<double,int> *const rmat);
+template RawBSCMatrix<double,int>
+convert_BSR_to_BSC<double,int,5>(const CRawBSRMatrix<double,int> *const rmat);
+template RawBSCMatrix<double,int>
+convert_BSR_to_BSC<double,int,7>(const CRawBSRMatrix<double,int> *const rmat);
 
 template <typename scalar, typename index, int bs>
 RawBSCMatrix<scalar,index> convert_BSR_to_BSC_1based(const CRawBSRMatrix<scalar,index> *const rmat)

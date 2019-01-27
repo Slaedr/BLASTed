@@ -20,6 +20,7 @@
 #ifndef COOMATRIX_H
 #define COOMATRIX_H
 
+#include <stdexcept>
 #include <limits>
 #include <string>
 #include <vector>
@@ -111,6 +112,13 @@ protected:
 /// Build a BSR (row-major blocks) or CSR matrix from a Matrix Market file in COO format
 template <typename scalar, typename index, int bs>
 BSRMatrix<scalar,index,bs> constructBSRMatrixFromMatrixMarketFile(const std::string file);
+
+/// Exception thrown if the matrix (or vector) file is incorrect or unsupported
+class MatrixReadException : public std::runtime_error
+{
+public:
+	MatrixReadException(const std::string& msg);
+};
 
 }
 
