@@ -91,7 +91,7 @@ void block_ilu0_apply(const CRawBSRMatrix<scalar,index> *const mat,
 		for(index i = 0; i < mat->nbrows; i++)
 		{
 			block_unit_lower_triangular<scalar,index,bs,stor>
-			  (ilu, mat->bcolind, mat->browptr[i], mat->diagind[i], r[i], i, y);
+				(ilu, mat->bcolind, mat->browptr[i], mat->diagind[i], r[i], i, y);
 		}
 	}
 
@@ -122,7 +122,7 @@ void block_ilu0_apply(const CRawBSRMatrix<scalar,index> *const mat,
 		for(index i = mat->nbrows-1; i >= 0; i--)
 		{
 			block_upper_triangular<scalar,index,bs,stor>
-			  (ilu, mat->bcolind, mat->diagind[i], mat->browptr[i+1], y[i], i, z);
+				(ilu, mat->bcolind, mat->diagind[i], mat->browptr[i+1], y[i], i, z);
 		}
 	}
 }

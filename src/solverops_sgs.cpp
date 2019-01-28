@@ -43,7 +43,7 @@ template <typename scalar, typename index, int bs, StorageOptions stor>
 void AsyncBlockSGS_SRPreconditioner<scalar,index,bs,stor>::apply(const scalar *const rr,
                                                                  scalar *const __restrict zz) const
 {
-	const Blk *mvals = reinterpret_cast<const Blk*>(mat.vals);
+	//const Blk *mvals = reinterpret_cast<const Blk*>(mat.vals);
 	const Blk *dblks = reinterpret_cast<const Blk*>(dblocks);
 	const Seg *r = reinterpret_cast<const Seg*>(rr);
 	Seg *z = reinterpret_cast<Seg*>(zz);
@@ -57,13 +57,7 @@ void AsyncBlockSGS_SRPreconditioner<scalar,index,bs,stor>::apply(const scalar *c
 	for(int isweep = 0; isweep < napplysweeps; isweep++)
 	{
 		// forward sweep ytemp := D^(-1) (r - L ytemp)
-
-#pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size)
-		for(index irow = 0; irow < mat.nbrows; irow++)
-		{
-			block_fgs<scalar, index, bs, stor>(mvals, mat.bcolind, irow, mat.browptr[irow], 
-			                                   mat.diagind[irow], dblks[irow], r[irow], y);
-		}
+		perform_block_fgs<scalar,index,bs,stor>(mat, dblks, thread_chunk_size, r, y);
 	}
 
 	if(ainit == INIT_A_JACOBI)
@@ -78,13 +72,7 @@ void AsyncBlockSGS_SRPreconditioner<scalar,index,bs,stor>::apply(const scalar *c
 	for(int isweep = 0; isweep < napplysweeps; isweep++)
 	{
 		// backward sweep z := D^(-1) (D y - U z)
-
-#pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size)
-		for(index irow = mat.nbrows-1; irow >= 0; irow--)
-		{
-			block_bgs<scalar, index, bs, stor>(mvals, mat.bcolind, irow, mat.diagind[irow], 
-			                                   mat.browptr[irow+1], dblks[irow], y[irow], z);
-		}
+		perform_block_bgs<scalar,index,bs,stor>(mat, dblks, thread_chunk_size, y, z);
 	}
 }
 
@@ -126,13 +114,7 @@ void AsyncSGS_SRPreconditioner<scalar,index>::apply(const scalar *const rr,
 	for(int isweep = 0; isweep < napplysweeps; isweep++)
 	{
 		// forward sweep ytemp := D^(-1) (r - L ytemp)
-
-#pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size)
-		for(index irow = 0; irow < mat.nbrows; irow++)
-		{
-			ytemp[irow] = scalar_fgs(mat.vals, mat.bcolind, mat.browptr[irow], mat.diagind[irow],
-			                         dblocks[irow], rr[irow], ytemp);
-		}
+		perform_scalar_fgs(mat, dblocks, thread_chunk_size, rr, ytemp);
 	}
 
 	if(ainit == INIT_A_JACOBI)
@@ -147,13 +129,7 @@ void AsyncSGS_SRPreconditioner<scalar,index>::apply(const scalar *const rr,
 	for(int isweep = 0; isweep < napplysweeps; isweep++)
 	{
 		// backward sweep z := D^(-1) (D y - U z)
-
-#pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size)
-		for(index irow = mat.nbrows-1; irow >= 0; irow--)
-		{
-			zz[irow] = scalar_bgs(mat.vals, mat.bcolind, mat.diagind[irow], mat.browptr[irow+1],
-			                      mat.vals[mat.diagind[irow]], dblocks[irow], ytemp[irow], zz);
-		}
+		perform_scalar_bgs(mat, dblocks, thread_chunk_size, ytemp, zz);
 	}
 }
 
