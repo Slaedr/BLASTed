@@ -27,7 +27,8 @@
 namespace blasted {
 
 template <typename scalar, typename index, int bs>
-RawBSCMatrix<scalar,index> convert_BSR_to_BSC(const CRawBSRMatrix<scalar,index> *const rmat)
+void convert_BSR_to_BSC(const CRawBSRMatrix<scalar,index> *const rmat,
+                        CRawBSCMatrix<scalar,index> *const cscmat)
 {
 	constexpr int bs2 = bs*bs;
 
@@ -86,24 +87,34 @@ RawBSCMatrix<scalar,index> convert_BSR_to_BSC(const CRawBSRMatrix<scalar,index> 
 	assert(iz == bnnz);
 	cmat.bcolptr[N] = bnnz;
 
-	return cmat;
+	cscmat->nbcols = cmat.nbcols;
+	cscmat->bcolptr = cmat.bcolptr;
+	cscmat->browind = cmat.browind;
+	cscmat->vals = cmat.vals;
+	cscmat->diagind = cmat.diagind;
 }
 
-template RawBSCMatrix<double,int>
-convert_BSR_to_BSC<double,int,1>(const CRawBSRMatrix<double,int> *const rmat);
-template RawBSCMatrix<double,int>
-convert_BSR_to_BSC<double,int,3>(const CRawBSRMatrix<double,int> *const rmat);
-template RawBSCMatrix<double,int>
-convert_BSR_to_BSC<double,int,4>(const CRawBSRMatrix<double,int> *const rmat);
-template RawBSCMatrix<double,int>
-convert_BSR_to_BSC<double,int,5>(const CRawBSRMatrix<double,int> *const rmat);
-template RawBSCMatrix<double,int>
-convert_BSR_to_BSC<double,int,7>(const CRawBSRMatrix<double,int> *const rmat);
+template void
+convert_BSR_to_BSC<double,int,1>(const CRawBSRMatrix<double,int> *const rmat,
+                                 CRawBSCMatrix<double,int> *const cscmat);
+template void
+convert_BSR_to_BSC<double,int,3>(const CRawBSRMatrix<double,int> *const rmat,
+                                 CRawBSCMatrix<double,int> *const cscmat);
+template void
+convert_BSR_to_BSC<double,int,4>(const CRawBSRMatrix<double,int> *const rmat,
+                                 CRawBSCMatrix<double,int> *const cscmat);
+template void
+convert_BSR_to_BSC<double,int,5>(const CRawBSRMatrix<double,int> *const rmat,
+                                 CRawBSCMatrix<double,int> *const cscmat);
+template void
+convert_BSR_to_BSC<double,int,7>(const CRawBSRMatrix<double,int> *const rmat,
+                                 CRawBSCMatrix<double,int> *const cscmat);
 
 template <typename scalar, typename index, int bs>
-RawBSCMatrix<scalar,index> convert_BSR_to_BSC_1based(const CRawBSRMatrix<scalar,index> *const rmat)
+CRawBSCMatrix<scalar,index> convert_BSR_to_BSC_1based(const CRawBSRMatrix<scalar,index> *const rmat)
 {
-	RawBSCMatrix<scalar,index> cmat = convert_BSR_to_BSC<scalar,index,bs>(rmat);
+	RawBSCMatrix<scalar,index> cmat;
+	convert_BSR_to_BSC<scalar,index,bs>(rmat, reinterpret_cast<CRawBSCMatrix<scalar,index>*>(&cmat));
 	for(index i = 0; i < cmat.nbcols+1; i++)
 		cmat.bcolptr[i] += 1;
 	for(index i = 0; i < cmat.nbcols; i++)
@@ -111,23 +122,17 @@ RawBSCMatrix<scalar,index> convert_BSR_to_BSC_1based(const CRawBSRMatrix<scalar,
 	for(index i = 0; i < rmat->browptr[rmat->nbrows]; i++)
 		cmat.browind[i] += 1;
 
-	return cmat;
+	CRawBSCMatrix<scalar,index> ccmat;
+	ccmat.nbcols =  cmat.nbcols;
+	ccmat.bcolptr = cmat.bcolptr;
+	ccmat.browind = cmat.browind;
+	ccmat.diagind = cmat.diagind;
+	ccmat.vals =    cmat.vals;
+	return ccmat;
 }
 
-template RawBSCMatrix<double,int>
+template CRawBSCMatrix<double,int>
 convert_BSR_to_BSC_1based<double,int,1>(const CRawBSRMatrix<double,int> *const rmat);
-
-template <typename scalar, typename index>
-void destroyRawBSCMatrix(RawBSCMatrix<scalar,index>& mat)
-{
-	delete [] mat.bcolptr;
-	delete [] mat.browind;
-	delete [] mat.vals;
-	delete [] mat.diagind;
-	mat.nbcols = 0;
-}
-
-template void destroyRawBSCMatrix<double,int>(RawBSCMatrix<double,int>& mat);
 
 template <typename scalar, typename index>
 void destroyRawBSCMatrix(const RawBSCMatrix<scalar,index>& mat)
@@ -139,5 +144,16 @@ void destroyRawBSCMatrix(const RawBSCMatrix<scalar,index>& mat)
 }
 
 template void destroyRawBSCMatrix<double,int>(const RawBSCMatrix<double,int>& mat);
+
+template <typename scalar, typename index>
+void destroyRawBSCMatrix(const CRawBSCMatrix<scalar,index>& mat)
+{
+	delete [] mat.bcolptr;
+	delete [] mat.browind;
+	delete [] mat.vals;
+	delete [] mat.diagind;
+}
+
+template void destroyRawBSCMatrix<double,int>(const CRawBSCMatrix<double,int>& mat);
 
 }

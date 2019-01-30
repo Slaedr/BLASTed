@@ -11,7 +11,7 @@
 using namespace blasted;
 
 template <int bs>
-bool compare(const CRawBSRMatrix<double,int> *const mr, const RawBSCMatrix<double,int> *const mc)
+bool compare(const CRawBSRMatrix<double,int> *const mr, const CRawBSCMatrix<double,int> *const mc)
 {
 	bool same = true;
 	for(int irow = 0; irow < mr->nbrows; irow++)
@@ -47,8 +47,9 @@ int testConvertBSRToBSC(const std::string mfile)
 	RawBSRMatrix<double,int> rmat;
 	coomat.convertToBSR<bs,ColMajor>(&rmat);
 
-	RawBSCMatrix<double,int> cmat =
-		convert_BSR_to_BSC<double,int,bs>(reinterpret_cast<const CRawBSRMatrix<double,int>*>(&rmat));
+	CRawBSCMatrix<double,int> cmat;
+	convert_BSR_to_BSC<double,int,bs>(reinterpret_cast<const CRawBSRMatrix<double,int>*>(&rmat),
+	                                  &cmat);
 
 	const bool pass = compare<bs>(reinterpret_cast<const CRawBSRMatrix<double,int>*>(&rmat), &cmat);
 
@@ -68,8 +69,9 @@ int testConvertBSRToBSC<1>(const std::string mfile)
 	RawBSRMatrix<double,int> rmat;
 	coomat.convertToCSR(&rmat);
 
-	RawBSCMatrix<double,int> cmat =
-		convert_BSR_to_BSC<double,int,1>(reinterpret_cast<const CRawBSRMatrix<double,int>*>(&rmat));
+	CRawBSCMatrix<double,int> cmat;
+	convert_BSR_to_BSC<double,int,1>(reinterpret_cast<const CRawBSRMatrix<double,int>*>(&rmat),
+	                                 &cmat);
 
 	const bool pass = compare<1>(reinterpret_cast<const CRawBSRMatrix<double,int>*>(&rmat), &cmat);
 

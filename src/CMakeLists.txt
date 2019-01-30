@@ -6,13 +6,13 @@ endif()
 add_library(helper helper_algorithms.cpp)
 set_property(TARGET helper PROPERTY POSITION_INDEPENDENT_CODE ON)
 
-add_library(rawmatrixutils rawsrmatrixutils.cpp)
+add_library(rawmatrixutils rawsrmatrixutils.cpp scmatrix.cpp)
 set_property(TARGET rawmatrixutils PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 add_library(orderingscaling reorderingscaling.cpp)
 set_property(TARGET orderingscaling PROPERTY POSITION_INDEPENDENT_CODE ON)
 
-add_library(blockmatrices csrmatrix.cpp bsrmatrix.cpp matvecs.cpp scmatrix.cpp)
+add_library(blockmatrices csrmatrix.cpp bsrmatrix.cpp matvecs.cpp)
 set_property(TARGET blockmatrices PROPERTY POSITION_INDEPENDENT_CODE ON)
 target_link_libraries(blockmatrices rawmatrixutils)
 

@@ -14,7 +14,7 @@ using namespace blasted;
 /// Compares a CSC matrix with one read from a file in CSC format
 /** The function returns iff the two matrices are the same.
  */
-int checkCSCMatrix(const RawBSCMatrix<double,int>& cmat, const std::string cfile)
+int checkCSCMatrix(const CRawBSCMatrix<double,int>& cmat, const std::string cfile)
 {
 	std::ifstream infile(cfile);
 	int dumi;
@@ -66,8 +66,8 @@ int testConvertCSRToCSC(const std::string mfile, const std::string solnfile)
 	RawBSRMatrix<double,int> rmat;
 	coomat.convertToCSR(&rmat);
 
-	RawBSCMatrix<double,int> cmat =
-		convert_BSR_to_BSC<double,int,1>(reinterpret_cast<const CRawBSRMatrix<double,int>*>(&rmat));
+	CRawBSCMatrix<double,int> cmat;
+	convert_BSR_to_BSC<double,int,1>(reinterpret_cast<const CRawBSRMatrix<double,int>*>(&rmat), &cmat);
 
 	int ierr = checkCSCMatrix(cmat, solnfile);
 

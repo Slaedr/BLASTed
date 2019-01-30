@@ -13,17 +13,17 @@ add_executable(testcscmatrix scmatrixtest.cpp)
 target_link_libraries(testcscmatrix blockmatrices coomatrix)
 
 add_executable(testbscconversion bscconversiontest.cpp)
-target_link_libraries(testbscconversion blockmatrices coomatrix)
+target_link_libraries(testbscconversion blockmatrices coomatrix rawmatrixutils)
 
 add_executable(testreordering testreordering.cpp)
-target_link_libraries(testreordering orderingscaling blockmatrices coomatrix helper)
+target_link_libraries(testreordering orderingscaling blockmatrices rawmatrixutils coomatrix helper)
 if(WITH_MC64)
   target_link_libraries(testreordering ${MC64_LIB} ${FORTLDFLAGS})
 endif(WITH_MC64)
 
 if(WITH_MC64)
   add_executable(testmc64 testmc64.cpp)
-  target_link_libraries(testmc64 orderingscaling blockmatrices coomatrix helper)
+  target_link_libraries(testmc64 orderingscaling blockmatrices coomatrix rawmatrixutils helper)
   target_link_libraries(testmc64 ${MC64_LIB} ${FORTLDFLAGS})
 endif(WITH_MC64)
 

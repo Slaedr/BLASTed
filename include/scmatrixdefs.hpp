@@ -30,28 +30,52 @@ struct RawBSCMatrix
 	index nbcols;
 };
 
+/// An almost-immutable compressed sparse block-column square matrix
+/** A const object of this time is immutable.
+ */
+template <typename scalar, typename index>
+struct CRawBSCMatrix
+{
+	static_assert(std::numeric_limits<index>::is_integer, "Integer index type required!");
+	static_assert(std::numeric_limits<index>::is_signed, "Signed index type required!");
+
+	/// Array of pointers into \ref browind that point to first entries of (block-)columns
+	const index * bcolptr;
+	/// Array of row indices of each non-zero entry, stored in the same order as \ref vals
+	const index * browind;
+	/// Array of non-zero values
+	const scalar * vals;
+	/// Pointers into \ref browind pointing to diagonal entries in each column
+	const index * diagind;
+	/// Number of (block-)columns
+	index nbcols;
+};
+
 /// Converts a (block-) sparse-row matrix to a (block-) sparse-column matrix
 /** Assumes a square matrix.
  */
 template <typename scalar, typename index, int bs>
-RawBSCMatrix<scalar,index> convert_BSR_to_BSC(const CRawBSRMatrix<scalar,index> *const rmat);
+void convert_BSR_to_BSC(const CRawBSRMatrix<scalar,index> *const rmat,
+                        CRawBSCMatrix<scalar,index> *const cscmat);
 
 /// Converts a 0-based (block-) sparse-row matrix to a 1-based (block-) sparse-column matrix
 /** Assumes a square matrix.
  * Convenient for using the resulting matrix with Fortran subroutines.
  */
 template <typename scalar, typename index, int bs>
-RawBSCMatrix<scalar,index> convert_BSR_to_BSC_1based(const CRawBSRMatrix<scalar,index> *const rmat);
+CRawBSCMatrix<scalar,index> convert_BSR_to_BSC_1based(const CRawBSRMatrix<scalar,index> *const rmat);
 
 /// Frees storage
-template <typename scalar, typename index>
-void destroyRawBSCMatrix(RawBSCMatrix<scalar,index>& mat);
-
-/// Frees storage
-/** Deletion of const pointers is allowed!
+/** Because deletion of const pointers is allowed.
  */
 template <typename scalar, typename index>
 void destroyRawBSCMatrix(const RawBSCMatrix<scalar,index>& mat);
+
+/// Frees storage
+/** Because deletion of const pointers is allowed.
+ */
+template <typename scalar, typename index>
+void destroyRawBSCMatrix(const CRawBSCMatrix<scalar,index>& mat);
 
 }
 #endif

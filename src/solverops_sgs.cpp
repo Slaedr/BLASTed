@@ -104,7 +104,7 @@ void AsyncSGS_SRPreconditioner<scalar,index>::compute()
 
 template <typename scalar, typename index>
 void AsyncSGS_SRPreconditioner<scalar,index>::apply(const scalar *const rr,
-                                                        scalar *const __restrict zz) const
+                                                    scalar *const __restrict zz) const
 {
 	if(ainit == INIT_A_JACOBI || ainit == INIT_A_ZERO)
 #pragma omp parallel for simd default(shared)
@@ -133,9 +133,49 @@ void AsyncSGS_SRPreconditioner<scalar,index>::apply(const scalar *const rr,
 	}
 }
 
+template <typename scalar, typename index>
+CSC_BGS_Preconditioner<scalar,index>::CSC_BGS_Preconditioner(const int naswps,
+                                                             const int threadchunksize)
+	: napplysweeps{naswps}, thread_chunk_size{threadchunksize},
+	  cmat{nullptr, nullptr, nullptr, nullptr,0}
+{ }
+
+template <typename scalar, typename index>
+CSC_BGS_Preconditioner<scalar,index>::~CSC_BGS_Preconditioner()
+{
+	destroyRawBSCMatrix(cmat);
+}
+
+template <typename scalar, typename index>
+void CSC_BGS_Preconditioner<scalar,index>::compute()
+{
+	JacobiSRPreconditioner<scalar,index>::compute();
+
+	destroyRawBSCMatrix(cmat);
+	convert_BSR_to_BSC<scalar,index,1>(&mat, &cmat);
+}
+
+template <typename scalar, typename index>
+void CSC_BGS_Preconditioner<scalar,index>::apply(const scalar *const rr,
+                                                 scalar *const __restrict zz) const
+{
+	for(index i = 0; i < cmat.nbcols; i++)
+		zz[i] = 0;
+
+	for(index j = cmat.nbcols-1; j > 0; j--)
+	{
+		for(index ii = cmat.diagind[j]; ii >= cmat.bcolptr[j]; ii--)
+		{
+			const index irow = cmat.browind[ii];
+			zz[irow] = dblocks[irow];
+		}
+	}
+}
+
 // instantiations
 
 template class AsyncSGS_SRPreconditioner<double,int>;
+template class CSC_BGS_Preconditioner<double,int>;
 
 template class AsyncBlockSGS_SRPreconditioner<double,int,4,ColMajor>;
 template class AsyncBlockSGS_SRPreconditioner<double,int,5,ColMajor>;

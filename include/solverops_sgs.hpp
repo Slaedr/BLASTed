@@ -8,6 +8,7 @@
 
 #include "async_initialization_decl.hpp"
 #include "solverops_jacobi.hpp"
+#include "scmatrixdefs.hpp"
 
 namespace blasted {
 
@@ -93,6 +94,29 @@ protected:
 	const int napplysweeps;
 	const ApplyInit ainit;
 	const int thread_chunk_size;
+};
+
+/// Backward Gauss-Seidel preconditioner applied column-wise
+template <typename scalar, typename index>
+class CSC_BGS_Preconditioner : public JacobiSRPreconditioner<scalar,index>
+{
+	static_assert(std::is_signed<index>::value, "Signed index type required!");
+
+	CSC_BGS_Preconditioner(const int napplysweeps, const int threadchunksize);
+	~CSC_BGS_Preconditioner();
+
+	index dim() const { return mat.nbrows; }
+
+	void compute();
+	void apply(const scalar *const x, scalar *const __restrict y) const;
+
+protected:
+	using SRPreconditioner<scalar,index>::mat;
+	using JacobiSRPreconditioner<scalar,index>::dblocks;
+	const int napplysweeps;
+	const int thread_chunk_size;
+
+	CRawBSCMatrix<scalar,index> cmat;         ///< Storage for original matrix in CSC format
 };
 
 }

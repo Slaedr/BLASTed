@@ -433,7 +433,7 @@ std::tuple<int,int> getWorkSizes(const int job, const int nrows, const int nnz)
 
 void MC64::compute(const CRawBSRMatrix<double,int>& mat)
 {
-	const RawBSCMatrix<double,int> scmat = convert_BSR_to_BSC_1based<double,int,1>(&mat);
+	const CRawBSCMatrix<double,int> scmat = convert_BSR_to_BSC_1based<double,int,1>(&mat);
 	assert(mat.nbrows == scmat.nbcols);
 	assert(mat.browptr[mat.nbrows]+1 == scmat.bcolptr[scmat.nbcols]);
 	const int nnz = mat.browptr[mat.nbrows];
