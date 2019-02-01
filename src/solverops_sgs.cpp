@@ -176,7 +176,7 @@ void CSC_BGS_Preconditioner<scalar,index>::apply(const scalar *const rr,
 			}
 
 #pragma omp for schedule(dynamic, thread_chunk_size) nowait
-			for(index j = cmat.nbcols-1; j > 0; j--)
+			for(index j = cmat.nbcols-1; j >= 0; j--)
 			{
 				zz[j] = temp[j];
 				for(index ii = cmat.diagind[j]-1; ii >= cmat.bcolptr[j]; ii--)

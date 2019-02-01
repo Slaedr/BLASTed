@@ -1,0 +1,33 @@
+# -ref_sub_pc_type and -blasted_pc_type must be given separately.
+
+# With reference PETSc preconditioner
+
+-ref_ksp_type richardson
+
+-ref_ksp_rtol 1e-6
+-ref_ksp_max_it 200
+-ref_ksp_final_residual
+-ref_ksp_view
+
+-ref_pc_type asm
+#-ref_sub_pc_type sor
+
+# With BLASTed preconditioner
+
+-ksp_type richardson
+
+-ksp_rtol 1e-6
+-ksp_max_it 200
+-ksp_final_residual
+
+-ksp_view
+
+-pc_type asm
+-sub_pc_type shell
+
+#-blasted_pc_type sgs
+-blasted_async_sweeps 1,3
+
+-blasted_thread_chunk_size 512
+-blasted_async_fact_init_type init_zero
+-blasted_async_apply_init_type init_zero

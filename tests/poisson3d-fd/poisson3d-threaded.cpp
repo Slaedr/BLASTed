@@ -266,11 +266,17 @@ int main(int argc, char* argv[])
 		destroyBlastedDataList(&bctx);
 	}
 
+	avgkspiters = avgkspiters/(double)nruns;
 	if(rank == 0)
-		printf("KSP Iters: Reference %d vs BLASTed %d.\n", refkspiters, avgkspiters/nruns);
+		printf("KSP Iters: Reference %d vs BLASTed %d.\n", refkspiters, avgkspiters);
+	fflush(stdout);
 
-	if(!strcmp(testtype, "compare_its"))
-		assert(refkspiters >= avgkspiters/nruns);
+	if(!strcmp(testtype, "compare_its")) {
+		assert(fabs((double)refkspiters - avgkspiters)/refkspiters <= error_tol);
+	}
+	else if(!strcmp(testtype, "upper_bound_its")) {
+		assert(refkspiters > avgkspiters);
+	}
 
 	// the following test is probably not workable..
 	printf("Difference in error norm = %.16f.\n", std::fabs(errnorm-errnormref));

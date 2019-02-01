@@ -97,6 +97,11 @@ protected:
 };
 
 /// Backward Gauss-Seidel preconditioner applied column-wise
+/** Works fine in single-threaded mode - it's an exact bacward triangular solve. But,
+ * \warning The asynchronous mode seems to be inconsistent - it seems to require more Richardson
+ * iterations regardless of the number of sweeps.
+ * \todo Investigate consistency of the asynchronous iteration.
+ */
 template <typename scalar, typename index>
 class CSC_BGS_Preconditioner : public JacobiSRPreconditioner<scalar,index>
 {

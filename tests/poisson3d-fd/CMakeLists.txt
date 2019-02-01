@@ -69,21 +69,29 @@ if(WITH_PETSC)
 	COMMAND ${MPIEXEC} ${THREADOPTS} -n 1 ./testcsr_poisson_threaded
 	${CMAKE_CURRENT_SOURCE_DIR}/input/poisson.control 
 	-options_file  ${CMAKE_CURRENT_SOURCE_DIR}/../input/asyncrelaxation.perc 
-	-ref_sub_pc_type jacobi -blasted_pc_type gs -test_type compare_its)
+	-ref_sub_pc_type jacobi -blasted_pc_type gs -test_type upper_bound_its)
 
   add_test(NAME AsyncRelaxationPoissonPetsc-SGS-IterationsLowerBound
 	COMMAND ${MPIEXEC} ${THREADOPTS} -n 1 ./testcsr_poisson_threaded
 	${CMAKE_CURRENT_SOURCE_DIR}/input/poisson.control 
 	-options_file  ${CMAKE_CURRENT_SOURCE_DIR}/../input/asyncrelaxation.perc 
-	-ref_sub_pc_type jacobi -blasted_pc_type sgs -test_type compare_its)
+	-ref_sub_pc_type jacobi -blasted_pc_type sgs -test_type upper_bound_its)
 
   add_test(NAME SerialPoissonCSRPetsc-CSC-BGS
 	COMMAND env OMP_NUM_THREADS=1 ${SEQEXEC} ./testcsr_poisson
 	${CMAKE_CURRENT_SOURCE_DIR}/input/poisson-large.control
 	-options_file  ${CMAKE_CURRENT_SOURCE_DIR}/input/mpi_poisson.perc
 	-ref_sub_pc_type sor -ref_sub_pc_sor_backward -blasted_pc_type cscbgs
-	-error_tolerance_factor 1e9
+	-error_tolerance_factor 1e2
 	)
+
+  # add_test(NAME AsyncPrecPoissonCSRPetsc-CSC-BGS
+  # 	COMMAND ${SEQEXEC} ${THREADOPTS} ./testcsr_poisson_threaded
+  # 	${CMAKE_CURRENT_SOURCE_DIR}/input/poisson-large.control
+  # 	-options_file  ${CMAKE_CURRENT_SOURCE_DIR}/input/async_poisson.perc
+  # 	-ref_sub_pc_type sor -ref_sub_pc_sor_backward -blasted_pc_type cscbgs -num_runs 3
+  # 	-test_type compare_its -error_tolerance_factor 0.01
+  # 	)
 
 endif()
 
