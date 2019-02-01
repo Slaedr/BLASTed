@@ -40,6 +40,8 @@ BlastedSolverType SRFactory<scalar,index>::solverTypeFromString(const std::strin
 		ptype = BLASTED_ILU0;
 	else if(precstr2 == sapilu0str)
 		ptype = BLASTED_SAPILU0;
+	else if(precstr2 == cscbgsstr)
+		ptype = BLASTED_CSC_BGS;
 	else if(precstr2 == noprecstr)
 		ptype = BLASTED_NO_PREC;
 	else {
@@ -134,6 +136,13 @@ SRFactory<scalar,index>::create_preconditioner(const index ndim, const SolverSet
 				std::cout << "solverfactory(): Warning: Forward Gauss-Seidel preconditioner ";
 				std::cout << "is not implemented; using relaxation instead.\n";
 			}
+		}
+		else if(opts.prectype == BLASTED_CSC_BGS) {
+			if(opts.relax) {
+				std::cout << "WARNING: SolverFactory: CSC BGS relaxation not yet implemented.";
+				std::cout << " Using the preconditioner instead.\n";
+			}
+			return new CSC_BGS_Preconditioner<scalar,index>(opts.napplysweeps, opts.thread_chunk_size);
 		}
 		else if(opts.prectype == BLASTED_SGS) {
 			if(opts.relax)

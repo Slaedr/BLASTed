@@ -16,6 +16,7 @@ extern "C" {
 	              BLASTED_SGS,
 	              BLASTED_ILU0,
 	              BLASTED_SAPILU0,
+	              BLASTED_CSC_BGS,
 	              BLASTED_NO_PREC,
 	              BLASTED_EXTERNAL
 	} BlastedSolverType;

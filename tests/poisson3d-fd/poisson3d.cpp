@@ -93,6 +93,22 @@ int main(int argc, char* argv[])
 		printf("Number of runs: %d\n", nruns);
 	}
 
+	// Get error check tolerance
+	auto get_errtol = []() {
+		PetscReal errtol = 0;
+		PetscBool set = PETSC_FALSE;
+		int ierr = PetscOptionsGetReal(NULL, NULL, "-error_tolerance_factor", &errtol, &set);
+		if(!ierr) {
+			printf("!! Could not get error tolerance!\n");
+		}
+		if(!set) {
+			printf("Error tolerance factor not set; using the default 2.");
+			errtol = 2.0;
+		}
+		return errtol;
+	};
+	const PetscReal error_tol = get_errtol();
+
 	//----------------------------------------------------------------------------------
 
 	// set up Petsc variables
@@ -216,12 +232,15 @@ int main(int argc, char* argv[])
 		destroyBlastedDataList(&bctx);
 	}
 
-	if(rank == 0)
+	if(rank == 0) {
 		printf("KSP Iters: Reference %d vs BLASTed %d.\n", refkspiters, avgkspiters/nruns);
+		printf("Error norms: Ref \n   %16.16e vs. Blasted \n   %16.16e\n", errnormref, errnorm);
+	}
+	fflush(stdout);
 
 	// the test
 	assert(avgkspiters/nruns == refkspiters);
-	assert(std::fabs(errnorm-errnormref) < 2.0*DBL_EPSILON);
+	assert(std::fabs(errnorm-errnormref) < error_tol*DBL_EPSILON);
 
 	VecDestroy(&u);
 	VecDestroy(&uexact);

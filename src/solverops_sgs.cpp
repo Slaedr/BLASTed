@@ -159,17 +159,38 @@ template <typename scalar, typename index>
 void CSC_BGS_Preconditioner<scalar,index>::apply(const scalar *const rr,
                                                  scalar *const __restrict zz) const
 {
-	for(index i = 0; i < cmat.nbcols; i++)
-		zz[i] = 0;
+	scalar *temp = (scalar*)aligned_alloc(CACHE_LINE_LEN, cmat.nbcols*sizeof(scalar));
+#pragma omp parallel for simd
+	for(index i = 0; i < cmat.nbcols; i++) {
+		temp[i] = 0;
+		//zz[i] = rr[i]*dblocks[i];
+	}
 
-	for(index j = cmat.nbcols-1; j > 0; j--)
+#pragma omp parallel default(shared) // firstprivate(napplysweeps)
 	{
-		for(index ii = cmat.diagind[j]; ii >= cmat.bcolptr[j]; ii--)
+		for(int isweep = 0; isweep < napplysweeps; isweep++)
 		{
-			const index irow = cmat.browind[ii];
-			zz[irow] = dblocks[irow];
+#pragma omp for simd
+			for(index j = cmat.nbcols-1; j >= 0; j--) {
+				temp[j] = rr[j]*dblocks[j];
+			}
+
+#pragma omp for schedule(dynamic, thread_chunk_size) nowait
+			for(index j = cmat.nbcols-1; j > 0; j--)
+			{
+				zz[j] = temp[j];
+				for(index ii = cmat.diagind[j]-1; ii >= cmat.bcolptr[j]; ii--)
+				{
+					const index irow = cmat.browind[ii];
+					const scalar term = cmat.vals[ii]*zz[j]*dblocks[irow];
+#pragma omp atomic update
+					temp[irow] -= term;
+				}
+			}
 		}
 	}
+
+	aligned_free(temp);
 }
 
 // instantiations

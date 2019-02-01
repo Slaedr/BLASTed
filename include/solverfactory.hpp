@@ -30,6 +30,8 @@ const std::string sgsstr = "sgs";
 const std::string ilu0str = "ilu0";
 /// Sequentially applied ILU(0)
 const std::string sapilu0str = "sapilu0";
+/// Column-oriented backward GS
+const std::string cscbgsstr = "cscbgs";
 /** @} */
 
 /// Basic settings needed for most iterations

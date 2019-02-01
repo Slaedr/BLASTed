@@ -102,6 +102,7 @@ class CSC_BGS_Preconditioner : public JacobiSRPreconditioner<scalar,index>
 {
 	static_assert(std::is_signed<index>::value, "Signed index type required!");
 
+public:
 	CSC_BGS_Preconditioner(const int napplysweeps, const int threadchunksize);
 	~CSC_BGS_Preconditioner();
 

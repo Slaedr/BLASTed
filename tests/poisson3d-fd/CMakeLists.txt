@@ -77,6 +77,14 @@ if(WITH_PETSC)
 	-options_file  ${CMAKE_CURRENT_SOURCE_DIR}/../input/asyncrelaxation.perc 
 	-ref_sub_pc_type jacobi -blasted_pc_type sgs -test_type compare_its)
 
+  add_test(NAME SerialPoissonCSRPetsc-CSC-BGS
+	COMMAND env OMP_NUM_THREADS=1 ${SEQEXEC} ./testcsr_poisson
+	${CMAKE_CURRENT_SOURCE_DIR}/input/poisson-large.control
+	-options_file  ${CMAKE_CURRENT_SOURCE_DIR}/input/mpi_poisson.perc
+	-ref_sub_pc_type sor -ref_sub_pc_sor_backward -blasted_pc_type cscbgs
+	-error_tolerance_factor 1e9
+	)
+
 endif()
 
 
