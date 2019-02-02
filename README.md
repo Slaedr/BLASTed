@@ -34,7 +34,7 @@ and to run the tests,
 
 	make test
 
-A C++ compiler with C++ 14 support is required; the build is known to work with GCC 5.4, 6.4, 7.x, 8.1, Intel 2017, 2018 and Clang 6.0 in a GNU/Linux environment. To build in other enviroments, tweaking the CMakeLists.txt file will be required.
+A C++ compiler with C++ 14 support is required. The build is known to work with GCC 7.3, 8.1, 8.2, Intel 2017, 2018, and Clang 6.0, 7.0 in a GNU/Linux environment. To build in other enviroments, tweaking the CMakeLists.txt file will be required.
 
 To build the [Doxygen](http://www.stack.nl/~dimitri/doxygen/) documentation,
 
