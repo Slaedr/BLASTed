@@ -127,21 +127,8 @@ void block_ilu0_factorize(const CRawBSRMatrix<scalar,index> *const mat,
 				{
 					Matrix<scalar,bs,bs> sum = mvals[j];
 
-					for( index k = mat->browptr[irow]; 
-						 (k < mat->browptr[irow+1]) && (mat->bcolind[k] < mat->bcolind[j]); 
-						 k++
-					   ) 
-					{
-						index pos = -1;
-						internal::inner_search<index>(mat->bcolind,
-						                              mat->diagind[mat->bcolind[k]],
-						                              mat->browptr[mat->bcolind[k]+1],
-						                              mat->bcolind[j], &pos );
-
-						if(pos == -1) continue;
-
-						sum.noalias() -= ilu[k]*ilu[pos];
-					}
+					for(index k = plist.posptr[j]; k < plist.posptr[j+1]; k++)
+						sum.noalias() -= ilu[plist.lowerp[k]]*ilu[plist.upperp[k]];
 
 					ilu[j].noalias() = sum * ilu[mat->diagind[mat->bcolind[j]]].inverse();
 				}
@@ -150,22 +137,8 @@ void block_ilu0_factorize(const CRawBSRMatrix<scalar,index> *const mat,
 					// compute u_ij
 					ilu[j] = mvals[j];
 
-					for(index k = mat->browptr[irow]; 
-							(k < mat->browptr[irow+1]) && (mat->bcolind[k] < irow); k++) 
-					{
-						index pos = -1;
-
-						/* search for column index mat->bcolind[j],
-						 * between the diagonal index of row mat->bcolind[k] 
-						 * and the last index of row bcolind[k]
-						 */
-						internal::inner_search(mat->bcolind, mat->diagind[mat->bcolind[k]], 
-						                       mat->browptr[mat->bcolind[k]+1], mat->bcolind[j], &pos);
-
-						if(pos == -1) continue;
-
-						ilu[j].noalias() -= ilu[k]*ilu[pos];
-					}
+					for(index k = plist.posptr[j]; k < plist.posptr[j+1]; k++)
+						ilu[j].noalias() -= ilu[plist.lowerp[k]]*ilu[plist.upperp[k]];
 				}
 			}
 		}
