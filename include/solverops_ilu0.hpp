@@ -55,6 +55,9 @@ public:
 	/// Applies a block LU factorization L U z = r
 	void apply(const scalar *const x, scalar *const __restrict y) const;
 
+	/// Does nothing but throw an exception
+	void apply_relax(const scalar *const x, scalar *const __restrict y) const;
+
 protected:
 	using SRPreconditioner<scalar,index>::mat;
 
@@ -118,6 +121,9 @@ public:
 	/// To apply the preconditioner
 	void apply(const scalar *const x, scalar *const __restrict y) const;
 
+	/// Does nothing but throw an exception
+	void apply_relax(const scalar *const x, scalar *const __restrict y) const;
+
 protected:
 	using SRPreconditioner<scalar,index>::mat;
 	
@@ -174,6 +180,9 @@ public:
 
 	/// Apply the preconditioner and apply ordering and scaling to the output
 	void apply(const scalar *const x, scalar *const __restrict y) const;
+
+	/// Does nothing but throw an exception
+	void apply_relax(const scalar *const x, scalar *const __restrict y) const;
 
 protected:
 	using SRPreconditioner<scalar,index>::mat;

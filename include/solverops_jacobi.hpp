@@ -31,9 +31,13 @@ public:
 	/// To apply the preconditioner
 	void apply(const scalar *const x, scalar *const __restrict y) const;
 
+	/// Carry out a relaxation solve
+	void apply_relax(const scalar *const x, scalar *const __restrict y) const;
+
 protected:
 	
 	using SRPreconditioner<scalar,index>::mat;
+	using Preconditioner<scalar,index>::solveparams;
 	using Blk = Block_t<scalar,bs,stopt>;
 	using Seg = Segment_t<scalar,bs>;
 	
@@ -62,9 +66,13 @@ public:
 	/// To apply the preconditioner
 	void apply(const scalar *const x, scalar *const __restrict y) const;
 
+	/// Carry out a relaxation solve
+	void apply_relax(const scalar *const x, scalar *const __restrict y) const;
+
 protected:
 	
 	using SRPreconditioner<scalar,index>::mat;
+	using Preconditioner<scalar,index>::solveparams;
 	
 	/// Storage for factored or inverted diagonal blocks
 	scalar *dblocks;

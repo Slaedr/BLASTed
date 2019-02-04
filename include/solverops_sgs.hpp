@@ -45,7 +45,11 @@ public:
 	/// To apply the preconditioner
 	void apply(const scalar *const x, scalar *const __restrict y) const;
 
+	/// Carry out a relaxation solve
+	void apply_relax(const scalar *const x, scalar *const __restrict y) const;
+
 protected:
+	using Preconditioner<scalar,index>::solveparams;
 	using SRPreconditioner<scalar,index>::mat;
 	using BJacobiSRPreconditioner<scalar,index,bs,stor>::dblocks;
 
@@ -84,7 +88,11 @@ public:
 	/// To apply the preconditioner
 	void apply(const scalar *const x, scalar *const __restrict y) const;
 
+	/// Carry out a relaxation solve
+	void apply_relax(const scalar *const x, scalar *const __restrict y) const;
+
 protected:
+	using Preconditioner<scalar,index>::solveparams;
 	using SRPreconditioner<scalar,index>::mat;
 	using JacobiSRPreconditioner<scalar,index>::dblocks;
 	
@@ -116,7 +124,11 @@ public:
 	void compute();
 	void apply(const scalar *const x, scalar *const __restrict y) const;
 
+	/// Does nothing but throw an exception
+	void apply_relax(const scalar *const x, scalar *const __restrict y) const;
+
 protected:
+	using Preconditioner<scalar,index>::solveparams;
 	using SRPreconditioner<scalar,index>::mat;
 	using JacobiSRPreconditioner<scalar,index>::dblocks;
 	const int napplysweeps;

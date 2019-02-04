@@ -31,7 +31,7 @@ AsyncBlockSGS_Relaxation<scalar,index,bs,stor>::AsyncBlockSGS_Relaxation(const i
 
 template<typename scalar, typename index, int bs, StorageOptions stor>
 void AsyncBlockSGS_Relaxation<scalar,index,bs,stor>::apply(const scalar *const bb, 
-		scalar *const __restrict xx) const
+                                                           scalar *const __restrict xx) const
 {
 	const Blk *mvals = reinterpret_cast<const Blk*>(mat.vals);
 	const Blk *dblks = reinterpret_cast<const Blk*>(dblocks);
@@ -60,6 +60,13 @@ void AsyncBlockSGS_Relaxation<scalar,index,bs,stor>::apply(const scalar *const b
 		}
 	}
 	}
+}
+
+template<typename scalar, typename index, int bs, StorageOptions stor>
+void AsyncBlockSGS_Relaxation<scalar,index,bs,stor>::apply_relax(const scalar *const bb, 
+                                                                 scalar *const __restrict xx) const
+{
+	throw std::runtime_error("!");
 }
 
 template class AsyncBlockSGS_Relaxation<double,int,4,RowMajor>;
@@ -101,6 +108,13 @@ void AsyncSGS_Relaxation<scalar,index>::apply(const scalar *const b,
 				                dblocks[irow], b[irow], x, x);
 		}		
 	}
+}
+
+template<typename scalar, typename index>
+void AsyncSGS_Relaxation<scalar,index>::apply_relax(const scalar *const b, 
+                                                    scalar *const __restrict x) const
+{
+	throw std::runtime_error("!");
 }
 
 template class AsyncSGS_Relaxation<double,int>;	

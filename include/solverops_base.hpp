@@ -50,6 +50,9 @@ public:
 	/// To apply the preconditioner
 	virtual void apply(const scalar *const x, scalar *const __restrict y) const = 0;
 
+	/// To apply relaxation
+	virtual void apply_relax(const scalar *const x, scalar *const __restrict y) const = 0;
+
 protected:
 
 	/// Optional apply parameters \sa SolveParams
@@ -103,6 +106,9 @@ public:
 	
 	/// Does nothing but copy the input argument into the output argument
 	void apply(const scalar *const x, scalar *const __restrict y) const;
+
+	/// Does nothing
+	void apply_relax(const scalar *const x, scalar *const __restrict y) const;
 
 protected:
 	index ndim;

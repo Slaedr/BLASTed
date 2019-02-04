@@ -7,6 +7,7 @@
 #include <boost/align/aligned_alloc.hpp>
 #include "solverops_sgs.hpp"
 #include "kernels/kernels_sgs.hpp"
+#include "kernels/kernels_relaxation.hpp"
 
 namespace blasted {
 
@@ -76,6 +77,39 @@ void AsyncBlockSGS_SRPreconditioner<scalar,index,bs,stor>::apply(const scalar *c
 	}
 }
 
+template<typename scalar, typename index, int bs, StorageOptions stor>
+void AsyncBlockSGS_SRPreconditioner<scalar,index,bs,stor>::apply_relax(const scalar *const bb, 
+                                                                       scalar *const __restrict xx) const
+{
+	const Blk *mvals = reinterpret_cast<const Blk*>(mat.vals);
+	const Blk *dblks = reinterpret_cast<const Blk*>(dblocks);
+	const Seg *b = reinterpret_cast<const Seg*>(bb);
+	// the solution vector is wrapped in both a pointer to const segment and one to mutable segment
+	const Seg *x = reinterpret_cast<const Seg*>(xx);
+	Seg *xmut = reinterpret_cast<Seg*>(xx);
+
+#pragma omp parallel default(shared)
+	{
+	for(int step = 0; step < solveparams.maxits; step++)
+	{
+#pragma omp for schedule(dynamic, thread_chunk_size) nowait
+		for(index irow = 0; irow < mat.nbrows; irow++)
+		{
+			block_relax_kernel<scalar,index,bs,stor>
+				(mvals, mat.bcolind, irow, mat.browptr[irow], mat.diagind[irow], mat.browptr[irow+1],
+				 dblks[irow], b[irow], x, x, xmut[irow]);
+		}
+#pragma omp for schedule(dynamic, thread_chunk_size) nowait
+		for(index irow = mat.nbrows-1; irow >= 0; irow--)
+		{
+			block_relax_kernel<scalar,index,bs,stor>
+				(mvals, mat.bcolind, irow, mat.browptr[irow], mat.diagind[irow], mat.browptr[irow+1],
+				 dblks[irow], b[irow], x, x, xmut[irow]);
+		}
+	}
+	}
+}
+
 template <typename scalar, typename index>
 AsyncSGS_SRPreconditioner<scalar,index>::AsyncSGS_SRPreconditioner(const int naswps,
                                                                    const ApplyInit apply_inittype,
@@ -130,6 +164,32 @@ void AsyncSGS_SRPreconditioner<scalar,index>::apply(const scalar *const rr,
 	{
 		// backward sweep z := D^(-1) (D y - U z)
 		perform_scalar_bgs(mat, dblocks, thread_chunk_size, ytemp, zz);
+	}
+}
+
+template<typename scalar, typename index>
+void AsyncSGS_SRPreconditioner<scalar,index>::apply_relax(const scalar *const b, 
+                                                          scalar *const __restrict x) const
+{
+#pragma omp parallel default(shared)
+	for(int step = 0; step < solveparams.maxits; step++)
+	{
+#pragma omp for schedule(dynamic, thread_chunk_size) nowait		
+		for(index irow = 0; irow < mat.nbrows; irow++)
+		{
+			x[irow] = scalar_relax<scalar,index>
+				(mat.vals, mat.bcolind,
+				 mat.browptr[irow], mat.diagind[irow], mat.browptr[irow+1],
+				 dblocks[irow], b[irow], x, x);
+		}
+#pragma omp for schedule(dynamic, thread_chunk_size) nowait		
+		for(index irow = mat.nbrows-1; irow >= 0; irow--)
+		{
+			x[irow] = scalar_relax<scalar,index>
+				(mat.vals, mat.bcolind, 
+				 mat.browptr[irow], mat.diagind[irow], mat.browptr[irow+1],
+				 dblocks[irow], b[irow], x, x);
+		}		
 	}
 }
 
@@ -191,6 +251,13 @@ void CSC_BGS_Preconditioner<scalar,index>::apply(const scalar *const rr,
 	}
 
 	aligned_free(temp);
+}
+
+template <typename scalar, typename index>
+void CSC_BGS_Preconditioner<scalar,index>::apply_relax(const scalar *const rr,
+                                                       scalar *const __restrict zz) const
+{
+	throw std::runtime_error("CSC_BGS relaxation not implemented!");
 }
 
 // instantiations

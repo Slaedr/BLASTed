@@ -41,6 +41,13 @@ void ChaoticBlockRelaxation<scalar,index,bs,stor>::apply(const scalar *const bb,
 	}
 }
 
+template<typename scalar, typename index, int bs, StorageOptions stor>
+void ChaoticBlockRelaxation<scalar,index,bs,stor>::apply_relax(const scalar *const bb, 
+                                                               scalar *const __restrict xx) const
+{
+	throw std::runtime_error("!");
+}
+
 template class ChaoticBlockRelaxation<double,int,4,RowMajor>;
 template class ChaoticBlockRelaxation<double,int,4,ColMajor>;
 
@@ -56,13 +63,13 @@ ChaoticRelaxation<scalar,index>::ChaoticRelaxation(const int threadchunksize)
 	: thread_chunk_size{threadchunksize}
 { }
 
-template<typename scalar, typename index>
-void chaotic_relax(const SolveParams<scalar>& sp,
-		const CRawBSRMatrix<scalar,index>& mat, const scalar *const dblocks,
-		const int thread_chunk_size,
-		const scalar *const bb, scalar *const __restrict xx)
-{
-}
+// template<typename scalar, typename index>
+// void chaotic_relax(const SolveParams<scalar>& sp,
+// 		const CRawBSRMatrix<scalar,index>& mat, const scalar *const dblocks,
+// 		const int thread_chunk_size,
+// 		const scalar *const bb, scalar *const __restrict xx)
+// {
+// }
 
 template<typename scalar, typename index>
 void ChaoticRelaxation<scalar,index>::apply(const scalar *const bb, 
@@ -80,6 +87,13 @@ void ChaoticRelaxation<scalar,index>::apply(const scalar *const bb,
 				            dblocks[irow], bb[irow], xx, xx);
 		}
 	}
+}
+
+template<typename scalar, typename index>
+void ChaoticRelaxation<scalar,index>::apply_relax(const scalar *const bb, 
+                                                  scalar *const __restrict xx) const
+{
+	throw std::runtime_error("!");
 }
 
 template class ChaoticRelaxation<double,int>;

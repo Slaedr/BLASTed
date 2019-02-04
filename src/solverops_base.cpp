@@ -46,6 +46,11 @@ void NoPreconditioner<scalar,index>::apply(const scalar *const x, scalar *const 
 		y[i] = x[i];
 }
 
+template <typename scalar, typename index>
+void NoPreconditioner<scalar,index>::apply_relax(const scalar *const x, scalar *const __restrict y) const
+{
+}
+
 // instantiations
 template class Preconditioner<double,int>;
 template class SRPreconditioner<double,int>;

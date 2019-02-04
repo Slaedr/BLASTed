@@ -73,6 +73,13 @@ void BJacobiRelaxation<scalar,index,bs,stor>::apply(const scalar *const bb,
 	aligned_free(xtempr);
 }
 
+template<typename scalar, typename index, int bs, StorageOptions stor>
+void BJacobiRelaxation<scalar,index,bs,stor>::apply_relax(const scalar *const bb, 
+                                                          scalar *const __restrict xx) const
+{
+	throw std::runtime_error("!");
+}
+
 template class BJacobiRelaxation<double,int,4,RowMajor>;
 template class BJacobiRelaxation<double,int,4,ColMajor>;
 
@@ -104,7 +111,8 @@ void JacobiRelaxation<scalar,index>::apply(const scalar *const bb,
 		for(index irow = 0; irow < mat.nbrows; irow++)
 		{
 			xtemp[irow] = scalar_relax<scalar,index>(mat.vals, mat.bcolind, 
-			                                         mat.browptr[irow], mat.diagind[irow], mat.browptr[irow+1],
+			                                         mat.browptr[irow], mat.diagind[irow],
+			                                         mat.browptr[irow+1],
 			                                         dblocks[irow], bb[irow], xx, xx);
 		}
 
@@ -138,6 +146,13 @@ void JacobiRelaxation<scalar,index>::apply(const scalar *const bb,
 
 	//delete [] xtemp;
 	aligned_free(xtemp);
+}
+
+template<typename scalar, typename index>
+void JacobiRelaxation<scalar,index>::apply_relax(const scalar *const bb, 
+                                                 scalar *const __restrict xx) const
+{
+	throw std::runtime_error("!");
 }
 
 template class JacobiRelaxation<double,int>;

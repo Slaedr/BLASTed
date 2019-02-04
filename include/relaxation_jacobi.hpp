@@ -21,6 +21,9 @@ public:
 	 */
 	void apply(const scalar *const b, scalar *const __restrict x) const;
 
+	/// Does nothing but throw an exception
+	void apply_relax(const scalar *const x, scalar *const __restrict y) const;
+
 protected:
 	using SRPreconditioner<scalar,index>::mat;
 	using BJacobiSRPreconditioner<scalar,index,bs,stor>::dblocks;
@@ -36,6 +39,9 @@ public:
 	 * the initial guess.
 	 */
 	void apply(const scalar *const b, scalar *const __restrict x) const;
+
+	/// Does nothing but throw an exception
+	void apply_relax(const scalar *const x, scalar *const __restrict y) const;
 
 protected:
 	using SRPreconditioner<scalar,index>::mat;

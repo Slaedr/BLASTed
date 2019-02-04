@@ -188,6 +188,13 @@ void AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>::apply(const scalar *
 		(&mat, iluvals, ytemp, napplysweeps, thread_chunk_size, threadedapply, applyinittype, r, z);
 }
 
+template <typename scalar, typename index, int bs, StorageOptions stor>
+void AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>::apply_relax(const scalar *const r, 
+                                                                        scalar *const __restrict z) const
+{
+	throw std::runtime_error("ILU relaxation not implemented!");
+}
+
 template <typename scalar, typename index>
 AsyncILU0_SRPreconditioner<scalar,index>::
 AsyncILU0_SRPreconditioner(const int nbuildswp, const int napplyswp, const int tcs,
@@ -337,6 +344,13 @@ void AsyncILU0_SRPreconditioner<scalar,index>::apply(const scalar *const __restr
 }
 
 template <typename scalar, typename index>
+void AsyncILU0_SRPreconditioner<scalar,index>::apply_relax(const scalar *const __restrict ra, 
+                                                           scalar *const __restrict za) const
+{
+	throw std::runtime_error("ILU relaxation not implemented!");
+}
+
+template <typename scalar, typename index>
 RSAsyncILU0_SRPreconditioner<scalar,index>::
 RSAsyncILU0_SRPreconditioner(const ReorderingScaling<scalar,index,1>& reorderscale,
                              const int nbuildsweeps, const int napplysweeps, const int tcs,
@@ -365,6 +379,13 @@ template <typename scalar, typename index>
 void RSAsyncILU0_SRPreconditioner<scalar,index>::apply(const scalar *const x,
                                                        scalar *const __restrict y) const
 {
+}
+
+template <typename scalar, typename index>
+void RSAsyncILU0_SRPreconditioner<scalar,index>::apply_relax(const scalar *const x,
+                                                             scalar *const __restrict y) const
+{
+	throw std::runtime_error("ILU relaxation not implemented!");
 }
 
 // instantiations

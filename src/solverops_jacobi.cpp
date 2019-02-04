@@ -8,6 +8,7 @@
 #include <boost/align/aligned_alloc.hpp>
 #include <Eigen/LU>
 #include "solverops_jacobi.hpp"
+#include "kernels/kernels_relaxation.hpp"
 
 namespace blasted {
 
@@ -22,8 +23,6 @@ BJacobiSRPreconditioner<scalar,index,bs,stor>::BJacobiSRPreconditioner()
 template <typename scalar, typename index, int bs, StorageOptions stor>
 BJacobiSRPreconditioner<scalar,index,bs,stor>::~BJacobiSRPreconditioner()
 {
-	//Eigen::aligned_allocator<scalar> aa;
-	//aa.deallocate(dblocks, mat.nbrows*bs*bs);
 	boost::alignment::aligned_free(dblocks);
 }
 	
@@ -31,9 +30,6 @@ template <typename scalar, typename index, int bs, StorageOptions stor>
 void BJacobiSRPreconditioner<scalar,index,bs,stor>::compute()
 {
 	if(!dblocks) {
-		// dblocks = new scalar[mat.nbrows*bs*bs];
-		//Eigen::aligned_allocator<scalar> aa;
-		//dblocks = aa.allocate(mat.nbrows*bs*bs);
 		dblocks = (scalar*)aligned_alloc(CACHE_LINE_LEN, mat.nbrows*bs*bs*sizeof(scalar));
 #ifdef DEBUG
 		std::cout << " precJacobiSetup(): Allocating.\n";
@@ -63,6 +59,64 @@ void BJacobiSRPreconditioner<scalar,index,bs,stor>::apply(const scalar *const rr
 	}
 }
 
+template<typename scalar, typename index, int bs, StorageOptions stor>
+void BJacobiSRPreconditioner<scalar,index,bs,stor>::apply_relax(const scalar *const bb, 
+                                                                scalar *const __restrict xx) const
+{
+	using Blk = Block_t<scalar,bs,stor>;
+	using Seg = Segment_t<scalar,bs>;
+
+	scalar *xtempr = (scalar*)aligned_alloc(CACHE_LINE_LEN, mat.nbrows*bs*sizeof(scalar));
+
+	const Blk *data = reinterpret_cast<const Blk*>(mat.vals);
+	const Blk *dblks = reinterpret_cast<const Blk*>(dblocks);
+	const Seg *b = reinterpret_cast<const Seg*>(bb);
+	const Seg *x = reinterpret_cast<const Seg*>(xx);
+	Seg *xtemp = reinterpret_cast<Seg*>(xtempr);
+	scalar refdiffnorm = 1;
+
+	for(int step = 0; step < solveparams.maxits; step++)
+	{
+#pragma omp parallel for default(shared)
+		for(index irow = 0; irow < mat.nbrows; irow++)
+		{
+			block_relax_kernel<scalar,index,bs,stor>(data, mat.bcolind, 
+				irow, mat.browptr[irow], mat.diagind[irow], mat.browptr[irow+1],
+				dblks[irow], b[irow], x, x, xtemp[irow]);
+		}
+
+		if(solveparams.ctol)
+		{
+			scalar diffnorm = 0;
+#pragma omp parallel for simd default(shared) reduction(+:diffnorm)
+			for(index i = 0; i < mat.nbrows*bs; i++) 
+			{
+				const scalar diff = xtempr[i] - xx[i];
+				diffnorm += diff*diff;
+				xx[i] = xtempr[i];
+			}
+			diffnorm = std::sqrt(diffnorm);
+
+			if(step == 0)
+				refdiffnorm = diffnorm;
+
+			if(diffnorm < solveparams.atol || diffnorm/refdiffnorm < solveparams.rtol ||
+			   diffnorm/refdiffnorm > solveparams.dtol)
+				break;
+		}
+		else
+		{
+#pragma omp parallel for simd default(shared)
+			for(index i = 0; i < mat.nbrows*bs; i++) {
+				xx[i] = xtempr[i];
+			}
+		}
+	}
+
+	//ea.deallocate(xtemp,mat.nbrows);
+	aligned_free(xtempr);
+}
+
 template <typename scalar, typename index>
 JacobiSRPreconditioner<scalar,index>::JacobiSRPreconditioner()
 	: dblocks{nullptr}
@@ -71,7 +125,6 @@ JacobiSRPreconditioner<scalar,index>::JacobiSRPreconditioner()
 template <typename scalar, typename index>
 JacobiSRPreconditioner<scalar,index>::~JacobiSRPreconditioner()
 {
-	//delete [] dblocks;
 	boost::alignment::aligned_free(dblocks);
 }
 	
@@ -93,7 +146,6 @@ template <typename scalar, typename index>
 void JacobiSRPreconditioner<scalar,index>::compute()
 {
 	if(!dblocks) {
-		//dblocks = new scalar[mat.nbrows];
 		dblocks = (scalar*)boost::alignment::aligned_alloc(CACHE_LINE_LEN,mat.nbrows*sizeof(scalar));
 #ifdef DEBUG
 		std::cout << " CSR MatrixView: precJacobiSetup(): Initial setup.\n";
@@ -110,6 +162,55 @@ void JacobiSRPreconditioner<scalar,index>::apply(const scalar *const rr,
 #pragma omp parallel for simd default(shared)
 	for(index irow = 0; irow < mat.nbrows; irow++)
 		zz[irow] = dblocks[irow] * rr[irow];
+}
+
+template<typename scalar, typename index>
+void JacobiSRPreconditioner<scalar,index>::apply_relax(const scalar *const bb, 
+                                                       scalar *const __restrict xx) const
+{
+	scalar *xtemp = (scalar*)aligned_alloc(CACHE_LINE_LEN,mat.nbrows*sizeof(scalar));
+	scalar refdiffnorm = 1;
+	
+	for(int step = 0; step < solveparams.maxits; step++)
+	{
+#pragma omp parallel for default(shared)
+		for(index irow = 0; irow < mat.nbrows; irow++)
+		{
+			xtemp[irow] = scalar_relax<scalar,index>(mat.vals, mat.bcolind, 
+			                                         mat.browptr[irow], mat.diagind[irow],
+			                                         mat.browptr[irow+1],
+			                                         dblocks[irow], bb[irow], xx, xx);
+		}
+
+		if(solveparams.ctol)
+		{
+			scalar diffnorm = 0;
+#pragma omp parallel for simd default(shared) reduction(+:diffnorm)
+			for(index i = 0; i < mat.nbrows; i++) 
+			{
+				scalar diff = xtemp[i] - xx[i];
+				diffnorm += diff*diff;
+				xx[i] = xtemp[i];
+			}
+			diffnorm = std::sqrt(diffnorm);
+
+			if(step == 0)
+				refdiffnorm = diffnorm;
+
+			if(diffnorm < solveparams.atol || diffnorm/refdiffnorm < solveparams.rtol ||
+			   diffnorm/refdiffnorm > solveparams.dtol)
+				break;
+		}
+		else
+		{
+#pragma omp parallel for simd default(shared)
+			for(index i = 0; i < mat.nbrows; i++) {
+				xx[i] = xtemp[i];
+			}
+		}
+	}
+
+	aligned_free(xtemp);
 }
 
 
