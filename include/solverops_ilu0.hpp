@@ -45,12 +45,11 @@ public:
 
 	/// Returns the number of rows of the operator
 	index dim() const { return mat.nbrows*bs; }
-
-	/// Wraps an existing CSR matrix and also pre-computes some pointers \sa plist
-	void wrap(const index n_brows, const index *const brptrs,
-	          const index *const bcinds, const scalar *const values, const index *const dinds);
 	
 	/// Compute the preconditioner \sa block_ilu0_setup
+	/** We assume that sucessive calls to this function maintain the same sparsity pattern of the
+	 * original matrix. ILU location precomputations are not repeated.
+	 */
 	void compute();
 
 	/// Applies a block LU factorization L U z = r
@@ -112,10 +111,6 @@ public:
 
 	/// Returns the number of rows
 	index dim() const { return mat.nbrows; }
-
-	/// Wraps an existing CSR matrix and also pre-computes some pointers \sa plist
-	void wrap(const index n_brows, const index *const brptrs,
-	          const index *const bcinds, const scalar *const values, const index *const dinds);
 	
 	/// Compute the preconditioner
 	void compute();

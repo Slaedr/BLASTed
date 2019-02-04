@@ -35,17 +35,6 @@ AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>::~AsyncBlockILU0_SRPrecond
 	aligned_free(scale);
 }
 
-template <typename scalar, typename index, int bs, StorageOptions stor>
-void
-AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>::
-wrap(const index n_brows,
-     const index *const brptrs, const index *const bcinds,
-     const scalar *const values, const index *const dinds)
-{
-	SRPreconditioner<scalar,index>::wrap(n_brows, brptrs, bcinds, values, dinds);
-	plist = compute_ILU_positions_CSR_CSR(&mat);
-}
-
 /// Applies the block-ILU0 factorization using a block variant of the asynch triangular solve in
 /// \cite async:anzt_triangular
 /**
@@ -180,8 +169,11 @@ void AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>::setup_storage()
 template <typename scalar, typename index, int bs, StorageOptions stor>
 void AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>::compute()
 {
-	if(!iluvals)
+	// first-time setup
+	if(!iluvals) {
 		setup_storage();
+		plist = compute_ILU_positions_CSR_CSR(&mat);
+	}
 
 	block_ilu0_factorize<scalar,index,bs,stor>
 		(&mat, plist, nbuildsweeps, thread_chunk_size, threadedfactor, factinittype,
@@ -212,16 +204,6 @@ AsyncILU0_SRPreconditioner<scalar,index>::~AsyncILU0_SRPreconditioner()
 	aligned_free(iluvals);
 	aligned_free(ytemp);
 	aligned_free(scale);
-}
-
-template <typename scalar, typename index>
-void
-AsyncILU0_SRPreconditioner<scalar,index>::wrap(const index n_brows,
-                                               const index *const brptrs, const index *const bcinds,
-                                               const scalar *const values, const index *const dinds)
-{
-	SRPreconditioner<scalar,index>::wrap(n_brows, brptrs, bcinds, values, dinds);
-	plist = compute_ILU_positions_CSR_CSR(&mat);
 }
 
 template <typename scalar, typename index>
@@ -337,8 +319,10 @@ void AsyncILU0_SRPreconditioner<scalar,index>::setup_storage(const bool scaling)
 template <typename scalar, typename index>
 void AsyncILU0_SRPreconditioner<scalar,index>::compute()
 {
-	if(!iluvals)
+	if(!iluvals) {
 		setup_storage(true);
+		plist = compute_ILU_positions_CSR_CSR(&mat);
+	}
 
 	scalar_ilu0_factorize(&mat, plist, nbuildsweeps, thread_chunk_size, threadedfactor,
 	                      factinittype, iluvals, scale);
