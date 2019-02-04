@@ -86,7 +86,7 @@ ILUPositions<index> compute_ILU_positions_CSR_CSR(const CRawBSRMatrix<scalar,ind
 	const size_t totallen = std::accumulate(numpos.begin(), numpos.end(), 0);
 	exclusive_scan(pos.posptr);
 
-	//assert(static_cast<size_t>(pos.posptr[pattern_size-1]) == totallen);
+	assert(static_cast<size_t>(pos.posptr[pattern_size]) == totallen);
 
 	pos.lowerp.resize(totallen);
 	pos.upperp.resize(totallen);
