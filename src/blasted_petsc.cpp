@@ -250,6 +250,9 @@ PetscErrorCode updatePreconditioner(PC pc)
 		relop->wrap(localrows/ctx->bs, Abdiag->i, Abdiag->j, Abdiag->a, Abdiag->diag);
 	}
 
+	precop->compute();
+	relop->compute();
+
 	return ierr;
 }
 

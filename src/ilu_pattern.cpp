@@ -30,9 +30,16 @@ namespace blasted {
 template <typename T>
 static void exclusive_scan(std::vector<T>& v);
 
+/** 
+ * \note In the loops, the variable pos is initially set negative.
+ * If index is an unsigned type, that might be a problem.
+ */
 template <typename scalar, typename index>
 ILUPositions<index> compute_ILU_positions_CSR_CSR(const CRawBSRMatrix<scalar,index> *const mat)
 {
+	static_assert(std::numeric_limits<index>::is_signed, "Signed index type required!");
+	static_assert(std::numeric_limits<index>::is_integer, "Integer index type required!");
+
 	ILUPositions<index> pos;
 	const index pattern_size = mat->browptr[mat->nbrows];
 
@@ -88,6 +95,14 @@ ILUPositions<index> compute_ILU_positions_CSR_CSR(const CRawBSRMatrix<scalar,ind
 
 	assert(static_cast<size_t>(pos.posptr[pattern_size]) == totallen);
 
+	// check for structured grids
+	// for(index irow = 0; irow < mat->nbrows; irow++)
+	// {
+	// 	for(index jj = mat->browptr[irow]; jj < mat->browptr[irow+1]; jj++)
+	// 		if(jj != mat->diagind[irow])
+	// 			assert(pos.posptr[jj+1]-pos.posptr[jj] == 0);
+	// }
+
 	pos.lowerp.resize(totallen);
 	pos.upperp.resize(totallen);
 
@@ -96,6 +111,8 @@ ILUPositions<index> compute_ILU_positions_CSR_CSR(const CRawBSRMatrix<scalar,ind
 		{
 			if(irow > mat->bcolind[j])
 			{
+				index offset = 0;
+
 				for(index k = mat->browptr[irow]; 
 				    (k < mat->browptr[irow+1]) && (mat->bcolind[k] < mat->bcolind[j]); 
 				    k++  ) 
@@ -106,14 +123,19 @@ ILUPositions<index> compute_ILU_positions_CSR_CSR(const CRawBSRMatrix<scalar,ind
 
 					if(ipos != -1)
 					{
-						pos.lowerp[pos.posptr[j]] = k;
-						pos.upperp[pos.posptr[j]] = ipos;
+						pos.lowerp[pos.posptr[j]+offset] = k;
+						pos.upperp[pos.posptr[j]+offset] = ipos;
+						offset++;
 					}
 				}
+
+				assert(static_cast<size_t>(offset) == numpos[j]);
 			}
 			else
 			{
 				// u_ij
+
+				index offset = 0;
 
 				for(index k = mat->browptr[irow];
 				    (k < mat->browptr[irow+1]) && (mat->bcolind[k] < irow); k++) 
@@ -129,15 +151,18 @@ ILUPositions<index> compute_ILU_positions_CSR_CSR(const CRawBSRMatrix<scalar,ind
 
 					if(ipos != -1)
 					{
-						pos.lowerp[pos.posptr[j]] = k;
-						pos.upperp[pos.posptr[j]] = ipos;
+						pos.lowerp[pos.posptr[j]+offset] = k;
+						pos.upperp[pos.posptr[j]+offset] = ipos;
+						offset++;
 					}
 				}
+
+				assert(static_cast<size_t>(offset) == numpos[j]);
 			}
 		}
 	}
 
-	std::cout << "  Computed required locations in L and U factors.\n";
+	std::cout << "  ILU_positions: Computed required locations in L and U factors." << std::endl;
 	return pos;
 }
 

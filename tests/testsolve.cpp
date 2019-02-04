@@ -84,6 +84,7 @@ int testSolve(const std::string solvertype, const std::string precontype,
 	prec = fctry.create_preconditioner(rm.nbrows*bs, params);
 
 	prec->wrap(rm.nbrows, rm.browptr, rm.bcolind, rm.vals, rm.diagind);
+	prec->compute();
 
 	IterativeSolver* solver = nullptr;
 	if(solvertype == "richardson")

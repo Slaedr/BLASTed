@@ -6,16 +6,13 @@
 #ifndef BLASTED_KERNELS_ILU0_FACTORIZE_H
 #define BLASTED_KERNELS_ILU0_FACTORIZE_H
 
-#include "../helper_algorithms.hpp"
+#include "ilu_pattern.hpp"
 
 namespace blasted {
 
 /// Computes one row of an asynchronous ILU(0) factorization
 /** Depending on template parameters, it can
  * factorize a scaled matrix, though the original matrix is not modified.
- * \note In the factorization loop, the variable pos is initially set negative.
- * If index is an unsigned type, that might be a problem. However,
- * it should usually be okay as we are only comparing equality later.
  * \param[in] plist Lists of positions in the LU matrix required for the ILU computation
  */
 template <typename scalar, typename index, bool needscalerow, bool needscalecol> inline
@@ -36,19 +33,9 @@ void async_ilu0_factorize_kernel(const CRawBSRMatrix<scalar,index> *const mat,
 			if(needscalecol)
 				sum *= colscale[mat->bcolind[j]];
 
-			for(index k = mat->browptr[irow]; 
-				(k < mat->browptr[irow+1]) && (mat->bcolind[k] < mat->bcolind[j]); 
-				k++  ) 
+			for(index k = plist.posptr[j]; k < plist.posptr[j+1]; k++)
 			{
-				index pos = -1;
-				internal::inner_search<index> ( mat->bcolind, mat->diagind[mat->bcolind[k]], 
-						mat->browptr[mat->bcolind[k]+1], mat->bcolind[j], &pos );
-
-				if(pos == -1) {
-					continue;
-				}
-
-				sum -= iluvals[k]*iluvals[pos];
+				sum -= iluvals[plist.lowerp[k]]*iluvals[plist.upperp[k]];
 			}
 
 			iluvals[j] = sum / iluvals[mat->diagind[mat->bcolind[j]]];
@@ -63,21 +50,9 @@ void async_ilu0_factorize_kernel(const CRawBSRMatrix<scalar,index> *const mat,
 			if(needscalecol)
 				iluvals[j] *= colscale[mat->bcolind[j]];
 
-			for(index k = mat->browptr[irow]; 
-					(k < mat->browptr[irow+1]) && (mat->bcolind[k] < irow); k++) 
+			for(index k = plist.posptr[j]; k < plist.posptr[j+1]; k++)
 			{
-				index pos = -1;
-
-				/* search for column index mat->bcolind[j], 
-					* between the diagonal index of row mat->bcolind[k] 
-					* and the last index of row mat->bcolind[k]
-					*/
-				internal::inner_search(mat->bcolind, mat->diagind[mat->bcolind[k]], 
-										mat->browptr[mat->bcolind[k]+1], mat->bcolind[j], &pos);
-
-				if(pos == -1) continue;
-
-				iluvals[j] -= iluvals[k]*iluvals[pos];
+				iluvals[j] -= iluvals[plist.lowerp[k]]*iluvals[plist.upperp[k]];
 			}
 		}
 	}

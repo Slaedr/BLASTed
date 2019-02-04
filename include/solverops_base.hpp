@@ -63,8 +63,8 @@ class SRPreconditioner : public Preconditioner<scalar,index>
 public:
 	SRPreconditioner();
 	
-	/// Wraps a sparse-row matrix described by 4 arrays, and recomputes the preconditioner
-	/** Calls \ref Preconditioner::compute 
+	/// Wraps a sparse-row matrix described by 4 arrays. Does NOT recompute the preconditioner.
+	/** Users should call \ref Preconditioner::compute after this function returns.
 	 * \param[in] n_brows Number of (block-)rows
 	 * \param[in] brptrs Array of (block-)row pointers
 	 * \param[in] bcinds Array of (block-)column indices
@@ -77,9 +77,6 @@ public:
 	                  const index *const bcinds, const scalar *const values, const index *const dinds);
 	
 	/// Compute the preconditioner
-	/** Does not usually need to be called by the user because it is automatically invoked whenever
-	 * the matrix is changed via \ref wrap.
-	 */
 	virtual void compute() = 0;
 
 protected:

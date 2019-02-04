@@ -42,6 +42,10 @@ if(WITH_PETSC)
 	-ref_sub_pc_type sor -blasted_pc_type sgs
 	)
 
+  add_test(NAME SerialPoissonCSRPetscILU0 COMMAND env OMP_NUM_THREADS=1 ${SEQEXEC} ./testcsr_poisson 
+	${CMAKE_CURRENT_SOURCE_DIR}/input/poisson.control
+	-options_file  ${CMAKE_CURRENT_SOURCE_DIR}/input/mpi_poisson_csr_ilu0.perc)
+
   add_test(NAME MPIPoissonCSRPetscILU0 COMMAND env OMP_NUM_THREADS=1 ${MPIEXEC} -n 4 ./testcsr_poisson 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/poisson.control
 	-options_file  ${CMAKE_CURRENT_SOURCE_DIR}/input/mpi_poisson_csr_ilu0.perc)

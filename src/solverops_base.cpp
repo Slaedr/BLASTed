@@ -31,10 +31,6 @@ void SRPreconditioner<scalar,index>::wrap(const index n_brows, const index *cons
 	mat.bcolind = bcinds;
 	mat.vals = values;
 	mat.diagind = dinds;
-
-	// Since the matrix has been changed, recompute the preconditioner.
-	// This should call the compute function from the appropriate derived class
-	compute();
 }
 
 template <typename scalar, typename index>
