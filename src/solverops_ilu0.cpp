@@ -35,6 +35,17 @@ AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>::~AsyncBlockILU0_SRPrecond
 	aligned_free(scale);
 }
 
+template <typename scalar, typename index, int bs, StorageOptions stor>
+void
+AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>::
+wrap(const index n_brows,
+     const index *const brptrs, const index *const bcinds,
+     const scalar *const values, const index *const dinds)
+{
+	SRPreconditioner<scalar,index>::wrap(n_brows, brptrs, bcinds, values, dinds);
+	plist = compute_ILU_positions_CSR_CSR(&mat);
+}
+
 /// Applies the block-ILU0 factorization using a block variant of the asynch triangular solve in
 /// \cite async:anzt_triangular
 /**
@@ -173,7 +184,7 @@ void AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>::compute()
 		setup_storage();
 
 	block_ilu0_factorize<scalar,index,bs,stor>
-		(&mat, nbuildsweeps, thread_chunk_size, threadedfactor, factinittype,
+		(&mat, plist, nbuildsweeps, thread_chunk_size, threadedfactor, factinittype,
 		 compute_remainder, iluvals);
 }
 
@@ -201,6 +212,16 @@ AsyncILU0_SRPreconditioner<scalar,index>::~AsyncILU0_SRPreconditioner()
 	aligned_free(iluvals);
 	aligned_free(ytemp);
 	aligned_free(scale);
+}
+
+template <typename scalar, typename index>
+void
+AsyncILU0_SRPreconditioner<scalar,index>::wrap(const index n_brows,
+                                               const index *const brptrs, const index *const bcinds,
+                                               const scalar *const values, const index *const dinds)
+{
+	SRPreconditioner<scalar,index>::wrap(n_brows, brptrs, bcinds, values, dinds);
+	plist = compute_ILU_positions_CSR_CSR(&mat);
 }
 
 template <typename scalar, typename index>
@@ -319,7 +340,7 @@ void AsyncILU0_SRPreconditioner<scalar,index>::compute()
 	if(!iluvals)
 		setup_storage(true);
 
-	scalar_ilu0_factorize(&mat, nbuildsweeps, thread_chunk_size, threadedfactor,
+	scalar_ilu0_factorize(&mat, plist, nbuildsweeps, thread_chunk_size, threadedfactor,
 	                      factinittype, iluvals, scale);
 }
 
@@ -339,7 +360,7 @@ RSAsyncILU0_SRPreconditioner(const ReorderingScaling<scalar,index,1>& reordersca
                              const bool threadedfactor, const bool threadedapply)
 	: AsyncILU0_SRPreconditioner<scalar,index>(nbuildsweeps,napplysweeps, tcs, finit, ainit,
 	                                           threadedfactor,threadedapply),
-	rs{reorderscale}
+	  rs{reorderscale}
 { }
 
 template <typename scalar, typename index>
@@ -352,7 +373,7 @@ void RSAsyncILU0_SRPreconditioner<scalar,index>::compute()
 	if(!iluvals)
 		setup_storage(false);
 
-	scalar_ilu0_factorize_noscale(&rsmat, nbuildsweeps, thread_chunk_size, threadedfactor,
+	scalar_ilu0_factorize_noscale(&rsmat, plist, nbuildsweeps, thread_chunk_size, threadedfactor,
 	                              factinittype, iluvals);
 }
 

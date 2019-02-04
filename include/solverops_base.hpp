@@ -73,8 +73,8 @@ public:
 	 *
 	 * Does not take ownership of the 4 arrays; they are not cleaned up in the destructor either.
 	 */
-	void wrap(const index n_brows, const index *const brptrs,
-	          const index *const bcinds, const scalar *const values, const index *const dinds);
+	virtual void wrap(const index n_brows, const index *const brptrs,
+	                  const index *const bcinds, const scalar *const values, const index *const dinds);
 	
 	/// Compute the preconditioner
 	/** Does not usually need to be called by the user because it is automatically invoked whenever

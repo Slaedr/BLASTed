@@ -8,6 +8,7 @@
 
 #include "srmatrixdefs.hpp"
 #include "async_initialization_decl.hpp"
+#include "ilu_pattern.hpp"
 
 namespace blasted {
 
@@ -17,6 +18,7 @@ namespace blasted {
  * It will probably be too expensive to carry out a row-column scaling like in the point case.
  *
  * \param[in] mat The BSR matrix
+ * \param[in] plist Lists of positions in the LU matrix required for the ILU computation
  * \param[in] nbuildsweeps Number of asynchronous sweeps to use for parallel builds
  * \param[in] thread_chunk_size The number of work-items to assign to thread-contexts in one batch
  *   for dynamically scheduled threads - should not be too small or too large
@@ -29,6 +31,7 @@ namespace blasted {
  */
 template <typename scalar, typename index, int bs, StorageOptions stor>
 void block_ilu0_factorize(const CRawBSRMatrix<scalar,index> *const mat,
+                          const ILUPositions<index>& plist,
                           const int nbuildsweeps, const int thread_chunk_size, const bool usethreads,
                           const FactInit init_type,
                           const bool compute_remainder,
@@ -41,9 +44,10 @@ void block_ilu0_factorize(const CRawBSRMatrix<scalar,index> *const mat,
  * \param[in,out] remvals Pre-allocated storage for the entries of the remainder matrix
  */
 template <typename scalar, typename index, int bs, StorageOptions stor>
-void compute_ILU_remainder(const CRawBSRMatrix<scalar,index> *const mat, const scalar *const iluvals,
-                          const int thread_chunk_size,
-                          scalar *const __restrict remvals);
+void compute_ILU_remainder(const CRawBSRMatrix<scalar,index> *const mat,
+                           const ILUPositions<index>& plist, const scalar *const iluvals,
+                           const int thread_chunk_size,
+                           scalar *const __restrict remvals);
 
 }
 

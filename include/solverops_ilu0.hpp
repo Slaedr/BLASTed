@@ -9,6 +9,7 @@
 #include "solverops_base.hpp"
 #include "reorderingscaling.hpp"
 #include "async_initialization_decl.hpp"
+#include "ilu_pattern.hpp"
 
 namespace blasted {
 
@@ -44,6 +45,10 @@ public:
 
 	/// Returns the number of rows of the operator
 	index dim() const { return mat.nbrows*bs; }
+
+	/// Wraps an existing CSR matrix and also pre-computes some pointers \sa plist
+	void wrap(const index n_brows, const index *const brptrs,
+	          const index *const bcinds, const scalar *const values, const index *const dinds);
 	
 	/// Compute the preconditioner \sa block_ilu0_setup
 	void compute();
@@ -56,6 +61,9 @@ protected:
 
 	using Blk = Block_t<scalar,bs,stor>;
 	using Seg = Segment_t<scalar,bs>;
+
+	/// Precomputed positions in \ref iluvals to help with factorization
+	ILUPositions<index> plist;
 	
 	/// Storage for L and U factors
 	/** Use \ref bcolind and \ref browptr to access the storage,
@@ -104,6 +112,10 @@ public:
 
 	/// Returns the number of rows
 	index dim() const { return mat.nbrows; }
+
+	/// Wraps an existing CSR matrix and also pre-computes some pointers \sa plist
+	void wrap(const index n_brows, const index *const brptrs,
+	          const index *const bcinds, const scalar *const values, const index *const dinds);
 	
 	/// Compute the preconditioner
 	void compute();
@@ -113,6 +125,9 @@ public:
 
 protected:
 	using SRPreconditioner<scalar,index>::mat;
+	
+	/// Precomputed positions in \ref iluvals to help with factorization
+	ILUPositions<index> plist;
 	
 	/// Storage for L and U factors
 	scalar *iluvals;
@@ -167,6 +182,7 @@ public:
 
 protected:
 	using SRPreconditioner<scalar,index>::mat;
+	using AsyncILU0_SRPreconditioner<scalar,index>::plist;
 	using AsyncILU0_SRPreconditioner<scalar,index>::iluvals;
 	using AsyncILU0_SRPreconditioner<scalar,index>::scale;
 	using AsyncILU0_SRPreconditioner<scalar,index>::ytemp;

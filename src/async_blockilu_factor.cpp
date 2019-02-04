@@ -69,6 +69,7 @@ void fact_init_sgs(const CRawBSRMatrix<scalar,index> *const mat, scalar *const _
  */
 template <typename scalar, typename index, int bs, StorageOptions stor>
 void block_ilu0_factorize(const CRawBSRMatrix<scalar,index> *const mat,
+                          const ILUPositions<index>& plist,
                           const int nbuildsweeps, const int thread_chunk_size, const bool usethreads,
                           const FactInit init_type,
                           const bool compute_residuals,
@@ -103,7 +104,7 @@ void block_ilu0_factorize(const CRawBSRMatrix<scalar,index> *const mat,
 	{
 		scalar *const remvals = (scalar*)aligned_alloc(CACHE_LINE_LEN,
 		                                               mat->browptr[mat->nbrows]*bs*bs*sizeof(scalar));
-		compute_ILU_remainder<scalar,index,bs,stor>(mat, iluvals, thread_chunk_size, remvals);
+		compute_ILU_remainder<scalar,index,bs,stor>(mat, plist, iluvals, thread_chunk_size, remvals);
 		const scalar maxrem = maxnorm<scalar,index>(mat->browptr[mat->nbrows]*bs*bs, remvals);
 		std::cout << "   ILU(0) residuals: Initial = " << maxrem;
 		aligned_free(remvals);
@@ -174,7 +175,7 @@ void block_ilu0_factorize(const CRawBSRMatrix<scalar,index> *const mat,
 	{
 		scalar *const resvals = (scalar*)aligned_alloc(CACHE_LINE_LEN,
 		                                               mat->browptr[mat->nbrows]*bs*bs*sizeof(scalar));
-		compute_ILU_remainder<scalar,index,bs,stor>(mat, iluvals, thread_chunk_size, resvals);
+		compute_ILU_remainder<scalar,index,bs,stor>(mat, plist, iluvals, thread_chunk_size, resvals);
 		const scalar maxres = maxnorm<scalar,index>(mat->browptr[mat->nbrows]*bs*bs, resvals);
 		std::cout << ", final = " << maxres << std::endl;
 		aligned_free(resvals);
@@ -188,18 +189,21 @@ void block_ilu0_factorize(const CRawBSRMatrix<scalar,index> *const mat,
 
 template void
 block_ilu0_factorize<double,int,4,ColMajor> (const CRawBSRMatrix<double,int> *const mat,
+                                             const ILUPositions<int>& plist,
                                              const int nbuildsweeps, const int thread_chunk_size,
                                              const bool usethreads, const FactInit inittype,
                                              const bool compute_residuals,
                                              double *const __restrict iluvals);
 template void
 block_ilu0_factorize<double,int,5,ColMajor> (const CRawBSRMatrix<double,int> *const mat,
+                                             const ILUPositions<int>& plist,
                                              const int nbuildsweeps, const int thread_chunk_size,
                                              const bool usethreads, const FactInit inittype,
                                              const bool compute_residuals,
                                              double *const __restrict iluvals);
 template void
 block_ilu0_factorize<double,int,4,RowMajor> (const CRawBSRMatrix<double,int> *const mat,
+                                             const ILUPositions<int>& plist,
                                              const int nbuildsweeps, const int thread_chunk_size,
                                              const bool usethreads, const FactInit inittype,
                                              const bool compute_residuals,
@@ -208,13 +212,15 @@ block_ilu0_factorize<double,int,4,RowMajor> (const CRawBSRMatrix<double,int> *co
 #ifdef BUILD_BLOCK_SIZE
 template void block_ilu0_factorize<double,int,BUILD_BLOCK_SIZE,ColMajor>
 (const CRawBSRMatrix<double,int> *const mat,
+ const ILUPositions<int>& plist,
  const int nbuildsweeps, const int thread_chunk_size, const bool usethreads, const FactInit inittype,
  const bool compute_residuals,
  double *const __restrict iluvals);
 #endif
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
-void compute_ILU_remainder(const CRawBSRMatrix<scalar,index> *const mat, const scalar *const iluvals,
+void compute_ILU_remainder(const CRawBSRMatrix<scalar,index> *const mat,
+                           const ILUPositions<index>& plist, const scalar *const iluvals,
                            const int thread_chunk_size,
                            scalar *const __restrict resvals)
 {
@@ -280,16 +286,19 @@ void compute_ILU_remainder(const CRawBSRMatrix<scalar,index> *const mat, const s
 
 template
 void compute_ILU_remainder<double,int,4,RowMajor>(const CRawBSRMatrix<double,int> *const mat,
+                                                  const ILUPositions<int>& plist,
                                                   const double *const iluvals,
                                                   const int thread_chunk_size,
                                                   double *const __restrict resvals);
 template
 void compute_ILU_remainder<double,int,4,ColMajor>(const CRawBSRMatrix<double,int> *const mat,
+                                                  const ILUPositions<int>& plist,
                                                   const double *const iluvals,
                                                   const int thread_chunk_size,
                                                   double *const __restrict resvals);
 template
 void compute_ILU_remainder<double,int,5,ColMajor>(const CRawBSRMatrix<double,int> *const mat,
+                                                  const ILUPositions<int>& plist,
                                                   const double *const iluvals,
                                                   const int thread_chunk_size,
                                                   double *const __restrict resvals);

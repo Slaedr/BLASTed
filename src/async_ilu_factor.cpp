@@ -60,6 +60,7 @@ void fact_init_scaled_original(const CRawBSRMatrix<scalar,index> *const mat,
 
 template <typename scalar, typename index, bool scalerow, bool scalecol>
 static void executeILU0Factorization(const CRawBSRMatrix<scalar,index> *const mat,
+                                     const ILUPositions<index>& plist,
                                      const int nbuildsweeps, const int thread_chunk_size,
                                      const bool usethreads,
                                      const scalar *const rowscale, const scalar *const colscale,
@@ -72,7 +73,7 @@ static void executeILU0Factorization(const CRawBSRMatrix<scalar,index> *const ma
 #pragma omp for schedule(dynamic, thread_chunk_size)
 			for(index irow = 0; irow < mat->nbrows; irow++)
 			{
-				async_ilu0_factorize_kernel<scalar,index,scalerow,scalecol>(mat, irow,
+				async_ilu0_factorize_kernel<scalar,index,scalerow,scalecol>(mat, plist, irow,
 				                                                            rowscale, colscale,
 				                                                            iluvals);
 			}
@@ -82,6 +83,7 @@ static void executeILU0Factorization(const CRawBSRMatrix<scalar,index> *const ma
 
 template <typename scalar, typename index>
 void scalar_ilu0_factorize(const CRawBSRMatrix<scalar,index> *const mat,
+                           const ILUPositions<index>& plist,
                            const int nbuildsweeps, const int thread_chunk_size, const bool usethreads,
                            const FactInit factinittype,
                            scalar *const __restrict iluvals, scalar *const __restrict scale)
@@ -106,12 +108,13 @@ void scalar_ilu0_factorize(const CRawBSRMatrix<scalar,index> *const mat,
 		;
 	}
 
-	executeILU0Factorization<scalar,index,true,true>(mat, nbuildsweeps, thread_chunk_size,
+	executeILU0Factorization<scalar,index,true,true>(mat, plist, nbuildsweeps, thread_chunk_size,
 	                                                 usethreads, scale, scale, iluvals);
 }
 
 template void
 scalar_ilu0_factorize<double,int>(const CRawBSRMatrix<double,int> *const mat,
+                                  const ILUPositions<int>& plist,
                                   const int nbuildsweeps, const int thread_chunk_size,
                                   const bool usethreads, const FactInit finit,
                                   double *const __restrict iluvals, double *const __restrict scale);
@@ -121,6 +124,7 @@ scalar_ilu0_factorize<double,int>(const CRawBSRMatrix<double,int> *const mat,
 /// \todo TODO
 template <typename scalar, typename index>
 void scalar_ilu0_factorize_noscale(const CRawBSRMatrix<scalar,index> *const mat,
+                                   const ILUPositions<index>& plist,
                                    const int nbuildsweeps, const int thread_chunk_size,
                                    const bool usethreads, const FactInit factinittype,
                                    scalar *const __restrict iluvals)
@@ -147,12 +151,13 @@ void scalar_ilu0_factorize_noscale(const CRawBSRMatrix<scalar,index> *const mat,
 	}
 
 	// compute L and U
-	executeILU0Factorization<scalar,index,false,false>(mat, nbuildsweeps, thread_chunk_size,
+	executeILU0Factorization<scalar,index,false,false>(mat, plist, nbuildsweeps, thread_chunk_size,
 	                                                   usethreads, nullptr, nullptr, iluvals);
 }
 
 template
 void scalar_ilu0_factorize_noscale<double,int>(const CRawBSRMatrix<double,int> *const mat,
+                                               const ILUPositions<int>& plist,
                                                const int nbuildsweeps, const int thread_chunk_size,
                                                const bool usethreads, const FactInit finit,
                                                double *const __restrict iluvals);

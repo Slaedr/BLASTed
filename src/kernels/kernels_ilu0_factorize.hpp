@@ -16,9 +16,12 @@ namespace blasted {
  * \note In the factorization loop, the variable pos is initially set negative.
  * If index is an unsigned type, that might be a problem. However,
  * it should usually be okay as we are only comparing equality later.
+ * \param[in] plist Lists of positions in the LU matrix required for the ILU computation
  */
 template <typename scalar, typename index, bool needscalerow, bool needscalecol> inline
-void async_ilu0_factorize_kernel(const CRawBSRMatrix<scalar,index> *const mat, const index irow,
+void async_ilu0_factorize_kernel(const CRawBSRMatrix<scalar,index> *const mat,
+                                 const ILUPositions<index>& plist,
+                                 const index irow,
                                  const scalar *const rowscale, const scalar *const colscale,
                                  scalar *const __restrict iluvals)
 {

@@ -20,24 +20,30 @@
 #ifndef BLASTED_ILU_PATTERN_H
 #define BLASTED_ILU_PATTERN_H
 
+#include <vector>
 #include "srmatrixdefs.hpp"
 
 namespace blasted {
 
 /// Stores the locations that need to be processed for computing each entry of the ILU factorization
 template<typename index>
-struct ILUIndices
+struct ILUPositions
 {
-	/// Column indices in the L matrix that are needed
-	std::vector<index> lcols;
+	/// Positions of entries in bcolind of the L matrix that are needed for a given entry of the ILU factors
+	std::vector<index> lowerp;
 
 	/// Positions in the bcolind array of the original matrix that need to be multiplied by corresponding
-	///  entries of \ref lcols.
-	std::vector<index> upos;
+	///  entries of \ref lowerp.
+	std::vector<index> upperp;
+
+	/// Pointers into \ref lowerp and \ref upperp for the beginning of the lists corresponding to each
+	///  non-zero entry
+	std::vector<index> posptr;
 };
 
+/// Computes a list of positions in L and U that need to traversed for computing new ILU components
 template <typename scalar, typename index>
-ILUIndices<index> compute_ILU_indices_CSR_CSR(const CRawBSRMatrix<scalar,index> *const mat);
+ILUPositions<index> compute_ILU_positions_CSR_CSR(const CRawBSRMatrix<scalar,index> *const mat);
 
 }
 
