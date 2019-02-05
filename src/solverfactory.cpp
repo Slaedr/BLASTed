@@ -61,30 +61,15 @@ SRFactory<scalar,index>::create_srpreconditioner_of_type(const int ndim,
                                                          const AsyncSolverSettings& opts) const
 {
 	if(opts.prectype == BLASTED_JACOBI)
-		if(opts.relax)
-			return new BJacobiRelaxation<scalar,index,bs,stor>();
-		else
-			return new BJacobiSRPreconditioner<scalar,index,bs,stor>();
+		return new BJacobiSRPreconditioner<scalar,index,bs,stor>();
 	else if(opts.prectype == BLASTED_GS) {
-		if(!opts.relax) {
-			std::cout << "WARNING: SolverFactory: GS preconditioner not yet implemented.";
-			std::cout << " Using the relaxation instead.\n";
-		}
-		return new ChaoticBlockRelaxation<scalar,index,bs,stor>(opts.thread_chunk_size);
+		return new ChaoticBlockRelaxation<scalar,index,bs,stor>(opts.napplysweeps, opts.thread_chunk_size);
 	}
 	else if(opts.prectype == BLASTED_SGS) {
-		if(opts.relax) {
-			return new AsyncBlockSGS_Relaxation<scalar,index,bs,stor>(opts.thread_chunk_size);
-		}
-		else
-			return new AsyncBlockSGS_SRPreconditioner<scalar,index,bs,stor>
-				(opts.napplysweeps, opts.apply_inittype, opts.thread_chunk_size);
+		return new AsyncBlockSGS_SRPreconditioner<scalar,index,bs,stor>
+			(opts.napplysweeps, opts.apply_inittype, opts.thread_chunk_size);
 	}
 	else if(opts.prectype == BLASTED_ILU0) {
-		if(opts.relax) {
-			std::cout << "Solverfactory: ILU relaxation is not implemented.";
-			std::cout << " Using the preconditioner.\n";
-		}
 		/* Currently, the object is set to print the max norm of the ILU remainder before
 		 * and after factorization. The last argument below is responsible for it.
 		 */
@@ -93,10 +78,6 @@ SRFactory<scalar,index>::create_srpreconditioner_of_type(const int ndim,
 			 opts.fact_inittype, opts.apply_inittype, true, true, opts.compute_factorization_res);
 	}
 	else if(opts.prectype == BLASTED_SAPILU0) {
-		if(opts.relax) {
-			std::cout << "Solverfactory: ILU relaxation is not implemented.";
-			std::cout << " Using the preconditioner.\n";
-		}
 		/* Currently, the object is set to print the max norm of the ILU remainder before
 		 * and after factorization. The last argument below is responsible for it.
 		 */
@@ -105,10 +86,6 @@ SRFactory<scalar,index>::create_srpreconditioner_of_type(const int ndim,
 			 opts.fact_inittype, opts.apply_inittype, true, false, true);
 	}
 	else if(opts.prectype == BLASTED_NO_PREC) {
-		if(opts.relax) {
-			std::cout << "WARNING: Solverfactory: ILU relaxation is not possible.";
-			std::cout << " Using the preconditioner instead.\n";
-		}
 		return new NoPreconditioner<scalar,index>(ndim);
 	}
 	else
@@ -125,31 +102,17 @@ SRFactory<scalar,index>::create_preconditioner(const index ndim, const SolverSet
 		
 	if(opts.bs == 1) {
 		if(opts.prectype == BLASTED_JACOBI) {
-			if(opts.relax)
-				p = new JacobiRelaxation<scalar,index>();
-			else
-				p = new JacobiSRPreconditioner<scalar,index>();
+			p = new JacobiSRPreconditioner<scalar,index>();
 		}
 		else if(opts.prectype == BLASTED_GS) {
-			p = new ChaoticRelaxation<scalar,index>(opts.thread_chunk_size);
-			if(!opts.relax) {
-				std::cout << "solverfactory(): Warning: Forward Gauss-Seidel preconditioner ";
-				std::cout << "is not implemented; using relaxation instead.\n";
-			}
+			p = new ChaoticRelaxation<scalar,index>(opts.napplysweeps, opts.thread_chunk_size);
 		}
 		else if(opts.prectype == BLASTED_CSC_BGS) {
-			if(opts.relax) {
-				std::cout << "WARNING: SolverFactory: CSC BGS relaxation not yet implemented.";
-				std::cout << " Using the preconditioner instead.\n";
-			}
 			return new CSC_BGS_Preconditioner<scalar,index>(opts.napplysweeps, opts.thread_chunk_size);
 		}
 		else if(opts.prectype == BLASTED_SGS) {
-			if(opts.relax)
-				p = new AsyncSGS_Relaxation<scalar,index>(opts.thread_chunk_size);
-			else
-				p = new AsyncSGS_SRPreconditioner<scalar,index>
-					(opts.napplysweeps, opts.apply_inittype, opts.thread_chunk_size);
+			p = new AsyncSGS_SRPreconditioner<scalar,index>
+				(opts.napplysweeps, opts.apply_inittype, opts.thread_chunk_size);
 		}
 		else if(opts.prectype == BLASTED_ILU0)
 			p = new AsyncILU0_SRPreconditioner<scalar,index>

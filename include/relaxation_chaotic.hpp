@@ -18,10 +18,15 @@ template<typename scalar, typename index, int bs, StorageOptions stor>
 class ChaoticBlockRelaxation : public BJacobiSRPreconditioner<scalar,index,bs,stor>
 {
 public:
-	/// Assigns thread chunk size
-	/** \param threadchunksize Number of iterations to assign to a thread at a time
+	/// Constructor
+	/** \param napplysweeps In case of preconditioning, number of sweeps to use per preconditioner
+	 *    application. Ignored for relaxation.
+	 * \param threadchunksize Number of iterations to assign to a thread at a time
 	 */
-	ChaoticBlockRelaxation(const int threadchunksize);
+	ChaoticBlockRelaxation(const int napplysweeps, const int threadchunksize);
+
+	/// Async. forward block-Gauss-Seidel preconditioner
+	void apply(const scalar *const b, scalar *const __restrict x) const;
 
 	/// Carry out chaotic block relaxation
 	/** For this solver, tolerance checking is never done irrespective of
@@ -31,9 +36,6 @@ public:
 	 * \param b The right hand side in Ax=b
 	 * \param x The solution vector, initially containing the initial guess
 	 */
-	void apply(const scalar *const b, scalar *const __restrict x) const;
-
-	/// Does nothing but throw an exception
 	void apply_relax(const scalar *const x, scalar *const __restrict y) const;
 
 protected:
@@ -43,7 +45,8 @@ protected:
 
 	using Blk = Block_t<scalar,bs,stor>;
 	using Seg = Segment_t<scalar,bs>;
-	
+
+	const int napplysweeps;
 	const int thread_chunk_size;
 };
 
@@ -54,10 +57,15 @@ template<typename scalar, typename index>
 class ChaoticRelaxation : public JacobiSRPreconditioner<scalar,index>
 {
 public:
-	/// Assigns thread chunk size
-	/** \param threadchunksize Number of iterations to assign to a thread at a time
+	/// Constructor
+	/** \param n_applysweeps In case of preconditioning, number of sweeps to use per preconditioner
+	 *    application. Ignored for relaxation.
+	 * \param threadchunksize Number of iterations to assign to a thread at a time
 	 */
-	ChaoticRelaxation(const int threadchunksize);
+	ChaoticRelaxation(const int n_applysweeps, const int threadchunksize);
+
+	/// Async. forward Gauss-Seidel preconditioner
+	void apply(const scalar *const b, scalar *const __restrict x) const;
 
 	/// Carry out chaotic relaxation
 	/** For this solver, tolerance checking is never done irrespective of
@@ -67,9 +75,6 @@ public:
 	 * \param b The right hand side in Ax=b
 	 * \param x The solution vector, initially containing the initial guess
 	 */
-	void apply(const scalar *const b, scalar *const __restrict x) const;
-
-	/// Does nothing but throw an exception
 	void apply_relax(const scalar *const x, scalar *const __restrict y) const;
 
 protected:
@@ -77,6 +82,7 @@ protected:
 	using JacobiSRPreconditioner<scalar,index>::dblocks;
 	using Preconditioner<scalar,index>::solveparams;
 
+	const int napplysweeps;
 	const int thread_chunk_size;
 };
 

@@ -24,6 +24,8 @@ public:
 
 	/// Returns the number of rows of the operator
 	index dim() const { return mat.nbrows*bs; }
+
+	bool relaxationAvailable() const { return true; }
 	
 	/// Compute the preconditioner
 	void compute();
@@ -59,6 +61,8 @@ public:
 
 	/// Returns the number of rows of the operator
 	index dim() const { return mat.nbrows; }
+
+	bool relaxationAvailable() const { return true; }
 	
 	/// Compute the preconditioner
 	void compute();

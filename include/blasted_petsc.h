@@ -27,7 +27,6 @@ extern "C" {
 struct Blasted_node
 {
 	void *bprec;                ///< BLASTed preconditioning object
-	void *brelax;               ///< BLASTed relaxation object
 	void *bfactory;             ///< BLASTed factory object
 	
 	int bs;                     ///< Block size of dense blocks

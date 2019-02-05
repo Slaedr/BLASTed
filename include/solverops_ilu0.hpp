@@ -45,6 +45,8 @@ public:
 
 	/// Returns the number of rows of the operator
 	index dim() const { return mat.nbrows*bs; }
+
+	bool relaxationAvailable() const { return false; }
 	
 	/// Compute the preconditioner \sa block_ilu0_setup
 	/** We assume that sucessive calls to this function maintain the same sparsity pattern of the
@@ -114,6 +116,8 @@ public:
 
 	/// Returns the number of rows
 	index dim() const { return mat.nbrows; }
+
+	bool relaxationAvailable() const { return false; }
 	
 	/// Compute the preconditioner
 	void compute();

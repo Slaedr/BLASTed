@@ -41,6 +41,9 @@ public:
 	/// Returns the dimension (number of rows) of the operator
 	virtual index dim() const = 0;
 
+	/// For querying whether a valid relaxation is available via \ref apply_relax
+	virtual bool relaxationAvailable() const = 0;
+
 	/// Compute the preconditioner
 	virtual void compute() = 0;
 
@@ -100,6 +103,8 @@ public:
 
 	/// Returns the dimension (number of rows) of the operator
 	index dim() const { return ndim; }
+
+	bool relaxationAvailable() const { return false; }
 
 	/// Does nothing
 	void compute() { }

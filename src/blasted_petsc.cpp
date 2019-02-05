@@ -156,9 +156,7 @@ PetscErrorCode createNewPreconditioner(PC pc)
 
 	// delete old matrix
 	BlastedPreconditioner* precop = reinterpret_cast<BlastedPreconditioner*>(ctx->bprec);
-	BlastedPreconditioner* relop = reinterpret_cast<BlastedPreconditioner*>(ctx->brelax);
 	delete precop;
-	delete relop;
 
 	/* get the local preconditioning matrix
 	 * we operate on the diagonal matrix block corresponding to this process
@@ -202,11 +200,7 @@ PetscErrorCode createNewPreconditioner(PC pc)
 	settings.relax = false;
 	precop = factory->create_preconditioner(ndim, settings);
 
-	settings.relax = true;
-	relop = factory->create_preconditioner(ndim, settings);
-
 	ctx->bprec = reinterpret_cast<void*>(precop);
-	ctx->brelax = reinterpret_cast<void*>(relop);
 	return ierr;
 }
 
@@ -220,7 +214,6 @@ PetscErrorCode updatePreconditioner(PC pc)
 	Blasted_data* ctx;
 	ierr = PCShellGetContext(pc, (void**)&ctx); CHKERRQ(ierr);
 	BlastedPreconditioner* precop = reinterpret_cast<BlastedPreconditioner*>(ctx->bprec);
-	BlastedPreconditioner* relop = reinterpret_cast<BlastedPreconditioner*>(ctx->brelax);
 
 	/* get the local preconditioning matrix
 	 * we operate on the diagonal matrix block corresponding to this process
@@ -243,15 +236,12 @@ PetscErrorCode updatePreconditioner(PC pc)
 	// update and recompute
 	if(ctx->bs == 1) {
 		precop->wrap(localrows/ctx->bs, Adiag->i, Adiag->j, Adiag->a, Adiag->diag);
-		relop->wrap(localrows/ctx->bs, Adiag->i, Adiag->j, Adiag->a, Adiag->diag);
 	}
 	else {
 		precop->wrap(localrows/ctx->bs, Abdiag->i, Abdiag->j, Abdiag->a, Abdiag->diag);
-		relop->wrap(localrows/ctx->bs, Abdiag->i, Abdiag->j, Abdiag->a, Abdiag->diag);
 	}
 
 	precop->compute();
-	relop->compute();
 
 	return ierr;
 }
@@ -290,7 +280,6 @@ Blasted_data newBlastedDataContext()
 {
 	Blasted_data ctx;
 	ctx.bprec = NULL;
-	ctx.brelax = NULL;
 	ctx.prectypestr = NULL;
 	ctx.factinittype = NULL;
 	ctx.applyinittype = NULL;
@@ -319,9 +308,7 @@ PetscErrorCode cleanup_blasted(PC pc)
 	Blasted_data* ctx;
 	ierr = PCShellGetContext(pc, (void**)&ctx); CHKERRQ(ierr);
 	BlastedPreconditioner* prec = reinterpret_cast<BlastedPreconditioner*>(ctx->bprec);
-	BlastedPreconditioner* relx = reinterpret_cast<BlastedPreconditioner*>(ctx->brelax);
 	delete prec;
-	delete relx;
 
 	delete [] ctx->prectypestr;
 	delete [] ctx->factinittype;
@@ -359,6 +346,7 @@ PetscErrorCode compute_preconditioner_blasted(PC pc)
 	return ierr;
 }
 
+#if 0
 /// Apply any kind of BLASTed operator
 PetscErrorCode apply_local_base(Blasted_data *const ctx,
                                 const BlastedPreconditioner *const bp, Vec r, Vec z)
@@ -398,6 +386,7 @@ PetscErrorCode apply_local_base(Blasted_data *const ctx,
 	
 	return ierr;
 }
+#endif
 
 PetscErrorCode apply_local_blasted(PC pc, Vec r, Vec z)
 {
@@ -407,7 +396,39 @@ PetscErrorCode apply_local_blasted(PC pc, Vec r, Vec z)
 	const BlastedPreconditioner *const prec =
 		reinterpret_cast<const BlastedPreconditioner*>(ctx->bprec);
 
-	ierr = apply_local_base(ctx, prec, r, z); CHKERRQ(ierr);
+	{
+		const PetscReal *ra;
+		PetscReal *za;
+		PetscInt start, end;
+		ierr = VecGetOwnershipRange(r, &start, &end); CHKERRQ(ierr);
+	
+#ifdef DEBUG
+		if(prec->dim() != end-start) {
+			SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, 
+			         "BLASTed: Dimension of vector does not match that of the matrix- %d vs %d!\n", 
+			         prec->dim(), end-start);
+		}
+#endif
+	
+		ierr = VecGetArray(z, &za); CHKERRQ(ierr);
+		ierr = VecGetArrayRead(r, &ra); CHKERRQ(ierr);
+	
+		struct timeval time1, time2;
+		gettimeofday(&time1, NULL);
+		double initialwtime = (double)time1.tv_sec + (double)time1.tv_usec * 1.0e-6;
+		double initialctime = (double)clock() / (double)CLOCKS_PER_SEC;
+
+		prec->apply(ra,za);
+
+		gettimeofday(&time2, NULL);
+		double finalwtime = (double)time2.tv_sec + (double)time2.tv_usec * 1.0e-6;
+		ctx->applywalltime += (finalwtime - initialwtime);
+		double finalctime = (double)clock() / (double)CLOCKS_PER_SEC;
+		ctx->applycputime += (finalctime - initialctime);
+
+		VecRestoreArrayRead(r, &ra);
+		VecRestoreArray(z, &za);
+	}
 
 	return ierr;
 }
@@ -420,29 +441,53 @@ PetscErrorCode relax_local_blasted(PC pc, Vec rhs, Vec x, Vec w,
 	Blasted_data* ctx;
 	ierr = PCShellGetContext(pc, (void**)&ctx); CHKERRQ(ierr);
 
-	// ILUs are not implemented as relaxation, so just just call the preconditioner instead
-	if(ctx->prectype == BLASTED_ILU0 || ctx->prectype == BLASTED_SAPILU0) {
-		const BlastedPreconditioner *const prec =
-			reinterpret_cast<const BlastedPreconditioner*>(ctx->bprec);
-		
-		ierr = apply_local_base(ctx, prec, rhs, x); CHKERRQ(ierr);
+	BlastedPreconditioner *const relaxation =
+		reinterpret_cast<BlastedPreconditioner*>(ctx->bprec);
+
+	// set relaxation parameters, though we don't use any of them except the max iterations
+	relaxation->setApplyParams({rtol,abstol,dtol,false,it});
+
+	if(guesszero) {
+		ierr = VecSet(x, 0.0); CHKERRQ(ierr);
 	}
-	else {
-		BlastedPreconditioner *const relaxation =
-			reinterpret_cast<BlastedPreconditioner*>(ctx->brelax);
 
-		// set relaxation parameters, though we don't use any of them except the max iterations
-		relaxation->setApplyParams({rtol,abstol,dtol,false,it});
-
-		if(guesszero) {
-			ierr = VecSet(x, 0.0); CHKERRQ(ierr);
+	//ierr = apply_local_base(ctx, relaxation, rhs, x); CHKERRQ(ierr);
+	{
+		const PetscReal *ra;
+		PetscReal *za;
+		PetscInt start, end;
+		ierr = VecGetOwnershipRange(rhs, &start, &end); CHKERRQ(ierr);
+	
+#ifdef DEBUG
+		if(relaxation->dim() != end-start) {
+			SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, 
+			         "BLASTed: Dimension of vector does not match that of the matrix- %d vs %d!\n", 
+			         relaxation->dim(), end-start);
 		}
+#endif
+	
+		ierr = VecGetArray(x, &za); CHKERRQ(ierr);
+		ierr = VecGetArrayRead(rhs, &ra); CHKERRQ(ierr);
+	
+		struct timeval time1, time2;
+		gettimeofday(&time1, NULL);
+		double initialwtime = (double)time1.tv_sec + (double)time1.tv_usec * 1.0e-6;
+		double initialctime = (double)clock() / (double)CLOCKS_PER_SEC;
 
-		ierr = apply_local_base(ctx, relaxation, rhs, x); CHKERRQ(ierr);
+		relaxation->apply_relax(ra,za);
 
-		*reason = PCRICHARDSON_CONVERGED_ITS;
-		*outits = it;
+		gettimeofday(&time2, NULL);
+		double finalwtime = (double)time2.tv_sec + (double)time2.tv_usec * 1.0e-6;
+		ctx->applywalltime += (finalwtime - initialwtime);
+		double finalctime = (double)clock() / (double)CLOCKS_PER_SEC;
+		ctx->applycputime += (finalctime - initialctime);
+
+		VecRestoreArrayRead(rhs, &ra);
+		VecRestoreArray(x, &za);
 	}
+
+	*reason = PCRICHARDSON_CONVERGED_ITS;
+	*outits = it;
 
 	return ierr;
 }
@@ -578,8 +623,16 @@ PetscErrorCode setup_localpreconditioner_blasted(KSP ksp, Blasted_data *const bc
 	ierr = PCShellSetContext(subpc, (void*)bctx);                   CHKERRQ(ierr);
 	ierr = PCShellSetSetUp(subpc, &compute_preconditioner_blasted); CHKERRQ(ierr);
 	ierr = PCShellSetApply(subpc, &apply_local_blasted);            CHKERRQ(ierr);
-	ierr = PCShellSetApplyRichardson(subpc, &relax_local_blasted);  CHKERRQ(ierr);
 	ierr = PCShellSetDestroy(subpc, &cleanup_blasted);              CHKERRQ(ierr);
+
+	// set a relaxation application only for supported preconditioners
+	if(bctx->prectype != BLASTED_ILU0 &&
+	   bctx->prectype != BLASTED_CSC_BGS &&
+	   bctx->prectype != BLASTED_NO_PREC)
+	{
+		ierr = PCShellSetApplyRichardson(subpc, &relax_local_blasted);
+		CHKERRQ(ierr);
+	}
 
 	return ierr;
 }

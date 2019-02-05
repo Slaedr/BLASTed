@@ -27,8 +27,9 @@ class AsyncBlockSGS_SRPreconditioner : public BJacobiSRPreconditioner<scalar,ind
 {
 public:
 	/// Create block SGS preconditioner
-	/** \param napplysweeps Number of asynchronous application sweeps
+	/** \param napplysweeps Number of asynchronous application sweeps (ignored for relaxation)
 	 * \param apply_inittype Type of initialization to use for temporary and output vectors
+	 *   (ignored for relaxation)
 	 * \param threadchunksize Number of iterations assigned to a thread at a time
 	 */
 	AsyncBlockSGS_SRPreconditioner(const int napplysweeps, const ApplyInit apply_inittype,
@@ -38,6 +39,8 @@ public:
 
 	/// Returns the number of rows of the operator
 	index dim() const { return mat.nbrows*bs; }
+
+	bool relaxationAvailable() const { return true; }
 
 	/// Compute the preconditioner
 	void compute();
@@ -70,8 +73,9 @@ class AsyncSGS_SRPreconditioner : public JacobiSRPreconditioner<scalar,index>
 {
 public:
 	/// Create asynchronous scalar SGS preconditioner
-	/** \param napplysweeps Number of asynchronous application sweeps
+	/** \param napplysweeps Number of asynchronous application sweeps (ignored for relaxation)
 	 * \param apply_inittype Type of initialization to use for temporary and output vectors
+	 *   (ignored for relaxation)
 	 * \param threadchunksize Number of iterations assigned to a thread at a time
 	 */
 	AsyncSGS_SRPreconditioner(const int napplysweeps, const ApplyInit apply_inittype,
@@ -81,6 +85,8 @@ public:
 
 	/// Returns the number of rows
 	index dim() const { return mat.nbrows; }
+
+	bool relaxationAvailable() const { return true; }
 
 	/// Compute the preconditioner
 	void compute();
@@ -120,6 +126,8 @@ public:
 	~CSC_BGS_Preconditioner();
 
 	index dim() const { return mat.nbrows; }
+
+	bool relaxationAvailable() const { return false; }
 
 	void compute();
 	void apply(const scalar *const x, scalar *const __restrict y) const;
