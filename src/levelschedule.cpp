@@ -29,34 +29,46 @@ std::vector<index> computeLevels(const CRawBSRMatrix<scalar,index>& mat)
 	{
 		// 1. Find consecutive independent nodes
 
-		while (depends[inode].first() >= inode && inode < mat.nbrows)
+		while (inode < mat.nbrows && depends[inode].front() >= inode) {
 			inode++;
+		}
 
+		// and add those nodes (ie., add the end of the consecutive set of nodes) to this level.
 		levels.push_back(inode);
 		nlevels++;
 
-		// 2. remove dependency of remaining nodes on each node in this level
+		// 2. Remove dependency of remaining nodes on each node in this level
 
 		// for each node in the new level..
 		for(index jnode = levels[levels.size()-2]; jnode < inode; jnode++)
 		{
-			// go over the neighbors of the node..
+			// go over the neighbors of the node (because the sparsity structure is assumed symmetric)
 			for(auto jnbr = depends[jnode].begin(); jnbr != depends[jnode].end(); jnbr++)
 			{
-				// remove jnode from the list of dependencies of the neighbor
+				// Every node is its own dependency - skip that
+				if(*jnbr == jnode)
+					continue;
+
+				// find jnode in the list of dependencies of the neighbor..
 				auto it = std::find(depends[*jnbr].begin(), depends[*jnbr].end(), jnode);
 
+				// (jnode must be found because the sparsity structure is symmetric)
 				if(it == depends[*jnbr].end())
 					throw std::runtime_error("Faulty dependency list!");
 
+				// .. and remove it.
 				depends[*jnbr].erase(it);
 			}
 		}
 	}
 
 	assert(inode == mat.nbrows);
+	assert(nlevels+1 == static_cast<index>(levels.size()));
+	printf(" LevelSchedule: Found %d levels.\n", nlevels);
 
 	return levels;
 }
+
+template std::vector<int> computeLevels(const CRawBSRMatrix<double,int>& mat);
 
 }

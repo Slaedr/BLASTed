@@ -15,6 +15,9 @@ target_link_libraries(testcscmatrix blockmatrices coomatrix)
 add_executable(testbscconversion bscconversiontest.cpp)
 target_link_libraries(testbscconversion blockmatrices coomatrix rawmatrixutils)
 
+add_executable(testlevelschedule testlevelschedule.cpp)
+target_link_libraries(testlevelschedule coomatrix solverops)
+
 add_executable(testreordering testreordering.cpp)
 target_link_libraries(testreordering orderingscaling blockmatrices rawmatrixutils coomatrix helper)
 if(WITH_MC64)
@@ -110,6 +113,14 @@ add_test(NAME BSR7ApplyRowReordering COMMAND ${SEQEXEC} ${SEQTASKS} testreorderi
   )
 add_test(NAME BSR7ApplyColReordering COMMAND ${SEQEXEC} ${SEQTASKS} testreordering
   ${CMAKE_CURRENT_SOURCE_DIR}/input/fluorem-dk01r/DK01R.mtx 7 column matrix
+  )
+
+add_test(NAME LevelSchedule_Blk4 COMMAND ${SEQEXEC} ${SEQTASKS} testlevelschedule
+  ${CMAKE_CURRENT_SOURCE_DIR}/../input/fvens-2dcyl1/2dcyl1.mtx 4
+  )
+
+add_test(NAME LevelSchedule_1 COMMAND ${SEQEXEC} ${SEQTASKS} testlevelschedule
+  ${CMAKE_CURRENT_SOURCE_DIR}/../input/boeing-msc00726/msc00726.mtx 1
   )
 
 if(WITH_MC64)
