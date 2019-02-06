@@ -24,7 +24,7 @@ add_library(solverops
   solverfactory.cpp relaxation_chaotic.cpp
   solverops_jacobi.cpp solverops_sgs.cpp solverops_ilu0.cpp solverops_base.cpp
   async_blockilu_factor.cpp async_ilu_factor.cpp
-  ilu_pattern.cpp blas1.cpp
+  ilu_pattern.cpp levelschedule.cpp blas1.cpp
   )
 set_property(TARGET solverops PROPERTY POSITION_INDEPENDENT_CODE ON)
 if(CXX_COMPILER_CLANG)

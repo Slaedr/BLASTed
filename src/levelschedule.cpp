@@ -44,6 +44,12 @@ std::vector<index> computeLevels(const CRawBSRMatrix<scalar,index>& mat)
 			for(auto jnbr = depends[jnode].begin(); jnbr != depends[jnode].end(); jnbr++)
 			{
 				// remove jnode from the list of dependencies of the neighbor
+				auto it = std::find(depends[*jnbr].begin(), depends[*jnbr].end(), jnode);
+
+				if(it == depends[*jnbr].end())
+					throw std::runtime_error("Faulty dependency list!");
+
+				depends[*jnbr].erase(it);
 			}
 		}
 	}
