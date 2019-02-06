@@ -10,9 +10,7 @@
 #include "solverops_jacobi.hpp"
 #include "solverops_sgs.hpp"
 #include "solverops_ilu0.hpp"
-#include "relaxation_jacobi.hpp"
 #include "relaxation_chaotic.hpp"
-#include "relaxation_async_sgs.hpp"
 
 namespace blasted {
 
