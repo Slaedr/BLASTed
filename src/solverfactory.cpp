@@ -113,18 +113,24 @@ SRFactory<scalar,index>::create_preconditioner(const index ndim, const SolverSet
 			p = new AsyncSGS_SRPreconditioner<scalar,index>
 				(opts.napplysweeps, opts.apply_inittype, opts.thread_chunk_size);
 		}
-		else if(opts.prectype == BLASTED_ILU0)
+		else if(opts.prectype == BLASTED_LEVEL_SGS) {
+			return new Level_SGS<scalar,index>();
+		}
+		else if(opts.prectype == BLASTED_ILU0) {
 			p = new AsyncILU0_SRPreconditioner<scalar,index>
 				(opts.nbuildsweeps, opts.napplysweeps,
 				 opts.thread_chunk_size,
 				 opts.fact_inittype, opts.apply_inittype, true,true);
-		else if(opts.prectype == BLASTED_SAPILU0)
+		}
+		else if(opts.prectype == BLASTED_SAPILU0) {
 			return new AsyncILU0_SRPreconditioner<scalar,index>
 				(opts.nbuildsweeps, opts.napplysweeps,
 				 opts.thread_chunk_size,
 				 opts.fact_inittype, opts.apply_inittype, true,false);
-		else if(opts.prectype == BLASTED_NO_PREC)
+		}
+		else if(opts.prectype == BLASTED_NO_PREC) {
 			return new NoPreconditioner<scalar,index>(ndim);
+		}
 		else
 			throw std::invalid_argument("Invalid preconditioner!");
 	}

@@ -42,6 +42,13 @@ if(WITH_PETSC)
 	-ref_sub_pc_type sor -blasted_pc_type sgs
 	)
 
+  add_test(NAME MPIThreadedPoissonCSRPetsc-LevelSGS-Relaxation
+	COMMAND ${MPIEXEC} -n 4 ${THREADOPTS} ./testcsr_poisson
+	${CMAKE_CURRENT_SOURCE_DIR}/input/poisson.control
+	-options_file  ${CMAKE_CURRENT_SOURCE_DIR}/input/mpi_poisson_localrelaxation.perc
+	-ref_sub_pc_type sor -blasted_pc_type level_sgs
+	)
+
   add_test(NAME SerialPoissonCSRPetscILU0 COMMAND env OMP_NUM_THREADS=1 ${SEQEXEC} ./testcsr_poisson 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/poisson.control
 	-options_file  ${CMAKE_CURRENT_SOURCE_DIR}/input/mpi_poisson_csr_ilu0.perc)
@@ -68,6 +75,12 @@ if(WITH_PETSC)
 	${CMAKE_CURRENT_SOURCE_DIR}/input/poisson.control 
 	-options_file  ${CMAKE_CURRENT_SOURCE_DIR}/input/thread_poisson_csr.perc 
 	-ref_sub_pc_type ilu -blasted_pc_type sapilu0 -test_type compare_error)
+
+  add_test(NAME ThreadedPoissonCSRPetsc-LevelSGS
+	COMMAND ${SEQEXEC} ${THREADOPTS} ${CMAKE_CURRENT_BINARY_DIR}/testcsr_poisson
+	${CMAKE_CURRENT_SOURCE_DIR}/input/poisson.control 
+	-options_file  ${CMAKE_CURRENT_SOURCE_DIR}/input/thread_poisson_csr.perc 
+	-ref_sub_pc_type sor -blasted_pc_type level_sgs)
 
   add_test(NAME AsyncRelaxationPoissonPetsc-GS-IterationsLowerBound
 	COMMAND ${MPIEXEC} ${THREADOPTS} -n 1 ./testcsr_poisson_threaded

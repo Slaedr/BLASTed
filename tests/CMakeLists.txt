@@ -204,15 +204,15 @@ if(WITH_PETSC)
 	-blasted_pc_type level_sgs
 	)
 
-  ## Fails! Our scalar SGS preconditioner is not the same as PETSc's, because the latter does block
+  ## Our scalar SGS preconditioner is not the same as PETSc's, because the latter does block
   ##  preconditioning even for aij matrices.
-  #add_test(NAME MPIPetsc-CSR-SGS 
-  # COMMAND env OMP_NUM_THREADS=1 ${MPIEXEC} -n 3 ${CMAKE_CURRENT_BINARY_DIR}/testpetscsolver
-  #	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.pmat 
-  #	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.pmat 
-  #	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.pmat
-  #	-options_file ${CMAKE_CURRENT_SOURCE_DIR}/input/2dcyl1_sgs.perc -mat_type aij
-  #	)
+  add_test(NAME MPIPetsc-CSR-SGS 
+  COMMAND env OMP_NUM_THREADS=1 ${MPIEXEC} -n 3 ${CMAKE_CURRENT_BINARY_DIR}/testthreadedpetscsolver
+  	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.pmat 
+  	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.pmat 
+  	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.pmat
+  	-options_file ${CMAKE_CURRENT_SOURCE_DIR}/input/2dcyl1_sgs.perc -mat_type aij -test_type convergence
+  	)
   ## Fails! Our scalar SGS relaxation is not the same as PETSc's.
   #add_test(NAME MPIPetsc-CSR-SGS-Relaxation 
   # COMMAND env OMP_NUM_THREADS=1 ${MPIEXEC} -n 3 ${CMAKE_CURRENT_BINARY_DIR}/testpetscsolver
@@ -223,7 +223,7 @@ if(WITH_PETSC)
   #	-ref_sub_pc_type sor -ref_sub_pc_sor_local_symmetric -blasted_pc_type sgs
   #	)
 
-  add_test(NAME AsyncRelaxation-Petsc-BSR4-GS-Convergence 
+  add_test(NAME AsyncRelaxation-Petsc-BSR4-GS-ResidualConvergence 
 	COMMAND ${SEQEXEC} ${THREADOPTS} ${SEQTASKS} ${CMAKE_CURRENT_BINARY_DIR}/testthreadedpetscsolver
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.pmat
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.pmat 
@@ -247,7 +247,7 @@ if(WITH_PETSC)
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.pmat
 	-options_file ${CMAKE_CURRENT_SOURCE_DIR}/input/asyncpreconditioning.perc -mat_type baij
 	-ref_sub_pc_type sor -blasted_pc_type sgs -blasted_async_sweeps 1,4
-	-test_type compare_its
+	-test_type compare_its -error_tolerance_factor 0.01
 	)
 
   add_test(NAME AsyncPreconditioning-Petsc-BSR4-ILU0
@@ -257,7 +257,7 @@ if(WITH_PETSC)
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.pmat
 	-options_file ${CMAKE_CURRENT_SOURCE_DIR}/input/asyncpreconditioning.perc -mat_type baij
 	-ref_sub_pc_type ilu -blasted_pc_type ilu0 -blasted_async_sweeps 2,3
-	-test_type compare_its
+	-test_type compare_its -error_tolerance_factor 0.01
 	)
   
   #add_test(NAME MPIPetscMKL-BSR4-SGS 

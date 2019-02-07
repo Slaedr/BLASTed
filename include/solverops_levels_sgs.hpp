@@ -11,11 +11,13 @@
 
 namespace blasted {
 
+/// Level-scheduled parallel block symmetric Gauss-Seidel iteration
 template <typename scalar, typename index, int bs, StorageOptions stor>
 class Level_BSGS : public BJacobiSRPreconditioner<scalar,index,bs,stor>
 {
 public:
 	Level_BSGS();
+	~Level_BSGS();
 
 	bool relaxationAvailable() const { return true; }
 
@@ -35,6 +37,37 @@ protected:
 
 	using Blk = Block_t<scalar,bs,stor>;
 	using Seg = Segment_t<scalar,bs>;
+	
+	/// Temporary storage for the result of the forward Gauss-Seidel sweep
+	scalar *ytemp;
+
+	/// Independent levels
+	std::vector<index> levels;
+};
+
+/// Level-scheduled parallel symmetric Gauss-Seidel iteration
+template <typename scalar, typename index>
+class Level_SGS : public JacobiSRPreconditioner<scalar,index>
+{
+public:
+	Level_SGS();
+	~Level_SGS();
+
+	bool relaxationAvailable() const { return true; }
+
+	/// Compute the preconditioner
+	void compute();
+
+	/// To apply the preconditioner
+	void apply(const scalar *const r, scalar *const __restrict z) const;
+
+	/// Carry out a relaxation solve
+	void apply_relax(const scalar *const x, scalar *const __restrict y) const;
+
+protected:
+	using Preconditioner<scalar,index>::solveparams;
+	using SRPreconditioner<scalar,index>::mat;
+	using JacobiSRPreconditioner<scalar,index>::dblocks;
 	
 	/// Temporary storage for the result of the forward Gauss-Seidel sweep
 	scalar *ytemp;

@@ -29,8 +29,15 @@ using boost::alignment::aligned_alloc;
 using boost::alignment::aligned_free;
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
-Level_BSGS<scalar,index,bs,stor>::Level_BSGS() : BJacobiSRPreconditioner<scalar,index,bs,stor>()
+Level_BSGS<scalar,index,bs,stor>::Level_BSGS()
+	: BJacobiSRPreconditioner<scalar,index,bs,stor>(), ytemp{nullptr}
 { }
+
+template <typename scalar, typename index, int bs, StorageOptions stor>
+Level_BSGS<scalar,index,bs,stor>::~Level_BSGS()
+{
+	aligned_free(ytemp);
+}
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
 void Level_BSGS<scalar,index,bs,stor>::compute()
@@ -126,5 +133,92 @@ template class Level_BSGS<double,int,4,RowMajor>;
 template class Level_BSGS<double,int,BUILD_BLOCK_SIZE,ColMajor>;
 template class Level_BSGS<double,int,BUILD_BLOCK_SIZE,RowMajor>;
 #endif
+
+template <typename scalar, typename index>
+Level_SGS<scalar,index>::Level_SGS() : JacobiSRPreconditioner<scalar,index>(), ytemp{nullptr}
+{ }
+
+template <typename scalar, typename index>
+Level_SGS<scalar,index>::~Level_SGS()
+{
+	aligned_free(ytemp);
+}
+
+template <typename scalar, typename index>
+void Level_SGS<scalar,index>::compute()
+{
+	if(!ytemp) {
+		ytemp = (scalar*)aligned_alloc(CACHE_LINE_LEN, mat.nbrows*sizeof(scalar));
+		levels = computeLevels(mat);
+	}
+
+	JacobiSRPreconditioner<scalar,index>::compute();
+}
+
+template <typename scalar, typename index>
+void Level_SGS<scalar,index>::apply(const scalar *const rr,
+                                    scalar *const __restrict zz) const
+{
+	const index nlevels = static_cast<index>(levels.size())-1;
+
+	// forward solve
+	for(index ilvl = 0; ilvl < nlevels; ilvl++)
+	{
+#pragma omp parallel for default(shared)
+		for(index irow = levels[ilvl]; irow < levels[ilvl+1]; irow++)
+		{
+			ytemp[irow] = kernels::scalar_fgs(mat.vals, mat.bcolind,
+			                                  mat.browptr[irow], mat.diagind[irow],
+			                                  dblocks[irow], rr[irow], ytemp);
+		}
+	}
+
+	// backward solve
+	for(index ilvl = nlevels; ilvl >= 1; ilvl--)
+	{
+#pragma omp parallel for default(shared)
+		for(index irow = levels[ilvl]-1; irow >= levels[ilvl-1]; irow--)
+		{
+			zz[irow] = kernels::scalar_bgs(mat.vals, mat.bcolind,
+			                               mat.diagind[irow], mat.browptr[irow+1],
+			                               mat.vals[mat.diagind[irow]], dblocks[irow],
+			                               ytemp[irow], zz);
+		}
+	}
+}
+
+template <typename scalar, typename index>
+void Level_SGS<scalar,index>::apply_relax(const scalar *const b,
+                                          scalar *const __restrict x) const
+{
+	const index nlevels = static_cast<index>(levels.size())-1;
+
+	for(int step = 0; step < solveparams.maxits; step++)
+	{
+		for(index ilvl = 0; ilvl < nlevels; ilvl++) {
+#pragma omp parallel for default(shared)
+			for(index irow = levels[ilvl]; irow < levels[ilvl+1]; irow++)
+			{
+				x[irow] = scalar_relax<scalar,index>
+					(mat.vals, mat.bcolind,
+					 mat.browptr[irow], mat.diagind[irow], mat.browptr[irow+1],
+					 dblocks[irow], b[irow], x, x);
+			}
+		}
+
+		for(index ilvl = nlevels; ilvl >= 1; ilvl--) {
+#pragma omp parallel for default(shared)
+			for(index irow = levels[ilvl]-1; irow >= levels[ilvl-1]; irow--)
+			{
+				x[irow] = scalar_relax<scalar,index>
+					(mat.vals, mat.bcolind, 
+					 mat.browptr[irow], mat.diagind[irow], mat.browptr[irow+1],
+					 dblocks[irow], b[irow], x, x);
+			}
+		}
+	}
+}
+
+template class Level_SGS<double,int>;
 
 }

@@ -71,7 +71,7 @@ int main(int argc, char* argv[])
 	ierr = PetscOptionsGetReal(NULL, NULL, "-error_tolerance_factor", &error_tol, &set);
 	if(!set) {
 		printf("Error tolerance factor not set; using the default 100.");
-		error_tol = 100.0;
+		error_tol = 0.01;
 	}
 
 	char testtype[PETSCOPTION_STR_LEN];
@@ -214,10 +214,9 @@ int main(int argc, char* argv[])
 
 	if(!strcmp(testtype, "compare_its")) {
 		printf("Checking whether solvers converged in almost the same number of iterations.\n");
-		const double tol = 0.01;
 		const double reldiff = abs(avgkspiters-refkspiters)/(double)refkspiters;
 		printf("Relative difference = %f.\n", reldiff); fflush(stdout);
-		assert(reldiff <= tol);
+		assert(reldiff <= error_tol);
 	}
 	else if(!strcmp(testtype, "upper_bound_its")) {
 		assert(avgkspiters <= refkspiters);
