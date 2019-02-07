@@ -11,6 +11,7 @@
 #include "solverops_sgs.hpp"
 #include "solverops_ilu0.hpp"
 #include "relaxation_chaotic.hpp"
+#include "solverops_levels_sgs.hpp"
 
 namespace blasted {
 
@@ -40,6 +41,8 @@ BlastedSolverType SRFactory<scalar,index>::solverTypeFromString(const std::strin
 		ptype = BLASTED_SAPILU0;
 	else if(precstr2 == cscbgsstr)
 		ptype = BLASTED_CSC_BGS;
+	else if(precstr2 == levelsgsstr)
+		ptype = BLASTED_LEVEL_SGS;
 	else if(precstr2 == noprecstr)
 		ptype = BLASTED_NO_PREC;
 	else {
@@ -58,8 +61,9 @@ SRPreconditioner<scalar,index>*
 SRFactory<scalar,index>::create_srpreconditioner_of_type(const int ndim,
                                                          const AsyncSolverSettings& opts) const
 {
-	if(opts.prectype == BLASTED_JACOBI)
+	if(opts.prectype == BLASTED_JACOBI) {
 		return new BJacobiSRPreconditioner<scalar,index,bs,stor>();
+	}
 	else if(opts.prectype == BLASTED_GS) {
 		return new ChaoticBlockRelaxation<scalar,index,bs,stor>(opts.napplysweeps, opts.thread_chunk_size);
 	}
@@ -68,20 +72,17 @@ SRFactory<scalar,index>::create_srpreconditioner_of_type(const int ndim,
 			(opts.napplysweeps, opts.apply_inittype, opts.thread_chunk_size);
 	}
 	else if(opts.prectype == BLASTED_ILU0) {
-		/* Currently, the object is set to print the max norm of the ILU remainder before
-		 * and after factorization. The last argument below is responsible for it.
-		 */
 		return new AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>
 			(opts.nbuildsweeps, opts.napplysweeps, opts.thread_chunk_size,
 			 opts.fact_inittype, opts.apply_inittype, true, true, opts.compute_factorization_res);
 	}
 	else if(opts.prectype == BLASTED_SAPILU0) {
-		/* Currently, the object is set to print the max norm of the ILU remainder before
-		 * and after factorization. The last argument below is responsible for it.
-		 */
 		return new AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>
 			(opts.nbuildsweeps, opts.napplysweeps, opts.thread_chunk_size,
-			 opts.fact_inittype, opts.apply_inittype, true, false, true);
+			 opts.fact_inittype, opts.apply_inittype, true, false, opts.compute_factorization_res);
+	}
+	else if(opts.prectype == BLASTED_LEVEL_SGS) {
+		return new Level_BSGS<scalar,index,bs,stor>();
 	}
 	else if(opts.prectype == BLASTED_NO_PREC) {
 		return new NoPreconditioner<scalar,index>(ndim);

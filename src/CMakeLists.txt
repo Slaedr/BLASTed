@@ -21,7 +21,9 @@ target_link_libraries(coomatrix blockmatrices)
 set_property(TARGET coomatrix PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 add_library(solverops
-  solverfactory.cpp relaxation_chaotic.cpp
+  solverfactory.cpp
+  solverops_levels_sgs.cpp
+  relaxation_chaotic.cpp
   solverops_jacobi.cpp solverops_sgs.cpp solverops_ilu0.cpp solverops_base.cpp
   async_blockilu_factor.cpp async_ilu_factor.cpp
   ilu_pattern.cpp levelschedule.cpp blas1.cpp

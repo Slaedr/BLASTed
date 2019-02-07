@@ -23,7 +23,7 @@ public:
 	void compute();
 
 	/// To apply the preconditioner
-	void apply(const scalar *const x, scalar *const __restrict y) const;
+	void apply(const scalar *const r, scalar *const __restrict z) const;
 
 	/// Carry out a relaxation solve
 	void apply_relax(const scalar *const x, scalar *const __restrict y) const;
@@ -37,7 +37,10 @@ protected:
 	using Seg = Segment_t<scalar,bs>;
 	
 	/// Temporary storage for the result of the forward Gauss-Seidel sweep
-	mutable scalar *ytemp;
+	scalar *ytemp;
+
+	/// Independent levels
+	std::vector<index> levels;
 };
 
 }

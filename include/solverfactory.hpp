@@ -32,6 +32,8 @@ const std::string ilu0str = "ilu0";
 const std::string sapilu0str = "sapilu0";
 /// Column-oriented backward GS
 const std::string cscbgsstr = "cscbgs";
+/// Level-scheduled SGS
+const std::string levelsgsstr = "level_sgs";
 /** @} */
 
 /// Basic settings needed for most iterations
