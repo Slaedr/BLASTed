@@ -36,9 +36,12 @@ protected:
 	using AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>::ytemp;
 	using AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>::nbuildsweeps;
 	using AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>::thread_chunk_size;
+	using AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>::threadedfactor;
 
 	using Blk = Block_t<scalar,bs,stor>;
 	using Seg = Segment_t<scalar,bs>;
+
+	std::vector<index> levels;
 };
 
 }
