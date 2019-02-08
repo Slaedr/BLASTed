@@ -114,7 +114,7 @@ static PetscErrorCode setupDataFromOptions(PC pc)
 	else {
 		sweeps[0] = 1; sweeps[1] = 1;
 	}
-	if(ptype == BLASTED_ILU0 || ptype == BLASTED_ASYNC_LEVEL_ILU0) {
+	if(ptype == BLASTED_ILU0 || ptype == BLASTED_ASYNC_LEVEL_ILU0 || ptype == BLASTED_SAPILU0) {
 		ctx->compute_ilu_rem =
 			get_optional_bool_petscoptions("-blasted_compute_factorization_remainder", false);
 	}
