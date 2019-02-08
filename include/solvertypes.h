@@ -10,7 +10,7 @@
 extern "C" {
 #endif
 
-	/// The types of solver operations that BLASTed provides
+	/// The types of solver iterations that BLASTed provides
 	typedef enum {BLASTED_JACOBI,
 	              BLASTED_GS,
 	              BLASTED_SGS,
@@ -18,6 +18,7 @@ extern "C" {
 	              BLASTED_SAPILU0,
 	              BLASTED_CSC_BGS,
 	              BLASTED_LEVEL_SGS,
+	              BLASTED_ASYNC_LEVEL_ILU0,
 	              BLASTED_NO_PREC,
 	              BLASTED_EXTERNAL
 	} BlastedSolverType;

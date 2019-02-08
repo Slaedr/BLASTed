@@ -20,6 +20,7 @@ public:
 
 	~Async_Level_BlockILU0();
 
+	/// Calls the asynchronous factorization routine. The first invocation also computes levels.
 	void compute();
 
 	/// Applies a block LU factorization L U z = r
@@ -40,6 +41,38 @@ protected:
 
 	using Blk = Block_t<scalar,bs,stor>;
 	using Seg = Segment_t<scalar,bs>;
+
+	std::vector<index> levels;
+};
+
+template <typename scalar, typename index>
+class Async_Level_ILU0 : public AsyncILU0_SRPreconditioner<scalar,index>
+{
+public:
+	Async_Level_ILU0(const int nbuildsweeps, const int thread_chunk_size,
+	                      const FactInit fact_inittype, const bool threadedfactor=true,
+	                      const bool compute_remainder = false);
+
+	~Async_Level_ILU0();
+
+	/// Calls the asynchronous factorization routine. The first invocation also computes levels.
+	void compute();
+
+	/// Applies a block LU factorization L U z = r
+	void apply(const scalar *const x, scalar *const __restrict y) const;
+
+	/// Does nothing but throw an exception
+	void apply_relax(const scalar *const x, scalar *const __restrict y) const;
+
+protected:
+	using SRPreconditioner<scalar,index>::mat;
+	using AsyncILU0_SRPreconditioner<scalar,index>::plist;
+	using AsyncILU0_SRPreconditioner<scalar,index>::iluvals;
+	using AsyncILU0_SRPreconditioner<scalar,index>::scale;
+	using AsyncILU0_SRPreconditioner<scalar,index>::ytemp;
+	using AsyncILU0_SRPreconditioner<scalar,index>::nbuildsweeps;
+	using AsyncILU0_SRPreconditioner<scalar,index>::thread_chunk_size;
+	using AsyncILU0_SRPreconditioner<scalar,index>::threadedfactor;
 
 	std::vector<index> levels;
 };

@@ -140,7 +140,7 @@ int main(int argc, char* argv[])
 
 	// run the solve to be tested as many times as requested
 
-	int avgkspiters = 0;
+	int totalkspiters = 0;
 	PetscReal errnorm = 0;
 	for(int irun = 0; irun < nruns; irun++)
 	{
@@ -167,7 +167,7 @@ int main(int argc, char* argv[])
 		// post-process
 		int kspiters; PetscReal rnorm;
 		KSPGetIterationNumber(ksp, &kspiters);
-		avgkspiters += kspiters;
+		totalkspiters += kspiters;
 
 		if(rank == 0) {
 			//printf(" Number of KSP iterations = %d\n", kspiters);
@@ -185,11 +185,18 @@ int main(int argc, char* argv[])
 		destroyBlastedDataList(&bctx);
 	}
 
+	const int avgkspiters = totalkspiters/(double)nruns;
 	if(rank == 0)
-		printf("KSP Iters: Reference %d vs BLASTed %d.\n", refkspiters, avgkspiters/nruns);
+		printf("KSP Iters: Reference %d vs BLASTed %d.\n", refkspiters, avgkspiters);
+	fflush(stdout);
 
-	// the test
+	// Test 1
 	assert(avgkspiters/nruns == refkspiters);
+
+	if (rank == 0)
+		printf("Difference in error norms = %g.\n", fabs(errnorm-errnormref));
+	fflush(stdout);
+	// Test 2
 	assert(fabs(errnorm-errnormref) < error_tol*DBL_EPSILON);
 
 	VecDestroy(&u);

@@ -34,6 +34,8 @@ const std::string sapilu0str = "sapilu0";
 const std::string cscbgsstr = "cscbgs";
 /// Level-scheduled SGS
 const std::string levelsgsstr = "level_sgs";
+/// Asynchronous factorized ILU0 with level-scheduled application
+const std::string asynclevelilustr = "async_level_ilu0";
 /** @} */
 
 /// Basic settings needed for most iterations

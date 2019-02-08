@@ -44,7 +44,7 @@ void Level_BSGS<scalar,index,bs,stor>::compute()
 {
 	if(!ytemp) {
 		ytemp = (scalar*)aligned_alloc(CACHE_LINE_LEN, mat.nbrows*bs*sizeof(scalar));
-		levels = computeLevels(mat);
+		levels = computeLevels(&mat);
 	}
 
 	BJacobiSRPreconditioner<scalar,index,bs,stor>::compute();
@@ -149,7 +149,7 @@ void Level_SGS<scalar,index>::compute()
 {
 	if(!ytemp) {
 		ytemp = (scalar*)aligned_alloc(CACHE_LINE_LEN, mat.nbrows*sizeof(scalar));
-		levels = computeLevels(mat);
+		levels = computeLevels(&mat);
 	}
 
 	JacobiSRPreconditioner<scalar,index>::compute();

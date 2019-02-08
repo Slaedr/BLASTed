@@ -16,7 +16,7 @@ int test_levelschedule(const std::string matfile)
 	std::cout << "Number of block rows = " << omat.nbrows << std::endl;
 
 	const std::vector<int> levels
-		= computeLevels(reinterpret_cast<const CRawBSRMatrix<double,int>&>(omat));
+		= computeLevels(reinterpret_cast<const CRawBSRMatrix<double,int>*>(&omat));
 
 	for(size_t lvl = 0; lvl < levels.size()-1; lvl++)
 	{
@@ -46,7 +46,7 @@ int test_levelschedule<1>(const std::string matfile)
 	std::cout << "Number of block rows = " << omat.nbrows << std::endl;
 
 	const std::vector<int> levels
-		= computeLevels(reinterpret_cast<const CRawBSRMatrix<double,int>&>(omat));
+		= computeLevels(reinterpret_cast<const CRawBSRMatrix<double,int>*>(&omat));
 
 	for(size_t lvl = 0; lvl < levels.size()-1; lvl++)
 	{

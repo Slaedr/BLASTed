@@ -204,6 +204,15 @@ if(WITH_PETSC)
 	-blasted_pc_type level_sgs
 	)
 
+  add_test(NAME ThreadedPetsc-BSR4-Async-Level-ILU0
+	COMMAND ${SEQEXEC} ${THREADOPTS} ${SEQTASKS} ${CMAKE_CURRENT_BINARY_DIR}/testpetscsolver
+	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.pmat 
+	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.pmat 
+	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.pmat
+	-options_file ${CMAKE_CURRENT_SOURCE_DIR}/input/2dcyl1_ilu0.perc -mat_type baij
+	-blasted_pc_type async_level_ilu0 -blasted_async_sweeps 3,1
+	)
+
   ## Our scalar SGS preconditioner is not the same as PETSc's, because the latter does block
   ##  preconditioning even for aij matrices.
   add_test(NAME MPIPetsc-CSR-SGS 
@@ -223,7 +232,7 @@ if(WITH_PETSC)
   #	-ref_sub_pc_type sor -ref_sub_pc_sor_local_symmetric -blasted_pc_type sgs
   #	)
 
-  add_test(NAME AsyncRelaxation-Petsc-BSR4-GS-ResidualConvergence 
+  add_test(NAME ThreadedRelaxation-Petsc-BSR4-Async-GS-ResidualConvergence 
 	COMMAND ${SEQEXEC} ${THREADOPTS} ${SEQTASKS} ${CMAKE_CURRENT_BINARY_DIR}/testthreadedpetscsolver
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.pmat
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.pmat 
@@ -231,7 +240,7 @@ if(WITH_PETSC)
 	-options_file ${CMAKE_CURRENT_SOURCE_DIR}/input/asyncrelaxation.perc -mat_type baij
 	-ref_sub_pc_type pbjacobi -blasted_pc_type gs -test_type convergence
 	)
-  add_test(NAME AsyncRelaxation-Petsc-BSR4-SGS-IterationsLowerBound 
+  add_test(NAME ThreadedRelaxation-Petsc-BSR4-Async-SGS-ItersLowerBound 
 	COMMAND ${SEQEXEC} ${THREADOPTS} ${SEQTASKS} ${CMAKE_CURRENT_BINARY_DIR}/testthreadedpetscsolver
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.pmat
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.pmat 
@@ -240,7 +249,7 @@ if(WITH_PETSC)
 	-ref_sub_pc_type pbjacobi -blasted_pc_type sgs -test_type upper_bound_its
 	)
 
-  add_test(NAME AsyncPreconditioning-Petsc-BSR4-SGS
+  add_test(NAME ThreadedPreconditioning-Petsc-BSR4-Async-SGS
 	COMMAND ${SEQEXEC} ${THREADOPTS} ${SEQTASKS} ${CMAKE_CURRENT_BINARY_DIR}/testthreadedpetscsolver
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.pmat
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.pmat 
@@ -250,7 +259,7 @@ if(WITH_PETSC)
 	-test_type compare_its -error_tolerance_factor 0.01
 	)
 
-  add_test(NAME AsyncPreconditioning-Petsc-BSR4-ILU0
+  add_test(NAME ThreadedPreconditioning-Petsc-BSR4-Async-ILU0
 	COMMAND ${SEQEXEC} ${THREADOPTS} ${SEQTASKS} ${CMAKE_CURRENT_BINARY_DIR}/testthreadedpetscsolver
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.pmat
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.pmat 

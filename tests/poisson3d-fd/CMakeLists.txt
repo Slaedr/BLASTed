@@ -82,13 +82,21 @@ if(WITH_PETSC)
 	-options_file  ${CMAKE_CURRENT_SOURCE_DIR}/input/thread_poisson_csr.perc 
 	-ref_sub_pc_type sor -blasted_pc_type level_sgs)
 
-  add_test(NAME AsyncRelaxationPoissonPetsc-GS-IterationsLowerBound
+  # Does not work with hyper-threading, for some reason
+  add_test(NAME ThreadedPoissonCSRPetsc-Async-Level-ILU0
+	COMMAND ${SEQEXEC} ${THREADOPTS} ${CMAKE_CURRENT_BINARY_DIR}/testcsr_poisson
+	${CMAKE_CURRENT_SOURCE_DIR}/input/poisson.control 
+	-options_file  ${CMAKE_CURRENT_SOURCE_DIR}/input/thread_poisson_csr.perc 
+	-ref_sub_pc_type ilu -blasted_pc_type async_level_ilu0 -blasted_async_sweeps 500,1
+	-blasted_async_fact_init_type init_original -error_tolerance_factor 1e5)
+
+  add_test(NAME ThreadedRelaxationPoissonPetsc-Async-GS-ItersLowerBound
 	COMMAND ${MPIEXEC} ${THREADOPTS} -n 1 ./testcsr_poisson_threaded
 	${CMAKE_CURRENT_SOURCE_DIR}/input/poisson.control 
 	-options_file  ${CMAKE_CURRENT_SOURCE_DIR}/../input/asyncrelaxation.perc 
 	-ref_sub_pc_type jacobi -blasted_pc_type gs -test_type upper_bound_its)
 
-  add_test(NAME AsyncRelaxationPoissonPetsc-SGS-IterationsLowerBound
+  add_test(NAME ThreadedRelaxationPoissonPetsc-Async-SGS-ItersLowerBound
 	COMMAND ${MPIEXEC} ${THREADOPTS} -n 1 ./testcsr_poisson_threaded
 	${CMAKE_CURRENT_SOURCE_DIR}/input/poisson.control 
 	-options_file  ${CMAKE_CURRENT_SOURCE_DIR}/../input/asyncrelaxation.perc 

@@ -234,7 +234,7 @@ int main(int argc, char* argv[])
 
 	if(rank == 0) {
 		printf("KSP Iters: Reference %d vs BLASTed %d.\n", refkspiters, avgkspiters/nruns);
-		printf("Error norms: Ref \n   %16.16e vs. Blasted \n   %16.16e\n", errnormref, errnorm);
+		printf("Difference in error norms: %g\n", fabs(errnormref-errnorm));
 	}
 	fflush(stdout);
 

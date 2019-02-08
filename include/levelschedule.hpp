@@ -17,7 +17,7 @@ namespace blasted {
  * extra entry in the end for convenience - this is always one past the total number of (block-) rows.
  */
 template <typename scalar, typename index>
-std::vector<index> computeLevels(const CRawBSRMatrix<scalar,index>& mat);
+std::vector<index> computeLevels(const CRawBSRMatrix<scalar,index> *const mat);
 
 }
 

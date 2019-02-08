@@ -12,6 +12,7 @@
 #include "solverops_ilu0.hpp"
 #include "relaxation_chaotic.hpp"
 #include "solverops_levels_sgs.hpp"
+#include "solverops_levels_ilu0.hpp"
 
 namespace blasted {
 
@@ -43,6 +44,8 @@ BlastedSolverType SRFactory<scalar,index>::solverTypeFromString(const std::strin
 		ptype = BLASTED_CSC_BGS;
 	else if(precstr2 == levelsgsstr)
 		ptype = BLASTED_LEVEL_SGS;
+	else if(precstr2 == asynclevelilustr)
+		ptype = BLASTED_ASYNC_LEVEL_ILU0;
 	else if(precstr2 == noprecstr)
 		ptype = BLASTED_NO_PREC;
 	else {
@@ -83,6 +86,11 @@ SRFactory<scalar,index>::create_srpreconditioner_of_type(const int ndim,
 	}
 	else if(opts.prectype == BLASTED_LEVEL_SGS) {
 		return new Level_BSGS<scalar,index,bs,stor>();
+	}
+	else if(opts.prectype == BLASTED_ASYNC_LEVEL_ILU0) {
+		return new Async_Level_BlockILU0<scalar,index,bs,stor>(opts.nbuildsweeps, opts.thread_chunk_size,
+		                                                       opts.fact_inittype, true,
+		                                                       opts.compute_factorization_res);
 	}
 	else if(opts.prectype == BLASTED_NO_PREC) {
 		return new NoPreconditioner<scalar,index>(ndim);
@@ -127,6 +135,11 @@ SRFactory<scalar,index>::create_preconditioner(const index ndim, const SolverSet
 				(opts.nbuildsweeps, opts.napplysweeps,
 				 opts.thread_chunk_size,
 				 opts.fact_inittype, opts.apply_inittype, true,false);
+		}
+		else if(opts.prectype == BLASTED_ASYNC_LEVEL_ILU0) {
+			return new Async_Level_ILU0<scalar,index>(opts.nbuildsweeps, opts.thread_chunk_size,
+			                                          opts.fact_inittype, true,
+			                                          opts.compute_factorization_res);
 		}
 		else if(opts.prectype == BLASTED_NO_PREC) {
 			return new NoPreconditioner<scalar,index>(ndim);

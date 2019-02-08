@@ -9,27 +9,27 @@
 namespace blasted {
 
 template <typename scalar, typename index>
-std::vector<index> computeLevels(const CRawBSRMatrix<scalar,index>& mat)
+std::vector<index> computeLevels(const CRawBSRMatrix<scalar,index> *const mat)
 {
 	std::vector<index> levels;
 
 	// Build dependency lists
-	std::vector<std::list<index>> depends(mat.nbrows);
-	for(index irow = 0; irow < mat.nbrows; irow++)
+	std::vector<std::list<index>> depends(mat->nbrows);
+	for(index irow = 0; irow < mat->nbrows; irow++)
 	{
-		for(index jj = mat.browptr[irow]; jj < mat.browptr[irow+1]; jj++)
-			depends[irow].push_back(mat.bcolind[jj]);
+		for(index jj = mat->browptr[irow]; jj < mat->browptr[irow+1]; jj++)
+			depends[irow].push_back(mat->bcolind[jj]);
 	}
 
 	index inode = 0;
 	levels.push_back(0);
 	index nlevels = 0;
 
-	while(inode < mat.nbrows)
+	while(inode < mat->nbrows)
 	{
 		// 1. Find consecutive independent nodes
 
-		while (inode < mat.nbrows && depends[inode].front() >= inode) {
+		while (inode < mat->nbrows && depends[inode].front() >= inode) {
 			inode++;
 		}
 
@@ -62,7 +62,7 @@ std::vector<index> computeLevels(const CRawBSRMatrix<scalar,index>& mat)
 		}
 	}
 
-	assert(inode == mat.nbrows);
+	assert(inode == mat->nbrows);
 	assert(mat.nbrows == levels.back());
 	assert(nlevels+1 == static_cast<index>(levels.size()));
 	printf(" LevelSchedule: Found %d levels.\n", nlevels);
@@ -70,6 +70,6 @@ std::vector<index> computeLevels(const CRawBSRMatrix<scalar,index>& mat)
 	return levels;
 }
 
-template std::vector<int> computeLevels(const CRawBSRMatrix<double,int>& mat);
+template std::vector<int> computeLevels(const CRawBSRMatrix<double,int> *const mat);
 
 }

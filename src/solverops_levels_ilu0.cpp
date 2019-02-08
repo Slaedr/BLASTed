@@ -47,7 +47,7 @@ template <typename scalar, typename index, int bs, StorageOptions stor>
 void Async_Level_BlockILU0<scalar,index,bs,stor>::compute()
 {
 	if(!iluvals)
-		levels = computeLevels(mat);
+		levels = computeLevels(&mat);
 
 	AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>::compute();
 }
@@ -99,5 +99,77 @@ template class Async_Level_BlockILU0<double,int,4,RowMajor>;
 template class Async_Level_BlockILU0<double,int,BUILD_BLOCK_SIZE,ColMajor>;
 template class Async_Level_BlockILU0<double,int,BUILD_BLOCK_SIZE,RowMajor>;
 #endif
+
+template <typename scalar, typename index>
+Async_Level_ILU0<scalar,index>
+::Async_Level_ILU0(const int nbuildsweeps, const int thread_chunk_size,
+                   const FactInit fact_inittype, const bool threadedfactor,
+                   const bool compute_remainder)
+	: AsyncILU0_SRPreconditioner<scalar,index>(nbuildsweeps,1,thread_chunk_size,
+	                                           fact_inittype, INIT_A_NONE, threadedfactor, true)
+{ }
+
+template <typename scalar, typename index>
+Async_Level_ILU0<scalar,index>::~Async_Level_ILU0()
+{
+}
+
+template <typename scalar, typename index>
+void Async_Level_ILU0<scalar,index>::compute()
+{
+	if(!iluvals)
+		levels = computeLevels(&mat);
+
+	AsyncILU0_SRPreconditioner<scalar,index>::compute();
+}
+
+template <typename scalar, typename index>
+void Async_Level_ILU0<scalar,index>::apply(const scalar *const rr, 
+                                           scalar *const __restrict zz) const
+{
+	const index nlevels = static_cast<index>(levels.size())-1;
+
+	// initially, z := Sr
+#pragma omp parallel for simd default(shared)
+	for(index i = 0; i < mat.nbrows; i++) {
+		zz[i] = scale[i]*rr[i];
+	}
+
+
+	for(int ilvl = 0; ilvl < nlevels; ilvl++)
+	{
+#pragma omp parallel for default(shared)
+		for(index i = levels[ilvl]; i < levels[ilvl+1]; i++)
+		{
+			ytemp[i] = scalar_unit_lower_triangular<scalar,index>(iluvals, mat.bcolind, mat.browptr[i],
+			                                                      mat.diagind[i], zz[i], ytemp);
+		}
+	}
+
+	for(int ilvl = nlevels; ilvl > 0; ilvl--)
+	{
+#pragma omp parallel for default(shared)
+		for(index i = levels[ilvl]-1; i >= levels[ilvl-1]; i--)
+		{
+			zz[i] = scalar_upper_triangular<scalar,index>(iluvals, mat.bcolind, mat.diagind[i],
+			                                              mat.browptr[i+1], 1.0/iluvals[mat.diagind[i]],
+			                                              ytemp[i], zz);
+		}
+	}
+
+	// correct z
+#pragma omp parallel for simd default(shared)
+	for(int i = 0; i < mat.nbrows; i++)
+		zz[i] = zz[i]*scale[i];
+}
+
+template <typename scalar, typename index>
+void Async_Level_ILU0<scalar,index>::apply_relax(const scalar *const r, 
+                                                 scalar *const __restrict z) const
+{
+	throw std::runtime_error("ILU relaxation not implemented!");
+}
+
+template class Async_Level_ILU0<double,int>;
 
 }

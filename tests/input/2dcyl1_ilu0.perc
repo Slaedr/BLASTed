@@ -4,7 +4,6 @@
 # With reference PETSc preconditioner
 
 -ref_ksp_type gmres
--ref_ksp_richardson_scale 1.0
 
 -ref_ksp_rtol 1e-6
 -ref_ksp_max_it 100
@@ -24,8 +23,6 @@
 -ksp_rtol 1e-6
 -ksp_max_it 100
 -ksp_final_residual
-
--ksp_richardson_scale 1.0
 
 -ksp_view
 
