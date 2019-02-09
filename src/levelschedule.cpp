@@ -63,7 +63,7 @@ std::vector<index> computeLevels(const CRawBSRMatrix<scalar,index> *const mat)
 	}
 
 	assert(inode == mat->nbrows);
-	assert(mat.nbrows == levels.back());
+	assert(mat->nbrows == levels.back());
 	assert(nlevels+1 == static_cast<index>(levels.size()));
 	printf(" LevelSchedule: Found %d levels.\n", nlevels);
 
