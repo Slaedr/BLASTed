@@ -30,7 +30,7 @@ bool compare(const CRawBSRMatrix<double,int> *const mr, const CRawBSCMatrix<doub
 			for(int i = 0; i < bs*bs; i++) {
 				if(mr->vals[jr*bs*bs+i] != mc->vals[rowpos*bs*bs+i])
 				{
-					printf("Difference = %f.\n", abs(mr->vals[jr*bs*bs+i]-mc->vals[rowpos*bs*bs+i]));
+					printf("Difference = %f.\n", std::abs(mr->vals[jr*bs*bs+i]-mc->vals[rowpos*bs*bs+i]));
 					return false;
 				}
 			}
