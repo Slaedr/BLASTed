@@ -451,9 +451,8 @@ void MC64::compute(const CRawBSRMatrix<double,int>& mat)
 	int icntl[10];
 	mc64id_(icntl);
 
-	// Set options in icntl if needed. The only useful one is
-	//icntl[3] = 1;
-	//  which disables data-checking.
+	// Set options in icntl if needed.
+	//icntl[3] = 1;                        //  disables data-checking.
 
 	int num_diag, info[10];
 
@@ -467,6 +466,12 @@ void MC64::compute(const CRawBSRMatrix<double,int>& mat)
 			throw std::runtime_error("MC64: Matrix was structurally singular!");
 		else
 			throw std::runtime_error("MC64 failed! Error code = " + std::to_string(info[0]));
+	}
+
+	if(num_diag < scmat.nbcols)
+	{
+		printf("! MC64: Permuted matrix has %d nonzeros on its diagonal!\n", num_diag);
+		fflush(stdout);
 	}
 
 	destroyRawBSCMatrix<double,int>(scmat);
