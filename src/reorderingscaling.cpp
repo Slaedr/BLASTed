@@ -483,7 +483,8 @@ void MC64::compute(const CRawBSRMatrix<double,int>& mat)
 			rowscale[i] = std::exp(scalevec[i]);
 			colscale[i] = std::exp(colscalevec[i]);
 		}
-		cp[i]--;
+		// MC64 requires taking abs value. Also convert to 0-based indexing.
+		cp[i] = std::abs(cp[i])-1;
 	}
 
 	// compute the inverse column permutation as well
