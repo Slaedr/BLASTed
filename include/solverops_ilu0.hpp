@@ -210,24 +210,28 @@ protected:
 	RawBSRMatrix<scalar,index> rsmat;
 };
 
-/// Asynchronous scalar ILU(0) that uses an external (re-)ordering and scaling before factorization
-/** The reordering and scaling are updated every time the preconditioner is computed.
+/// Asynchronous scalar ILU(0) that uses one of the MC64 (\cite mc64_manual) orderings
+/** The reordering is updated every time the preconditioner is computed. Therefore, this is
+ * very inefficient.
  */
 template <typename scalar, typename index>
 class MC64_AsyncILU0_SRPreconditioner : public AsyncILU0_SRPreconditioner<scalar,index>
 {
 public:
-	/** \see AsyncILU0_SRPreconditioner
-	 * \param reorderscale The reordering and scaling object use at every iteration
+	/** Sets options
+	 * \param job The MC64 job ID. Must be 1,2,3,4 or 5. See \cite mc64_manual for details.
+	 * \warning For job 5, we don't apply the scaling. However, for all jobs, symmetric scaling is
+	 *   applied after reordering.
+	 * \sa AsyncILU0_SRPreconditioner
 	 */
-	MC64_AsyncILU0_SRPreconditioner(const int nbuildsweeps, const int napplysweeps,
+	MC64_AsyncILU0_SRPreconditioner(const int job, const int nbuildsweeps, const int napplysweeps,
 	                                const int thread_chunk_size,
 	                                const FactInit fact_init_type, const ApplyInit apply_init_type,
 	                                const bool threadedfactor=true, const bool threadedapply=true);
 
 	~MC64_AsyncILU0_SRPreconditioner();
 
-	/// Apply the ordering and scaling and then compute the preconditioner
+	/// Apply the ordering and then compute the preconditioner
 	void compute();
 
 	/// Apply the preconditioner and apply ordering and scaling to the output
@@ -250,6 +254,9 @@ protected:
 	using AsyncILU0_SRPreconditioner<scalar,index>::factinittype;
 	using AsyncILU0_SRPreconditioner<scalar,index>::applyinittype;
 	using AsyncILU0_SRPreconditioner<scalar,index>::setup_storage;
+
+	/// MC64 job index
+	const int job;
 
 	/// Computes a reordering and a scaling, in this case, whenever the matrix \ref mat is changed
 	MC64 rs;

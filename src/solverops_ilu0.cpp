@@ -380,11 +380,11 @@ void RSAsyncILU0_SRPreconditioner<scalar,index>::apply_relax(const scalar *const
 
 template <typename scalar, typename index>
 MC64_AsyncILU0_SRPreconditioner<scalar,index>::
-MC64_AsyncILU0_SRPreconditioner(const int nbuildsweeps, const int napplysweeps, const int tcs,
-                                const FactInit finit, const ApplyInit ainit,
+MC64_AsyncILU0_SRPreconditioner(const int jb, const int nbuildsweeps, const int napplysweeps,
+                                const int tcs, const FactInit finit, const ApplyInit ainit,
                                 const bool threadedfactor, const bool threadedapply)
 	: AsyncILU0_SRPreconditioner<scalar,index>(nbuildsweeps,napplysweeps, tcs, finit, ainit,
-	                                           threadedfactor,threadedapply)
+	                                           threadedfactor,threadedapply), job{jb}, rs(jb)
 { }
 
 template <typename scalar, typename index>
@@ -392,9 +392,26 @@ MC64_AsyncILU0_SRPreconditioner<scalar,index>::~MC64_AsyncILU0_SRPreconditioner(
 { }
 
 template <typename scalar, typename index>
+void MC64_AsyncILU0_SRPreconditioner<scalar,index>::compute()
+{
+	if(!iluvals) {
+		setup_storage(true);
+	}
+
+	rs.compute(mat);
+	rs.applyOrdering(rsmat, COLUMN);
+
+	plist = compute_ILU_positions_CSR_CSR(&mat);
+
+	scalar_ilu0_factorize(&mat, plist, nbuildsweeps, thread_chunk_size, threadedfactor,
+	                      factinittype, iluvals, scale);
+}
+
+template <typename scalar, typename index>
 void MC64_AsyncILU0_SRPreconditioner<scalar,index>::apply(const scalar *const x,
                                                           scalar *const __restrict y) const
 {
+	// TODO:  Implement reordered apply
 }
 
 template <typename scalar, typename index>

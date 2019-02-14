@@ -1,0 +1,3 @@
+/** \mainpage
+ * See the [user manual](user-doc.md) for using BLASTed for local preconditioning in PETSc solvers.
+ */
