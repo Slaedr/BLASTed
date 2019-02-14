@@ -171,7 +171,7 @@ public:
 	/** \see AsyncILU0_SRPreconditioner
 	 * \param reorderscale The reordering and scaling object use at every iteration
 	 */
-	RSAsyncILU0_SRPreconditioner(const ReorderingScaling<scalar,index,1>& reorderscale,
+	RSAsyncILU0_SRPreconditioner(const ReorderingScaling<scalar,index,1> *const reorderscale,
 	                             const int nbuildsweeps, const int napplysweeps,
 	                             const int thread_chunk_size,
 	                             const FactInit fact_init_type, const ApplyInit apply_init_type,
@@ -204,7 +204,55 @@ protected:
 	using AsyncILU0_SRPreconditioner<scalar,index>::setup_storage;
 
 	/// Computes a reordering and a scaling, in this case, whenever the matrix \ref mat is changed
-	const ReorderingScaling<scalar,index,1>& rs;
+	const ReorderingScaling<scalar,index,1> *const rs;
+
+	/// Reordered and scaled form of the original preconditioning matrix
+	RawBSRMatrix<scalar,index> rsmat;
+};
+
+/// Asynchronous scalar ILU(0) that uses an external (re-)ordering and scaling before factorization
+/** The reordering and scaling are updated every time the preconditioner is computed.
+ */
+template <typename scalar, typename index>
+class MC64_AsyncILU0_SRPreconditioner : public AsyncILU0_SRPreconditioner<scalar,index>
+{
+public:
+	/** \see AsyncILU0_SRPreconditioner
+	 * \param reorderscale The reordering and scaling object use at every iteration
+	 */
+	MC64_AsyncILU0_SRPreconditioner(const int nbuildsweeps, const int napplysweeps,
+	                                const int thread_chunk_size,
+	                                const FactInit fact_init_type, const ApplyInit apply_init_type,
+	                                const bool threadedfactor=true, const bool threadedapply=true);
+
+	~MC64_AsyncILU0_SRPreconditioner();
+
+	/// Apply the ordering and scaling and then compute the preconditioner
+	void compute();
+
+	/// Apply the preconditioner and apply ordering and scaling to the output
+	void apply(const scalar *const x, scalar *const __restrict y) const;
+
+	/// Does nothing but throw an exception
+	void apply_relax(const scalar *const x, scalar *const __restrict y) const;
+
+protected:
+	using SRPreconditioner<scalar,index>::mat;
+	using AsyncILU0_SRPreconditioner<scalar,index>::plist;
+	using AsyncILU0_SRPreconditioner<scalar,index>::iluvals;
+	using AsyncILU0_SRPreconditioner<scalar,index>::scale;
+	using AsyncILU0_SRPreconditioner<scalar,index>::ytemp;
+	using AsyncILU0_SRPreconditioner<scalar,index>::threadedfactor;
+	using AsyncILU0_SRPreconditioner<scalar,index>::threadedapply;
+	using AsyncILU0_SRPreconditioner<scalar,index>::nbuildsweeps;
+	using AsyncILU0_SRPreconditioner<scalar,index>::napplysweeps;
+	using AsyncILU0_SRPreconditioner<scalar,index>::thread_chunk_size;
+	using AsyncILU0_SRPreconditioner<scalar,index>::factinittype;
+	using AsyncILU0_SRPreconditioner<scalar,index>::applyinittype;
+	using AsyncILU0_SRPreconditioner<scalar,index>::setup_storage;
+
+	/// Computes a reordering and a scaling, in this case, whenever the matrix \ref mat is changed
+	MC64 rs;
 
 	/// Reordered and scaled form of the original preconditioning matrix
 	RawBSRMatrix<scalar,index> rsmat;

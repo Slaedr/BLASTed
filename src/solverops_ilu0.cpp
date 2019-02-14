@@ -352,7 +352,7 @@ void AsyncILU0_SRPreconditioner<scalar,index>::apply_relax(const scalar *const _
 
 template <typename scalar, typename index>
 RSAsyncILU0_SRPreconditioner<scalar,index>::
-RSAsyncILU0_SRPreconditioner(const ReorderingScaling<scalar,index,1>& reorderscale,
+RSAsyncILU0_SRPreconditioner(const ReorderingScaling<scalar,index,1> *const reorderscale,
                              const int nbuildsweeps, const int napplysweeps, const int tcs,
                              const FactInit finit, const ApplyInit ainit,
                              const bool threadedfactor, const bool threadedapply)
@@ -366,16 +366,6 @@ RSAsyncILU0_SRPreconditioner<scalar,index>::~RSAsyncILU0_SRPreconditioner()
 { }
 
 template <typename scalar, typename index>
-void RSAsyncILU0_SRPreconditioner<scalar,index>::compute()
-{
-	if(!iluvals)
-		setup_storage(false);
-
-	scalar_ilu0_factorize_noscale(&rsmat, plist, nbuildsweeps, thread_chunk_size, threadedfactor,
-	                              factinittype, iluvals);
-}
-
-template <typename scalar, typename index>
 void RSAsyncILU0_SRPreconditioner<scalar,index>::apply(const scalar *const x,
                                                        scalar *const __restrict y) const
 {
@@ -384,6 +374,32 @@ void RSAsyncILU0_SRPreconditioner<scalar,index>::apply(const scalar *const x,
 template <typename scalar, typename index>
 void RSAsyncILU0_SRPreconditioner<scalar,index>::apply_relax(const scalar *const x,
                                                              scalar *const __restrict y) const
+{
+	throw std::runtime_error("ILU relaxation not implemented!");
+}
+
+template <typename scalar, typename index>
+MC64_AsyncILU0_SRPreconditioner<scalar,index>::
+MC64_AsyncILU0_SRPreconditioner(const int nbuildsweeps, const int napplysweeps, const int tcs,
+                                const FactInit finit, const ApplyInit ainit,
+                                const bool threadedfactor, const bool threadedapply)
+	: AsyncILU0_SRPreconditioner<scalar,index>(nbuildsweeps,napplysweeps, tcs, finit, ainit,
+	                                           threadedfactor,threadedapply)
+{ }
+
+template <typename scalar, typename index>
+MC64_AsyncILU0_SRPreconditioner<scalar,index>::~MC64_AsyncILU0_SRPreconditioner()
+{ }
+
+template <typename scalar, typename index>
+void MC64_AsyncILU0_SRPreconditioner<scalar,index>::apply(const scalar *const x,
+                                                          scalar *const __restrict y) const
+{
+}
+
+template <typename scalar, typename index>
+void MC64_AsyncILU0_SRPreconditioner<scalar,index>::apply_relax(const scalar *const x,
+                                                                scalar *const __restrict y) const
 {
 	throw std::runtime_error("ILU relaxation not implemented!");
 }
