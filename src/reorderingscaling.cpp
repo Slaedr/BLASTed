@@ -25,6 +25,10 @@
 
 namespace blasted {
 
+/** For the output invp and input p, it can be shown that
+ * invp[p[i]] = i  (obviously, see below), and also
+ * p[invp[i]] = i.
+ */
 template <typename index>
 std::vector<index> invertPermutationVector(const std::vector<index> p)
 {

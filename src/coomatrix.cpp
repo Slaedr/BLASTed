@@ -389,7 +389,10 @@ BSRMatrix<scalar,index,bs> constructBSRMatrixFromMatrixMarketFile(const std::str
 	COOMatrix<scalar,index> coomat;
 	coomat.readMatrixMarket(file);
 	RawBSRMatrix<scalar,index> rmat;
-	coomat.template convertToBSR<bs,RowMajor>(&rmat);
+	if(bs == 1)
+		coomat.convertToCSR(&rmat);
+	else
+		coomat.template convertToBSR<bs,RowMajor>(&rmat);
 	BSRMatrix<scalar,index,bs> bmat(rmat);
 	return bmat;
 }
