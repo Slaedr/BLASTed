@@ -6,6 +6,7 @@
 #undef NDEBUG
 
 #include <cassert>
+#include <stdexcept>
 #include <vector>
 #include <fstream>
 #include <string>
