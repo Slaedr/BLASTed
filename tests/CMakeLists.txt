@@ -11,6 +11,10 @@ add_executable(testsolve runsolvetest.cpp testsolve.cpp)
 target_link_libraries(testsolve solvers solverops coomatrix )
 set_property(TARGET testsolve PROPERTY POSITION_INDEPENDENT_CODE ON)
 
+add_executable(testreorderedsolve testreorderedsolve.cpp)
+target_link_libraries(testreorderedsolve solvers solverops coomatrix )
+set_property(TARGET testreorderedsolve PROPERTY POSITION_INDEPENDENT_CODE ON)
+
 # Tests
 
 add_subdirectory(helper_algs)
@@ -121,6 +125,14 @@ add_test(NAME BSR4ILU0Colmajor COMMAND env OMP_NUM_THREADS=1 ${SEQEXEC} ${SEQTAS
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.mtx
 	1e-10 1e-8 200 ${TCS}
 )
+
+add_test(NAME Reorder_CSRILU0 COMMAND env OMP_NUM_THREADS=1 ${SEQEXEC} ${SEQTASKS}
+  ${CMAKE_CURRENT_BINARY_DIR}/testreorderedsolve bcgs ilu0 init_original init_zero csr rowmajor
+  ${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.mtx 
+  ${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.mtx 
+  ${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.mtx
+  1e-10 1e-8 200 ${TCS}
+  )
 
 if(WITH_PETSC)
   add_executable(testpetscsolver runpetsctest.c)

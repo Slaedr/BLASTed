@@ -67,34 +67,16 @@ void IterativeSolverBase::getRunTimes(double& wall_time, double& cpu_time) const
 	wall_time = walltime; cpu_time = cputime;
 }
 
-IterativeSolver::IterativeSolver(MatrixView<a_real,a_int>& mat, Preconditioner<a_real,a_int>& precond)
+IterativeSolver::IterativeSolver(const MatrixView<a_real,a_int>& mat,
+                                 const Preconditioner<a_real,a_int>& precond)
 	: A(mat), prec(precond)
 { }
 
-void IterativeSolver::setupPreconditioner()
-{
-	struct timeval time1, time2;
-	gettimeofday(&time1, NULL);
-	double initialwtime = (double)time1.tv_sec + (double)time1.tv_usec * 1.0e-6;
-	double initialctime = (double)clock() / (double)CLOCKS_PER_SEC;
-	
-	prec.compute();
-	
-	gettimeofday(&time2, NULL);
-	double finalwtime = (double)time2.tv_sec + (double)time2.tv_usec * 1.0e-6;
-	double finalctime = (double)clock() / (double)CLOCKS_PER_SEC;
-	walltime += (finalwtime-initialwtime); cputime += (finalctime-initialctime);
-}
-
-RichardsonSolver::RichardsonSolver(MatrixView<a_real,a_int>& mat, Preconditioner<a_real,a_int>& precond)
+RichardsonSolver::RichardsonSolver(const MatrixView<a_real,a_int>& mat,
+                                   const Preconditioner<a_real,a_int>& precond)
 	: IterativeSolver(mat, precond)
 { }
 
-/** \param[in] res The right hand side vector
- * \param[in] du The solution vector which is assumed to contain an initial solution
- *
- * \warning The two arguments must not alias each other.
- */
 int RichardsonSolver::solve(const a_real *const res, a_real *const __restrict du) const
 {
 	struct timeval time1, time2;
@@ -135,7 +117,7 @@ int RichardsonSolver::solve(const a_real *const res, a_real *const __restrict du
 	return step;
 }
 
-BiCGSTAB::BiCGSTAB(MatrixView<a_real,a_int>& mat, Preconditioner<a_real,a_int>& precond)
+BiCGSTAB::BiCGSTAB(const MatrixView<a_real,a_int>& mat, const Preconditioner<a_real,a_int>& precond)
 	: IterativeSolver(mat, precond)
 { }
 

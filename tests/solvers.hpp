@@ -46,14 +46,11 @@ public:
 class IterativeSolver : public IterativeSolverBase
 {
 protected:
-	MatrixView<a_real,a_int>& A;            ///< The LHS matrix context
-	Preconditioner<a_real,a_int>& prec;     ///< Preconditioner context
+	const MatrixView<a_real,a_int>& A;            ///< The LHS matrix context
+	const Preconditioner<a_real,a_int>& prec;     ///< Preconditioner context
 
 public:
-	IterativeSolver(MatrixView<a_real,a_int>& mat, Preconditioner<a_real,a_int>& precond);
-
-	/// Compute the preconditioner
-	virtual void setupPreconditioner();
+	IterativeSolver(const MatrixView<a_real,a_int>& mat, const Preconditioner<a_real,a_int>& precond);
 
 	/// Solves the linear system A du = -r
 	/** Note that usually, the two arguments cannot alias each other.
@@ -63,7 +60,7 @@ public:
 	 * \return Returns the number of solver iterations performed
 	 */
 	virtual int solve(const a_real *const res, 
-			a_real *const __restrict du) const = 0;
+	                  a_real *const __restrict du) const = 0;
 };
 
 /// A solver that just applies the preconditioner repeatedly
@@ -77,7 +74,7 @@ class RichardsonSolver : public IterativeSolver
 	using IterativeSolver::prec;
 
 public:
-	RichardsonSolver(MatrixView<a_real,a_int>& mat, Preconditioner<a_real,a_int>& precond);
+	RichardsonSolver(const MatrixView<a_real,a_int>& mat, const Preconditioner<a_real,a_int>& precond);
 
 	/** \param[in] res The right hand side vector
 	 * \param[in] du The solution vector which is assumed to contain an initial solution
@@ -100,7 +97,7 @@ class BiCGSTAB : public IterativeSolver
 	using IterativeSolver::prec;
 
 public:
-	BiCGSTAB(MatrixView<a_real,a_int>& mat, Preconditioner<a_real,a_int>& precond);
+	BiCGSTAB(const MatrixView<a_real,a_int>& mat, const Preconditioner<a_real,a_int>& precond);
 
 	int solve(const a_real *const res, a_real *const __restrict du) const;
 };

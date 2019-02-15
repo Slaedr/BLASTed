@@ -20,13 +20,19 @@
 
 using namespace blasted;
 
-ReorderingScaling<double,int,1> createTrivialColReordering(const int N)
+class TrivialReorderingScaling : public ReorderingScaling<double,int,1>
+{
+public:
+	void compute(const CRawBSRMatrix<double,int>& mat) { }
+};
+
+TrivialReorderingScaling createTrivialColReordering(const int N)
 {
 	std::vector<int> v(N);
 	for(int i = 0; i < N; i++)
 		v[i] = i;
 
-	ReorderingScaling<double,int,1> rs;
+	TrivialReorderingScaling rs;
 	rs.setOrdering(nullptr, &v[0], N);
 	return rs;
 }
@@ -39,7 +45,7 @@ int testSolve(const std::string solvertype,
               const int threadchunksize)
 {
 	std::cout << "Inputs: Solver = " <<solvertype 
-		<< ", Prec = ReorderedAsyncILU0"
+		<< ", Prec = Async ILU0"
 		<< ", order = " << storageorder << ", test tol = " << testtol 
 		<< ", tolerance = " << tol << " maxiter = " << maxiter
 		<< ",\n  Num build sweeps = " << nbuildswps << ", num apply sweeps = " << napplyswps << '\n';
@@ -51,16 +57,50 @@ int testSolve(const std::string solvertype,
 
 	const std::vector<double> ans = readDenseMatrixMarket<double>(xfile);
 	const std::vector<double> b = readDenseMatrixMarket<double>(bfile);
-	std::vector<double> x(rm.nbrows*bs,0.0);
+	std::vector<double> x(rm.nbrows,0.0);
 
-	MatrixView<double,int>* mat = nullptr;
-	mat = new CSRMatrixView<double,int>(rm.nbrows,
-	                                    rm.browptr,rm.bcolind,rm.vals,rm.diagind);
+	const CSRMatrixView<double,int> mat(rm.nbrows, rm.browptr,rm.bcolind,rm.vals,rm.diagind);
 
-	// construct preconditioner context
-
+	// reference solve
 	SRPreconditioner<double,int>* prec = nullptr;
-	ReorderingScaling<double,int,1> rs = createTrivialColReordering(rm.nbrows);
+	prec = new AsyncILU0_SRPreconditioner<double,int>(nbuildswps, napplyswps,
+	                                                  threadchunksize,
+	                                                  getFactInitFromString(factinittype),
+	                                                  getApplyInitFromString(applyinittype),
+	                                                  false, false);
+	prec->wrap(rm.nbrows, rm.browptr, rm.bcolind, rm.vals, rm.diagind);
+	prec->compute();
+
+	IterativeSolver* solver = nullptr;
+	if(solvertype == "richardson")
+		solver = new RichardsonSolver(mat,*prec);
+	else if(solvertype == "bcgs")
+		solver = new BiCGSTAB(mat,*prec);
+	else {
+		std::cout << " ! Invalid solver option!\n";
+		std::abort();
+	}
+
+	solver->setParams(tol,maxiter);
+	const int refiters = solver->solve(b.data(), x.data());
+	std::cout << " Ref num iters = " << refiters << std::endl;
+
+	double refl2norm = 0;
+	for(int i = 0; i < mat.dim(); i++) {
+		refl2norm += (x[i]-ans[i])*(x[i]-ans[i]);
+	}
+	refl2norm = std::sqrt(refl2norm);
+	std::cout << " Ref L2 norm of error = " << refl2norm << '\n';
+	assert(refl2norm < testtol);
+	delete solver;
+	delete prec;
+
+	// solve with reordered preconditioning
+	std::cout << " Prec = ReorderedAsyncILU0" << std::endl;
+
+	x.assign(rm.nbrows, 0.0);
+
+	TrivialReorderingScaling rs = createTrivialColReordering(rm.nbrows);
 	prec = new ReorderedAsyncILU0_SRPreconditioner<double,int>(&rs, nbuildswps, napplyswps,
 	                                                           threadchunksize,
 	                                                           getFactInitFromString(factinittype),
@@ -70,32 +110,29 @@ int testSolve(const std::string solvertype,
 	prec->wrap(rm.nbrows, rm.browptr, rm.bcolind, rm.vals, rm.diagind);
 	prec->compute();
 
-	IterativeSolver* solver = nullptr;
 	if(solvertype == "richardson")
-		solver = new RichardsonSolver(*mat,*prec);
+		solver = new RichardsonSolver(mat,*prec);
 	else if(solvertype == "bcgs")
-		solver = new BiCGSTAB(*mat,*prec);
+		solver = new BiCGSTAB(mat,*prec);
 	else {
 		std::cout << " ! Invalid solver option!\n";
 		std::abort();
 	}
 
 	solver->setParams(tol,maxiter);
-	std::cout << "Starting solve " << std::endl;
-	int iters = solver->solve(b.data(), x.data());
+	const int iters = solver->solve(b.data(), x.data());
 	std::cout << " Num iters = " << iters << std::endl;
 
 	double l2norm = 0;
-	for(int i = 0; i < mat->dim(); i++) {
+	for(int i = 0; i < mat.dim(); i++) {
 		l2norm += (x[i]-ans[i])*(x[i]-ans[i]);
 	}
 	l2norm = std::sqrt(l2norm);
-	std::cout << " L2 norm of error = " << l2norm << '\n';
+	std::cout << " L2 norm of error = " << l2norm << std::endl;
 	assert(l2norm < testtol);
 
 	delete solver;
 	delete prec;
-	delete mat;
 	alignedDestroyRawBSRMatrix(rm);
 
 	return 0;
@@ -134,8 +171,8 @@ int main(const int argc, const char *const argv[])
 	const std::string xfile = argv[8];
 	const std::string bfile = argv[9];
 
-	int err = testSolve<1>(solvertype, factinittype, applyinittype, mattype, storageorder, 
-	                       testtol, matfile, xfile, bfile, reltol, maxiter, 1, 1, threadchunksize);
+	int err = testSolve(solvertype, factinittype, applyinittype, mattype, storageorder, 
+	                    testtol, matfile, xfile, bfile, reltol, maxiter, 1, 1, threadchunksize);
 
 	return err;
 }
