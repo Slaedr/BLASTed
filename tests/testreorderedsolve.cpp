@@ -1,0 +1,141 @@
+/** \file testsolve.hpp
+ * \brief Tests for preconditioning operations
+ * \author Aditya Kashi
+ * \date 2017-11-29
+ */
+
+#undef NDEBUG
+
+#include <iostream>
+
+#include <blockmatrices.hpp>
+#include <coomatrix.hpp>
+#include <solverfactory.hpp>
+#include <solverops_jacobi.hpp>
+#include <solverops_sgs.hpp>
+#include <solverops_ilu0.hpp>
+
+#include "testsolve.hpp"
+#include "solvers.hpp"
+
+using namespace blasted;
+
+ReorderingScaling<double,int,1> createTrivialColReordering(const int N)
+{
+	std::vector<int> v(N);
+	for(int i = 0; i < N; i++)
+		v[i] = i;
+
+	ReorderingScaling<double,int,1> rs;
+	rs.setOrdering(nullptr, &v[0], N);
+	return rs;
+}
+
+int testSolve(const std::string solvertype,
+              const std::string factinittype, const std::string applyinittype,
+              const std::string mattype, const std::string storageorder, const double testtol,
+              const std::string matfile, const std::string xfile, const std::string bfile,
+              const double tol, const int maxiter, const int nbuildswps, const int napplyswps,
+              const int threadchunksize)
+{
+	std::cout << "Inputs: Solver = " <<solvertype 
+		<< ", Prec = ReorderedAsyncILU0"
+		<< ", order = " << storageorder << ", test tol = " << testtol 
+		<< ", tolerance = " << tol << " maxiter = " << maxiter
+		<< ",\n  Num build sweeps = " << nbuildswps << ", num apply sweeps = " << napplyswps << '\n';
+
+	RawBSRMatrix<double,int> rm;
+	COOMatrix<double,int> coom;
+	coom.readMatrixMarket(matfile);
+	coom.convertToCSR(&rm);
+
+	const std::vector<double> ans = readDenseMatrixMarket<double>(xfile);
+	const std::vector<double> b = readDenseMatrixMarket<double>(bfile);
+	std::vector<double> x(rm.nbrows*bs,0.0);
+
+	MatrixView<double,int>* mat = nullptr;
+	mat = new CSRMatrixView<double,int>(rm.nbrows,
+	                                    rm.browptr,rm.bcolind,rm.vals,rm.diagind);
+
+	// construct preconditioner context
+
+	SRPreconditioner<double,int>* prec = nullptr;
+	ReorderingScaling<double,int,1> rs = createTrivialColReordering(rm.nbrows);
+	prec = new ReorderedAsyncILU0_SRPreconditioner<double,int>(&rs, nbuildswps, napplyswps,
+	                                                           threadchunksize,
+	                                                           getFactInitFromString(factinittype),
+	                                                           getApplyInitFromString(applyinittype),
+	                                                           false, false);
+
+	prec->wrap(rm.nbrows, rm.browptr, rm.bcolind, rm.vals, rm.diagind);
+	prec->compute();
+
+	IterativeSolver* solver = nullptr;
+	if(solvertype == "richardson")
+		solver = new RichardsonSolver(*mat,*prec);
+	else if(solvertype == "bcgs")
+		solver = new BiCGSTAB(*mat,*prec);
+	else {
+		std::cout << " ! Invalid solver option!\n";
+		std::abort();
+	}
+
+	solver->setParams(tol,maxiter);
+	std::cout << "Starting solve " << std::endl;
+	int iters = solver->solve(b.data(), x.data());
+	std::cout << " Num iters = " << iters << std::endl;
+
+	double l2norm = 0;
+	for(int i = 0; i < mat->dim(); i++) {
+		l2norm += (x[i]-ans[i])*(x[i]-ans[i]);
+	}
+	l2norm = std::sqrt(l2norm);
+	std::cout << " L2 norm of error = " << l2norm << '\n';
+	assert(l2norm < testtol);
+
+	delete solver;
+	delete prec;
+	delete mat;
+	alignedDestroyRawBSRMatrix(rm);
+
+	return 0;
+}
+
+int main(const int argc, const char *const argv[])
+{
+	if(argc < 14) {
+		std::cout << "! Please specify the solver (richardson, bcgs),\n";
+		std::cout << " the preconditioner (options: jacobi, sgs, ilu0), \n";
+		std::cout << " the factor initialization type (options: init_zero, init_sgs, init_original)\n";
+		std::cout << " the apply initialization type (options: init_zero, init_jacobi)\n";
+		std::cout << " the matrix type to use (options: csr, bsr),\n";
+		std::cout << "whether the entries within blocks should be rowmajor or colmajor\n";
+		std::cout << "(this option does not matter for CSR, but it's needed anyway),\n";
+		std::cout << "the three file names of (in order) the matrix,\n"
+		          << "the true solution vector x and the RHS vector b,\n"
+		          << "the rel residual tolerance to which to solve the linear system,\n"
+		          << "the testing tolerance for judging correctness,\n"
+		          << "the max number of iterations,\n"
+		          << "and the thread chunk size.\n";
+		std::abort();
+	}
+	
+	const int maxiter = std::stoi(argv[12]);
+	const double reltol = std::stod(argv[10]);
+	const double testtol = std::stod(argv[11]);
+	const int threadchunksize = std::stoi(argv[13]);
+	const std::string solvertype = argv[1];
+	const std::string precontype = argv[2];
+	const std::string mattype = argv[5];
+	const std::string storageorder = argv[6];
+	const std::string factinittype = argv[3];
+	const std::string applyinittype = argv[4];
+	const std::string matfile = argv[7];
+	const std::string xfile = argv[8];
+	const std::string bfile = argv[9];
+
+	int err = testSolve<1>(solvertype, factinittype, applyinittype, mattype, storageorder, 
+	                       testtol, matfile, xfile, bfile, reltol, maxiter, 1, 1, threadchunksize);
+
+	return err;
+}

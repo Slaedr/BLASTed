@@ -350,79 +350,6 @@ void AsyncILU0_SRPreconditioner<scalar,index>::apply_relax(const scalar *const _
 	throw std::runtime_error("ILU relaxation not implemented!");
 }
 
-template <typename scalar, typename index>
-RSAsyncILU0_SRPreconditioner<scalar,index>::
-RSAsyncILU0_SRPreconditioner(const ReorderingScaling<scalar,index,1> *const reorderscale,
-                             const int nbuildsweeps, const int napplysweeps, const int tcs,
-                             const FactInit finit, const ApplyInit ainit,
-                             const bool threadedfactor, const bool threadedapply)
-	: AsyncILU0_SRPreconditioner<scalar,index>(nbuildsweeps,napplysweeps, tcs, finit, ainit,
-	                                           threadedfactor,threadedapply),
-	  rs{reorderscale}
-{ }
-
-template <typename scalar, typename index>
-RSAsyncILU0_SRPreconditioner<scalar,index>::~RSAsyncILU0_SRPreconditioner()
-{ }
-
-template <typename scalar, typename index>
-void RSAsyncILU0_SRPreconditioner<scalar,index>::apply(const scalar *const x,
-                                                       scalar *const __restrict y) const
-{
-}
-
-template <typename scalar, typename index>
-void RSAsyncILU0_SRPreconditioner<scalar,index>::apply_relax(const scalar *const x,
-                                                             scalar *const __restrict y) const
-{
-	throw std::runtime_error("ILU relaxation not implemented!");
-}
-
-template <typename scalar, typename index>
-MC64_AsyncILU0_SRPreconditioner<scalar,index>::
-MC64_AsyncILU0_SRPreconditioner(const int jb, const int nbuildsweeps, const int napplysweeps,
-                                const int tcs, const FactInit finit, const ApplyInit ainit,
-                                const bool threadedfactor, const bool threadedapply)
-	: AsyncILU0_SRPreconditioner<scalar,index>(nbuildsweeps,napplysweeps, tcs, finit, ainit,
-	                                           threadedfactor,threadedapply), job{jb}, rs(jb)
-{ }
-
-template <typename scalar, typename index>
-MC64_AsyncILU0_SRPreconditioner<scalar,index>::~MC64_AsyncILU0_SRPreconditioner()
-{ }
-
-template <typename scalar, typename index>
-void MC64_AsyncILU0_SRPreconditioner<scalar,index>::compute()
-{
-	if(!iluvals) {
-		setup_storage(true);
-	}
-
-	rs.compute(mat);
-	rs.applyOrdering(rsmat, COLUMN);
-
-	plist = compute_ILU_positions_CSR_CSR(&mat);
-
-	scalar_ilu0_factorize(&mat, plist, nbuildsweeps, thread_chunk_size, threadedfactor,
-	                      factinittype, iluvals, scale);
-}
-
-template <typename scalar, typename index>
-void MC64_AsyncILU0_SRPreconditioner<scalar,index>::apply(const scalar *const x,
-                                                          scalar *const __restrict y) const
-{
-	// TODO:  Implement reordered apply
-}
-
-template <typename scalar, typename index>
-void MC64_AsyncILU0_SRPreconditioner<scalar,index>::apply_relax(const scalar *const x,
-                                                                scalar *const __restrict y) const
-{
-	throw std::runtime_error("ILU relaxation not implemented!");
-}
-
-// instantiations
-
 template class AsyncILU0_SRPreconditioner<double,int>;
 
 template class AsyncBlockILU0_SRPreconditioner<double,int,4,ColMajor>;
@@ -433,6 +360,89 @@ template class AsyncBlockILU0_SRPreconditioner<double,int,4,RowMajor>;
 #ifdef BUILD_BLOCK_SIZE
 template class AsyncBlockILU0_SRPreconditioner<double,int,BUILD_BLOCK_SIZE,ColMajor>;
 template class AsyncBlockILU0_SRPreconditioner<double,int,BUILD_BLOCK_SIZE,RowMajor>;
+#endif
+
+
+template <typename scalar, typename index>
+ReorderedAsyncILU0_SRPreconditioner<scalar,index>::
+ReorderedAsyncILU0_SRPreconditioner(ReorderingScaling<scalar,index,1> *const reorderscale,
+                                    const int nbuildsweeps, const int napplysweeps, const int tcs,
+                                    const FactInit finit, const ApplyInit ainit,
+                                    const bool threadedfactor, const bool threadedapply)
+	: AsyncILU0_SRPreconditioner<scalar,index>(nbuildsweeps,napplysweeps, tcs, finit, ainit,
+	                                           threadedfactor,threadedapply),
+	rsmat{nullptr, nullptr, nullptr, nullptr, 0}, rs{reorderscale}
+{ }
+
+template <typename scalar, typename index>
+ReorderedAsyncILU0_SRPreconditioner<scalar,index>::~ReorderedAsyncILU0_SRPreconditioner()
+{
+	alignedDestroyRawBSRMatrix<scalar,index>(rsmat);
+}
+
+template <typename scalar, typename index>
+void ReorderedAsyncILU0_SRPreconditioner<scalar,index>::compute()
+{
+	if(!iluvals) {
+		setup_storage(true);
+	}
+
+	alignedDestroyRawBSRMatrix<scalar,index>(rsmat);
+	rsmat = copyRawBSRMatrix<scalar,index,1>(mat);
+
+	rs->compute(mat);
+	rs->applyOrdering(rsmat, FORWARD);
+
+	plist = compute_ILU_positions_CSR_CSR(reinterpret_cast<CRawBSRMatrix<scalar,index>*>(&rsmat));
+
+	scalar_ilu0_factorize(reinterpret_cast<CRawBSRMatrix<scalar,index>*>(&rsmat),
+	                      plist, nbuildsweeps, thread_chunk_size, threadedfactor,
+	                      factinittype, iluvals, scale);
+}
+
+template <typename scalar, typename index>
+void ReorderedAsyncILU0_SRPreconditioner<scalar,index>::apply(const scalar *const ra,
+                                                              scalar *const __restrict za) const
+{
+	// solve triangular system
+	scalar_ilu0_apply(reinterpret_cast<const CRawBSRMatrix<scalar,index>*>(&rsmat),
+	                  iluvals, scale, ytemp, napplysweeps, thread_chunk_size, threadedapply,
+	                  applyinittype, ra, za);
+
+	// reorder solution
+	rs->applyOrdering(za, FORWARD, COLUMN);
+}
+
+template <typename scalar, typename index>
+void ReorderedAsyncILU0_SRPreconditioner<scalar,index>::apply_relax(const scalar *const x,
+                                                                    scalar *const __restrict y) const
+{
+	throw std::runtime_error("ILU relaxation not implemented!");
+}
+
+template class ReorderedAsyncILU0_SRPreconditioner<double,int>;
+
+#ifdef HAVE_MC64
+
+template <typename scalar, typename index>
+MC64_AsyncILU0_SRPreconditioner<scalar,index>::
+MC64_AsyncILU0_SRPreconditioner(const int jb, const int nbuildsweeps, const int napplysweeps,
+                                const int tcs, const FactInit finit, const ApplyInit ainit,
+                                const bool threadedfactor, const bool threadedapply)
+	: ReorderedAsyncILU0_SRPreconditioner<scalar,index>(new MC64(jb), nbuildsweeps,napplysweeps, tcs,
+	                                                    finit, ainit,
+	                                                    threadedfactor,threadedapply),
+	job{jb}
+{ }
+
+template <typename scalar, typename index>
+MC64_AsyncILU0_SRPreconditioner<scalar,index>::~MC64_AsyncILU0_SRPreconditioner()
+{
+	delete rs;
+}
+
+template class MC64_AsyncILU0_SRPreconditioner<double,int>;
+
 #endif
 
 }

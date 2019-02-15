@@ -48,7 +48,7 @@ public:
 	/// Destructor
 	virtual ~Reordering();
 
-	/// Set an ordering from a permutation vector
+	/// Set an ordering from a permutation vector - stores a deep copy of the provided vectors
 	/** \param rord Row ordering vector (can be nullptr, in which case it's ignored)
 	 * \param cord Column ordering vector (can be nullptr, in which case it's ignored)
 	 * \param length Length of the ordering vectors
