@@ -30,7 +30,7 @@ TrivialReorderingScaling createTrivialColReordering(const int N)
 {
 	std::vector<int> v(N);
 	for(int i = 0; i < N; i++)
-		v[i] = i;
+		v[i] = N-i-1;
 
 	TrivialReorderingScaling rs;
 	rs.setOrdering(nullptr, &v[0], N);
