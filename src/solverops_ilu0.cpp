@@ -371,7 +371,7 @@ ReorderedAsyncILU0_SRPreconditioner(ReorderingScaling<scalar,index,1> *const reo
                                     const bool threadedfactor, const bool threadedapply)
 	: AsyncILU0_SRPreconditioner<scalar,index>(nbuildsweeps,napplysweeps, tcs, finit, ainit,
 	                                           threadedfactor,threadedapply),
-	rsmat{nullptr, nullptr, nullptr, nullptr, 0}, rs{reorderscale}
+	rsmat{nullptr, nullptr, nullptr, nullptr, 0}, reord{reorderscale}
 { }
 
 template <typename scalar, typename index>
@@ -390,8 +390,8 @@ void ReorderedAsyncILU0_SRPreconditioner<scalar,index>::compute()
 	alignedDestroyRawBSRMatrix<scalar,index>(rsmat);
 	rsmat = copyRawBSRMatrix<scalar,index,1>(mat);
 
-	rs->compute(mat);
-	rs->applyOrdering(rsmat, FORWARD);
+	reord->compute(mat);
+	reord->applyOrdering(rsmat, FORWARD);
 
 	plist = compute_ILU_positions_CSR_CSR(reinterpret_cast<CRawBSRMatrix<scalar,index>*>(&rsmat));
 
@@ -404,13 +404,33 @@ template <typename scalar, typename index>
 void ReorderedAsyncILU0_SRPreconditioner<scalar,index>::apply(const scalar *const ra,
                                                               scalar *const __restrict za) const
 {
-	// solve triangular system
-	scalar_ilu0_apply(reinterpret_cast<const CRawBSRMatrix<scalar,index>*>(&rsmat),
-	                  iluvals, scale, ytemp, napplysweeps, thread_chunk_size, threadedapply,
-	                  applyinittype, ra, za);
+	// if a row-reordering has been set, create a temporary
+	if(reord->isRowReordering())
+	{
+		scalar *const rb = (scalar*)aligned_alloc(CACHE_LINE_LEN, rsmat.nbrows*sizeof(scalar));
+
+#pragma omp parallel for simd default(shared)
+		for(index i = 0; i < rsmat.nbrows; i++)
+			rb[i] = ra[i];
+
+		reord->applyOrdering(rb, FORWARD, ROW);
+
+		// solve triangular system
+		scalar_ilu0_apply(reinterpret_cast<const CRawBSRMatrix<scalar,index>*>(&rsmat),
+		                  iluvals, scale, ytemp, napplysweeps, thread_chunk_size, threadedapply,
+		                  applyinittype, rb, za);
+
+		aligned_free(rb);
+	}
+	else {
+		// solve triangular system
+		scalar_ilu0_apply(reinterpret_cast<const CRawBSRMatrix<scalar,index>*>(&rsmat),
+		                  iluvals, scale, ytemp, napplysweeps, thread_chunk_size, threadedapply,
+		                  applyinittype, ra, za);
+	}
 
 	// reorder solution
-	rs->applyOrdering(za, FORWARD, COLUMN);
+	reord->applyOrdering(za, FORWARD, COLUMN);
 }
 
 template <typename scalar, typename index>
@@ -438,7 +458,7 @@ MC64_AsyncILU0_SRPreconditioner(const int jb, const int nbuildsweeps, const int 
 template <typename scalar, typename index>
 MC64_AsyncILU0_SRPreconditioner<scalar,index>::~MC64_AsyncILU0_SRPreconditioner()
 {
-	delete rs;
+	delete reord;
 }
 
 template class MC64_AsyncILU0_SRPreconditioner<double,int>;

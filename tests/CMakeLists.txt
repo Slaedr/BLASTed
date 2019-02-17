@@ -126,13 +126,20 @@ add_test(NAME BSR4ILU0Colmajor COMMAND env OMP_NUM_THREADS=1 ${SEQEXEC} ${SEQTAS
 	1e-10 1e-8 200 ${TCS}
 )
 
-add_test(NAME Reorder_CSRILU0 COMMAND env OMP_NUM_THREADS=1 ${SEQEXEC} ${SEQTASKS}
-  ${CMAKE_CURRENT_BINARY_DIR}/testreorderedsolve bcgs ilu0 init_original init_zero csr rowmajor
-  ${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.mtx 
-  ${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.mtx 
-  ${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.mtx
-  1e-10 1e-8 200 ${TCS}
-  )
+# add_test(NAME Reorder_CSRILU0_msc00726 COMMAND env OMP_NUM_THREADS=1 ${SEQEXEC} ${SEQTASKS}
+#   ${CMAKE_CURRENT_BINARY_DIR}/testreorderedsolve bcgs ilu0 init_original init_zero csr rowmajor
+#   ${CMAKE_CURRENT_SOURCE_DIR}/input/boeing-msc00726/msc00726.mtx
+#   ${CMAKE_CURRENT_SOURCE_DIR}/input/boeing-msc00726/msc00726_x.mtx 
+#   ${CMAKE_CURRENT_SOURCE_DIR}/input/boeing-msc00726/msc00726_b.mtx
+#   1e-10 1e-8 200 ${TCS}
+#   )
+# add_test(NAME Reorder_CSRILU0 COMMAND env OMP_NUM_THREADS=1 ${SEQEXEC} ${SEQTASKS}
+#   ${CMAKE_CURRENT_BINARY_DIR}/testreorderedsolve bcgs ilu0 init_original init_zero csr rowmajor
+#   ${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.mtx 
+#   ${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.mtx 
+#   ${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.mtx
+#   1e-10 1e-8 200 ${TCS}
+#   )
 
 if(WITH_PETSC)
   add_executable(testpetscsolver runpetsctest.c)

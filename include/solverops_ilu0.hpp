@@ -161,6 +161,7 @@ protected:
 	void setup_storage(const bool scaling);
 };
 
+/// EXPERIMENTAL - 
 /// Asynchronous scalar ILU(0) that uses an external (re-)ordering (and scaling) before factorization
 /** The reordering and scaling are updated every time the preconditioner is computed.
  * The scaling is as in AsyncILU0_SRPreconditioner - symmetric scaling to make diagonal entries 1.
@@ -208,11 +209,12 @@ protected:
 	RawBSRMatrix<scalar,index> rsmat;
 
 	/// Computes a reordering and a scaling, in this case, whenever the matrix \ref mat is changed
-	ReorderingScaling<scalar,index,1> *const rs;
+	ReorderingScaling<scalar,index,1> *const reord;
 };
 
 #ifdef HAVE_MC64
 
+/// EXPERIMENTAL - 
 /// Asynchronous scalar ILU(0) that uses one of the MC64 (\cite mc64_manual) orderings
 /** The reordering is updated every time the preconditioner is computed. Therefore, this is
  * very inefficient.
@@ -251,7 +253,7 @@ protected:
 	using AsyncILU0_SRPreconditioner<scalar,index>::applyinittype;
 	using AsyncILU0_SRPreconditioner<scalar,index>::setup_storage;
 	using ReorderedAsyncILU0_SRPreconditioner<scalar,index>::rsmat;
-	using ReorderedAsyncILU0_SRPreconditioner<scalar,index>::rs;
+	using ReorderedAsyncILU0_SRPreconditioner<scalar,index>::reord;
 
 	/// MC64 job index
 	const int job;

@@ -23,17 +23,23 @@ using namespace blasted;
 class TrivialReorderingScaling : public ReorderingScaling<double,int,1>
 {
 public:
-	void compute(const CRawBSRMatrix<double,int>& mat) { }
+	void compute(const CRawBSRMatrix<double,int>& mat)
+	{
+	}
 };
 
 TrivialReorderingScaling createTrivialColReordering(const int N)
 {
 	std::vector<int> v(N);
 	for(int i = 0; i < N; i++)
-		v[i] = N-i-1;
+		// v[i] = N-i-1;
+	    v[i] = i;
+
+	const int temp = v[1];
+	v[1] = v[3]; v[3] = temp;
 
 	TrivialReorderingScaling rs;
-	rs.setOrdering(nullptr, &v[0], N);
+	rs.setOrdering(&v[0], &v[0], N);
 	return rs;
 }
 

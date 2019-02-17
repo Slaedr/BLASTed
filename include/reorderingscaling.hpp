@@ -55,6 +55,14 @@ public:
 	 */
 	void setOrdering(const index *const rord, const index *const cord, const index length);
 
+	/// Returns true if the row-ordering vectors \ref rp and \ref irp have been allocated
+	bool isRowReordering() const {
+		if(rp.size() > 0 && irp.size() == rp.size())
+			return true;
+		else
+			return false;
+	}
+
 	/// Compute an ordering
 	/** \param mat The matrix on which some algorithm is applied to compute the ordering
 	 *

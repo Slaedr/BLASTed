@@ -43,7 +43,7 @@ if(WITH_PETSC)
 	)
 
   add_test(NAME MPIThreadedPoissonCSRPetsc-LevelSGS-Relaxation
-	COMMAND ${MPIEXEC} -n 4 ${THREADOPTS} ./testcsr_poisson
+	COMMAND ${MPIEXEC} -n 2 ${THREADOPTS} ./testcsr_poisson
 	${CMAKE_CURRENT_SOURCE_DIR}/input/poisson.control
 	-options_file  ${CMAKE_CURRENT_SOURCE_DIR}/input/mpi_poisson_localrelaxation.perc
 	-ref_sub_pc_type sor -blasted_pc_type level_sgs

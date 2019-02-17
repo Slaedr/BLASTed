@@ -205,7 +205,9 @@ void Reordering<scalar,index,bs>::applyOrdering(scalar *const vec,
                                                 const RSApplyMode mode, const RSApplyDir dir) const
 {
 	const index size = dir == ROW ? rp.size() : cp.size();
-	assert(size > 0);
+	if (size <= 0) {
+		return;
+	}
 
 	// copy vector to temp location
 	std::vector<scalar> tv(size*bs);
