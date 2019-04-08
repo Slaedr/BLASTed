@@ -7,7 +7,7 @@
 #include <iostream>
 #include <boost/align/aligned_alloc.hpp>
 #include <Eigen/LU>
-#include "solverops_jacobi.hpp"
+#include "bsr/solverops_jacobi.hpp"
 #include "kernels/kernels_relaxation.hpp"
 
 namespace blasted {

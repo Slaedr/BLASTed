@@ -3,7 +3,7 @@
  * \author Aditya Kashi
  */
 
-#include "solverops_base.hpp"
+#include "bsr/solverops_base.hpp"
 
 namespace blasted {
 

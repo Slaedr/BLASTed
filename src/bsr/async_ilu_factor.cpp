@@ -6,7 +6,7 @@
 #include <iostream>
 #include "async_ilu_factor.hpp"
 #include "kernels/kernels_ilu0_factorize.hpp"
-#include "helper_algorithms.hpp"
+#include "../helper_algorithms.hpp"
 
 namespace blasted {
 

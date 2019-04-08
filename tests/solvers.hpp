@@ -7,7 +7,7 @@
 #ifndef BLASTED_SOLVERS_H
 #define BLASTED_SOLVERS_H
 
-#include <solverops_base.hpp>
+#include <bsr/solverops_base.hpp>
 
 namespace blasted {
 

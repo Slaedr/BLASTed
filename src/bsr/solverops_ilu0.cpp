@@ -6,7 +6,7 @@
 #include <type_traits>
 #include <iostream>
 #include <boost/align/aligned_alloc.hpp>
-#include "solverops_ilu0.hpp"
+#include "bsr/solverops_ilu0.hpp"
 #include "kernels/kernels_ilu_apply.hpp"
 #include "async_ilu_factor.hpp"
 #include "async_blockilu_factor.hpp"

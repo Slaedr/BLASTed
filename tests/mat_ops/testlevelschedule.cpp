@@ -1,8 +1,8 @@
 #undef NDEBUG
 
 #include "coomatrix.hpp"
-#include "blockmatrices.hpp"
-#include "levelschedule.hpp"
+#include "bsr/blockmatrices.hpp"
+#include "bsr/levelschedule.hpp"
 
 using namespace blasted;
 

@@ -20,8 +20,8 @@
 #include <boost/align/aligned_alloc.hpp>
 #include "kernels/kernels_sgs.hpp"
 #include "kernels/kernels_relaxation.hpp"
-#include "levelschedule.hpp"
-#include "solverops_levels_sgs.hpp"
+#include "bsr/levelschedule.hpp"
+#include "bsr/solverops_levels_sgs.hpp"
 
 namespace blasted {
 

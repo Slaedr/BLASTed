@@ -19,9 +19,9 @@
 
 #include <algorithm>
 #include <utility>
-#include "helper_algorithms.hpp"
-#include "reorderingscaling.hpp"
-#include "scmatrixdefs.hpp"
+#include "../helper_algorithms.hpp"
+#include "bsr/reorderingscaling.hpp"
+#include "bsr/scmatrixdefs.hpp"
 
 namespace blasted {
 

@@ -20,7 +20,7 @@
 #include <numeric>
 #include <iostream>
 #include "ilu_pattern.hpp"
-#include "helper_algorithms.hpp"
+#include "../helper_algorithms.hpp"
 
 namespace blasted {
 

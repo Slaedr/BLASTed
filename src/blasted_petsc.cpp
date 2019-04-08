@@ -13,10 +13,10 @@
 #include <../src/mat/impls/baij/mpi/mpibaij.h>
 
 #include "solvertypes.h"
-#include "solverops_jacobi.hpp"
-#include "solverops_sgs.hpp"
-#include "solverops_ilu0.hpp"
-#include "solverfactory.hpp"
+#include "bsr/solverops_jacobi.hpp"
+#include "bsr/solverops_sgs.hpp"
+#include "bsr/solverops_ilu0.hpp"
+#include "bsr/solverfactory.hpp"
 #include "blasted_petsc_ext.hpp"
 
 using namespace blasted;

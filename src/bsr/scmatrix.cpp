@@ -22,7 +22,7 @@
 #include <utility>
 #include <vector>
 #include <algorithm>
-#include "scmatrixdefs.hpp"
+#include "bsr/scmatrixdefs.hpp"
 
 namespace blasted {
 

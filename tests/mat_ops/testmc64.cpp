@@ -1,8 +1,8 @@
 #undef NDEBUG
 
 #include "coomatrix.hpp"
-#include "blockmatrices.hpp"
-#include "reorderingscaling.hpp"
+#include "bsr/blockmatrices.hpp"
+#include "bsr/reorderingscaling.hpp"
 
 using namespace blasted;
 

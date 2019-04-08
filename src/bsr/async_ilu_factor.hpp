@@ -6,9 +6,9 @@
 #ifndef BLASTED_ASYNC_ILU_FACTOR_H
 #define BLASTED_ASYNC_ILU_FACTOR_H
 
-#include "srmatrixdefs.hpp"
+#include "bsr/srmatrixdefs.hpp"
 #include "ilu_pattern.hpp"
-#include "reorderingscaling.hpp"
+#include "bsr/reorderingscaling.hpp"
 #include "async_initialization_decl.hpp"
 
 namespace blasted {

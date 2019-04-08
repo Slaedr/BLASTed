@@ -7,7 +7,7 @@
 #ifndef BLASTED_KERNELS_ILU_APPLY_H
 #define BLASTED_KERNELS_ILU_APPLY_H
 
-#include "srmatrixdefs.hpp"
+#include "bsr/srmatrixdefs.hpp"
 
 namespace blasted {
 	

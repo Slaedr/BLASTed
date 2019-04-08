@@ -6,13 +6,13 @@
 
 #include <stdexcept>
 #include <iostream>
-#include "solverfactory.hpp"
-#include "solverops_jacobi.hpp"
-#include "solverops_sgs.hpp"
-#include "solverops_ilu0.hpp"
-#include "relaxation_chaotic.hpp"
-#include "solverops_levels_sgs.hpp"
-#include "solverops_levels_ilu0.hpp"
+#include "bsr/solverfactory.hpp"
+#include "bsr/solverops_jacobi.hpp"
+#include "bsr/solverops_sgs.hpp"
+#include "bsr/solverops_ilu0.hpp"
+#include "bsr/relaxation_chaotic.hpp"
+#include "bsr/solverops_levels_sgs.hpp"
+#include "bsr/solverops_levels_ilu0.hpp"
 
 namespace blasted {
 

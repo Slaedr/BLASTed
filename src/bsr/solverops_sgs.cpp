@@ -5,7 +5,7 @@
 
 #include <type_traits>
 #include <boost/align/aligned_alloc.hpp>
-#include "solverops_sgs.hpp"
+#include "bsr/solverops_sgs.hpp"
 #include "kernels/kernels_sgs.hpp"
 #include "kernels/kernels_relaxation.hpp"
 

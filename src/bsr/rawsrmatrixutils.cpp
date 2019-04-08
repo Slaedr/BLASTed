@@ -4,7 +4,7 @@
  */
 
 #include <boost/align/aligned_alloc.hpp>
-#include <srmatrixdefs.hpp>
+#include <bsr/srmatrixdefs.hpp>
 
 namespace blasted {
 

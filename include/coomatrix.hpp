@@ -25,7 +25,7 @@
 #include <string>
 #include <vector>
 
-#include <blockmatrices.hpp>
+#include <bsr/blockmatrices.hpp>
 
 namespace blasted {
 

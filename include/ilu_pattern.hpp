@@ -21,7 +21,7 @@
 #define BLASTED_ILU_PATTERN_H
 
 #include <vector>
-#include "srmatrixdefs.hpp"
+#include "bsr/srmatrixdefs.hpp"
 
 namespace blasted {
 

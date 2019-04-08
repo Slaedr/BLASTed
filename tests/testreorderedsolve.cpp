@@ -8,12 +8,12 @@
 
 #include <iostream>
 
-#include <blockmatrices.hpp>
+#include <bsr/blockmatrices.hpp>
 #include <coomatrix.hpp>
-#include <solverfactory.hpp>
-#include <solverops_jacobi.hpp>
-#include <solverops_sgs.hpp>
-#include <solverops_ilu0.hpp>
+#include <bsr/solverfactory.hpp>
+#include <bsr/solverops_jacobi.hpp>
+#include <bsr/solverops_sgs.hpp>
+#include <bsr/solverops_ilu0.hpp>
 
 #include "testsolve.hpp"
 #include "solvers.hpp"

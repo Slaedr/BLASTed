@@ -4,7 +4,7 @@
  */
 
 #include <list>
-#include "levelschedule.hpp"
+#include "bsr/levelschedule.hpp"
 
 namespace blasted {
 

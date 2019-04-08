@@ -23,7 +23,7 @@
 #include <array>
 #include <Eigen/Core>
 
-#include <blockmatrices.hpp>
+#include <bsr/blockmatrices.hpp>
 #include "matvecs.hpp"
 
 namespace blasted {

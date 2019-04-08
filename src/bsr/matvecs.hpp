@@ -7,7 +7,7 @@
 #define BLASTED_MATVECS_H
 
 #include <Eigen/Core>
-#include "srmatrixdefs.hpp"
+#include "bsr/srmatrixdefs.hpp"
 
 namespace blasted {
 

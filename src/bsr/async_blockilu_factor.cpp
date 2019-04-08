@@ -19,8 +19,8 @@
 
 #include <Eigen/LU>
 #include "async_blockilu_factor.hpp"
-#include "helper_algorithms.hpp"
-#include "blas1.hpp"
+#include "../helper_algorithms.hpp"
+#include "../blas1.hpp"
 
 #include <boost/align.hpp>
 #include <iostream>

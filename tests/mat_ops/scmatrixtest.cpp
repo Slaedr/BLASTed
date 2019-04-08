@@ -6,7 +6,7 @@
 #undef NDEBUG
 
 #include <fstream>
-#include "scmatrixdefs.hpp"
+#include "bsr/scmatrixdefs.hpp"
 #include "coomatrix.hpp"
 
 using namespace blasted;

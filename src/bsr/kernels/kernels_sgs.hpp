@@ -7,7 +7,7 @@
 #ifndef BLASTED_KERNELS_SGS_H
 #define BLASTED_KERNELS_SGS_H
 
-#include "srmatrixdefs.hpp"
+#include "bsr/srmatrixdefs.hpp"
 
 namespace blasted {
 

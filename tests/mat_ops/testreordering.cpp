@@ -11,7 +11,7 @@
 #include <string>
 #include <iostream>
 #include "coomatrix.hpp"
-#include "reorderingscaling.hpp"
+#include "bsr/reorderingscaling.hpp"
 
 using namespace blasted;
 

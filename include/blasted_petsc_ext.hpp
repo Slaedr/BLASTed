@@ -7,7 +7,7 @@
 #define BLASTED_PETSC_EXT_H
 
 #include "blasted_petsc.h"
-#include "solverfactory.hpp"
+#include "bsr/solverfactory.hpp"
 
 namespace blasted {
 

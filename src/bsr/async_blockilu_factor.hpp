@@ -6,7 +6,7 @@
 #ifndef BLASTED_ASYNC_BLOCKILU_FACTOR_H
 #define BLASTED_ASYNC_BLOCKILU_FACTOR_H
 
-#include "srmatrixdefs.hpp"
+#include "bsr/srmatrixdefs.hpp"
 #include "async_initialization_decl.hpp"
 #include "ilu_pattern.hpp"
 

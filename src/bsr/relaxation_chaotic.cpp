@@ -4,7 +4,7 @@
  * \date 2018-05
  */
 
-#include "relaxation_chaotic.hpp"
+#include "bsr/relaxation_chaotic.hpp"
 #include "kernels/kernels_relaxation.hpp"
 #include <iostream>
 

@@ -6,48 +6,23 @@ endif()
 add_library(helper helper_algorithms.cpp)
 set_property(TARGET helper PROPERTY POSITION_INDEPENDENT_CODE ON)
 
-add_library(rawmatrixutils rawsrmatrixutils.cpp scmatrix.cpp)
-set_property(TARGET rawmatrixutils PROPERTY POSITION_INDEPENDENT_CODE ON)
-
-add_library(orderingscaling reorderingscaling.cpp)
-set_property(TARGET orderingscaling PROPERTY POSITION_INDEPENDENT_CODE ON)
-if(WITH_MC64)
-  target_link_libraries(orderingscaling ${MC64_LIB} ${FORTLDFLAGS})
-endif(WITH_MC64)
-
-add_library(blockmatrices csrmatrix.cpp bsrmatrix.cpp matvecs.cpp)
-set_property(TARGET blockmatrices PROPERTY POSITION_INDEPENDENT_CODE ON)
-target_link_libraries(blockmatrices rawmatrixutils)
+add_subdirectory(bsr)
 
 add_library(coomatrix coomatrix.cpp)
-target_link_libraries(coomatrix blockmatrices)
+target_link_libraries(coomatrix srblockmatrices)
 set_property(TARGET coomatrix PROPERTY POSITION_INDEPENDENT_CODE ON)
-
-add_library(solverops
-  solverfactory.cpp
-  solverops_levels_sgs.cpp solverops_levels_ilu0.cpp
-  relaxation_chaotic.cpp
-  solverops_jacobi.cpp solverops_sgs.cpp solverops_ilu0.cpp solverops_base.cpp
-  async_blockilu_factor.cpp async_ilu_factor.cpp
-  ilu_pattern.cpp levelschedule.cpp blas1.cpp
-  )
-set_property(TARGET solverops PROPERTY POSITION_INDEPENDENT_CODE ON)
-if(CXX_COMPILER_CLANG)
-  target_compile_options(solverops PRIVATE "-Wno-error=pass-failed")
-endif()
-target_link_libraries(solverops orderingscaling helper)
 
 if(WITH_PETSC)
 
   add_library(blasted_petsc SHARED blasted_petsc.cpp)
 
-  target_link_libraries(blasted_petsc solverops orderingscaling rawmatrixutils helper
+  target_link_libraries(blasted_petsc srsolverops orderingscaling rawmatrixutils helper
 	${PETSC_LIB} ${MPI_C_LIBRARIES} ${MPI_C_LINK_FLAGS})
 
   set_property(TARGET blasted_petsc PROPERTY POSITION_INDEPENDENT_CODE ON)
   
   add_executable(util_petsc_io util_petsc_io.c blasted_petsc_io.cpp)
-  target_link_libraries(util_petsc_io coomatrix blockmatrices
+  target_link_libraries(util_petsc_io coomatrix srblockmatrices
 	${PETSC_LIB} ${MPI_C_LIBRARIES} ${MPI_C_LINK_FLAGS})
   
 endif()

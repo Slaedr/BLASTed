@@ -8,7 +8,7 @@
 
 #include <blasted_petsc_io.h>
 #include <coomatrix.hpp>
-#include <blockmatrices.hpp>
+#include <bsr/blockmatrices.hpp>
 
 extern "C" {
 

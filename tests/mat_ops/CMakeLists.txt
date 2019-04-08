@@ -1,32 +1,32 @@
 # test executables
 
 add_executable(testbsrmatrix runbsrmatrixtest.cpp testbsrmatrix.cpp)
-target_link_libraries(testbsrmatrix coomatrix blockmatrices)
+target_link_libraries(testbsrmatrix coomatrix srblockmatrices)
 
 add_executable(testcsrmatrix runcsrmatrixtest.cpp testcsrmatrix.cpp)
-target_link_libraries(testcsrmatrix coomatrix blockmatrices)
+target_link_libraries(testcsrmatrix coomatrix srblockmatrices)
 
 add_executable(testcoomatrix runcoomatrixtest.cpp testcoomatrix.cpp testcsrmatrix.cpp)
-target_link_libraries(testcoomatrix coomatrix blockmatrices)
+target_link_libraries(testcoomatrix coomatrix srblockmatrices)
 
 add_executable(testcscmatrix scmatrixtest.cpp)
-target_link_libraries(testcscmatrix blockmatrices coomatrix)
+target_link_libraries(testcscmatrix srblockmatrices coomatrix)
 
 add_executable(testbscconversion bscconversiontest.cpp)
-target_link_libraries(testbscconversion blockmatrices coomatrix rawmatrixutils)
+target_link_libraries(testbscconversion srblockmatrices coomatrix rawmatrixutils)
 
 add_executable(testlevelschedule testlevelschedule.cpp)
-target_link_libraries(testlevelschedule coomatrix solverops)
+target_link_libraries(testlevelschedule coomatrix srsolverops)
 
 add_executable(testreordering testreordering.cpp)
-target_link_libraries(testreordering orderingscaling blockmatrices rawmatrixutils coomatrix helper)
+target_link_libraries(testreordering orderingscaling srblockmatrices rawmatrixutils coomatrix helper)
 if(WITH_MC64)
   target_link_libraries(testreordering ${MC64_LIB} ${FORTLDFLAGS})
 endif(WITH_MC64)
 
 if(WITH_MC64)
   add_executable(testmc64 testmc64.cpp)
-  target_link_libraries(testmc64 orderingscaling blockmatrices coomatrix rawmatrixutils helper)
+  target_link_libraries(testmc64 orderingscaling srblockmatrices coomatrix rawmatrixutils helper)
   target_link_libraries(testmc64 ${MC64_LIB} ${FORTLDFLAGS})
 endif(WITH_MC64)
 

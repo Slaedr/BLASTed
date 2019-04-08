@@ -5,7 +5,7 @@
 
 #include <cstring>
 #include "../../src/helper_algorithms.hpp"
-#include "scmatrixdefs.hpp"
+#include "bsr/scmatrixdefs.hpp"
 #include "coomatrix.hpp"
 
 using namespace blasted;
