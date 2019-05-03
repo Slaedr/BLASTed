@@ -6,6 +6,8 @@
 #include <blasted_petsc.h>
 #include "perftesting.hpp"
 
+namespace blasted {
+
 /// Set -blasted_async_sweeps in the default Petsc options database and throw if not successful
 static int set_blasted_sweeps(const int nbswp, const int naswp)
 {
@@ -60,17 +62,20 @@ static double std_deviation(const double *const vals, const double avg, const in
 	return deviate;
 }
 
-int run_one_test(const RunParams rp, const RunParams refp, const Mat A, const Vec b, Vec u,
+int run_one_test(const RunParams rp, const TimingData refdata, const Mat A, const Vec b, Vec u,
                  TimingData& tdata, std::ofstream& outf)
 {
-	std::vector<double> prectimes(nruns);
+	std::vector<double> prectimes(rp.nrepeats);
 	int ierr = 0;
+	MPI_Comm comm = MPI_COMM_WORLD;
 
 	int rank = 1;
 	MPI_Comm_rank(comm,&rank);
 
+	set_blasted_sweeps(rp.nbswps, rp.naswps);
+
 	int irun;
-	for(irun = 0; irun < rp.nruns; irun++)
+	for(irun = 0; irun < rp.nrepeats; irun++)
 	{
 		KSP ksp;
 		ierr = KSPCreate(comm, &ksp);
@@ -87,15 +92,11 @@ int run_one_test(const RunParams rp, const RunParams refp, const Mat A, const Ve
 
 		ierr = KSPSolve(ksp, b, u); CHKERRQ(ierr);
 
-		PetscInt refkspiters;
-		ierr = KSPGetIterationNumber(ksp, &refkspiters);
-		tdata.avg_lin_iters += refkspiters;
-		if(tdata.max_lin_iters < refkspiters)
-			tdata.max_lin_iters = refkspiters;
-
-		if(rank==0 && rp.ref) {
-			printf("Ref run: error = %.16f\n", errnormref);
-		}
+		PetscInt kspiters;
+		ierr = KSPGetIterationNumber(ksp, &kspiters);
+		tdata.avg_lin_iters += kspiters;
+		if(tdata.max_lin_iters < kspiters)
+			tdata.max_lin_iters = kspiters;
 
 		KSPConvergedReason reason;
 		ierr = KSPGetConvergedReason(ksp, &reason); CHKERRQ(ierr);
@@ -122,18 +123,31 @@ int run_one_test(const RunParams rp, const RunParams refp, const Mat A, const Ve
 	tdata.precsetup_walltime /= irun;
 	tdata.precapply_walltime /= irun;
 	tdata.prec_cputime /= irun;
-	tdata.lin_iters = static_case<int>((float)tdata.lin_iters/(float)irun);
+	tdata.avg_lin_iters = static_cast<int>((float)tdata.avg_lin_iters/(float)irun);
 
 	const double prec_deviation = std_deviation(&prectimes[0],
 	                                            tdata.precsetup_walltime+tdata.precapply_walltime,
 	                                            irun);
 
-	writeTimingToFile(outf, field_width, rp.ref, tdata, rp,
-	                  refdata.precsetup_walltime/tdata.precsetup_walltime,
-	                  refdata.precapply_walltime/tdata.precapply_walltime,
-	                  (refdata.precsetup_walltime+refdata.precapply_walltime)
-	                  /(tdata.precsetup_walltime+tdata.precapply_walltime),
-	                  prec_deviation, tdata.prec_cputime);
+	if(rp.ref)
+		writeTimingToFile(outf, field_width, rp.ref, tdata, rp,
+		                  tdata.precsetup_walltime,
+		                  tdata.precapply_walltime,
+		                  (tdata.precsetup_walltime+tdata.precapply_walltime),
+		                  prec_deviation, tdata.prec_cputime);
+	else
+		writeTimingToFile(outf, field_width, rp.ref, tdata, rp,
+		                  refdata.precsetup_walltime/tdata.precsetup_walltime,
+		                  refdata.precapply_walltime/tdata.precapply_walltime,
+		                  (refdata.precsetup_walltime+refdata.precapply_walltime)
+		                  /(tdata.precsetup_walltime+tdata.precapply_walltime),
+		                  prec_deviation, tdata.prec_cputime);
 
 	return ierr;
+}
+
+TestParams getTestParams()
+{
+}
+
 }

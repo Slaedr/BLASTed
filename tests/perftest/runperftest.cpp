@@ -5,17 +5,20 @@
 #include <float.h>
 #include <assert.h>
 #include <string.h>
+#include <fstream>
 
 #ifdef _OPENMP
 #include <omp.h>
 #endif
 
-#inclued "perftesting.hpp"
+#include "perftesting.hpp"
 
 #define PETSCOPTION_STR_LEN 30
 #define PATH_STR_LEN 300
 
 #define TASSERT(x) if(!(x)) return -1
+
+using namespace blasted;
 
 int main(int argc, char* argv[])
 {
@@ -38,8 +41,6 @@ int main(int argc, char* argv[])
 	PetscMPIInt size, rank;
 	PetscErrorCode ierr = 0;
 	
-	const int nruns = 1;
-
 	ierr = PetscInitialize(&argc, &argv, NULL, help); CHKERRQ(ierr);
 	MPI_Comm comm = PETSC_COMM_WORLD;
 	MPI_Comm_size(comm,&size);
@@ -96,14 +97,16 @@ int main(int argc, char* argv[])
 	PetscViewerDestroy(&bvecreader);
 	PetscViewerDestroy(&xvecreader);
 
-	PetscInt bs;
-	ierr VecGetSize(b, &vs); CHKERRQ(ierr);
+	PetscInt vs;
+	ierr = VecGetSize(b, &vs); CHKERRQ(ierr);
 	printf(" Rank %d: RHS size = %d.\n", rank, vs);
 
 	std::ofstream report;
 	report.open(tparams.reportfile, std::ofstream::out);
 
 	writeHeaderToFile(report, field_width);
+
+	TimingData refdata;
 
 	// compute reference solution using a preconditioner from PETSc
 	{
@@ -112,9 +115,10 @@ int main(int argc, char* argv[])
 		rp.nbswps = tparams.nrefbswps;
 		rp.naswps = tparams.nrefaswps;
 		rp.numthreads = tparams.refthreads;
-		rp.nrepeats = tparams.refruns;
+		rp.nrepeats = tparams.refnruns;
+		TimingData dummydata;
 
-		run_one_test(rp, refdata, A, b, u, report);
+		run_one_test(rp, dummydata, A, b, u, refdata, report);
 	}
 
 	// run the solve to be tested as many times as requested
@@ -126,9 +130,10 @@ int main(int argc, char* argv[])
 		rp.nbswps = tparams.nbswpslist[isetting];
 		rp.naswps = tparams.naswpslist[isetting];
 		rp.numthreads = tparams.threadslist[isetting];
-		rp.nrepeats = tparams.nrunslist[isetting];
+		rp.nrepeats = tparams.nruns;
+		TimingData curtime;
 
-		run_one_test(rp, refdata, A, b, u, report);
+		run_one_test(rp, refdata, A, b, u, curtime, report);
 	}
 
 	report.close();

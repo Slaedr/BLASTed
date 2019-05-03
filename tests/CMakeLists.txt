@@ -19,6 +19,7 @@ set_property(TARGET testreorderedsolve PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 add_subdirectory(helper_algs)
 add_subdirectory(mat_ops)
+add_subdirectory(perftest)
 
 set(TCS 300)
 
