@@ -1,0 +1,12 @@
+
+-perftest_ref_threads 1
+-perftest_ref_runs 2
+-perftest_ref_build_sweeps 1
+-perftest_ref_apply_sweeps 2
+
+-perftest_test_threadslist 2,3,4
+-perftest_test_runs 2
+-perftest_test_build_sweeps 1
+-perftest_test_apply_sweeps 2
+
+-perftest_report_file sampletestreport.txt

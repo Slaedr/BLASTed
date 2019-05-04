@@ -163,7 +163,7 @@ TestParams getTestParams()
 	set = PETSC_FALSE;
 	int threadslist[MAX_THREADS_LIST_SIZE];
 	int len = MAX_THREADS_LIST_SIZE;
-	ierr = PetscOptionsGetIntArray(NULL,NULL,"",threadslist, &len, &set);
+	ierr = PetscOptionsGetIntArray(NULL,NULL,"-perftest_test_threadslist",threadslist, &len, &set);
 	if(ierr || !set) {
 		throw std::runtime_error("Need list of thread counts to test!");
 	}
@@ -196,13 +196,13 @@ TestParams getTestParams()
 	}
 
 	set = PETSC_FALSE;
-	ierr = PetscOptionsGetInt(NULL,NULL,"-perftest_build_sweeps", &tp.nbswps, &set);
+	ierr = PetscOptionsGetInt(NULL,NULL,"-perftest_test_build_sweeps", &tp.nbswps, &set);
 	if(ierr || !set) {
 		throw std::runtime_error("Number of testing build sweeps not set!");
 	}
 
 	set = PETSC_FALSE;
-	ierr = PetscOptionsGetInt(NULL,NULL,"-perftest_apply_sweeps", &tp.naswps, &set);
+	ierr = PetscOptionsGetInt(NULL,NULL,"-perftest_test_apply_sweeps", &tp.naswps, &set);
 	if(ierr || !set) {
 		throw std::runtime_error("Number of testing apply sweeps not set!");
 	}
