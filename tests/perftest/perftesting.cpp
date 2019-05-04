@@ -6,6 +6,9 @@
 #include <blasted_petsc.h>
 #include "perftesting.hpp"
 
+#define MAX_THREADS_LIST_SIZE 20
+#define PATH_STR_LEN 500
+
 namespace blasted {
 
 /// Set -blasted_async_sweeps in the default Petsc options database and throw if not successful
@@ -148,6 +151,71 @@ int run_one_test(const RunParams rp, const TimingData refdata, const Mat A, cons
 
 TestParams getTestParams()
 {
+	TestParams tp;
+	int ierr = 0;
+
+	PetscBool set = PETSC_FALSE;
+	ierr = PetscOptionsGetInt(NULL,NULL,"-perftest_ref_threads", &tp.refthreads, &set);
+	if(ierr || !set) {
+		throw std::runtime_error("Number of ref threads not set!");
+	}
+
+	set = PETSC_FALSE;
+	int threadslist[MAX_THREADS_LIST_SIZE];
+	int len = MAX_THREADS_LIST_SIZE;
+	ierr = PetscOptionsGetIntArray(NULL,NULL,"",threadslist, &len, &set);
+	if(ierr || !set) {
+		throw std::runtime_error("Need list of thread counts to test!");
+	}
+	tp.threadslist.resize(len);
+	for(int i = 0; i < len; i++)
+		tp.threadslist[i] = threadslist[i];
+
+	set = PETSC_FALSE;
+	ierr = PetscOptionsGetInt(NULL,NULL,"-perftest_ref_runs", &tp.refnruns, &set);
+	if(ierr || !set) {
+		throw std::runtime_error("Number of ref runs not set!");
+	}
+
+	set = PETSC_FALSE;
+	ierr = PetscOptionsGetInt(NULL,NULL,"-perftest_test_runs", &tp.nruns, &set);
+	if(ierr || !set) {
+		throw std::runtime_error("Number of testing runs not set!");
+	}
+
+	set = PETSC_FALSE;
+	ierr = PetscOptionsGetInt(NULL,NULL,"-perftest_ref_build_sweeps", &tp.nrefbswps, &set);
+	if(ierr || !set) {
+		throw std::runtime_error("Number of ref build sweeps not set!");
+	}
+
+	set = PETSC_FALSE;
+	ierr = PetscOptionsGetInt(NULL,NULL,"-perftest_ref_apply_sweeps", &tp.nrefaswps, &set);
+	if(ierr || !set) {
+		throw std::runtime_error("Number of ref apply sweeps not set!");
+	}
+
+	set = PETSC_FALSE;
+	ierr = PetscOptionsGetInt(NULL,NULL,"-perftest_build_sweeps", &tp.nbswps, &set);
+	if(ierr || !set) {
+		throw std::runtime_error("Number of testing build sweeps not set!");
+	}
+
+	set = PETSC_FALSE;
+	ierr = PetscOptionsGetInt(NULL,NULL,"-perftest_apply_sweeps", &tp.naswps, &set);
+	if(ierr || !set) {
+		throw std::runtime_error("Number of testing apply sweeps not set!");
+	}
+
+	set = PETSC_FALSE;
+	char filename[PATH_STR_LEN];
+	ierr = PetscOptionsGetString(NULL,NULL,"-perftest_report_file", filename, PATH_STR_LEN, &set);
+	if(ierr || !set) {
+		throw std::runtime_error("Path to report output not set!");
+	}
+	tp.reportfile = filename;
+
+	return tp;
 }
 
 }

@@ -127,8 +127,8 @@ int main(int argc, char* argv[])
 	{
 		RunParams rp;
 		rp.ref = false;
-		rp.nbswps = tparams.nbswpslist[isetting];
-		rp.naswps = tparams.naswpslist[isetting];
+		rp.nbswps = tparams.nbswps;
+		rp.naswps = tparams.naswps;
 		rp.numthreads = tparams.threadslist[isetting];
 		rp.nrepeats = tparams.nruns;
 		TimingData curtime;

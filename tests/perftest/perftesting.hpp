@@ -22,8 +22,8 @@ struct TestParams {
 	int nruns;                      ///< Number of times to repeat the test runs
 	int nrefbswps;                  ///< Number of build-sweeps to use for the ref run
 	int nrefaswps;                  ///< Number of apply-sweeps to use for the ref run
-	std::vector<int> nbswpslist;    ///< List of number of build-sweeps to use for test runs
-	std::vector<int> naswpslist;    ///< List of number of apply-sweeps to use for test runs
+	int nbswps;                     ///< List of number of build-sweeps to use for test runs
+	int naswps;                     ///< List of number of apply-sweeps to use for test runs
 	std::string reportfile;         ///< Path to output file
 };
 
@@ -52,8 +52,8 @@ struct TimingData {
 	std::vector<double> convhis;
 
 	/// Initialize
-	TimingData() : walltime{0}, cputime{0}, avg_lin_iters{0}, max_lin_iters{0}, converged{false},
-	               precsetup_walltime{0}, precapply_walltime{0}, prec_cputime{0}
+	TimingData() : nelem{0}, num_threads{-1}, walltime{0}, cputime{0}, avg_lin_iters{0}, max_lin_iters{0},
+	               converged{false}, precsetup_walltime{0}, precapply_walltime{0}, prec_cputime{0}
 	{ }
 };
 
