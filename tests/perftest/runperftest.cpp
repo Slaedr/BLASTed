@@ -28,7 +28,7 @@ int main(int argc, char* argv[])
 		Use -options_file to provide a PETSc options file.\n\
 		Use '-test_type compare_its' to compare the two solvers by iteration count.\n";
 
-	if(argc < 4) {
+	if(argc < 3) {
 		printf("Please specify the required files.\n");
 		printf("%s", help);
 		return 0;
@@ -36,7 +36,7 @@ int main(int argc, char* argv[])
 
 	const char *const matfile = argv[1];
 	const char *const bfile = argv[2];
-	const char *const xfile = argv[3];
+	//const char *const xfile = argv[3];
 	
 	PetscMPIInt size, rank;
 	PetscErrorCode ierr = 0;
@@ -77,25 +77,25 @@ int main(int argc, char* argv[])
 	PetscViewerBinaryOpen(comm, matfile, FILE_MODE_READ, &matreader);
 	PetscViewer bvecreader;
 	PetscViewerBinaryOpen(comm, bfile, FILE_MODE_READ, &bvecreader);
-	PetscViewer xvecreader;
-	PetscViewerBinaryOpen(comm, xfile, FILE_MODE_READ, &xvecreader);
+	// PetscViewer xvecreader;
+	// PetscViewerBinaryOpen(comm, xfile, FILE_MODE_READ, &xvecreader);
 
 	Mat A;
 	ierr = MatCreate(comm,&A); CHKERRQ(ierr);
 	ierr = MatSetFromOptions(A); CHKERRQ(ierr);
 	ierr = MatLoad(A, matreader); CHKERRQ(ierr);
 
-	Vec u, uexact, b, err;
+	Vec u, b;
 	ierr = VecCreate(comm,&b); CHKERRQ(ierr);
-	ierr = VecCreate(comm,&uexact); CHKERRQ(ierr);
+	//ierr = VecCreate(comm,&uexact); CHKERRQ(ierr);
 	ierr = VecLoad(b, bvecreader); CHKERRQ(ierr);
-	ierr = VecLoad(uexact, xvecreader); CHKERRQ(ierr);
-	ierr = MatCreateVecs(A, &err, NULL); CHKERRQ(ierr);
+	//ierr = VecLoad(uexact, xvecreader); CHKERRQ(ierr);
+	//ierr = MatCreateVecs(A, &err, NULL); CHKERRQ(ierr);
 	ierr = MatCreateVecs(A, &u, NULL); CHKERRQ(ierr);
 
 	PetscViewerDestroy(&matreader);
 	PetscViewerDestroy(&bvecreader);
-	PetscViewerDestroy(&xvecreader);
+	// PetscViewerDestroy(&xvecreader);
 
 	PetscInt vs;
 	ierr = VecGetSize(b, &vs); CHKERRQ(ierr);
@@ -139,9 +139,9 @@ int main(int argc, char* argv[])
 	report.close();
 
 	VecDestroy(&u);
-	VecDestroy(&uexact);
+	//VecDestroy(&uexact);
 	VecDestroy(&b);
-	VecDestroy(&err);
+	//VecDestroy(&err);
 	MatDestroy(&A);
 	PetscFinalize();
 
