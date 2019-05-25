@@ -3,6 +3,7 @@
  */
 
 #include <iomanip>
+#include <stdexcept>
 #include <blasted_petsc.h>
 #include "perftesting.hpp"
 

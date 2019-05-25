@@ -247,7 +247,7 @@ if(PROFILE)
 endif()
 
 # Boost
-find_package(Boost 1.60 REQUIRED)
+find_package(Boost 1.57 REQUIRED)
 include_directories(${Boost_INCLUDE_DIRS})
 
 # Eigen
