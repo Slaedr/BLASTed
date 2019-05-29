@@ -8,6 +8,7 @@
 
 #include <Eigen/Core>
 #include "srmatrixdefs.hpp"
+#include "scmatrixdefs.hpp"
 
 namespace blasted {
 
@@ -36,6 +37,14 @@ template <typename scalar, typename index>
 void csr_gemv3(const CRawBSRMatrix<scalar,index> *const mat,
                const scalar a, const scalar *const __restrict xx, 
                const scalar b, const scalar *const yy, scalar *const zz);
+
+/// GeMV for block compressed sparse column matrix
+/** Computes z := a Ax + by for  scalars a and b and vectors x and y
+ */
+template <typename scalar, typename index, int bs, StorageOptions stor>
+void bcsc_gemv3(const CRawBSCMatrix<scalar,index> *const mat,
+                const scalar a, const scalar *const __restrict xx, 
+                const scalar b, const scalar *const yy, scalar *const zz);
 
 }
 
