@@ -25,8 +25,8 @@ template <typename scalar, typename index>
 ColumnAdjacency<scalar,index>::ColumnAdjacency(const CRawBSRMatrix<scalar,index>& mat)
 {
 	ptrs.assign(mat.nbrows+1, 0);
-	rows_nz.resize(mat.browind[mat.nbrows]);
-	rows_loc.resize(mat.browind[mat.nbrows]);
+	col_rows.resize(mat.browptr[mat.nbrows]);
+	rows_loc.resize(mat.browptr[mat.nbrows]);
 
 	// first determine size of each column while leaving the first entry of ptrs empty
 	for(index jj = 0; jj < mat.browptr[mat.nbrows]; jj++) {
@@ -40,6 +40,19 @@ ColumnAdjacency<scalar,index>::ColumnAdjacency(const CRawBSRMatrix<scalar,index>
 	if(ptrs.back() != mat.browptr[mat.nbrows])
 		throw std::runtime_error("Wrong pointer list!");
 
+	std::vector<index> colfill(mat.nbrows, 0);
+
+	// Fill required indices (serially)
+	for(index irow = 0; irow < mat.nbrows; irow++)
+		for(index jj = mat.browptr[irow]; jj < mat.browptr[irow+1]; jj++)
+		{
+			const index colind = mat.bcolind[jj];
+
+			col_rows[ptrs[colind]+colfill[colind]] = irow;
+			rows_loc[ptrs[colind]+colfill[colind]] = jj;
+
+			colfill[colind]++;
+		}
 }
 
 template class ColumnAdjacency<double,int>;

@@ -6,7 +6,7 @@ endif()
 add_library(helper helper_algorithms.cpp)
 set_property(TARGET helper PROPERTY POSITION_INDEPENDENT_CODE ON)
 
-add_library(rawmatrixutils rawsrmatrixutils.cpp scmatrix.cpp)
+add_library(rawmatrixutils rawsrmatrixutils.cpp adjacency.cpp scmatrix.cpp)
 set_property(TARGET rawmatrixutils PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 add_library(orderingscaling reorderingscaling.cpp)
