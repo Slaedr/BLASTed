@@ -20,6 +20,8 @@
 #ifndef BLASTED_HELPER_ALGORITHMS_H
 #define BLASTED_HELPER_ALGORITHMS_H
 
+#include <vector>
+
 namespace blasted {
 
 /// Functionality only used in implementation(s); not part of the public interface of the library
@@ -58,6 +60,12 @@ inline void inner_search(const index *const aind,
  */
 template <typename scalar, typename index, int bs>
 void sortBlockInnerDimension(const index N, index *const colind, scalar *const vals);
+
+/// Each entry is replaced with the cumulative sum of all previous entries including itself
+/** The first entry is not modified, but is considered in the accumulation process.
+ */
+template <typename index>
+void inclusive_scan(std::vector<index>& v);
 
 }
 }

@@ -27,7 +27,9 @@ public:
 protected:
 	/// The indices of rows that contain a non-zero for each column
 	std::vector<index> rows_nz;
-	/// Locations of non-zeros in the rows corresponding to each column
+	/// Locations of the non-zero in each row corresponding to each column
+	/** Ordered the same way as \ref rows_nz
+	 */
 	std::vector<index> rows_loc;
 	/// Pointers into \ref rows where the list of each column begins
 	std::vector<index> ptrs;

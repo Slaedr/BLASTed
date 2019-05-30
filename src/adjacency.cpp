@@ -16,6 +16,7 @@
  *   along with BLASTed.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "helper_algorithms.hpp"
 #include "adjacency.hpp"
 
 namespace blasted {
@@ -23,16 +24,22 @@ namespace blasted {
 template <typename scalar, typename index>
 ColumnAdjacency<scalar,index>::ColumnAdjacency(const CRawBSRMatrix<scalar,index>& mat)
 {
-	ptrs.resize(mat.nbrows+1);
+	ptrs.assign(mat.nbrows+1, 0);
 	rows_nz.resize(mat.browind[mat.nbrows]);
 	rows_loc.resize(mat.browind[mat.nbrows]);
 
-	index iz = 0;
-	for(index irow = 0; irow < mat.nbrows; irow++)
-	{
-		for(index jj = mat.browptr[irow]; jj < mat.browptr[irow+1]; jj++) {
-		}
+	// first determine size of each column while leaving the first entry of ptrs empty
+	for(index jj = 0; jj < mat.browptr[mat.nbrows]; jj++) {
+		ptrs[mat.bcolind[jj]+1]++;
 	}
+	if(ptrs.front() != 0)
+		throw std::runtime_error("Wrong sizes!");
+
+	// compute beginnings of data list for each column
+	internal::inclusive_scan(ptrs);
+	if(ptrs.back() != mat.browptr[mat.nbrows])
+		throw std::runtime_error("Wrong pointer list!");
+
 }
 
 template class ColumnAdjacency<double,int>;

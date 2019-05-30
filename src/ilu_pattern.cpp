@@ -91,7 +91,7 @@ ILUPositions<index> compute_ILU_positions_CSR_CSR(const CRawBSRMatrix<scalar,ind
 	}
 
 	const size_t totallen = std::accumulate(numpos.begin(), numpos.end(), 0);
-	exclusive_scan(pos.posptr);
+	internal::inclusive_scan(pos.posptr);
 
 	assert(static_cast<size_t>(pos.posptr[pattern_size]) == totallen);
 
@@ -164,16 +164,6 @@ ILUPositions<index> compute_ILU_positions_CSR_CSR(const CRawBSRMatrix<scalar,ind
 
 	std::cout << "  ILU_positions: Computed required locations in L and U factors." << std::endl;
 	return pos;
-}
-
-// Serial
-template <typename T>
-void exclusive_scan(std::vector<T>& v)
-{
-	for(size_t i = 1; i < v.size(); i++)
-	{
-		v[i] += v[i-1];
-	}
 }
 
 template ILUPositions<int> compute_ILU_positions_CSR_CSR(const CRawBSRMatrix<double,int> *const mat);

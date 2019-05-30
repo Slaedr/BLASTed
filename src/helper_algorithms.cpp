@@ -63,5 +63,15 @@ template void sortBlockInnerDimension<double,int,5>(const int N,
 template void sortBlockInnerDimension<double,int,7>(const int N,
                                                     int *const colind, double *const vals);
 
+template <typename index>
+void inclusive_scan(std::vector<index>& v)
+{
+	// serial
+	for(size_t i = 1; i < v.size(); i++)
+		v[i] += v[i-1];
+}
+
+template void inclusive_scan(std::vector<int>& v);
+
 }
 }
