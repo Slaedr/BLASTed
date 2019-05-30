@@ -18,6 +18,9 @@ target_link_libraries(testbscconversion blockmatrices coomatrix rawmatrixutils)
 add_executable(testlevelschedule testlevelschedule.cpp)
 target_link_libraries(testlevelschedule coomatrix solverops)
 
+add_executable(testcoladj testcoladj.cpp)
+target_link_libraries(testcoladj coomatrix rawmatrixutils helper)
+
 add_executable(testreordering testreordering.cpp)
 target_link_libraries(testreordering orderingscaling blockmatrices rawmatrixutils coomatrix helper)
 if(WITH_MC64)
@@ -45,6 +48,11 @@ add_test(NAME COOConvertToBSR3
   COMMAND ${SEQEXEC} ${SEQTASKS} ${CMAKE_CURRENT_BINARY_DIR}/testcoomatrix convertBSR3
   ${CMAKE_CURRENT_SOURCE_DIR}/input/small_block3_matrix.mtx 
   ${CMAKE_CURRENT_SOURCE_DIR}/input/small_block3_matrix_sorted_bcolmajor.bcoo)
+
+add_test(NAME ColumnAdjacencyCSR
+  COMMAND ${SEQEXEC} ${SEQTASKS} ${CMAKE_CURRENT_BINARY_DIR}/testcoladj
+  ${CMAKE_CURRENT_SOURCE_DIR}/input/fluorem-dk01r/DK01R.mtx 
+  )
 
 add_test(NAME CSRMatMul
   COMMAND ${SEQEXEC} ${SEQTASKS} ${CMAKE_CURRENT_BINARY_DIR}/testcsrmatrix apply matrix
