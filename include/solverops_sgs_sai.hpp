@@ -7,6 +7,7 @@
 #define BLASTED_SGS_SAI_H
 
 #include "solverops_base.hpp"
+#include "adjacency.hpp"
 
 namespace blasted {
 
@@ -46,7 +47,45 @@ protected:
 	using Preconditioner<scalar,index>::solveparams;
 
 	const bool fullsai;
-	RawBSRMatrix<scalar,index> sai;
+
+	RawBSRMatrix<scalar,index> saiL;
+	RawBSRMatrix<scalar,index> saiU;
+
+	using LMatrix = Matrix<scalar,Dynamic,Dynamic,ColMajor>;
+	using IArray = Eigen::Array<index,Dynamic,Dynamic,RowMajor>;
+
+	/// Indexing required for assembling the local least-squares problem and scattering the result
+	/** Below, Minv refers to the (incomplete) approximate inverse matrix
+	 */
+	struct LSIndices
+	{
+		/// For each column of Minv, for each entry, the location in Minv
+		std::vector<index> midx;
+		/// Pointers into \ref midx for each column of Minv
+		std::vector<index> mptr;
+
+		/// For each column of Minv, locations (in the original matrix) of each entry of the local LHS
+		std::vector<index> ls_loc;
+		/// Pointers into \ref ls_loc for each column of Minv
+		std::vector<index> ijptr;
+
+		/// Location of identity block in the RHS vector of each column's local problem
+		std::vector<int> idtloc;
+	} lsindices;
+
+	/// Sets up data structures the first time
+	/** Computes sizes of lower and upper approximate inverses and allocates storage.
+	 */
+	void initialize();
+
+	__attribute__((always_inline))
+	LMatrix compute_LHS_SAI_upper(const index col) const;
+	__attribute__((always_inline))
+	LMatrix compute_LHS_SAI_lower(const index col) const;
+	__attribute__((always_inline))
+	LMatrix compute_LHS_incompSAI_upper(const index col) const;
+	__attribute__((always_inline))
+	LMatrix compute_LHS_incompSAI_lower(const index col) const;
 };
 
 }

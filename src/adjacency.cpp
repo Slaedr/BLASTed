@@ -24,6 +24,12 @@ namespace blasted {
 template <typename scalar, typename index>
 ColumnAdjacency<scalar,index>::ColumnAdjacency(const CRawBSRMatrix<scalar,index>& mat)
 {
+	compute(mat);
+}
+
+template <typename scalar, typename index>
+void ColumnAdjacency<scalar,index>::compute(const CRawBSRMatrix<scalar,index>& mat)
+{
 	ptrs.assign(mat.nbrows+1, 0);
 	col_rows.resize(mat.browptr[mat.nbrows]);
 	rows_loc.resize(mat.browptr[mat.nbrows]);

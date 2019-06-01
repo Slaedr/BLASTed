@@ -15,7 +15,7 @@ template <typename scalar, typename index>
 class ColumnAdjacency
 {
 public:
-	/// Computes the adjacency lists of a CSR-type matrix
+	/// Constructor that computes the adjacency lists of a CSR-type matrix
 	ColumnAdjacency(const CRawBSRMatrix<scalar,index>& mat);
 
 	/// Access lists of rows having non-zeros in any column
@@ -38,6 +38,9 @@ protected:
 	std::vector<index> rows_loc;
 	/// Pointers into \ref rows where the list of each column begins
 	std::vector<index> ptrs;
+
+	/// Computes the adjacency lists of a CSR-type matrix
+	void compute(const CRawBSRMatrix<scalar,index>& mat);
 };
 
 }
