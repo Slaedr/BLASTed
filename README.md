@@ -1,7 +1,7 @@
 BLASTed
 =======
 
-Basic Linear Algebra Subprograms Threaded: A collection of sparse matrix containers and manipulators, along with certain linear algebra operations. Note that this is not a complete sparse BLAS library. The main focus is on providing thread-parallel low-level kernels required to implement preconditioners for large sparse linear systems of algebraic equations, in an object-oriented framework. In case of a distributed-nemory parallel solver, the operations implemented here are meant to be used in the subdomains' local preconditioners.
+Basic Linear Algebra Subprograms Threaded: A collection of sparse matrix containers and manipulators, along with certain linear algebra operations. Note that this is not a complete sparse BLAS library. The main focus is on providing thread-parallel low-level kernels required to implement preconditioners for large sparse linear systems of algebraic equations, in an object-oriented framework. In case of a distributed-memory parallel solver, the operations implemented here are meant to be used in the subdomains' local preconditioners.
 
 Building
 --------
@@ -52,6 +52,7 @@ to generate a tags file for [easier navigation of the source code in Vim](http:/
 Usage
 -----
 For the most part, one would want to use the library as a plugin for PETSc. This is explained in the [usage documentation](doc/user-doc.md).
+
 ---
 
 [![Built with Spacemacs](https://cdn.rawgit.com/syl20bnr/spacemacs/442d025779da2f62fc86c2082703697714db6514/assets/spacemacs-badge.svg)](http://spacemacs.org)
