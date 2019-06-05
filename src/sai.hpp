@@ -11,7 +11,7 @@
 namespace blasted {
 
 /// Stores indices of non-zeros in a CSR-type matrix corresponding to the local least-squares matrices
-///  if a sparse approximate inverse preconditioner
+///  of a sparse approximate inverse preconditioner
 /** It is meant for use with a left approximate inverse preconditioner stored in a CSR-type format.
  */
 template <typename index>
@@ -35,14 +35,13 @@ struct TriangularLeftSAIPattern
 	std::vector<int> upperMConstraints;
 };
 
-/// Computes the pattern as described for \ref TriangularLeftSAIPattern
+/// Computes the pattern (as described for \ref TriangularLeftSAIPattern) of a SAI(0,1) preconditioner
+///  for the lower and upper triangular parts (both including the diagonal) of a CSR-type matrix
 /** \param mat The input matrix for which the SAI pattern is to be determined. Note that the values of
  *             the non-zero entries are immaterial - only the sparsity pattern is required.
- *  \param fullsai Whether SAI (true) or incomplete SAI (false) preconditioner is desired.
  */
 template <typename scalar, typename index>
-TriangularLeftSAIPattern<index> compute_triangular_SAI_pattern(const CRawBSRMatrix<scalar,index>& mat,
-                                                               const bool fullsai);
+TriangularLeftSAIPattern<index> triangular_SAI_pattern(const CRawBSRMatrix<scalar,index>& mat);
 
 }
 

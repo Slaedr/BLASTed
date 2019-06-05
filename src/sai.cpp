@@ -9,8 +9,7 @@
 namespace blasted {
 
 template <typename scalar, typename index>
-TriangularLeftSAIPattern<index> compute_triangular_SAI_pattern(const CRawBSRMatrix<scalar,index>& mat,
-                                                               const bool fullsai)
+TriangularLeftSAIPattern<index> triangular_SAI_pattern(const CRawBSRMatrix<scalar,index>& mat)
 {
 	TriangularLeftSAIPattern<index> tsp;
 
@@ -41,6 +40,7 @@ TriangularLeftSAIPattern<index> compute_triangular_SAI_pattern(const CRawBSRMatr
 		tsp.ptrlower[irow+1] = tsp.lowerMConstraints[irow]*lowerNVars;
 
 		const index upperNVars = mat.browptr[irow+1] - mat.diagind[irow];
+
 		std::set<index> ucols;
 		for(index jj = mat.diagind[irow]; jj < mat.browptr[irow+1]; jj++)
 		{
@@ -91,7 +91,7 @@ TriangularLeftSAIPattern<index> compute_triangular_SAI_pattern(const CRawBSRMatr
 				for(index kk = mat.browptr[rowL]; kk <= mat.diagind[rowL]; kk++) {
 					if(*icol == mat.bcolind[kk])
 					{
-						tsp.lowernz[tsp.ptrlower[irow] + llocrow + lloccol*nl] = kk;
+						tsp.lowernz[tsp.ptrlower[irow] + llocrow + lloccol*ml] = kk;
 					}
 				}
 				llocrow++;
@@ -131,7 +131,7 @@ TriangularLeftSAIPattern<index> compute_triangular_SAI_pattern(const CRawBSRMatr
 				for(index kk = mat.diagind[rowU]; kk < mat.browptr[rowU+1]; kk++) {
 					if(*icol == mat.bcolind[kk])
 					{
-						tsp.uppernz[tsp.ptrupper[irow] + ulocrow + uloccol*nl] = kk;
+						tsp.uppernz[tsp.ptrupper[irow] + ulocrow + uloccol*ml] = kk;
 					}
 				}
 				ulocrow++;
@@ -142,5 +142,7 @@ TriangularLeftSAIPattern<index> compute_triangular_SAI_pattern(const CRawBSRMatr
 
 	return tsp;
 }
+
+template TriangularLeftSAIPattern<int> triangular_SAI_pattern(const CRawBSRMatrix<double,int>& mat);
 
 }
