@@ -145,4 +145,99 @@ TriangularLeftSAIPattern<index> triangular_SAI_pattern(const CRawBSRMatrix<scala
 
 template TriangularLeftSAIPattern<int> triangular_SAI_pattern(const CRawBSRMatrix<double,int>& mat);
 
+template <typename scalar, typename index>
+TriangularLeftSAIPattern<index> triangular_incomp_SAI_pattern(const CRawBSRMatrix<scalar,index>& mat)
+{
+	TriangularLeftSAIPattern<index> tsp;
+
+	// compute number of columns of A that are needed for every row of M
+
+	tsp.ptrlower.resize(mat.nbrows+1);
+	tsp.ptrupper.resize(mat.nbrows+1);
+	tsp.ptrlower[0] = 0;
+	tsp.ptrupper[0] = 0;
+	tsp.lowerMConstraints(mat.nbrows);
+	tsp.upperMConstraints(mat.nbrows);
+
+	//#pragma omp parallel for default(shared)
+	for(index irow = 0; irow < mat.nbrows; irow++)
+	{
+		const index lowerNVars = mat.diagind[irow]+1 - mat.browptr[irow];
+		tsp.ptrlower[irow+1] = lowerNVars*lowerNVars;
+
+		const index upperNVars = mat.browptr[irow+1] - mat.diagind[irow];
+		tsp.ptrupper[irow+1] = tsp.upperMConstraints[irow]*upperNVars;
+	}
+
+	internal::inclusive_scan(tsp.ptrlower);
+	internal::inclusive_scan(tsp.ptrupper);
+
+	lowernz.resize(tsp.ptrlower[mat.nbrows]);
+	uppernz.resize(tsp.ptrupper[mat.nbrows]);
+
+	// compute locations of L that are needed for every row of the approx inverse M
+
+	for(index irow = 0; irow < mat.nbrows; irow++)
+	{
+		std::vector<index> lrows;
+		for(index jj = mat.browptr[irow]; jj <= mat.diagind[irow]; jj++)
+		{
+			const index col = mat.bcolind[jj];      // column of A^T, row of A
+			lrows.push_back(col);
+		}
+
+		const int nl = mat.diagind[irow]+1 - mat.browptr[irow];
+
+		for(int i = 0; i < nl*nl; i++)
+			tsp.lowernz[tsp.ptrlower[irow]+i] = -1;
+
+		for(int j = 0; j < nl; j++)
+		{
+			const index rowL = lrows[j];
+
+			for(int i = 0; i < nl; i++)
+			{
+				const index colL = lrows[i];
+				for(index kk = mat.browptr[rowL]; kk <= mat.diagind[rowL]; kk++) {
+					if(mat.bcolind[kk] == colL)
+						tsp.lowernz[tsp.ptrlower[irow] + i + j*nl] = kk;
+				}
+			}
+		}
+	}
+
+	// compute locations of U that are needed for every row of the approx inverse M
+
+	for(index irow = 0; irow < mat.nbrows; irow++)
+	{
+		std::vector<index> urows;
+		for(index jj = mat.diagind[irow]; jj < mat.browptr[irow+1]; jj++)
+		{
+			const index col = mat.bcolind[jj];      // column of A^T, row of A
+			urows.push_back(col);
+		}
+
+		const int nl = mat.browptr[irow+1] - mat.diagind[irow];
+
+		for(int i = 0; i < nl*nl; i++)
+			tsp.uppernz[tsp.ptrupper[irow]+i] = -1;
+
+		for(int j = 0; j < nl; j++)
+		{
+			const index rowU = urows[j];
+
+			for(int i = 0; i < nl; i++)
+			{
+				const index colL = urows[i];
+				for(index kk = mat.diagind[rowU]; kk < mat.browptr[rowU+1]; kk++) {
+					if(colL == mat.bcolind[kk])
+						tsp.uppernz[tsp.ptrupper[irow] + i + j*nl] = kk;
+				}
+			}
+		}
+	}
+
+	return tsp;
+}
+
 }
