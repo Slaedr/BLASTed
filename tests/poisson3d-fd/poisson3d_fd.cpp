@@ -101,9 +101,9 @@ PetscErrorCode computeLHS(const CartMesh *const m, DM da, PetscMPIInt rank, Mat 
 
 				rindices[0] = {k,j,i,0};
 
-				cindices[0] = {k,j,i-1,0};
+				cindices[2] = {k,j,i-1,0};
 				cindices[1] = {k,j-1,i,0};
-				cindices[2] = {k-1,j,i,0};
+				cindices[0] = {k-1,j,i,0};
 				cindices[3] = {k,j,i,0};
 				cindices[4] = {k,j,i+1,0};
 				cindices[5] = {k,j+1,i,0};
@@ -111,11 +111,11 @@ PetscErrorCode computeLHS(const CartMesh *const m, DM da, PetscMPIInt rank, Mat 
 
 				PetscInt I = i+1, J = j+1, K = k+1;		// 1-offset indices for mesh coords access
 				
-				values[0] = -1.0/( (m->gcoords(0,I)-m->gcoords(0,I-1)) 
+				values[2] = -1.0/( (m->gcoords(0,I)-m->gcoords(0,I-1)) 
 						* 0.5*(m->gcoords(0,I+1)-m->gcoords(0,I-1)) );
 				values[1] = -1.0/( (m->gcoords(1,J)-m->gcoords(1,J-1)) 
 						* 0.5*(m->gcoords(1,J+1)-m->gcoords(1,J-1)) );
-				values[2] = -1.0/( (m->gcoords(2,K)-m->gcoords(2,K-1)) 
+				values[0] = -1.0/( (m->gcoords(2,K)-m->gcoords(2,K-1)) 
 						* 0.5*(m->gcoords(2,K+1)-m->gcoords(2,K-1)) );
 
 				values[3] =  2.0/(m->gcoords(0,I+1)-m->gcoords(0,I-1))*

@@ -228,9 +228,9 @@ TriangularLeftSAIPattern<index> triangular_incomp_SAI_pattern(const CRawBSRMatri
 
 			for(int i = 0; i < nl; i++)
 			{
-				const index colL = urows[i];
+				const index colU = urows[i];
 				for(index kk = mat.diagind[rowU]; kk < mat.browptr[rowU+1]; kk++) {
-					if(colL == mat.bcolind[kk])
+					if(colU == mat.bcolind[kk])
 						tsp.uppernz[tsp.ptrupper[irow] + i + j*nl] = kk;
 				}
 			}
@@ -239,5 +239,8 @@ TriangularLeftSAIPattern<index> triangular_incomp_SAI_pattern(const CRawBSRMatri
 
 	return tsp;
 }
+
+template TriangularLeftSAIPattern<int>
+triangular_incomp_SAI_pattern<double,int>(const CRawBSRMatrix<double,int>& mat);
 
 }
