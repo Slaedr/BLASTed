@@ -54,6 +54,20 @@ TriangularLeftSAIPattern<index> triangular_SAI_pattern(const CRawBSRMatrix<scala
 template <typename scalar, typename index>
 TriangularLeftSAIPattern<index> triangular_incomp_SAI_pattern(const CRawBSRMatrix<scalar,index>& mat);
 
+template <typename index>
+struct LeftSAIPattern
+{
+	/// Locations in the original matrix's bcolind array for each entry of all SAI LHS matrices
+	std::vector<index> bpos;
+	/// Row indices of entries in the SAI LHS matrix corresponding to \ref bpos
+	std::vector<index> browind;
+	/// Pointers to the start of every block-column of every SAI LHS matrix
+	std::vector<index> bcolptr;
+	/// Pointers into \ref bcolptr for the start of the LHS matrix of the least-squares problem
+	///   for each block-row of the original matrix
+	std::vector<index> sairowptr;
+}
+
 }
 
 #endif
