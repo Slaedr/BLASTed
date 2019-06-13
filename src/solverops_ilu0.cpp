@@ -371,7 +371,7 @@ ReorderedAsyncILU0_SRPreconditioner(ReorderingScaling<scalar,index,1> *const reo
                                     const bool threadedfactor, const bool threadedapply)
 	: AsyncILU0_SRPreconditioner<scalar,index>(nbuildsweeps,napplysweeps, tcs, finit, ainit,
 	                                           threadedfactor,threadedapply),
-	rsmat{nullptr, nullptr, nullptr, nullptr, 0}, reord{reorderscale}
+	  reord{reorderscale}
 { }
 
 template <typename scalar, typename index>

@@ -73,5 +73,15 @@ void inclusive_scan(std::vector<index>& v)
 
 template void inclusive_scan(std::vector<int>& v);
 
+template <typename index>
+std::vector<index> inclusive_scan(const std::vector<index>& v)
+{
+	std::vector<index> scanned(v);
+	inclusive_scan(scanned);
+	return scanned;
+}
+
+template std::vector<int> inclusive_scan(const std::vector<int>& v);
+
 }
 }

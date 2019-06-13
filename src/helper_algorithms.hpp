@@ -47,7 +47,6 @@ inline void inner_search(const index *const aind,
 	}
 }
 
-
 /// Sorts two "corresponding" arrays according to the first array
 /** This is meant for sorting the array of 'inner' indices and the array of non-zero values for
  * on particular outer index. This means, for example, sorting by columns within a row of a sparse-
@@ -66,6 +65,13 @@ void sortBlockInnerDimension(const index N, index *const colind, scalar *const v
  */
 template <typename index>
 void inclusive_scan(std::vector<index>& v);
+
+/// Each entry is computed as the cumulative sum of all entries upto and including its position in
+///  the input vector
+/** The first entry of the output vector is set the same as in the input vector.
+ */
+template <typename index>
+std::vector<index> inclusive_scan(const std::vector<index>& v);
 
 }
 }

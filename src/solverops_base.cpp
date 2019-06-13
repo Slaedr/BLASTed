@@ -18,7 +18,7 @@ Preconditioner<scalar,index>::~Preconditioner()
 
 template <typename scalar, typename index>
 SRPreconditioner<scalar,index>::SRPreconditioner()
-	: Preconditioner<scalar,index>(SPARSEROW), mat{nullptr, nullptr, nullptr, nullptr, 0}
+	: Preconditioner<scalar,index>(SPARSEROW)
 { }
 
 template <typename scalar, typename index>
@@ -31,6 +31,8 @@ void SRPreconditioner<scalar,index>::wrap(const index n_brows, const index *cons
 	mat.bcolind = bcinds;
 	mat.vals = values;
 	mat.diagind = dinds;
+	if(n_brows > 0)
+		mat.browendptr = &brptrs[1];
 }
 
 template <typename scalar, typename index>
