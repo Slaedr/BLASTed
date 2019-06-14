@@ -16,10 +16,6 @@ RawBSRMatrix<scalar,index> copyRawBSRMatrix(const CRawBSRMatrix<scalar,index>& m
 {
 	RawBSRMatrix<scalar,index> nmat;
 	nmat.nbrows = mat.nbrows;
-	/*nmat.browptr = new index[mat.nbrows+1];
-	nmat.bcolind = new index[mat.browptr[mat.nbrows]];
-	nmat.vals = new scalar[mat.browptr[mat.nbrows]*bs*bs];
-	nmat.diagind = new index[mat.nbrows];*/
 	nmat.browptr = (index*)aligned_alloc(CACHE_LINE_LEN,(mat.nbrows+1)*sizeof(index));
 	nmat.bcolind = (index*)aligned_alloc(CACHE_LINE_LEN,mat.browptr[mat.nbrows]*sizeof(index));
 	nmat.vals = (scalar*)aligned_alloc(CACHE_LINE_LEN,mat.browptr[mat.nbrows]*bs*bs*sizeof(scalar));
@@ -58,7 +54,6 @@ void alignedDestroyRawBSRMatrix(RawBSRMatrix<scalar,index>& rmat)
 	aligned_free(rmat.bcolind);
 	aligned_free(rmat.diagind);
 	aligned_free(rmat.vals);
-	aligned_free(rmat.browendptr);
 }
 
 template void alignedDestroyRawBSRMatrix(RawBSRMatrix<double,int>& rmat);
@@ -70,7 +65,6 @@ void destroyCRawBSRMatrix(CRawBSRMatrix<scalar,index>& rmat)
 	delete [] rmat.bcolind;
 	delete [] rmat.vals;
 	delete [] rmat.diagind;
-	delete [] rmat.browendptr;
 }
 
 template void destroyCRawBSRMatrix(CRawBSRMatrix<double,int>& rmat);

@@ -107,6 +107,8 @@ void BSRMatrixView<scalar,index,bs,stor>::wrap(const index n_brows, const index 
 	mat.bcolind = bcinds;
 	mat.vals = values;
 	mat.diagind = dinds;
+	if(n_brows > 0)
+		mat.browendptr = &mat.browptr[1];
 }
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
@@ -116,6 +118,7 @@ BSRMatrixView<scalar, index, bs,stor>::~BSRMatrixView()
 	mat.bcolind = nullptr;
 	mat.vals = nullptr;
 	mat.diagind = nullptr;
+	mat.browendptr = nullptr;
 }
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
@@ -146,6 +149,7 @@ CSRMatrixView<scalar,index>::~CSRMatrixView()
 	mat.bcolind = nullptr;
 	mat.vals = nullptr;
 	mat.diagind = nullptr;
+	mat.browendptr = nullptr;
 }
 
 template <typename scalar, typename index>
@@ -157,6 +161,8 @@ void CSRMatrixView<scalar,index>::wrap(const index n_brows, const index *const b
 	mat.bcolind = bcinds;
 	mat.vals = values;
 	mat.diagind = dinds;
+	if(n_brows > 0)
+		mat.browendptr = &mat.browptr[1];
 }
 
 template <typename scalar, typename index>
@@ -207,6 +213,9 @@ BSRMatrix<scalar,index,bs>::BSRMatrix(const index n_brows,
 				break;
 			}
 	}
+
+	if(mat.nbrows > 0)
+		mat.browendptr = &mat.browptr[1];
 	std::cout << "BSRMatrix: Setup with matrix with " << mat.nbrows << " block-rows\n";
 }
 
@@ -249,6 +258,9 @@ BSRMatrix<scalar,index,bs>::BSRMatrix(const BSRMatrix<scalar,index,bs>& other)
 
 	for(index irow = 0; irow < mat.nbrows; irow++) 
 		mat.diagind[irow] = other.mat.diagind[irow];
+
+	if(mat.nbrows > 0)
+		mat.browendptr = mat.browptr+1;
 }
 
 template <typename scalar, typename index, int bs>
@@ -260,7 +272,7 @@ BSRMatrix<scalar, index, bs>::~BSRMatrix()
 		delete [] mat.browptr;
 		delete [] mat.diagind;
 	}
-	mat.bcolind = mat.browptr = mat.diagind = nullptr; mat.vals = nullptr;
+	mat.bcolind = mat.browptr = mat.diagind = nullptr; mat.vals = nullptr; mat.browendptr = nullptr;
 }
 
 template <typename scalar, typename index, int bs>
@@ -293,6 +305,9 @@ void BSRMatrix<scalar,index,bs>::setStructure(const index n_brows,
 				break;
 			}
 	}
+
+	if(mat.nbrows > 0)
+		mat.browendptr = mat.browptr+1;
 	std::cout << "BSRMatrix:  Allocated storage for matrix with " << mat.nbrows << " block-rows.\n";
 }
 
@@ -467,6 +482,8 @@ BSRMatrix<scalar,index,1>::BSRMatrix(const index n_brows,
 			}
 	}
 	
+	if(mat.nbrows > 0)
+		mat.browendptr = mat.browptr+1;
 	std::cout << "BSRMatrix<1>: Set up CSR matrix with " << mat.nbrows << " rows\n";
 }
 
@@ -506,6 +523,8 @@ BSRMatrix<scalar,index,1>::BSRMatrix(const BSRMatrix<scalar,index,1>& other)
 
 	for(index irow = 0; irow < mat.nbrows; irow++) 
 		mat.diagind[irow] = other.mat.diagind[irow];
+	if(mat.nbrows > 0)
+		mat.browendptr = mat.browptr+1;
 }
 
 template <typename scalar, typename index>
@@ -516,10 +535,9 @@ BSRMatrix<scalar,index,1>::~BSRMatrix()
 		delete [] mat.bcolind;
 		delete [] mat.browptr;
 		delete [] mat.diagind;
-		delete [] mat.browendptr;
 	}
 
-	mat.bcolind = mat.browptr = mat.diagind = nullptr;
+	mat.bcolind = mat.browptr = mat.diagind = mat.browendptr = nullptr;
 	mat.vals = nullptr;
 }
 
@@ -552,6 +570,8 @@ void BSRMatrix<scalar,index,1>::setStructure(const index n_brows,
 			}
 	}
 	
+	if(mat.nbrows > 0)
+		mat.browendptr = mat.browptr+1;
 	std::cout << "BSRMatrix<1>: Set up CSR matrix with " << mat.nbrows << " rows.\n";
 }
 
