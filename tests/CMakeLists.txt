@@ -7,6 +7,9 @@ if(CXX_COMPILER_CLANG)
   target_compile_options(solvers PRIVATE "-Wno-error=pass-failed")
 endif()
 
+add_library(testutils testutils.cpp ../src/utils/cmdoptions.cpp)
+target_link_libraries(testutils rawmatrixutils ${PETSC_LIB})
+
 add_executable(testsolve runsolvetest.cpp testsolve.cpp)
 target_link_libraries(testsolve solvers solverops coomatrix )
 set_property(TARGET testsolve PROPERTY POSITION_INDEPENDENT_CODE ON)

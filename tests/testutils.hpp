@@ -8,6 +8,10 @@
 #include <petscmat.h>
 #include "srmatrixdefs.hpp"
 
+#define PETSCOPTION_STR_LEN 30
+
+namespace blasted {
+
 /// Convert error code to exception
 void petsc_check(const int ierr);
 
@@ -16,4 +20,11 @@ void petsc_check(const int ierr);
  */
 CRawBSRMatrix<PetscScalar,PetscInt> wrapLocalPetscMat(Mat A, const int bs);
 
+namespace test {
+
+int compareSolverWithPetsc(const int refkspiters, const int avgkspiters, Vec uref, Vec u);
+
+}
+
+}
 #endif

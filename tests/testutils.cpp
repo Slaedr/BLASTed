@@ -4,8 +4,13 @@
 
 #include <stdexcept>
 #include <string>
-#include <petscerror.h>
+#include <../src/mat/impls/aij/mpi/mpiaij.h>
+#include <../src/mat/impls/baij/mpi/mpibaij.h>
+#include "utils/mpiutils.hpp"
+#include "utils/cmdoptions.hpp"
 #include "testutils.hpp"
+
+namespace blasted {
 
 void petsc_check(const int ierr)
 {
@@ -56,4 +61,44 @@ CRawBSRMatrix<PetscScalar,PetscInt> wrapLocalPetscMat(Mat A, const int bs)
 	}
 
 	return rmat;
+}
+
+namespace test {
+
+int compareSolverWithPetsc(const int refkspiters, const int avgkspiters,
+                           Vec uref, Vec u)
+{
+	const int rank = get_mpi_rank(MPI_COMM_WORLD);
+	if(rank == 0)
+		printf("KSP Iters: Reference %d vs BLASTed %d.\n", refkspiters, avgkspiters);
+	fflush(stdout);
+
+	const std::string testtype = parsePetscCmd_string("-test_type", PETSCOPTION_STR_LEN);
+	const double error_tol = parseOptionalPetscCmd_real("-error_tolerance", 1e-8);
+	//const double iters_tol = parseOptionalPetscCmd_real("-iters_tolerance", 1e-2);
+
+	if(testtype == "compare_its" || testtype == "issame") {
+		assert(fabs((double)refkspiters - avgkspiters)/refkspiters <= error_tol);
+	}
+	else if(testtype == "upper_bound_its") {
+		assert(refkspiters > avgkspiters);
+	}
+
+	Vec diff;
+	int ierr = VecDuplicate(u, &diff); CHKERRQ(ierr);
+	ierr = VecWAXPY(diff, -1.0, u, uref); CHKERRQ(ierr);
+	PetscScalar diffnorm, refnorm;
+	ierr = VecNorm(uref, NORM_2, &refnorm); CHKERRQ(ierr);
+	ierr = VecNorm(diff, NORM_2, &diffnorm); CHKERRQ(ierr);
+
+	printf("Difference in solutions = %.16f.\n", diffnorm);
+	printf("Relative difference = %.16f.\n", diffnorm/refnorm);
+	fflush(stdout);
+	if(testtype == "compare_error" || testtype == "issame")
+		assert(diffnorm/refnorm <= error_tol);
+
+	return 0;
+}
+
+}
 }

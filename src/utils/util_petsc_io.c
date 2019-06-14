@@ -3,7 +3,7 @@
 #include <assert.h>
 #include <string.h>
 
-#include <blasted_petsc_io.h>
+#include <utils/blasted_petsc_io.h>
 
 #ifdef _OPENMP
 #include <omp.h>

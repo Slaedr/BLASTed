@@ -1,12 +1,8 @@
 # test executables
 if(WITH_PETSC)
   add_executable(testcsr_poisson poisson3d.cpp poisson3d_fd.cpp cartmesh.cpp)
-  target_link_libraries(testcsr_poisson blasted_petsc)
+  target_link_libraries(testcsr_poisson blasted_petsc utils)
   set_property(TARGET testcsr_poisson PROPERTY POSITION_INDEPENDENT_CODE ON)
-  
-  add_executable(testcsr_poisson_threaded poisson3d-threaded.cpp poisson3d_fd.cpp cartmesh.cpp)
-  target_link_libraries(testcsr_poisson_threaded blasted_petsc)
-  set_property(TARGET testcsr_poisson_threaded PROPERTY POSITION_INDEPENDENT_CODE ON)
 
   # Tests
   #add_test(NAME SerialPoissonCSRPetscILU0 COMMAND env OMP_NUM_THREADS=1 ${MPIEXEC} -n 1 ./testcsr_poisson 
@@ -61,20 +57,20 @@ if(WITH_PETSC)
 	${CMAKE_CURRENT_SOURCE_DIR}/input/poisson.control
 	-options_file  ${CMAKE_CURRENT_SOURCE_DIR}/input/mpi_poisson_csr_sgs.perc)
 
-  add_test(NAME ThreadedPoissonCSRPetscSGS COMMAND ${MPIEXEC} -n 1 ./testcsr_poisson_threaded 
+  add_test(NAME ThreadedPoissonCSRPetscSGS COMMAND ${MPIEXEC} -n 1 ./testcsr_poisson
 	${CMAKE_CURRENT_SOURCE_DIR}/input/poisson.control
 	-options_file  ${CMAKE_CURRENT_SOURCE_DIR}/input/thread_poisson_csr.perc
-	-ref_sub_pc_type sor -blasted_pc_type sgs -test_type compare_error)
+	-ref_sub_pc_type sor -blasted_pc_type sgs -test_type compare_error -error_tolerance 2.5e-9)
 
-  add_test(NAME ThreadedPoissonCSRPetscILU0 COMMAND ${MPIEXEC} -n 1 ./testcsr_poisson_threaded 
+  add_test(NAME ThreadedPoissonCSRPetscILU0 COMMAND ${MPIEXEC} -n 1 ./testcsr_poisson
 	${CMAKE_CURRENT_SOURCE_DIR}/input/poisson.control
 	-options_file  ${CMAKE_CURRENT_SOURCE_DIR}/input/thread_poisson_csr.perc
-	-ref_sub_pc_type ilu -blasted_pc_type ilu0 -test_type compare_error -error_tolerance_factor 1e7)
+	-ref_sub_pc_type ilu -blasted_pc_type ilu0 -test_type compare_error -error_tolerance 2.5e-8)
 
-  add_test(NAME ThreadedPoissonCSRPetscSAPILU0 COMMAND ${MPIEXEC} -n 1 ./testcsr_poisson_threaded 
+  add_test(NAME ThreadedPoissonCSRPetscSAPILU0 COMMAND ${MPIEXEC} -n 1 ./testcsr_poisson
 	${CMAKE_CURRENT_SOURCE_DIR}/input/poisson.control 
 	-options_file  ${CMAKE_CURRENT_SOURCE_DIR}/input/thread_poisson_csr.perc 
-	-ref_sub_pc_type ilu -blasted_pc_type sapilu0 -test_type compare_error)
+	-ref_sub_pc_type ilu -blasted_pc_type sapilu0 -test_type compare_error -error_tolerance 2.5e-8)
 
   add_test(NAME ThreadedPoissonCSRPetsc-LevelSGS
 	COMMAND ${SEQEXEC} ${THREADOPTS} ${CMAKE_CURRENT_BINARY_DIR}/testcsr_poisson
@@ -88,16 +84,16 @@ if(WITH_PETSC)
 	${CMAKE_CURRENT_SOURCE_DIR}/input/poisson.control 
 	-options_file  ${CMAKE_CURRENT_SOURCE_DIR}/input/thread_poisson_csr.perc 
 	-ref_sub_pc_type ilu -blasted_pc_type async_level_ilu0 -blasted_async_sweeps 500,1
-	-blasted_async_fact_init_type init_original -error_tolerance_factor 1e5)
+	-blasted_async_fact_init_type init_original -error_tolerance 1e-10)
 
   add_test(NAME ThreadedRelaxationPoissonPetsc-Async-GS-ItersLowerBound
-	COMMAND ${MPIEXEC} ${THREADOPTS} -n 1 ./testcsr_poisson_threaded
+	COMMAND ${MPIEXEC} ${THREADOPTS} -n 1 ./testcsr_poisson
 	${CMAKE_CURRENT_SOURCE_DIR}/input/poisson.control 
 	-options_file  ${CMAKE_CURRENT_SOURCE_DIR}/../input/asyncrelaxation.perc 
 	-ref_sub_pc_type jacobi -blasted_pc_type gs -test_type upper_bound_its)
 
   add_test(NAME ThreadedRelaxationPoissonPetsc-Async-SGS-ItersLowerBound
-	COMMAND ${MPIEXEC} ${THREADOPTS} -n 1 ./testcsr_poisson_threaded
+	COMMAND ${MPIEXEC} ${THREADOPTS} -n 1 ./testcsr_poisson
 	${CMAKE_CURRENT_SOURCE_DIR}/input/poisson.control 
 	-options_file  ${CMAKE_CURRENT_SOURCE_DIR}/../input/asyncrelaxation.perc 
 	-ref_sub_pc_type jacobi -blasted_pc_type sgs -test_type upper_bound_its)
@@ -107,7 +103,7 @@ if(WITH_PETSC)
 	${CMAKE_CURRENT_SOURCE_DIR}/input/poisson-large.control
 	-options_file  ${CMAKE_CURRENT_SOURCE_DIR}/input/mpi_poisson.perc
 	-ref_sub_pc_type sor -ref_sub_pc_sor_backward -blasted_pc_type cscbgs
-	-error_tolerance_factor 1e2
+	-error_tolerance_factor 2.5e-14
 	)
 
   # add_test(NAME AsyncPrecPoissonCSRPetsc-CSC-BGS

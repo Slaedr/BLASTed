@@ -2,7 +2,6 @@
  */
 
 #undef NDEBUG
-#define DEBUG 1
 
 #include <petscksp.h>
 
@@ -18,8 +17,7 @@
 #include <blasted_petsc.h>
 
 #include "poisson3d_fd.hpp"
-
-#define PETSCOPTION_STR_LEN 30
+#include "../testutils.hpp"
 
 PetscReal compute_error(const MPI_Comm comm, const CartMesh& m, const DM da,
 		const Vec u, const Vec uexact) {
@@ -118,8 +116,11 @@ int main(int argc, char* argv[])
 	ierr = PetscOptionsGetReal(NULL, NULL, "-error_tolerance_factor", &error_tol, &set);
 	if(!set) {
 		printf("Error tolerance factor not set; using the default 1e6.\n");
-		error_tol = 1e6;
+		//error_tol = 1e6;
+		error_tol = 1e-10;
 	}
+
+	const PetscReal integer_error_tol = 1;
 
 	PetscInt cmdnumruns;
 	ierr = PetscOptionsGetInt(NULL,NULL,"-num_runs",&cmdnumruns,&set); CHKERRQ(ierr);
@@ -183,6 +184,10 @@ int main(int argc, char* argv[])
 	ierr = KSPSetOperators(kspref, A, A); CHKERRQ(ierr);
 	
 	ierr = KSPSolve(kspref, b, u); CHKERRQ(ierr);
+	
+	KSPConvergedReason ref_ksp_reason;
+	ierr = KSPGetConvergedReason(kspref, &ref_ksp_reason); CHKERRQ(ierr);
+	assert(ref_ksp_reason > 0);
 
 	PetscInt refkspiters;
 	ierr = KSPGetIterationNumber(kspref, &refkspiters);
@@ -191,10 +196,6 @@ int main(int argc, char* argv[])
 	if(rank==0) {
 		printf("Ref run: error = %.16f\n", errnormref);
 	}
-	
-	KSPConvergedReason ref_ksp_reason;
-	ierr = KSPGetConvergedReason(kspref, &ref_ksp_reason); CHKERRQ(ierr);
-	assert(ref_ksp_reason > 0);
 
 	KSPDestroy(&kspref);
 
@@ -202,11 +203,6 @@ int main(int argc, char* argv[])
 	
 	int avgkspiters = 0;
 	PetscReal errnorm = 0;
-	
-	// test with 4 threads - or not
-#ifdef _OPENMP
-	//omp_set_num_threads(4);
-#endif
 	
 	for(int irun = 0; irun < nruns; irun++)
 	{
@@ -235,8 +231,11 @@ int main(int argc, char* argv[])
 		KSPGetIterationNumber(ksp, &kspiters);
 		avgkspiters += kspiters;
 
+		KSPConvergedReason ksp_reason;
+		ierr = KSPGetConvergedReason(ksp, &ksp_reason); CHKERRQ(ierr);
+		assert(ksp_reason > 0);
+
 		if(rank == 0) {
-			//printf(" Number of KSP iterations = %d\n", kspiters);
 			KSPGetResidualNorm(ksp, &rnorm);
 			printf(" KSP residual norm = %f, num iters = %d.\n", rnorm, kspiters);
 		}
@@ -248,11 +247,6 @@ int main(int argc, char* argv[])
 			printf(" log h and log error: %f  %f\n", log10(m.gh()), log10(errnorm));
 		}
 		
-		// test
-		KSPConvergedReason ksp_reason;
-		ierr = KSPGetConvergedReason(ksp, &ksp_reason); CHKERRQ(ierr);
-		assert(ksp_reason > 0);
-
 		ierr = KSPDestroy(&ksp); CHKERRQ(ierr);
 
 		// rudimentary test for time-totaller
@@ -271,17 +265,16 @@ int main(int argc, char* argv[])
 		printf("KSP Iters: Reference %d vs BLASTed %d.\n", refkspiters, avgkspiters);
 	fflush(stdout);
 
-	if(!strcmp(testtype, "compare_its")) {
-		assert(fabs((double)refkspiters - avgkspiters)/refkspiters <= error_tol);
+	if(!strcmp(testtype, "compare_its") || !strcmp(testtype, "issame")) {
+		assert(fabs((double)refkspiters - avgkspiters)/refkspiters <= integer_error_tol);
 	}
 	else if(!strcmp(testtype, "upper_bound_its")) {
 		assert(refkspiters > avgkspiters);
 	}
 
-	// the following test is probably not workable..
 	printf("Difference in error norm = %.16f.\n", std::fabs(errnorm-errnormref));
-	if(!strcmp(testtype,"compare_error"))
-		assert(std::fabs(errnorm/nruns-errnormref) < error_tol*DBL_EPSILON);
+	if(!strcmp(testtype,"compare_error") || !strcmp(testtype,"issame"))
+		assert(std::fabs((errnorm/nruns-errnormref)/errnormref) < error_tol*DBL_EPSILON);
 
 
 	VecDestroy(&u);
@@ -294,46 +287,3 @@ int main(int argc, char* argv[])
 
 	return ierr;
 }
-		
-// some unused snippets that might be useful at some point
-	
-	/*struct timeval time1, time2;
-	gettimeofday(&time1, NULL);
-	double initialwtime = (double)time1.tv_sec + (double)time1.tv_usec * 1.0e-6;
-	double initialctime = (double)clock() / (double)CLOCKS_PER_SEC;*/
-
-	/*gettimeofday(&time2, NULL);
-	double finalwtime = (double)time2.tv_sec + (double)time2.tv_usec * 1.0e-6;
-	double finalctime = (double)clock() / (double)CLOCKS_PER_SEC;
-	if(rank==0) {
-		printf("Total times: Wall = %f, CPU = %f\n", finalwtime-initialwtime, finalctime-initialctime);
-		printf("Time taken by FGPILU factorization: Wall = %f, CPU = %f\n", iluctrl.factorwalltime, iluctrl.factorcputime);
-		printf("Time taken by FGPILU application: Wall = %f, CPU = %f\n", iluctrl.applywalltime, iluctrl.applycputime);
-		double totalwall = iluctrl.factorwalltime + iluctrl.applywalltime;
-		double totalcpu = iluctrl.factorcputime + iluctrl.applycputime;
-		printf("Time taken by FGPILU total: Wall = %f, CPU = %f\n", totalwall, totalcpu);
-		printf("Average number of iterations: %d\n", (int)(avgkspiters/nruns));
-	}*/
-
-/* For viewing the ILU factors computed by PETSc PCILU
-#include <../src/mat/impls/aij/mpi/mpiaij.h>
-#include <../src/ksp/pc/impls/factor/factor.h>
-#include <../src/ksp/pc/impls/factor/ilu/ilu.h>*/
-
-	/*if(precch == 'i') {	
-		// view factors
-		PC_ILU* ilu = (PC_ILU*)pc->data;
-		//PC_Factor* pcfact = (PC_Factor*)pc->data;
-		//Mat fact = pcfact->fact;
-		Mat fact = ((PC_Factor*)ilu)->fact;
-		printf("ILU0 factored matrix:\n");
-
-		Mat_SeqAIJ* fseq = (Mat_SeqAIJ*)fact->data;
-		for(int i = 0; i < fact->rmap->n; i++) {
-			printf("Row %d: ", i);
-			for(int j = fseq->i[i]; j < fseq->i[i+1]; j++)
-				printf("(%d: %f) ", fseq->j[j], fseq->a[j]);
-			printf("\n");
-		}
-	}*/
-

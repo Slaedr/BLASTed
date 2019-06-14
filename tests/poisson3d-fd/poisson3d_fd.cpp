@@ -145,8 +145,6 @@ PetscErrorCode computeLHS(const CartMesh *const m, DM da, PetscMPIInt rank, Mat 
 
 /// Computes L2 norm of a mesh function v
 /** Assumes piecewise constant values in a dual cell around each node.
- * Note that the actual norm will only be returned by process 0; 
- * the other processes return only local norms.
  */
 PetscReal computeNorm(const MPI_Comm comm, const CartMesh *const m, Vec v, DM da)
 {
@@ -171,10 +169,8 @@ PetscReal computeNorm(const MPI_Comm comm, const CartMesh *const m, Vec v, DM da
 
 	DMDAVecRestoreArray(da, v, &vv);
 
-	MPI_Barrier(comm);
-
 	// get global norm
-	MPI_Reduce(&norm, &global_norm, 1, MPI_DOUBLE, MPI_SUM, 0, comm);
+	MPI_Allreduce(&norm, &global_norm, 1, MPI_DOUBLE, MPI_SUM, comm);
 
 	return global_norm;
 }

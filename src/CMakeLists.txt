@@ -47,11 +47,9 @@ if(WITH_PETSC)
 
   set_property(TARGET blasted_petsc PROPERTY POSITION_INDEPENDENT_CODE ON)
   
-  add_executable(util_petsc_io util_petsc_io.c blasted_petsc_io.cpp)
-  target_link_libraries(util_petsc_io coomatrix blockmatrices
-	${PETSC_LIB} ${MPI_C_LIBRARIES} ${MPI_C_LINK_FLAGS})
-  
 endif()
+
+add_subdirectory(utils)
 
 # Tags
 

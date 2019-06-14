@@ -6,7 +6,7 @@
 #include <cstring>
 #include <vector>
 
-#include <blasted_petsc_io.h>
+#include <utils/blasted_petsc_io.h>
 #include <coomatrix.hpp>
 #include <blockmatrices.hpp>
 
