@@ -6,10 +6,36 @@
 #define BLASTED_SAI_H
 
 #include <vector>
+#include <boost/align/aligned_allocator.hpp>
 #include "srmatrixdefs.hpp"
 
 namespace blasted {
 
+using boost::alignment::aligned_allocator;
+
+template <typename index>
+struct LeftSAIPattern
+{
+	/// Locations in the original matrix's bcolind array for each entry of all SAI LHS matrices
+	std::vector<index,aligned_allocator<index,CACHE_LINE_LEN>> bpos;
+	/// Row indices of entries in the SAI LHS matrix corresponding to \ref bpos
+	std::vector<int,aligned_allocator<index,CACHE_LINE_LEN>> browind;
+	/// Pointers to the start of every block-column of every SAI LHS matrix
+	std::vector<index,aligned_allocator<index,CACHE_LINE_LEN>> bcolptr;
+	/// Pointers into \ref bcolptr for the start of the LHS matrix of the least-squares problem
+	///   for each block-row of the original matrix
+	std::vector<index,aligned_allocator<index,CACHE_LINE_LEN>> sairowptr;
+
+	/// Number of non-zero blocks in each block-row of the approximate inverse
+	std::vector<int,aligned_allocator<int,CACHE_LINE_LEN>> nVars;
+	/// Number of equations in the least-squares problem for each block-row of the approx inverse
+	std::vector<int,aligned_allocator<int,CACHE_LINE_LEN>> nEqns;
+};
+
+template <typename scalar, typename index>
+LeftSAIPattern<index> left_SAI_pattern(const CRawBSRMatrix<scalar,index>& mat);
+
+#if 0
 /// Stores indices of non-zeros in a CSR-type matrix corresponding to the local least-squares matrices
 ///  of a sparse approximate inverse preconditioner
 /** It is meant for use with a left approximate inverse preconditioner stored in a CSR-type format.
@@ -53,20 +79,7 @@ TriangularLeftSAIPattern<index> triangular_SAI_pattern(const CRawBSRMatrix<scala
  */
 template <typename scalar, typename index>
 TriangularLeftSAIPattern<index> triangular_incomp_SAI_pattern(const CRawBSRMatrix<scalar,index>& mat);
-
-template <typename index>
-struct LeftSAIPattern
-{
-	/// Locations in the original matrix's bcolind array for each entry of all SAI LHS matrices
-	std::vector<index> bpos;
-	/// Row indices of entries in the SAI LHS matrix corresponding to \ref bpos
-	std::vector<index> browind;
-	/// Pointers to the start of every block-column of every SAI LHS matrix
-	std::vector<index> bcolptr;
-	/// Pointers into \ref bcolptr for the start of the LHS matrix of the least-squares problem
-	///   for each block-row of the original matrix
-	std::vector<index> sairowptr;
-}
+#endif
 
 }
 

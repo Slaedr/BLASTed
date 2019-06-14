@@ -25,6 +25,7 @@ set_property(TARGET coomatrix PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 add_library(solverops
   solverfactory.cpp
+  sai.cpp
   solverops_levels_sgs.cpp solverops_levels_ilu0.cpp
   relaxation_chaotic.cpp
   solverops_jacobi.cpp solverops_sgs.cpp solverops_ilu0.cpp solverops_base.cpp

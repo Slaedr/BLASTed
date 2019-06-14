@@ -9,6 +9,128 @@
 namespace blasted {
 
 template <typename scalar, typename index>
+LeftSAIPattern<index> left_SAI_pattern(const CRawBSRMatrix<scalar,index>& mat)
+{
+	LeftSAIPattern<index> tsp;
+
+	/* Note that every block-row of A corresponds to a block-row of the approx inverse M and to a
+	 * least-squares problem.
+	 */
+
+	tsp.sairowptr.assign(mat.nbrows+1,0);
+	tsp.nVars.assign(mat.nbrows,0);
+	tsp.nEqns.assign(mat.nbrows,0);
+
+	// Step 1: Compute number of variables and constraints for each least-squares problem
+
+	index totalvars = 0;       // number of least-squares soln variables over all block-rows
+	index totalcoeffs = 0;     // number of least-square LHS coeffs over all block-rows
+	//#pragma NOT PARALLEL omp parallel for default(shared) reduction(+:totalvars,totalcoeffs)
+	for(index irow = 0; irow < mat.nbrows; irow++)
+	{
+		tsp.nVars[irow] = mat.browendptr[irow] - mat.browptr[irow];
+		totalvars += tsp.nVars[irow];
+
+		std::set<index> constraints;
+		for(index jj = mat.browptr[irow]; jj < mat.browendptr[irow]; jj++)
+		{
+			const index col = mat.bcolind[jj];      // column of A^T, row of A
+
+			for(index kk = mat.browptr[col]; kk < mat.browendptr[col]; kk++)
+				constraints.insert(mat.bcolind[kk]);
+		}
+
+		tsp.nEqns[irow] = static_cast<int>(constraints.size());
+		totalcoeffs += tsp.nVars[irow]*tsp.nEqns[irow];
+		tsp.sairowptr[irow+1] = totalvars;
+	}
+
+	// get the starting of each least-squares problem in bcolptr
+	internal::inclusive_scan(tsp.sairowptr);
+
+	tsp.bcolptr.assign(totalvars,0);
+	tsp.bpos.assign(totalcoeffs,0);
+	tsp.browind.assign(totalcoeffs,0);
+
+	std::vector<std::vector<int>> loc2globrowidx(mat.nbrows);
+
+	// Step 2: Get pointers into bpos and browind corresponding to the beginning of
+	//  each column in each least-squares matrix over all block-rows of the orig matrix
+
+	for(index irow = 0; irow < mat.nbrows; irow++)
+	{
+		for(index jj = mat.browptr[irow]; jj < mat.browendptr[irow]; jj++)
+		{
+			const index col = mat.bcolind[jj];      // column of A^T, row of A
+			const index localcolidx = jj - mat.browptr[irow];
+
+			for(index kk = mat.browptr[col]; kk < mat.browendptr[col]; kk++)
+			{
+				assert(tsp.sairowptr[irow]+localcolidx < tsp.sairowptr[irow+1]);
+				tsp.bcolptr[tsp.sairowptr[irow] + localcolidx + 1]++;
+			}
+		}
+	}
+
+	internal::inclusive_scan(tsp.bcolptr);
+
+	// #pragma omp parallel for default(shared)
+	for(index irow = 0; irow < mat.nbrows; irow++)
+	{
+		// First, get local row indices (in LHS matrix which is a block of A^T)
+
+		std::set<index> constraints;
+		for(index jj = mat.browptr[irow]; jj < mat.browendptr[irow]; jj++)
+		{
+			const index col = mat.bcolind[jj];      // column of A^T, row of A
+
+			for(index kk = mat.browptr[col]; kk < mat.browendptr[col]; kk++)
+				constraints.insert(mat.bcolind[kk]);
+		}
+
+		const std::vector<index> constrvec(constraints.begin(), constraints.end());
+		assert(static_cast<int>(constrvec.size())==tsp.nEqns[irow]);
+
+		std::vector<std::vector<int>> localrowinds(tsp.nVars[irow]);
+
+		for(index jj = mat.browptr[irow]; jj < mat.browendptr[irow]; jj++)
+		{
+			const index col = mat.bcolind[jj];
+			const int localcolidx = jj - mat.browptr[irow];
+			localrowinds[localcolidx].resize(mat.browendptr[col]-mat.browptr[col]);
+
+			for(size_t i = 0; i < constrvec.size(); i++)
+				for(int kk = mat.browptr[col]; kk < mat.browendptr[col]; kk++)
+					if(constrvec[i] == mat.bcolind[kk])
+						localrowinds[localcolidx][kk] = i;
+		}
+
+		// Then, store positions and local row indices
+
+		for(index jj = mat.browptr[irow]; jj < mat.browendptr[irow]; jj++)
+		{
+			const index col = mat.bcolind[jj];      // column of A^T, row of A
+			const int localcolidx = jj - mat.browptr[irow];
+
+			for(index kk = mat.browptr[col]; kk < mat.browendptr[col]; kk++)
+			{
+				const int locpos = mat.browptr[col]-kk;
+				tsp.bpos[tsp.bcolptr[tsp.sairowptr[irow]+localcolidx] + locpos] = kk;
+				tsp.browind[tsp.bcolptr[tsp.sairowptr[irow]+localcolidx] + locpos]
+					= localrowinds[localcolidx][kk];
+			}
+		}
+	}
+
+	return tsp;
+}
+
+template LeftSAIPattern<int> left_SAI_pattern(const CRawBSRMatrix<double,int>& mat);
+
+// ******************** OLD STUFF *************************
+
+#if 0
+template <typename scalar, typename index>
 TriangularLeftSAIPattern<index> triangular_SAI_pattern(const CRawBSRMatrix<scalar,index>& mat)
 {
 	TriangularLeftSAIPattern<index> tsp;
@@ -242,5 +364,6 @@ TriangularLeftSAIPattern<index> triangular_incomp_SAI_pattern(const CRawBSRMatri
 
 template TriangularLeftSAIPattern<int>
 triangular_incomp_SAI_pattern<double,int>(const CRawBSRMatrix<double,int>& mat);
+#endif
 
 }

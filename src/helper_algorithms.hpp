@@ -66,6 +66,12 @@ void sortBlockInnerDimension(const index N, index *const colind, scalar *const v
 template <typename index>
 void inclusive_scan(std::vector<index>& v);
 
+/// Each entry is replaced with the cumulative sum of all previous entries including itself
+/** The first entry is not modified, but is considered in the accumulation process.
+ */
+template <typename index, typename allocator>
+void inclusive_scan(std::vector<index,allocator>& v);
+
 /// Each entry is computed as the cumulative sum of all entries upto and including its position in
 ///  the input vector
 /** The first entry of the output vector is set the same as in the input vector.
