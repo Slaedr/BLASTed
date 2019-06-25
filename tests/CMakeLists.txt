@@ -7,9 +7,6 @@ if(CXX_COMPILER_CLANG)
   target_compile_options(solvers PRIVATE "-Wno-error=pass-failed")
 endif()
 
-add_library(testutils testutils.cpp ../src/utils/cmdoptions.cpp)
-target_link_libraries(testutils rawmatrixutils ${PETSC_LIB})
-
 add_executable(testsolve runsolvetest.cpp testsolve.cpp)
 target_link_libraries(testsolve solvers solverops coomatrix )
 set_property(TARGET testsolve PROPERTY POSITION_INDEPENDENT_CODE ON)
@@ -146,6 +143,9 @@ add_test(NAME BSR4ILU0Colmajor COMMAND env OMP_NUM_THREADS=1 ${SEQEXEC} ${SEQTAS
 #   )
 
 if(WITH_PETSC)
+  add_library(petsctestutils testutils.cpp testutils.c)
+  target_link_libraries(petsctestutils blasted_petsc)
+
   add_executable(testpetscsolver runpetsctest.c)
   target_link_libraries(testpetscsolver coomatrix blasted_petsc)
 

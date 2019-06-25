@@ -29,6 +29,48 @@ PetscReal compute_error(const MPI_Comm comm, const Vec u, const Vec uexact) {
 	return errnorm;
 }
 
+#if 0
+int main(int argc, char* argv[])
+{
+	char help[] = "This program solves a linear system.\n\
+		Arguments: (1) Matrix file in COO format (2) RHS file (3) Exact soln file\n\
+		Additionally, use -options_file to provide a PETSc options file.\n";
+
+	if(argc < 4) {
+		printf("Please specify the required files.\n");
+		printf("%s", help);
+		return 0;
+	}
+
+	char * matfile = argv[1];
+	char * bfile = argv[2];
+	char * xfile = argv[3];
+	PetscErrorCode ierr = 0;
+
+	ierr = PetscInitialize(&argc, &argv, NULL, help);
+	if(ierr) {
+		printf("Could not initialize PETSc!\n");
+		fflush(stdout);
+		return -1;
+	}
+
+	MPI_Comm comm = PETSC_COMM_WORLD;
+
+	PetscMPIInt size, rank;
+	MPI_Comm_size(comm,&size);
+	MPI_Comm_rank(comm,&rank);
+	if(rank == 0)
+		printf("Number of MPI ranks = %d.\n", size);
+
+#ifdef _OPENMP
+	const int nthreads = omp_get_max_threads();
+	if(rank == 0)
+		printf("Max OMP threads = %d\n", nthreads);
+#endif
+}
+
+#endif
+
 int main(int argc, char* argv[])
 {
 	char help[] = "This program solves a linear system.\n\
@@ -161,7 +203,7 @@ int main(int argc, char* argv[])
 		//setup_localpreconditioner_blasted(ksp, &bctx);
 		Blasted_data_list bctx = newBlastedDataList();
 		ierr = setup_blasted_stack(ksp, &bctx); CHKERRQ(ierr);
-		
+
 		ierr = KSPSolve(ksp, b, u); CHKERRQ(ierr);
 
 		// post-process
@@ -174,7 +216,7 @@ int main(int argc, char* argv[])
 			KSPGetResidualNorm(ksp, &rnorm);
 			printf(" KSP residual norm = %f\n", rnorm);
 		}
-		
+
 		errnorm = compute_error(comm,u,uexact);
 		if(rank == 0) {
 			printf("Test run:\n");
@@ -208,4 +250,4 @@ int main(int argc, char* argv[])
 
 	return ierr;
 }
-	
+

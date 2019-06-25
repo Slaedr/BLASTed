@@ -14,12 +14,18 @@
 
 namespace blasted {
 
-/// An exception to throw for errors from PETSc; takes a custom message
+/// Returns a string describing a PETSc error according to error code
+/** Refer to https://www.mcs.anl.gov/petsc/petsc-current/include/petscerror.h.html
+ */
+std::string parsePetscErrorCode(const int ierr);
+
+/// An exception to throw for errors from PETSc
 class Petsc_exception : public std::runtime_error
 {
 public:
-	Petsc_exception(const std::string& msg);
-	Petsc_exception(const char *const msg);
+	/** \param ierr An error code recognized by PETSc \sa parsePetscErrorCode
+	 */
+	Petsc_exception(const int ierr);
 };
 
 /// Exception thrown when a required input was not provided
@@ -31,11 +37,10 @@ public:
 
 /// Throw an error from an error code related to petsc
 /** \param ierr an expression which, if true, triggers the exception
- * \param str a short string message describing the error
  */
-inline void petsc_throw(const int ierr, const std::string str) {
+inline void petsc_throw(const int ierr) {
 	if(ierr != 0) 
-		throw Petsc_exception(str);
+		throw Petsc_exception(ierr);
 }
 
 /// Checks whether a command line option has been passed irrespective of any argument values
