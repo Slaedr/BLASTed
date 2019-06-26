@@ -101,9 +101,9 @@ PetscErrorCode computeLHS(const CartMesh *const m, DM da, PetscMPIInt rank, Mat 
 
 				rindices[0] = {k,j,i,0};
 
-				cindices[2] = {k,j,i-1,0};
-				cindices[1] = {k,j-1,i,0};
 				cindices[0] = {k-1,j,i,0};
+				cindices[1] = {k,j-1,i,0};
+				cindices[2] = {k,j,i-1,0};
 				cindices[3] = {k,j,i,0};
 				cindices[4] = {k,j,i+1,0};
 				cindices[5] = {k,j+1,i,0};

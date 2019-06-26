@@ -235,8 +235,8 @@ if(WITH_PETSC)
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.pmat 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.pmat
 	-options_file ${CMAKE_CURRENT_SOURCE_DIR}/input/2dcyl1_ilu0.perc -mat_type baij
-	-blasted_pc_type async_level_ilu0 -blasted_async_sweeps 3,1 -test_type issame
-	-error_tolerance 1e-13
+	-blasted_pc_type async_level_ilu0 -blasted_async_sweeps 5,1 -test_type issame
+	-error_tolerance 1e-7
 	)
 
   ## Our scalar SGS preconditioner is not the same as PETSc's, because the latter does block
