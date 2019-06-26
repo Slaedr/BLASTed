@@ -1,7 +1,7 @@
 # test executables
 if(WITH_PETSC)
   add_library(poisson poisson_setup.cpp poisson3d_fd.cpp cartmesh.cpp)
-  target_link_libraries(poisson petsctestutils utils)
+  target_link_libraries(poisson petsctestutils)
   set_property(TARGET poisson PROPERTY POSITION_INDEPENDENT_CODE ON)
 
   add_executable(testcsr_poisson poisson_test.c)

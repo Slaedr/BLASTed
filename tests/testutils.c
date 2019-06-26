@@ -62,7 +62,7 @@ int readLinearSystemFromFiles(const char *const matfile, const char *const bfile
 	PetscInt vs;
 	ierr = VecGetLocalSize(test, &vs); CHKERRQ(ierr);
 	printf(" Rank %d: Local test size = %d.\n", rank, vs);
-	ierr = VecGetLocalSize(lp->uexact, &vs);
+	ierr = VecGetLocalSize(lp->uexact, &vs); CHKERRQ(ierr);
 	printf(" Rank %d: Local u_exact size = %d.\n", rank, vs);
 	ierr = MatMult(lp->lhs, lp->uexact, test); CHKERRQ(ierr);
 	ierr = VecAXPY(test, -1.0, lp->b); CHKERRQ(ierr);

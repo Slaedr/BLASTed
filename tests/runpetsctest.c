@@ -13,6 +13,7 @@
 #endif
 
 #include <blasted_petsc.h>
+#include "testutils.h"
 
 #define PETSCOPTION_STR_LEN 30
 
@@ -29,7 +30,6 @@ PetscReal compute_error(const MPI_Comm comm, const Vec u, const Vec uexact) {
 	return errnorm;
 }
 
-#if 0
 int main(int argc, char* argv[])
 {
 	char help[] = "This program solves a linear system.\n\
@@ -67,10 +67,17 @@ int main(int argc, char* argv[])
 	if(rank == 0)
 		printf("Max OMP threads = %d\n", nthreads);
 #endif
+
+	DiscreteLinearProblem lp;
+	ierr = readLinearSystemFromFiles(matfile, bfile, xfile, &lp); CHKERRQ(ierr);
+	ierr = runComparisonVsPetsc(lp); CHKERRQ(ierr);
+	ierr = destroyDiscreteLinearProblem(&lp); CHKERRQ(ierr);
+
+	ierr = PetscFinalize();
+	return ierr;
 }
 
-#endif
-
+#if 0
 int main(int argc, char* argv[])
 {
 	char help[] = "This program solves a linear system.\n\
@@ -106,10 +113,10 @@ int main(int argc, char* argv[])
 	// Get error check tolerance
 	PetscReal error_tol;
 	PetscBool set = PETSC_FALSE;
-	ierr = PetscOptionsGetReal(NULL, NULL, "-error_tolerance_factor", &error_tol, &set);
+	ierr = PetscOptionsGetReal(NULL, NULL, "-error_tolerance", &error_tol, &set);
 	if(!set) {
 		printf("Error tolerance factor not set; using the default 100.");
-		error_tol = 100.0;
+		error_tol = 100.0*DBL_EPSILON;
 	}
 
 	// Error tolerance for PETSc matmult test
@@ -239,7 +246,7 @@ int main(int argc, char* argv[])
 		printf("Difference in error norms = %g.\n", fabs(errnorm-errnormref));
 	fflush(stdout);
 	// Test 2
-	assert(fabs(errnorm-errnormref) < error_tol*DBL_EPSILON);
+	assert(fabs(errnorm-errnormref) < error_tol);
 
 	VecDestroy(&u);
 	VecDestroy(&uexact);
@@ -250,4 +257,5 @@ int main(int argc, char* argv[])
 
 	return ierr;
 }
+#endif
 
