@@ -13,6 +13,9 @@ namespace blasted {
 
 using boost::alignment::aligned_allocator;
 
+/// The pattern required to assemble small least-squares problems for computing a left SAI preconditioner
+/** The sparsity pattern of the SAI is set to that of A.
+ */
 template <typename index>
 struct LeftSAIPattern
 {

@@ -23,13 +23,11 @@ LeftSAIPattern<index> left_SAI_pattern(const CRawBSRMatrix<scalar,index>& mat)
 
 	// Step 1: Compute number of variables and constraints for each least-squares problem
 
-	index totalvars = 0;       // number of least-squares soln variables over all block-rows
 	index totalcoeffs = 0;     // number of least-square LHS coeffs over all block-rows
-	//#pragma NOT PARALLEL omp parallel for default(shared) reduction(+:totalvars,totalcoeffs)
+	//#pragma NOT PARALLEL omp parallel for default(shared) reduction(+:totalcoeffs)
 	for(index irow = 0; irow < mat.nbrows; irow++)
 	{
 		tsp.nVars[irow] = mat.browendptr[irow] - mat.browptr[irow];
-		totalvars += tsp.nVars[irow];
 
 		std::set<index> constraints;
 		for(index jj = mat.browptr[irow]; jj < mat.browendptr[irow]; jj++)
@@ -42,20 +40,19 @@ LeftSAIPattern<index> left_SAI_pattern(const CRawBSRMatrix<scalar,index>& mat)
 
 		tsp.nEqns[irow] = static_cast<int>(constraints.size());
 		totalcoeffs += tsp.nVars[irow]*tsp.nEqns[irow];
-		tsp.sairowptr[irow+1] = totalvars;
+		tsp.sairowptr[irow+1] = tsp.nVars[irow];
 	}
 
 	// get the starting of each least-squares problem in bcolptr
 	internal::inclusive_scan(tsp.sairowptr);
 
+	const index totalvars = tsp.sairowptr[mat.nbrows];
 	tsp.bcolptr.assign(totalvars,0);
 	tsp.bpos.assign(totalcoeffs,0);
 	tsp.browind.assign(totalcoeffs,0);
 
-	std::vector<std::vector<int>> loc2globrowidx(mat.nbrows);
-
 	// Step 2: Get pointers into bpos and browind corresponding to the beginning of
-	//  each column in each least-squares matrix over all block-rows of the orig matrix
+	//  each column in each least-squares matrix over all rows of the orig matrix
 
 	for(index irow = 0; irow < mat.nbrows; irow++)
 	{
@@ -74,10 +71,12 @@ LeftSAIPattern<index> left_SAI_pattern(const CRawBSRMatrix<scalar,index>& mat)
 
 	internal::inclusive_scan(tsp.bcolptr);
 
+	// Step 3: For the least-squares problem of each row of A, compute the sparsity pattern
+
 	// #pragma omp parallel for default(shared)
 	for(index irow = 0; irow < mat.nbrows; irow++)
 	{
-		// First, get local row indices (in LHS matrix which is a block of A^T)
+		// Get local row indices (in LHS matrix, which is a block of A^T)
 
 		std::set<index> constraints;
 		for(index jj = mat.browptr[irow]; jj < mat.browendptr[irow]; jj++)
@@ -97,13 +96,27 @@ LeftSAIPattern<index> left_SAI_pattern(const CRawBSRMatrix<scalar,index>& mat)
 		{
 			const index col = mat.bcolind[jj];
 			const int localcolidx = jj - mat.browptr[irow];
-			localrowinds[localcolidx].resize(mat.browendptr[col]-mat.browptr[col]);
+			localrowinds[localcolidx].assign(mat.browendptr[col]-mat.browptr[col], -1);
 
 			for(size_t i = 0; i < constrvec.size(); i++)
+			{
+				bool found = false;
+
 				for(int kk = mat.browptr[col]; kk < mat.browendptr[col]; kk++)
 					if(constrvec[i] == mat.bcolind[kk])
-						localrowinds[localcolidx][kk] = i;
+					{
+						localrowinds[localcolidx][kk-mat.browptr[col]] = i;
+						found = true;
+					}
+
+				if(!found)
+					throw std::runtime_error("SAI pattern: Not found local row index!");
+			}
 		}
+
+		/* Note that because sets are always ordered, the set 'constraints' is ordered by column index.
+		 * This means that localrowinds is ordered by column index of the constraints.
+		 */
 
 		// Then, store positions and local row indices
 
