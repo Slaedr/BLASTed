@@ -34,6 +34,7 @@ int compute_difference_norm(const Vec u1, const Vec u2, PetscReal *const errnorm
  * where -test_type can be compare_its, issame or upper_bound_its.
  * Note that test type 'issame' compares the solution vectors obtained from the two solvers,
  * along with the number of iterations they take (both use the same relative tolerance currently).
+ * If anything but these is specified, such as 'convergence', we only test whether the solver converged.
  */
 int compareSolverWithRef(const int refkspiters, const int avgkspiters, Vec uref, Vec u);
 
