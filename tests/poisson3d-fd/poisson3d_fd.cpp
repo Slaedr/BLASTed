@@ -40,11 +40,13 @@ static inline PetscInt getFlattenedInteriorIndex(const CartMesh *const m,
  * \param f is the rhs vector
  * \param uexact is the exact solution
  */
-PetscErrorCode computeRHS(const CartMesh *const m, DM da, PetscMPIInt rank, Vec f, Vec uexact)
+PetscErrorCode computeRHS(const CartMesh *const m, PetscMPIInt rank, Vec f, Vec uexact)
 {
-	PetscErrorCode ierr = 0;	
+	PetscErrorCode ierr = 0;
 	if(rank == 0)
 		printf("ComputeRHS: Starting\n");
+
+	const DM da = m->getDA();
 
 	// get the starting global indices and sizes (in each direction) of the local mesh partition
 	PetscInt start[NDIM], lsize[NDIM];
@@ -78,11 +80,13 @@ PetscErrorCode computeRHS(const CartMesh *const m, DM da, PetscMPIInt rank, Vec 
 /// Set stiffness matrix corresponding to interior points
 /** Inserts entries rowwise into the matrix.
  */
-PetscErrorCode computeLHS(const CartMesh *const m, DM da, PetscMPIInt rank, Mat A)
+PetscErrorCode computeLHS(const CartMesh *const m, PetscMPIInt rank, Mat A)
 {
 	PetscErrorCode ierr = 0;	
 	if(rank == 0)	
 		printf("ComputeLHS: Setting values of the LHS matrix...\n");
+
+	const DM da = m->getDA();
 
 	// get the starting global indices and sizes (in each direction) of the local mesh partition
 	PetscInt start[NDIM], lsize[NDIM];
@@ -112,27 +116,28 @@ PetscErrorCode computeLHS(const CartMesh *const m, DM da, PetscMPIInt rank, Mat 
 				PetscInt I = i+1, J = j+1, K = k+1;		// 1-offset indices for mesh coords access
 				
 				values[2] = -1.0/( (m->gcoords(0,I)-m->gcoords(0,I-1)) 
-						* 0.5*(m->gcoords(0,I+1)-m->gcoords(0,I-1)) );
+				                   * 0.5*(m->gcoords(0,I+1)-m->gcoords(0,I-1)) );
 				values[1] = -1.0/( (m->gcoords(1,J)-m->gcoords(1,J-1)) 
-						* 0.5*(m->gcoords(1,J+1)-m->gcoords(1,J-1)) );
+				                   * 0.5*(m->gcoords(1,J+1)-m->gcoords(1,J-1)) );
 				values[0] = -1.0/( (m->gcoords(2,K)-m->gcoords(2,K-1)) 
-						* 0.5*(m->gcoords(2,K+1)-m->gcoords(2,K-1)) );
+				                   * 0.5*(m->gcoords(2,K+1)-m->gcoords(2,K-1)) );
 
 				values[3] =  2.0/(m->gcoords(0,I+1)-m->gcoords(0,I-1))*
-				  (1.0/(m->gcoords(0,I+1)-m->gcoords(0,I))+1.0/(m->gcoords(0,I)-m->gcoords(0,I-1)));
+					(1.0/(m->gcoords(0,I+1)-m->gcoords(0,I))+1.0/(m->gcoords(0,I)-m->gcoords(0,I-1)));
 				values[3] += 2.0/(m->gcoords(1,J+1)-m->gcoords(1,J-1))*
-				  (1.0/(m->gcoords(1,J+1)-m->gcoords(1,J))+1.0/(m->gcoords(1,J)-m->gcoords(1,J-1)));
+					(1.0/(m->gcoords(1,J+1)-m->gcoords(1,J))+1.0/(m->gcoords(1,J)-m->gcoords(1,J-1)));
 				values[3] += 2.0/(m->gcoords(2,K+1)-m->gcoords(2,K-1))*
-				  (1.0/(m->gcoords(2,K+1)-m->gcoords(2,K))+1.0/(m->gcoords(2,K)-m->gcoords(2,K-1)));
+					(1.0/(m->gcoords(2,K+1)-m->gcoords(2,K))+1.0/(m->gcoords(2,K)-m->gcoords(2,K-1)));
 
 				values[4] = -1.0/( (m->gcoords(0,I+1)-m->gcoords(0,I)) 
-						* 0.5*(m->gcoords(0,I+1)-m->gcoords(0,I-1)) );
+				                   * 0.5*(m->gcoords(0,I+1)-m->gcoords(0,I-1)) );
 				values[5] = -1.0/( (m->gcoords(1,J+1)-m->gcoords(1,J)) 
-						* 0.5*(m->gcoords(1,J+1)-m->gcoords(1,J-1)) );
+				                   * 0.5*(m->gcoords(1,J+1)-m->gcoords(1,J-1)) );
 				values[6] = -1.0/( (m->gcoords(2,K+1)-m->gcoords(2,K)) 
-						* 0.5*(m->gcoords(2,K+1)-m->gcoords(2,K-1)) );
+				                   * 0.5*(m->gcoords(2,K+1)-m->gcoords(2,K-1)) );
 
-				MatSetValuesStencil(A, mm, rindices, n, cindices, values, INSERT_VALUES);
+				ierr = MatSetValuesStencil(A, mm, rindices, n, cindices, values, INSERT_VALUES);
+				CHKERRQ(ierr);
 				//if(rank == 0)
 				//	printf("\tProcessed index %d, diag value = %f\n", rindices[0], values[3]);
 			}
@@ -146,12 +151,14 @@ PetscErrorCode computeLHS(const CartMesh *const m, DM da, PetscMPIInt rank, Mat 
 /// Computes L2 norm of a mesh function v
 /** Assumes piecewise constant values in a dual cell around each node.
  */
-PetscReal computeNorm(const MPI_Comm comm, const CartMesh *const m, Vec v, DM da)
+PetscReal computeNorm(const MPI_Comm comm, const CartMesh *const m, Vec v)
 {
+	const DM da = m->getDA();
+
 	// get the starting global indices and sizes (in each direction) of the local mesh partition
 	PetscInt start[NDIM], lsize[NDIM];
 	DMDAGetCorners(da, &start[0], &start[1], &start[2], &lsize[0], &lsize[1], &lsize[2]);
-	
+
 	// get local data that can be accessed by global indices
 	PetscReal *** vv;
 	DMDAVecGetArray(da, v, &vv);

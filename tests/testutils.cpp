@@ -39,6 +39,7 @@ CRawBSRMatrix<PetscScalar,PetscInt> wrapLocalPetscMat(Mat A, const int bs)
 	if(bs == 1) {
 		assert(Adiag != NULL);
 		rmat.browptr = Adiag->i;
+		rmat.browendptr = Adiag->i + 1;
 		rmat.bcolind = Adiag->j;
 		rmat.diagind = Adiag->diag;
 		rmat.vals = Adiag->a;
@@ -46,6 +47,7 @@ CRawBSRMatrix<PetscScalar,PetscInt> wrapLocalPetscMat(Mat A, const int bs)
 	else {
 		assert(Abdiag != NULL);
 		rmat.browptr = Abdiag->i;
+		rmat.browendptr = Abdiag->i + 1;
 		rmat.bcolind = Abdiag->j;
 		rmat.diagind = Abdiag->diag;
 		rmat.vals = Abdiag->a;

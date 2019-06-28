@@ -45,11 +45,11 @@ void CartMesh::computeMeshSize()
 }
 
 CartMesh::CartMesh()
-	: coords{NULL}
+	: coords{NULL}, da{NULL}
 { }
 
 CartMesh::CartMesh(const PetscInt npdim[NDIM], const PetscInt num_partitions)
-	: coords{NULL}
+	: coords{NULL}, da{NULL}
 {
 	std::printf("CartMesh: Number of points in each direction: ");
 	for(int i = 0; i < NDIM; i++) {
@@ -70,11 +70,13 @@ CartMesh::CartMesh(const PetscInt npdim[NDIM], const PetscInt num_partitions)
 }
 
 PetscErrorCode CartMesh::createMeshAndDMDA(const MPI_Comm comm, const PetscInt npdim[NDIM], 
-	PetscInt ndofpernode, PetscInt stencil_width,
-	DMBoundaryType bx, DMBoundaryType by, DMBoundaryType bz, DMDAStencilType stencil_type, 
-	DM *const dap, PetscMPIInt rank)
+                                           PetscInt ndofpernode, PetscInt stencil_width,
+                                           DMBoundaryType bx, DMBoundaryType by, DMBoundaryType bz,
+                                           DMDAStencilType stencil_type)
 {
 	PetscErrorCode ierr = 0;
+	int rank;
+	MPI_Comm_rank(comm, &rank);
 
 	for(int i = 0; i < NDIM; i++) {
 		npoind[i] = npdim[i];
@@ -98,28 +100,28 @@ PetscErrorCode CartMesh::createMeshAndDMDA(const MPI_Comm comm, const PetscInt n
 
 	if(rank == 0)
 		std::printf("CartMesh: Setting up DMDA\n");
-	
-	ierr = DMDACreate3d(comm, bx, by, bz, stencil_type, 
-			npoind[0]-2, npoind[1]-2, npoind[2]-2, 
-			PETSC_DECIDE, PETSC_DECIDE, PETSC_DECIDE, ndofpernode, stencil_width, 
-			NULL, NULL, NULL, dap);
+
+	ierr = DMDACreate3d(comm, bx, by, bz, stencil_type,
+	                    npoind[0]-2, npoind[1]-2, npoind[2]-2,
+	                    PETSC_DECIDE, PETSC_DECIDE, PETSC_DECIDE, ndofpernode, stencil_width,
+	                    NULL, NULL, NULL, &da);
 	CHKERRQ(ierr);
-	ierr = DMSetUp(*dap); CHKERRQ(ierr);
+	ierr = DMSetUp(da); CHKERRQ(ierr);
 
 	PetscInt M,N,P;
-	ierr = DMDAGetInfo(*dap, NULL, &M, &N, &P, &nprocs[0], &nprocs[1], &nprocs[2], 
-			NULL, NULL, NULL, NULL, NULL, NULL);
+	ierr = DMDAGetInfo(da, NULL, &M, &N, &P, &nprocs[0], &nprocs[1], &nprocs[2],
+	                   NULL, NULL, NULL, NULL, NULL, NULL);
 	CHKERRQ(ierr);
 
 	ntprocs = nprocs[0]*nprocs[1]*nprocs[2];
 
 	if(rank == 0) {
-		std::printf("CartMesh: Number of points in each direction: %d,%d,%d.\n", 
-				M,N,P);
-		std::printf("CartMesh: Number of procs in each direction: %d,%d,%d.\n", 
-				nprocs[0], nprocs[1], nprocs[2]);
-		std::printf("CartMesh: Total points = %d, interior points = %d, partitions = %d\n", 
-				npointotal, ninpoin, ntprocs);
+		std::printf("CartMesh: Number of points in each direction: %d,%d,%d.\n",
+		            M,N,P);
+		std::printf("CartMesh: Number of procs in each direction: %d,%d,%d.\n",
+		            nprocs[0], nprocs[1], nprocs[2]);
+		std::printf("CartMesh: Total points = %d, interior points = %d, partitions = %d\n",
+		            npointotal, ninpoin, ntprocs);
 	}
 
 	// have each process store coords; hardly costs anything
@@ -132,14 +134,17 @@ PetscErrorCode CartMesh::createMeshAndDMDA(const MPI_Comm comm, const PetscInt n
 
 CartMesh::~CartMesh()
 {
+	int ierr = DMDestroy(&da);
+	if(ierr)
+		std::printf("Could not destroy DM!\n");
 	for(int i = 0; i < NDIM; i++)
 		std::free(coords[i]);
 	std::free(coords);
 }
 
-void CartMesh::generateMesh_ChebyshevDistribution(const PetscReal rmin[NDIM], 
-		const PetscReal rmax[NDIM], 
-		const PetscMPIInt rank)
+void CartMesh::generateMesh_ChebyshevDistribution(const PetscReal rmin[NDIM],
+                                                  const PetscReal rmax[NDIM],
+                                                  const PetscMPIInt rank)
 {
 	if(rank == 0)
 		std::printf("CartMesh: generateMesh_cheb: Generating grid\n");
@@ -159,9 +164,9 @@ void CartMesh::generateMesh_ChebyshevDistribution(const PetscReal rmin[NDIM],
 }
 
 /// Generates grid with uniform spacing
-void CartMesh::generateMesh_UniformDistribution(const PetscReal rmin[NDIM], 
-		const PetscReal rmax[NDIM], 
-		const PetscMPIInt rank)
+void CartMesh::generateMesh_UniformDistribution(const PetscReal rmin[NDIM],
+                                                const PetscReal rmax[NDIM],
+                                                const PetscMPIInt rank)
 {
 	if(rank == 0)
 		std::printf("CartMesh: generateMesh_Uniform: Generating grid\n");

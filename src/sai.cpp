@@ -100,17 +100,11 @@ LeftSAIPattern<index> left_SAI_pattern(const CRawBSRMatrix<scalar,index>& mat)
 
 			for(size_t i = 0; i < constrvec.size(); i++)
 			{
-				bool found = false;
-
 				for(int kk = mat.browptr[col]; kk < mat.browendptr[col]; kk++)
 					if(constrvec[i] == mat.bcolind[kk])
 					{
 						localrowinds[localcolidx][kk-mat.browptr[col]] = i;
-						found = true;
 					}
-
-				if(!found)
-					throw std::runtime_error("SAI pattern: Not found local row index!");
 			}
 		}
 

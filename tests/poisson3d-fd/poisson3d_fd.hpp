@@ -18,16 +18,16 @@
  * \param f is the rhs vector
  * \param uexact is the exact solution
  */
-PetscErrorCode computeRHS(const CartMesh *const m, DM da, PetscMPIInt rank, Vec f, Vec uexact);
+PetscErrorCode computeRHS(const CartMesh *const m, PetscMPIInt rank, Vec f, Vec uexact);
 
 /// Set stiffness matrix corresponding to interior points
 /** Inserts entries rowwise into the matrix.
  */
-PetscErrorCode computeLHS(const CartMesh *const m, DM da, PetscMPIInt rank, Mat A);
+PetscErrorCode computeLHS(const CartMesh *const m, PetscMPIInt rank, Mat A);
 
 /// Computes L2 norm of a mesh function v
 /** Assumes piecewise constant values in a dual cell around each node.
  * Note that the actual norm will only be returned by process 0; 
  * the other processes return only local norms.
  */
-PetscReal computeNorm(const MPI_Comm comm, const CartMesh *const m, Vec v, DM da);
+PetscReal computeNorm(const MPI_Comm comm, const CartMesh *const m, Vec v);

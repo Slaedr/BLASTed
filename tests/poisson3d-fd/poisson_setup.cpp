@@ -4,16 +4,92 @@
 
 #include <cassert>
 #include <stdexcept>
+#include <cstdio>
 
 #ifdef _OPENMP
 #include <omp.h>
 #endif
 
 #include "poisson3d_fd.hpp"
+#include "poisson_utils.hpp"
 #include "utils/cmdoptions.hpp"
 #include "poisson_setup.h"
 
 #define PETSCOPTION_STR_LEN 30
+
+namespace test {
+
+MeshSpec readInputFile(const MPI_Comm comm, const char *confile)
+{
+	using blasted::file_input_throw;
+	int rank;
+	MPI_Comm_rank(comm,&rank);
+
+	MeshSpec spec;
+
+	char temp[50];
+	FILE* conf = fopen(confile, "r");
+	int fstatus = 1;
+	fstatus = fscanf(conf, "%s", temp); file_input_throw(fstatus);
+	fstatus = fscanf(conf, "%s", spec.gridtype); file_input_throw(fstatus);
+
+	fstatus = fscanf(conf, "%s", temp); file_input_throw(fstatus);
+	for(int i = 0; i < NDIM; i++) {
+		fstatus = fscanf(conf, "%d", &spec.npdim[i]);
+		file_input_throw(fstatus);
+	}
+
+	fstatus = fscanf(conf, "%s", temp); file_input_throw(fstatus);
+	for(int i = 0; i < NDIM; i++) {
+		fstatus = fscanf(conf, "%lf", &spec.rmin[i]);
+		file_input_throw(fstatus);
+	}
+
+	fstatus = fscanf(conf, "%s", temp); file_input_throw(fstatus);
+	for(int i = 0; i < NDIM; i++) {
+		fstatus = fscanf(conf, "%lf", &spec.rmax[i]);
+		file_input_throw(fstatus);
+	}
+	fclose(conf);
+
+	if(rank == 0) {
+		printf("Domain boundaries in each dimension:\n");
+		for(int i = 0; i < NDIM; i++)
+			printf("%f %f ", spec.rmin[i], spec.rmax[i]);
+		printf("\n");
+	}
+
+	return spec;
+}
+
+CartMesh createMesh(MPI_Comm comm, const MeshSpec ms)
+{
+	int ierr, rank;
+	MPI_Comm_rank(comm,&rank);
+
+	// set up Petsc variables
+	PetscInt ndofpernode = 1;
+	PetscInt stencil_width = 1;
+	DMBoundaryType bx = DM_BOUNDARY_GHOSTED;
+	DMBoundaryType by = DM_BOUNDARY_GHOSTED;
+	DMBoundaryType bz = DM_BOUNDARY_GHOSTED;
+	DMDAStencilType stencil_type = DMDA_STENCIL_STAR;
+
+	// grid structure - a copy of the mesh is stored by all processes as the mesh structure is very small
+	CartMesh m;
+	ierr = m.createMeshAndDMDA(comm, ms.npdim, ndofpernode, stencil_width, bx, by, bz, stencil_type);
+	blasted::petsc_throw(ierr);
+
+	// generate grid
+	if(!strcmp(ms.gridtype, "chebyshev"))
+		m.generateMesh_ChebyshevDistribution(ms.rmin, ms.rmax, rank);
+	else
+		m.generateMesh_UniformDistribution(ms.rmin, ms.rmax, rank);
+
+	return m;
+}
+
+}
 
 #ifdef __cplusplus
 extern "C" {
@@ -39,61 +115,9 @@ DiscreteLinearProblem setup_poisson_problem(const char *const confile)
 #endif
 
 	// Read control file
-	
-	PetscInt npdim[NDIM];
-	PetscReal rmax[NDIM], rmin[NDIM];
-	char temp[50], gridtype[50];
-	FILE* conf = fopen(confile, "r");
-	int fstatus = 1;
-	fstatus = fscanf(conf, "%s", temp);
-	fstatus = fscanf(conf, "%s", gridtype);
-	fstatus = fscanf(conf, "%s", temp);
-	if(!fstatus) {
-		std::printf("! Error reading control file!\n");
-		std::abort();
-	}
-	for(int i = 0; i < NDIM; i++)
-		fstatus = fscanf(conf, "%d", &npdim[i]);
-	fstatus = fscanf(conf, "%s", temp);
-	for(int i = 0; i < NDIM; i++)
-		fstatus = fscanf(conf, "%lf", &rmin[i]);
-	fstatus = fscanf(conf, "%s", temp);
-	for(int i = 0; i < NDIM; i++)
-		fstatus = fscanf(conf, "%lf", &rmax[i]);
-	fclose(conf);
-	
-	if(!fstatus) {
-		std::printf("! Error reading control file!\n");
-		std::abort();
-	}
-
-	if(rank == 0) {
-		printf("Domain boundaries in each dimension:\n");
-		for(int i = 0; i < NDIM; i++)
-			printf("%f %f ", rmin[i], rmax[i]);
-		printf("\n");
-	}
-
-	// set up Petsc variables
-	DM da;                        ///< Distributed array context for the cart grid
-	PetscInt ndofpernode = 1;
-	PetscInt stencil_width = 1;
-	DMBoundaryType bx = DM_BOUNDARY_GHOSTED;
-	DMBoundaryType by = DM_BOUNDARY_GHOSTED;
-	DMBoundaryType bz = DM_BOUNDARY_GHOSTED;
-	DMDAStencilType stencil_type = DMDA_STENCIL_STAR;
-
-	// grid structure - a copy of the mesh is stored by all processes as the mesh structure is very small
-	CartMesh m;
-	ierr = m.createMeshAndDMDA(comm, npdim, ndofpernode, stencil_width, bx, by, bz, stencil_type, 
-	                           &da, rank);
-	petsc_throw(ierr);
-
-	// generate grid
-	if(!strcmp(gridtype, "chebyshev"))
-		m.generateMesh_ChebyshevDistribution(rmin,rmax, rank);
-	else
-		m.generateMesh_UniformDistribution(rmin,rmax, rank);
+	const test::MeshSpec ms = test::readInputFile(comm, confile);
+	const CartMesh m = test::createMesh(comm, ms);
+	const DM da = m.getDA();
 
 	DiscreteLinearProblem lp;
 
@@ -105,8 +129,8 @@ DiscreteLinearProblem setup_poisson_problem(const char *const confile)
 
 	// compute values of LHS, RHS and exact soln
 
-	ierr = computeRHS(&m, da, rank, lp.b, lp.uexact); petsc_throw(ierr);
-	ierr = computeLHS(&m, da, rank, lp.lhs); petsc_throw(ierr);
+	ierr = computeRHS(&m, rank, lp.b, lp.uexact); petsc_throw(ierr);
+	ierr = computeLHS(&m, rank, lp.lhs); petsc_throw(ierr);
 
 	// Assemble LHS
 

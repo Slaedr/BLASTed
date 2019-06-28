@@ -19,6 +19,7 @@
 
 #include <algorithm>
 #include <boost/align/aligned_allocator.hpp>
+#include "blasted_config.hpp"
 #include "helper_algorithms.hpp"
 
 namespace blasted {
@@ -82,7 +83,7 @@ void inclusive_scan(std::vector<index,allocator>& v)
 		v[i] += v[i-1];
 }
 
-template void inclusive_scan(std::vector<int,boost::alignment::aligned_allocator<int>>& v);
+template void inclusive_scan(std::vector<int,boost::alignment::aligned_allocator<int,CACHE_LINE_LEN>>& v);
 
 template <typename index>
 std::vector<index> inclusive_scan(const std::vector<index>& v)

@@ -39,8 +39,14 @@ public:
 /** \param ierr an expression which, if true, triggers the exception
  */
 inline void petsc_throw(const int ierr) {
-	if(ierr != 0) 
+	if(ierr != 0)
 		throw Petsc_exception(ierr);
+}
+
+/// Throw an exception related to reading an input file
+inline void file_input_throw(const int fstatus) {
+	if(!fstatus)
+		throw InputNotGivenError("Error while reading file + " + std::to_string(fstatus));
 }
 
 /// Checks whether a command line option has been passed irrespective of any argument values

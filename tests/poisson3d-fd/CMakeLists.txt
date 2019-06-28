@@ -6,7 +6,9 @@ if(WITH_PETSC)
 
   add_executable(testcsr_poisson poisson_test.c)
   target_link_libraries(testcsr_poisson poisson)
-  set_property(TARGET testcsr_poisson PROPERTY POSITION_INDEPENDENT_CODE ON)
+
+  add_executable(testsai testsai.cpp)
+  target_link_libraries(testsai poisson solverops)
 
   # Tests
   #add_test(NAME SerialPoissonCSRPetscILU0 COMMAND env OMP_NUM_THREADS=1 ${MPIEXEC} -n 1 ./testcsr_poisson 
@@ -20,6 +22,10 @@ if(WITH_PETSC)
   #add_test(NAME SerialPoissonCSRPetscAMGILU0 COMMAND env OMP_NUM_THREADS=1 ${MPIEXEC} -n 1 ./testcsr_poisson 
   #  ${CMAKE_CURRENT_SOURCE_DIR}/input/poisson-amg.control 
   #  -options_file  ${CMAKE_CURRENT_SOURCE_DIR}/input/poisson_csr_amg.perc)
+
+  add_test(NAME SAIPatternPoissonFull
+	COMMAND testsai ${CMAKE_CURRENT_SOURCE_DIR}/input/poisson.control fullsai
+	)
 
   add_test(NAME MPIPoissonCSRPetscJacobiRelaxation
 	COMMAND env OMP_NUM_THREADS=1 ${MPIEXEC} -n 4 ./testcsr_poisson

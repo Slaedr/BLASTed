@@ -20,9 +20,9 @@
 #define PI 3.141592653589793238
 
 /// Non-uniform Cartesian grid
-/** 
+/**
  * We store the on-dimensional locations of points along 3 orthogonal vectors whose
- * tensor product defines the grid. So, we store only 
+ * tensor product defines the grid. So, we store only
  * - the x-coordinates of points lying along the "back lower horizontal" line of the cube
  *     containing the mesh
  * - the y-coordinates of points lying along the "back upper vertical" line of the cube
@@ -35,10 +35,10 @@ protected:
 	/// Array storing the number of points on each coordinate axis
 	PetscInt npoind[NDIM];
 
-	/// Stores an array for each of the 3 axes 
+	/// Stores an array for each of the 3 axes
 	/// coords[i][j] refers to the j-th node along the i-axis
-	PetscReal ** coords;			
-	
+	PetscReal **coords;
+
 	PetscInt npointotal;			///< Total number of points in the grid
 	PetscInt ninpoin;				///< Number of internal (non-boundary) points
 	PetscReal h;					///< Mesh size parameter
@@ -52,19 +52,26 @@ protected:
 	 */
 	void computeMeshSize();
 
+	DM da;
+
 public:
 	CartMesh();
 
 	CartMesh(const PetscInt npdim[NDIM], const PetscInt num_partitions);
 
 	PetscErrorCode createMeshAndDMDA(const MPI_Comm comm, const PetscInt npdim[NDIM], 
-		PetscInt ndofpernode, PetscInt stencil_width,
-		DMBoundaryType bx, DMBoundaryType by, DMBoundaryType bz, DMDAStencilType stencil_type, 
-		DM *const dap, PetscMPIInt rank);
+	                                 PetscInt ndofpernode, PetscInt stencil_width,
+	                                 DMBoundaryType bx, DMBoundaryType by, DMBoundaryType bz,
+	                                 DMDAStencilType stencil_type);
 
 	~CartMesh();
 
-	/// Returns the number of points along a coordinate direction
+	const DM getDA() const
+	{
+		return da;
+	}
+
+	/// Returns the total number of points along a coordinate direction (including ghost points)
 	PetscInt gnpoind(const int idim) const
 	{
 #if DEBUG == 1
@@ -76,7 +83,7 @@ public:
 		return npoind[idim];
 	}
 
-	/// Returns a coordinate of a grid point
+	/// Returns a coordinate of a grid point (real or ghost)
 	/** \param[in] idim The coordinate line along which the point to be queried lies
 	 * \param[in] ipoin Index of the required point in the direction idim
 	 */
