@@ -25,10 +25,17 @@ void test_fullmatrix_interior(const CartMesh& m, const CRawBSRMatrix<PetscScalar
 	{
 		const int colstart = sp.bcolptr[jcol];
 
+		for(int i = 0; i < 7; i++) {
+			assert(sp.browind[colstart+i] >= 0);
+			assert(sp.browind[colstart+i] < sp.nEqns[testrow]);
+		}
+
 		if(jcol == start) {
 			// back column
-			for(int i = 0; i < 6; i++)
+			for(int i = 0; i < 6; i++) {
+				//printf("  LHS row ind = %d. ", sp.browind[colstart+i]); fflush(stdout);
 				assert(sp.browind[colstart+i] == i);
+			}
 			assert(sp.browind[colstart+6] == 12);
 		}
 		else if(jcol == start+1) {
@@ -97,7 +104,7 @@ int test_sai(const bool fullsai, const CartMesh& m, const Mat A)
 	const LeftSAIPattern<int> sp = left_SAI_pattern(mat);
 
 	// Select some interior point
-	const PetscInt testpoint[] = {3,5,4};
+	const PetscInt testpoint[] = {3,3,3};
 	assert(m.gnpoind(0) >= 5);
 	assert(m.gnpoind(1) >= 7);
 	assert(m.gnpoind(2) >= 6);
@@ -123,14 +130,16 @@ int main(int argc, char *argv[])
 
 	int ierr = PetscInitialize(&argc, &argv, NULL, NULL);
 
-	const test::MeshSpec ms = test::readInputFile(PETSC_COMM_WORLD, confile.c_str());
-	const CartMesh mesh = createMesh(PETSC_COMM_WORLD, ms);
-	DiscreteLinearProblem lp = setup_poisson_problem(confile.c_str());
+	{
+		const test::MeshSpec ms = test::readInputFile(PETSC_COMM_WORLD, confile.c_str());
+		const CartMesh mesh = createMesh(PETSC_COMM_WORLD, ms);
+		DiscreteLinearProblem lp = setup_poisson_problem(confile.c_str());
 
-	if(test_type == "fullsai")
-		ierr = test_sai(true, mesh, lp.lhs);
+		if(test_type == "fullsai")
+			ierr = test_sai(true, mesh, lp.lhs);
 
-	ierr = destroyDiscreteLinearProblem(&lp); CHKERRQ(ierr);
+		ierr = destroyDiscreteLinearProblem(&lp); CHKERRQ(ierr);
+	}
 	ierr = PetscFinalize();
 	return ierr;
 }

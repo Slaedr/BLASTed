@@ -24,7 +24,7 @@ if(WITH_PETSC)
   #  -options_file  ${CMAKE_CURRENT_SOURCE_DIR}/input/poisson_csr_amg.perc)
 
   add_test(NAME SAIPatternPoissonFull
-	COMMAND testsai ${CMAKE_CURRENT_SOURCE_DIR}/input/poisson.control fullsai
+	COMMAND testsai ${CMAKE_CURRENT_SOURCE_DIR}/input/small_poisson.control fullsai
 	)
 
   add_test(NAME MPIPoissonCSRPetscJacobiRelaxation

@@ -13,6 +13,12 @@ LeftSAIPattern<index> left_SAI_pattern(const CRawBSRMatrix<scalar,index>& mat)
 {
 	LeftSAIPattern<index> tsp;
 
+#ifdef DEBUG
+	// test browendptr
+	for(index irow = 0; irow < mat.nbrows; irow++)
+		assert(mat.browptr[irow+1] == mat.browendptr[irow]);
+#endif
+
 	/* Note that every block-row of A corresponds to a block-row of the approx inverse M and to a
 	 * least-squares problem.
 	 */
@@ -24,7 +30,7 @@ LeftSAIPattern<index> left_SAI_pattern(const CRawBSRMatrix<scalar,index>& mat)
 	// Step 1: Compute number of variables and constraints for each least-squares problem
 
 	index totalcoeffs = 0;     // number of least-square LHS coeffs over all block-rows
-	//#pragma NOT PARALLEL omp parallel for default(shared) reduction(+:totalcoeffs)
+	//#pragma omp parallel for default(shared) reduction(+:totalcoeffs)
 	for(index irow = 0; irow < mat.nbrows; irow++)
 	{
 		tsp.nVars[irow] = mat.browendptr[irow] - mat.browptr[irow];
@@ -34,12 +40,13 @@ LeftSAIPattern<index> left_SAI_pattern(const CRawBSRMatrix<scalar,index>& mat)
 		{
 			const index col = mat.bcolind[jj];      // column of A^T, row of A
 
-			for(index kk = mat.browptr[col]; kk < mat.browendptr[col]; kk++)
+			for(index kk = mat.browptr[col]; kk < mat.browendptr[col]; kk++) {
 				constraints.insert(mat.bcolind[kk]);
+				totalcoeffs++;
+			}
 		}
 
 		tsp.nEqns[irow] = static_cast<int>(constraints.size());
-		totalcoeffs += tsp.nVars[irow]*tsp.nEqns[irow];
 		tsp.sairowptr[irow+1] = tsp.nVars[irow];
 	}
 
@@ -47,7 +54,12 @@ LeftSAIPattern<index> left_SAI_pattern(const CRawBSRMatrix<scalar,index>& mat)
 	internal::inclusive_scan(tsp.sairowptr);
 
 	const index totalvars = tsp.sairowptr[mat.nbrows];
-	tsp.bcolptr.assign(totalvars,0);
+#ifdef DEBUG
+	printf(" Total vars = %d.\n", totalvars);
+	for(index irow = 0; irow < mat.nbrows; irow++)
+		assert(tsp.sairowptr[irow] < totalvars);
+#endif
+	tsp.bcolptr.assign(totalvars+1,0);
 	tsp.bpos.assign(totalcoeffs,0);
 	tsp.browind.assign(totalcoeffs,0);
 
@@ -70,6 +82,8 @@ LeftSAIPattern<index> left_SAI_pattern(const CRawBSRMatrix<scalar,index>& mat)
 	}
 
 	internal::inclusive_scan(tsp.bcolptr);
+	printf(" Last bcolptr: %d, %d\n", tsp.bcolptr[totalvars], totalcoeffs); fflush(stdout);
+	assert(tsp.bcolptr[tsp.sairowptr[mat.nbrows]] == totalcoeffs);
 
 	// Step 3: For the least-squares problem of each row of A, compute the sparsity pattern
 
@@ -108,6 +122,20 @@ LeftSAIPattern<index> left_SAI_pattern(const CRawBSRMatrix<scalar,index>& mat)
 			}
 		}
 
+#ifdef DEBUG
+		for(index jj = mat.browptr[irow]; jj < mat.browendptr[irow]; jj++)
+		{
+			const int localcolidx = jj - mat.browptr[irow];
+			for(size_t i = 0; i < localrowinds[localcolidx].size(); i++) {
+				// printf("  Row %d: local row,col = (%d,%d).\n",
+				//        irow, localrowinds[localcolidx][i], localcolidx);
+				// fflush(stdout);
+				assert(localrowinds[localcolidx][i] >= 0);
+				assert(localrowinds[localcolidx][i] < tsp.nEqns[irow]);
+			}
+		}
+#endif
+
 		/* Note that because sets are always ordered, the set 'constraints' is ordered by column index.
 		 * This means that localrowinds is ordered by column index of the constraints.
 		 */
@@ -121,12 +149,26 @@ LeftSAIPattern<index> left_SAI_pattern(const CRawBSRMatrix<scalar,index>& mat)
 
 			for(index kk = mat.browptr[col]; kk < mat.browendptr[col]; kk++)
 			{
-				const int locpos = mat.browptr[col]-kk;
+				const int locpos = kk - mat.browptr[col];
 				tsp.bpos[tsp.bcolptr[tsp.sairowptr[irow]+localcolidx] + locpos] = kk;
 				tsp.browind[tsp.bcolptr[tsp.sairowptr[irow]+localcolidx] + locpos]
-					= localrowinds[localcolidx][kk];
+					= localrowinds[localcolidx][locpos];
 			}
 		}
+
+		// sanity check
+#ifdef DEBUG
+		for(index icol = tsp.sairowptr[irow]; icol < tsp.sairowptr[irow+1]; icol++)
+		{
+			for(index j = tsp.bcolptr[icol]; j < tsp.bcolptr[icol+1]; j++) {
+				assert(tsp.bpos[j] < mat.browptr[mat.nbrows]);
+				// printf("  Row %d: Col-idx %d: local row ind = %d.\n", irow, j, tsp.browind[j]);
+				// fflush(stdout);
+				assert(tsp.browind[j] >= 0);
+				assert(tsp.browind[j] < tsp.nEqns[irow]);
+			}
+		}
+#endif
 	}
 
 	return tsp;
