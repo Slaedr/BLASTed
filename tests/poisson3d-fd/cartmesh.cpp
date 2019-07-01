@@ -57,7 +57,7 @@ CartMesh::CartMesh(const PetscInt npdim[NDIM], const PetscInt num_partitions)
 		std::printf("%d ", npoind[i]);
 	}
 	std::printf("\n");
-	
+
 	npointotal = 1;
 	for(int i = 0; i < NDIM; i++)
 		npointotal *= npoind[i];
@@ -67,6 +67,16 @@ CartMesh::CartMesh(const PetscInt npdim[NDIM], const PetscInt num_partitions)
 	ninpoin = npointotal-nbpoints;
 
 	std::printf("CartMesh: Total points = %d, interior points = %d\n", npointotal, ninpoin);
+}
+
+CartMesh::~CartMesh()
+{
+	int ierr = DMDestroy(&da);
+	if(ierr)
+		std::printf("Could not destroy DM!\n");
+	for(int i = 0; i < NDIM; i++)
+		std::free(coords[i]);
+	std::free(coords);
 }
 
 PetscErrorCode CartMesh::createMeshAndDMDA(const MPI_Comm comm, const PetscInt npdim[NDIM], 
@@ -130,16 +140,6 @@ PetscErrorCode CartMesh::createMeshAndDMDA(const MPI_Comm comm, const PetscInt n
 		coords[i] = (PetscReal*)std::malloc(npoind[i]*sizeof(PetscReal));
 
 	return ierr;
-}
-
-CartMesh::~CartMesh()
-{
-	int ierr = DMDestroy(&da);
-	if(ierr)
-		std::printf("Could not destroy DM!\n");
-	for(int i = 0; i < NDIM; i++)
-		std::free(coords[i]);
-	std::free(coords);
 }
 
 void CartMesh::generateMesh_ChebyshevDistribution(const PetscReal rmin[NDIM],

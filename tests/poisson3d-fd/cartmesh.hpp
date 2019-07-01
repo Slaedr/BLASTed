@@ -28,6 +28,9 @@
  * - the y-coordinates of points lying along the "back upper vertical" line of the cube
  * - the z-coordinates of points lying along the line "coming out" of the "bottom-left" corner 
  *     of the "back" plane
+ *
+ * \warning Do NOT pass by value! There is currently no suitable copy constructor, so it will cause
+ *   multiple-frees by the destructor.
  */
 class CartMesh
 {

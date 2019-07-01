@@ -14,9 +14,25 @@
 
 using namespace blasted;
 
-void test_fullmatrix_interior(const CartMesh& m, const CRawBSRMatrix<PetscScalar,PetscInt>& mat,
-                              const LeftSAIPattern<int>& sp, const PetscInt testrow)
+static inline PetscInt getMatRowIdx(const CartMesh& m, const PetscInt testpoint[3])
 {
+	return (testpoint[2]-1)*(m.gnpoind(0)-2)*(m.gnpoind(1)-2)
+		+ (testpoint[1]-1)*(m.gnpoind(0)-2) + testpoint[0]-1;
+}
+
+
+void test_fullmatrix_interior(const CartMesh& m, const CRawBSRMatrix<PetscScalar,PetscInt>& mat,
+                              const LeftSAIPattern<int>& sp, const PetscInt testpoint[3])
+{
+	assert(testpoint[0] >= 2);
+	assert(testpoint[1] >= 2);
+	assert(testpoint[2] >= 2);
+	assert(testpoint[0] <= m.gnpoind(0)-4);
+	assert(testpoint[1] <= m.gnpoind(1)-4);
+	assert(testpoint[2] <= m.gnpoind(2)-4);
+
+	const PetscInt testrow = getMatRowIdx(m, testpoint);
+
 	assert(sp.nVars[testrow] == 7);
 	assert(sp.nEqns[testrow] == 25);
 
@@ -87,12 +103,98 @@ void test_fullmatrix_interior(const CartMesh& m, const CRawBSRMatrix<PetscScalar
 			for(int i = 1; i < 7; i++)
 				assert(sp.browind[colstart+i] == 18+i);
 		}
+		else
+			throw std::runtime_error("Invalid colummn!");
 	}
 }
 
-void test_fullmatrix_boundaryface(const CRawBSRMatrix<PetscScalar,PetscInt>& mat,
-                                  const LeftSAIPattern<int>& sp, const PetscInt testrow)
+void test_fullmatrix_boundaryface(const CartMesh& m, const CRawBSRMatrix<PetscScalar,PetscInt>& mat,
+                                  const LeftSAIPattern<int>& sp, const PetscInt testpoint[3])
 {
+	// let's do the +i face
+	assert(testpoint[0] == m.gnpoind(0)-2);
+
+	assert(testpoint[1] >= 3);
+	assert(testpoint[2] >= 3);
+	assert(testpoint[1] <= m.gnpoind(1)-4);
+	assert(testpoint[2] <= m.gnpoind(2)-4);
+
+	const PetscInt testrow = getMatRowIdx(m,testpoint);
+
+	assert(sp.nVars[testrow] == 6);
+	assert(sp.nEqns[testrow] == 19);
+
+	const int start = sp.sairowptr[testrow], end = sp.sairowptr[testrow+1];
+	assert(end-start == 6);
+	for(int jcol = start; jcol < end; jcol++)
+	{
+		const int colstart = sp.bcolptr[jcol];
+
+		if(jcol == start+2) {
+			printf(" Size of col = %d.\n", end-start); fflush(stdout);
+			for(int i = 0; i < 7; i++) {
+				assert(sp.browind[colstart+i] >= 0);
+				assert(sp.browind[colstart+i] < sp.nEqns[testrow]);
+			}
+		}
+		else {
+			for(int i = 0; i < 6; i++) {
+				assert(sp.browind[colstart+i] >= 0);
+				assert(sp.browind[colstart+i] < sp.nEqns[testrow]);
+			}
+		}
+
+		if(jcol == start) {
+			// back column
+			for(int i = 0; i < 5; i++) {
+				//printf("  LHS row ind = %d. ", sp.browind[colstart+i]); fflush(stdout);
+				assert(sp.browind[colstart+i] == i);
+			}
+			printf(" Colstart +5 = %d.\n", sp.browind[colstart+5]); fflush(stdout);
+			assert(sp.browind[colstart+5] == 10);
+		}
+		else if(jcol == start+1) {
+			// down column
+			assert(sp.browind[colstart] == 1);
+			for(int i = 1; i < 4; i++)
+				assert(sp.browind[colstart+i] == 4+i);
+			assert(sp.browind[colstart+4] == 10);
+			assert(sp.browind[colstart+5] == 14);
+		}
+		else if(jcol == start+2) {
+			// left column
+			assert(sp.browind[colstart] == 2);
+			assert(sp.browind[colstart+1] == 6);
+			for(int i = 2; i < 6; i++)
+				assert(sp.browind[colstart+i] == 6+i);
+			assert(sp.browind[colstart+6] == 15);
+		}
+		else if(jcol == start+3) {
+			// centre column
+			assert(sp.browind[colstart] == 3);
+			assert(sp.browind[colstart+1] == 7);
+			assert(sp.browind[colstart+2] == 9);
+			assert(sp.browind[colstart+3] == 10);
+			assert(sp.browind[colstart+4] == 12);
+			assert(sp.browind[colstart+5] == 16);
+		}
+		// right column does not exist
+		else if(jcol == start+4) {
+			// up column
+			assert(sp.browind[colstart] == 4);
+			for(int i = 1; i < 5; i++)
+				assert(sp.browind[colstart+i] == 9+i);
+			assert(sp.browind[colstart+5] == 17);
+		}
+		else if(jcol == start+5) {
+			// front column
+			assert(sp.browind[colstart] == 10);
+			for(int i = 1; i < 6; i++)
+				assert(sp.browind[colstart+i] == 13+i);
+		}
+		else
+			throw std::runtime_error("Invalid colummn!");
+	}
 }
 
 int test_sai(const bool fullsai, const CartMesh& m, const Mat A)
@@ -103,22 +205,28 @@ int test_sai(const bool fullsai, const CartMesh& m, const Mat A)
 
 	const LeftSAIPattern<int> sp = left_SAI_pattern(mat);
 
-	// Select some interior point
-	const PetscInt testpoint[] = {3,3,3};
-	assert(m.gnpoind(0) >= 5);
-	assert(m.gnpoind(1) >= 7);
-	assert(m.gnpoind(2) >= 6);
+	{
+		// Select some interior point
+		const PetscInt testpoint[] = {3,3,3};
+		assert(m.gnpoind(0) >= 5);
+		assert(m.gnpoind(1) >= 7);
+		assert(m.gnpoind(2) >= 6);
 
-	const PetscInt testrow = testpoint[2]*(m.gnpoind(0)-2)*(m.gnpoind(1)-2)
-		+ testpoint[1]*(m.gnpoind(0)-2) + testpoint[0];
+		// const PetscInt testrow = testpoint[2]*(m.gnpoind(0)-2)*(m.gnpoind(1)-2)
+		// 	+ testpoint[1]*(m.gnpoind(0)-2) + testpoint[0];
+		const PetscInt testrow = getMatRowIdx(m, testpoint);
 
-	PetscInt ncols = 0;
-	ierr = MatGetRow(A, testrow, &ncols, NULL, NULL); CHKERRQ(ierr);
-	printf("Number of cols in row %d is %d.\n", testrow, ncols);
-	assert(ncols == 7);
+		PetscInt ncols = 0;
+		ierr = MatGetRow(A, testrow, &ncols, NULL, NULL); CHKERRQ(ierr);
+		printf("Number of cols in row %d is %d.\n", testrow, ncols);
 
-	// Test full matrix
-	test_fullmatrix_interior(m, mat, sp, testrow);
+		// Test full matrix
+		test_fullmatrix_interior(m, mat, sp, testpoint);
+	}
+	{
+		const PetscInt testpoint[] = {m.gnpoind(0)-2, 3, 3};
+		test_fullmatrix_boundaryface(m,mat,sp,testpoint);
+	}
 
 	return ierr;
 }
