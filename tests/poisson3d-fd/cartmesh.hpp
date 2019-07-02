@@ -69,7 +69,7 @@ public:
 
 	~CartMesh();
 
-	const DM getDA() const
+	DM getDA() const
 	{
 		return da;
 	}
