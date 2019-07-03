@@ -192,8 +192,33 @@ LeftSAIPattern<index> left_incomplete_SAI_pattern(const CRawBSRMatrix<scalar,ind
 	 */
 
 	tsp.sairowptr.assign(mat.nbrows+1,0);
-	tsp.nVars.assign(mat.nbrows,0);
-	tsp.nEqns.assign(mat.nbrows,0);
+	tsp.nVars.resize(mat.nbrows);
+	tsp.nEqns.resize(mat.nbrows);
+
+	index totalcoeffs = 0;
+
+	for(index irow = 0; irow < mat.nbrows; irow++)
+	{
+		tsp.nVars[irow] = mat.browendptr[irow] - mat.browptr[irow];
+		tsp.nEqns[irow] = tsp.nVars[irow];
+		tsp.sairowptr[irow+1] = tsp.nVars[irow];
+
+		for(index jj = mat.browptr[irow]; jj < mat.browendptr[irow]; irow++)
+		{
+			const index colind = mat.bcolind[jj];
+			for(index kk = mat.bowptr[colind]; kk < mat.browendptr[colind]; kk++)
+			{
+				for(index ll = mat.browptr[irow]; ll < mat.browendptr[irow]; irow++) {
+					const index jcol = mat.bcolind[ll];
+					if(jcol == mat.bcolind[kk]) {
+						totalcoeffs++;
+					}
+				}
+			}
+		}
+	}
+
+	internal::inclusive_scan(tsp.sairowptr);
 
 	return tsp;
 }

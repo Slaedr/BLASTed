@@ -1,5 +1,5 @@
 /** \file
- * \brief Some processing needed for building SAI-type preconditioners
+ * \brief Some pre-processing needed for building SAI-type preconditioners
  */
 
 #ifndef BLASTED_SAI_H
