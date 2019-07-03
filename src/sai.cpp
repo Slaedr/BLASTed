@@ -195,6 +195,8 @@ LeftSAIPattern<index> left_incomplete_SAI_pattern(const CRawBSRMatrix<scalar,ind
 	tsp.nVars.resize(mat.nbrows);
 	tsp.nEqns.resize(mat.nbrows);
 
+	// First, compute sizes
+
 	index totalcoeffs = 0;
 
 	for(index irow = 0; irow < mat.nbrows; irow++)
@@ -209,8 +211,7 @@ LeftSAIPattern<index> left_incomplete_SAI_pattern(const CRawBSRMatrix<scalar,ind
 			for(index kk = mat.bowptr[colind]; kk < mat.browendptr[colind]; kk++)
 			{
 				for(index ll = mat.browptr[irow]; ll < mat.browendptr[irow]; irow++) {
-					const index jcol = mat.bcolind[ll];
-					if(jcol == mat.bcolind[kk]) {
+					if(mat.bcolind[ll] == mat.bcolind[kk]) {
 						totalcoeffs++;
 					}
 				}
@@ -219,6 +220,13 @@ LeftSAIPattern<index> left_incomplete_SAI_pattern(const CRawBSRMatrix<scalar,ind
 	}
 
 	internal::inclusive_scan(tsp.sairowptr);
+
+	const index totalvars = tsp.sairowptr[mat.nbrows];
+	tsp.bcolptr.resize(totalvars+1);
+	tsp.browind.resize(totalcoeffs);
+	tsp.bpos.resize(totalcoeffs);
+
+	// Compute the pattern
 
 	return tsp;
 }
