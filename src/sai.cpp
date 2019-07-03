@@ -176,4 +176,26 @@ LeftSAIPattern<index> left_SAI_pattern(const CRawBSRMatrix<scalar,index>& mat)
 
 template LeftSAIPattern<int> left_SAI_pattern(const CRawBSRMatrix<double,int>& mat);
 
+template <typename scalar, typename index>
+LeftSAIPattern<index> left_incomplete_SAI_pattern(const CRawBSRMatrix<scalar,index>& mat)
+{
+	LeftSAIPattern<index> tsp;
+
+#ifdef DEBUG
+	// test browendptr
+	for(index irow = 0; irow < mat.nbrows; irow++)
+		assert(mat.browptr[irow+1] == mat.browendptr[irow]);
+#endif
+
+	/* Note that every block-row of A corresponds to a block-row of the approx inverse M and to a
+	 * least-squares problem.
+	 */
+
+	tsp.sairowptr.assign(mat.nbrows+1,0);
+	tsp.nVars.assign(mat.nbrows,0);
+	tsp.nEqns.assign(mat.nbrows,0);
+
+	return tsp;
+}
+
 }

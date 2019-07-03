@@ -38,6 +38,9 @@ struct LeftSAIPattern
 template <typename scalar, typename index>
 LeftSAIPattern<index> left_SAI_pattern(const CRawBSRMatrix<scalar,index>& mat);
 
+template <typename scalar, typename index>
+LeftSAIPattern<index> left_incomplete_SAI_pattern(const CRawBSRMatrix<scalar,index>& mat);
+
 }
 
 #endif
