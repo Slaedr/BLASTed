@@ -26,6 +26,9 @@ if(WITH_PETSC)
   add_test(NAME SAIPatternPoissonFull
 	COMMAND testsai ${CMAKE_CURRENT_SOURCE_DIR}/input/small_poisson.control fullsai
 	)
+  add_test(NAME IncompleteSAIPatternPoissonFull
+	COMMAND testsai ${CMAKE_CURRENT_SOURCE_DIR}/input/small_poisson.control incomplete
+	)
 
   add_test(NAME MPIPoissonCSRPetscJacobiRelaxation
 	COMMAND env OMP_NUM_THREADS=1 ${MPIEXEC} -n 4 ./testcsr_poisson

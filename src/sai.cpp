@@ -195,7 +195,7 @@ LeftSAIPattern<index> left_incomplete_SAI_pattern(const CRawBSRMatrix<scalar,ind
 	tsp.nVars.resize(mat.nbrows);
 	tsp.nEqns.resize(mat.nbrows);
 
-	// First, compute sizes
+	// Compute sizes
 
 	index totalcoeffs = 0;
 
@@ -205,12 +205,12 @@ LeftSAIPattern<index> left_incomplete_SAI_pattern(const CRawBSRMatrix<scalar,ind
 		tsp.nEqns[irow] = tsp.nVars[irow];
 		tsp.sairowptr[irow+1] = tsp.nVars[irow];
 
-		for(index jj = mat.browptr[irow]; jj < mat.browendptr[irow]; irow++)
+		for(index jj = mat.browptr[irow]; jj < mat.browendptr[irow]; jj++)
 		{
 			const index colind = mat.bcolind[jj];
-			for(index kk = mat.bowptr[colind]; kk < mat.browendptr[colind]; kk++)
+			for(index kk = mat.browptr[colind]; kk < mat.browendptr[colind]; kk++)
 			{
-				for(index ll = mat.browptr[irow]; ll < mat.browendptr[irow]; irow++) {
+				for(index ll = mat.browptr[irow]; ll < mat.browendptr[irow]; ll++) {
 					if(mat.bcolind[ll] == mat.bcolind[kk]) {
 						totalcoeffs++;
 					}
@@ -226,9 +226,62 @@ LeftSAIPattern<index> left_incomplete_SAI_pattern(const CRawBSRMatrix<scalar,ind
 	tsp.browind.resize(totalcoeffs);
 	tsp.bpos.resize(totalcoeffs);
 
+	// Compute pointers to the beginning of every column in the LHS matrix for every row of the SAI
+	for(index irow = 0; irow < mat.nbrows; irow++)
+	{
+		const index startcol = tsp.sairowptr[irow];
+
+		for(index jj = mat.browptr[irow]; jj < mat.browendptr[irow]; jj++)
+		{
+			const index loccol = jj - mat.browptr[irow];
+			const index colind = mat.bcolind[jj];
+			for(index kk = mat.browptr[colind]; kk < mat.browendptr[colind]; kk++)
+			{
+				for(index ll = mat.browptr[irow]; ll < mat.browendptr[irow]; ll++) {
+					if(mat.bcolind[ll] == mat.bcolind[kk])
+					{
+						assert(startcol+loccol < tsp.sairowptr[irow+1]);
+						tsp.bcolptr[startcol+loccol+1]++;
+					}
+				}
+			}
+		}
+	}
+
+	internal::inclusive_scan(tsp.bcolptr);
+	assert(tsp.bcolptr[totalvars]==totalcoeffs);
+
 	// Compute the pattern
+
+	for(index irow = 0; irow < mat.nbrows; irow++)
+	{
+		const index startcol = tsp.sairowptr[irow];
+
+		for(index jj = mat.browptr[irow]; jj < mat.browendptr[irow]; jj++)
+		{
+			const index colind = mat.bcolind[jj];
+			const index loccol = jj - mat.browptr[irow];
+			const index saicolpos = tsp.bcolptr[startcol+loccol];
+
+			int numentries = 0;
+
+			for(index kk = mat.browptr[colind]; kk < mat.browendptr[colind]; kk++)
+			{
+				for(index ll = mat.browptr[irow]; ll < mat.browendptr[irow]; ll++) {
+					if(mat.bcolind[ll] == mat.bcolind[kk])
+					{
+						tsp.bpos[saicolpos+numentries] = kk;
+						tsp.browind[saicolpos+numentries] = ll-mat.browptr[irow];
+						numentries++;
+					}
+				}
+			}
+		}
+	}
 
 	return tsp;
 }
+
+template LeftSAIPattern<int> left_incomplete_SAI_pattern(const CRawBSRMatrix<double,int>& mat);
 
 }

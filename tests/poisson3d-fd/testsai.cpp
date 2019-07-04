@@ -20,6 +20,94 @@ static inline PetscInt getMatRowIdx(const CartMesh& m, const PetscInt testpoint[
 		+ (testpoint[1]-1)*(m.gnpoind(0)-2) + testpoint[0]-1;
 }
 
+void test_incomplete_fullmatrix_interior(const CartMesh& m, const CRawBSRMatrix<PetscScalar,PetscInt>& mat,
+                                         const LeftSAIPattern<int>& sp, const PetscInt testpoint[3])
+{
+	assert(testpoint[0] >= 2);
+	assert(testpoint[1] >= 2);
+	assert(testpoint[2] >= 2);
+	assert(testpoint[0] <= m.gnpoind(0)-4);
+	assert(testpoint[1] <= m.gnpoind(1)-4);
+	assert(testpoint[2] <= m.gnpoind(2)-4);
+
+	const PetscInt backpoint[] = { testpoint[0], testpoint[1], testpoint[2]-1 };
+	const PetscInt backrow = getMatRowIdx(m, backpoint);
+	const PetscInt downpoint[] = { testpoint[0], testpoint[1]-1, testpoint[2] };
+	const PetscInt downrow = getMatRowIdx(m, downpoint);
+	const PetscInt leftpoint[] = { testpoint[0]-1, testpoint[1], testpoint[2] };
+	const PetscInt leftrow = getMatRowIdx(m, leftpoint);
+	const PetscInt rightpoint[] = { testpoint[0]+1, testpoint[1], testpoint[2] };
+	const PetscInt rightrow = getMatRowIdx(m, rightpoint);
+	const PetscInt uppoint[] = { testpoint[0], testpoint[1]+1, testpoint[2] };
+	const PetscInt uprow = getMatRowIdx(m, uppoint);
+	const PetscInt frontpoint[] = { testpoint[0], testpoint[1], testpoint[2]+1 };
+	const PetscInt frontrow = getMatRowIdx(m, frontpoint);
+
+	const PetscInt testrow = getMatRowIdx(m, testpoint);
+
+	assert(sp.nVars[testrow] == 7);
+	assert(sp.nEqns[testrow] == 7);
+
+	const int firstcol = sp.sairowptr[testrow], lastcol = sp.sairowptr[testrow+1];
+	assert(lastcol-firstcol == 7);
+
+	for(int jcol = firstcol; jcol < lastcol; jcol++)
+	{
+		const int colstart = sp.bcolptr[jcol];
+
+		const int colsize = sp.bcolptr[jcol+1]-sp.bcolptr[jcol];
+		if(jcol == firstcol+3) {
+			printf(" Number of diagonal entries = %d.\n",colsize); fflush(stdout);
+			assert(colsize == 7);
+		}
+		else
+			assert(colsize == 2);
+
+		if(jcol == firstcol) {
+			// Back
+			assert(sp.browind[colstart] == 0);
+			assert(sp.bpos[colstart] == mat.diagind[backrow]);
+			assert(sp.browind[colstart+1] == 3);
+			assert(sp.bpos[colstart+1] == mat.browptr[backrow]+6);
+		}
+		else if(jcol == firstcol+1) {
+			assert(sp.browind[colstart] == 1);
+			assert(sp.bpos[colstart] == mat.diagind[downrow]);
+			assert(sp.browind[colstart+1] == 3);
+			assert(sp.bpos[colstart+1] == mat.browptr[downrow]+5);
+		}
+		else if(jcol == firstcol+2) {
+			assert(sp.browind[colstart] == 2);
+			assert(sp.bpos[colstart] == mat.diagind[leftrow]);
+			assert(sp.browind[colstart+1] == 3);
+			assert(sp.bpos[colstart+1] == mat.browptr[leftrow]+4);
+		}
+		else if(jcol == firstcol+3) {
+			for(int j = 0; j < 7; j++) {
+				assert(sp.browind[colstart+j] == j);
+				assert(sp.bpos[colstart+j] == mat.browptr[testrow]+j);
+			}
+		}
+		else if(jcol == firstcol+4) {
+			assert(sp.browind[colstart] == 3);
+			assert(sp.bpos[colstart] == mat.browptr[rightrow]+2);
+			assert(sp.browind[colstart+1] == 4);
+			assert(sp.bpos[colstart+1] == mat.diagind[rightrow]);
+		}
+		else if(jcol == firstcol+5) {
+			assert(sp.browind[colstart] == 3);
+			assert(sp.bpos[colstart] == mat.browptr[uprow]+1);
+			assert(sp.browind[colstart+1] == 5);
+			assert(sp.bpos[colstart+1] == mat.diagind[uprow]);
+		}
+		else if(jcol == firstcol+6) {
+			assert(sp.browind[colstart] == 3);
+			assert(sp.bpos[colstart] == mat.browptr[frontrow]);
+			assert(sp.browind[colstart+1] == 6);
+			assert(sp.bpos[colstart+1] == mat.diagind[frontrow]);
+		}
+	}
+}
 
 void test_fullmatrix_interior(const CartMesh& m, const CRawBSRMatrix<PetscScalar,PetscInt>& mat,
                               const LeftSAIPattern<int>& sp, const PetscInt testpoint[3])
@@ -30,6 +118,19 @@ void test_fullmatrix_interior(const CartMesh& m, const CRawBSRMatrix<PetscScalar
 	assert(testpoint[0] <= m.gnpoind(0)-4);
 	assert(testpoint[1] <= m.gnpoind(1)-4);
 	assert(testpoint[2] <= m.gnpoind(2)-4);
+
+	const PetscInt backpoint[] = { testpoint[0], testpoint[1], testpoint[2]-1 };
+	const PetscInt backrow = getMatRowIdx(m, backpoint);
+	const PetscInt downpoint[] = { testpoint[0], testpoint[1]-1, testpoint[2] };
+	const PetscInt downrow = getMatRowIdx(m, downpoint);
+	const PetscInt leftpoint[] = { testpoint[0]-1, testpoint[1], testpoint[2] };
+	const PetscInt leftrow = getMatRowIdx(m, leftpoint);
+	const PetscInt rightpoint[] = { testpoint[0]+1, testpoint[1], testpoint[2] };
+	const PetscInt rightrow = getMatRowIdx(m, rightpoint);
+	const PetscInt uppoint[] = { testpoint[0], testpoint[1]+1, testpoint[2] };
+	const PetscInt uprow = getMatRowIdx(m, uppoint);
+	const PetscInt frontpoint[] = { testpoint[0], testpoint[1], testpoint[2]+1 };
+	const PetscInt frontrow = getMatRowIdx(m, frontpoint);
 
 	const PetscInt testrow = getMatRowIdx(m, testpoint);
 
@@ -49,18 +150,24 @@ void test_fullmatrix_interior(const CartMesh& m, const CRawBSRMatrix<PetscScalar
 		if(jcol == start) {
 			// back column
 			for(int i = 0; i < 6; i++) {
-				//printf("  LHS row ind = %d. ", sp.browind[colstart+i]); fflush(stdout);
 				assert(sp.browind[colstart+i] == i);
 			}
 			assert(sp.browind[colstart+6] == 12);
+
+			for(int i = 0; i < 7; i++)
+				assert(sp.bpos[colstart+i] == mat.browptr[backrow]+i);
 		}
 		else if(jcol == start+1) {
 			// down column
 			assert(sp.browind[colstart] == 1);
-			for(int i = 1; i < 5; i++)
+			for(int i = 1; i < 5; i++) {
 				assert(sp.browind[colstart+i] == 5+i);
+			}
 			assert(sp.browind[colstart+5] == 12);
 			assert(sp.browind[colstart+6] == 19);
+
+			for(int i = 0; i < 7; i++)
+				assert(sp.bpos[colstart+i] == mat.browptr[downrow]+i);
 		}
 		else if(jcol == start+2) {
 			// left column
@@ -70,6 +177,9 @@ void test_fullmatrix_interior(const CartMesh& m, const CRawBSRMatrix<PetscScalar
 				assert(sp.browind[colstart+i] == 8+i);
 			assert(sp.browind[colstart+5] == 15);
 			assert(sp.browind[colstart+6] == 20);
+
+			for(int i = 0; i < 7; i++)
+				assert(sp.bpos[colstart+i] == mat.browptr[leftrow]+i);
 		}
 		else if(jcol == start+3) {
 			// centre column
@@ -79,6 +189,9 @@ void test_fullmatrix_interior(const CartMesh& m, const CRawBSRMatrix<PetscScalar
 				assert(sp.browind[colstart+i] == 9+i);
 			assert(sp.browind[colstart+5] == 16);
 			assert(sp.browind[colstart+6] == 21);
+
+			for(int i = 0; i < 7; i++)
+				assert(sp.bpos[colstart+i] == mat.browptr[testrow]+i);
 		}
 		else if(jcol == start+4) {
 			// right column
@@ -88,6 +201,9 @@ void test_fullmatrix_interior(const CartMesh& m, const CRawBSRMatrix<PetscScalar
 				assert(sp.browind[colstart+i] == 10+i);
 			assert(sp.browind[colstart+5] == 17);
 			assert(sp.browind[colstart+6] == 22);
+
+			for(int i = 0; i < 7; i++)
+				assert(sp.bpos[colstart+i] == mat.browptr[rightrow]+i);
 		}
 		else if(jcol == start+5) {
 			// up column
@@ -96,12 +212,18 @@ void test_fullmatrix_interior(const CartMesh& m, const CRawBSRMatrix<PetscScalar
 			for(int i = 2; i < 6; i++)
 				assert(sp.browind[colstart+i] == 13+i);
 			assert(sp.browind[colstart+6] == 23);
+
+			for(int i = 0; i < 7; i++)
+				assert(sp.bpos[colstart+i] == mat.browptr[uprow]+i);
 		}
 		else if(jcol == start+6) {
 			// front column
 			assert(sp.browind[colstart] == 12);
 			for(int i = 1; i < 7; i++)
 				assert(sp.browind[colstart+i] == 18+i);
+
+			for(int i = 0; i < 7; i++)
+				assert(sp.bpos[colstart+i] == mat.browptr[frontrow]+i);
 		}
 		else
 			throw std::runtime_error("Invalid colummn!");
@@ -203,17 +325,13 @@ int test_sai(const bool fullsai, const CartMesh& m, const Mat A)
 
 	const CRawBSRMatrix<PetscScalar,PetscInt> mat = wrapLocalPetscMat(A, 1);
 
-	const LeftSAIPattern<int> sp = left_SAI_pattern(mat);
-
+	// Test interior point
 	{
-		// Select some interior point
 		const PetscInt testpoint[] = {3,3,3};
 		assert(m.gnpoind(0) >= 5);
 		assert(m.gnpoind(1) >= 7);
 		assert(m.gnpoind(2) >= 6);
 
-		// const PetscInt testrow = testpoint[2]*(m.gnpoind(0)-2)*(m.gnpoind(1)-2)
-		// 	+ testpoint[1]*(m.gnpoind(0)-2) + testpoint[0];
 		const PetscInt testrow = getMatRowIdx(m, testpoint);
 
 		PetscInt ncols = 0;
@@ -221,11 +339,26 @@ int test_sai(const bool fullsai, const CartMesh& m, const Mat A)
 		printf("Number of cols in row %d is %d.\n", testrow, ncols);
 
 		// Test full matrix
-		test_fullmatrix_interior(m, mat, sp, testpoint);
+		if(fullsai) {
+			const LeftSAIPattern<int> sp = left_SAI_pattern(mat);
+			test_fullmatrix_interior(m, mat, sp, testpoint);
+		}
+		else {
+			const LeftSAIPattern<int> sp = left_incomplete_SAI_pattern(mat);
+			test_incomplete_fullmatrix_interior(m, mat, sp, testpoint);
+		}
 	}
+
+	// Test +i boundary point
 	{
 		const PetscInt testpoint[] = {m.gnpoind(0)-2, 3, 3};
-		test_fullmatrix_boundaryface(m,mat,sp,testpoint);
+		if(fullsai) {
+			const LeftSAIPattern<int> sp = left_SAI_pattern(mat);
+			test_fullmatrix_boundaryface(m,mat,sp,testpoint);
+		}
+		else {
+			// const LeftSAIPattern<int> sp = left_incomplete_SAI_pattern(mat);
+		}
 	}
 
 	return ierr;
@@ -245,6 +378,8 @@ int main(int argc, char *argv[])
 
 		if(test_type == "fullsai")
 			ierr = test_sai(true, mesh, lp.lhs);
+		else
+			ierr = test_sai(false, mesh, lp.lhs);
 
 		ierr = destroyDiscreteLinearProblem(&lp); CHKERRQ(ierr);
 	}
