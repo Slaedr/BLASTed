@@ -8,6 +8,10 @@
 #include <petscmat.h>
 #include "cartmesh.hpp"
 
-int test_sai(const bool fullsai, const CartMesh& m, const Mat A);
+inline PetscInt getMatRowIdx(const CartMesh& m, const PetscInt testpoint[3])
+{
+	return (testpoint[2]-1)*(m.gnpoind(0)-2)*(m.gnpoind(1)-2)
+		+ (testpoint[1]-1)*(m.gnpoind(0)-2) + testpoint[0]-1;
+}
 
 #endif

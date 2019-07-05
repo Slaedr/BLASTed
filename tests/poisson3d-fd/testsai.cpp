@@ -14,12 +14,6 @@
 
 using namespace blasted;
 
-static inline PetscInt getMatRowIdx(const CartMesh& m, const PetscInt testpoint[3])
-{
-	return (testpoint[2]-1)*(m.gnpoind(0)-2)*(m.gnpoind(1)-2)
-		+ (testpoint[1]-1)*(m.gnpoind(0)-2) + testpoint[0]-1;
-}
-
 void test_incomplete_fullmatrix_interior(const CartMesh& m, const CRawBSRMatrix<PetscScalar,PetscInt>& mat,
                                          const LeftSAIPattern<int>& sp, const PetscInt testpoint[3])
 {
@@ -71,18 +65,21 @@ void test_incomplete_fullmatrix_interior(const CartMesh& m, const CRawBSRMatrix<
 			assert(sp.bpos[colstart+1] == mat.browptr[backrow]+6);
 		}
 		else if(jcol == firstcol+1) {
+			// Down
 			assert(sp.browind[colstart] == 1);
 			assert(sp.bpos[colstart] == mat.diagind[downrow]);
 			assert(sp.browind[colstart+1] == 3);
 			assert(sp.bpos[colstart+1] == mat.browptr[downrow]+5);
 		}
 		else if(jcol == firstcol+2) {
+			// Left
 			assert(sp.browind[colstart] == 2);
 			assert(sp.bpos[colstart] == mat.diagind[leftrow]);
 			assert(sp.browind[colstart+1] == 3);
 			assert(sp.bpos[colstart+1] == mat.browptr[leftrow]+4);
 		}
 		else if(jcol == firstcol+3) {
+			// Centre
 			for(int j = 0; j < 7; j++) {
 				assert(sp.browind[colstart+j] == j);
 				assert(sp.bpos[colstart+j] == mat.browptr[testrow]+j);
@@ -241,6 +238,17 @@ void test_fullmatrix_boundaryface(const CartMesh& m, const CRawBSRMatrix<PetscSc
 	assert(testpoint[1] <= m.gnpoind(1)-4);
 	assert(testpoint[2] <= m.gnpoind(2)-4);
 
+	const PetscInt backpoint[] = { testpoint[0], testpoint[1], testpoint[2]-1 };
+	const PetscInt backrow = getMatRowIdx(m, backpoint);
+	const PetscInt downpoint[] = { testpoint[0], testpoint[1]-1, testpoint[2] };
+	const PetscInt downrow = getMatRowIdx(m, downpoint);
+	const PetscInt leftpoint[] = { testpoint[0]-1, testpoint[1], testpoint[2] };
+	const PetscInt leftrow = getMatRowIdx(m, leftpoint);
+	const PetscInt uppoint[] = { testpoint[0], testpoint[1]+1, testpoint[2] };
+	const PetscInt uprow = getMatRowIdx(m, uppoint);
+	const PetscInt frontpoint[] = { testpoint[0], testpoint[1], testpoint[2]+1 };
+	const PetscInt frontrow = getMatRowIdx(m, frontpoint);
+
 	const PetscInt testrow = getMatRowIdx(m,testpoint);
 
 	assert(sp.nVars[testrow] == 6);
@@ -274,6 +282,9 @@ void test_fullmatrix_boundaryface(const CartMesh& m, const CRawBSRMatrix<PetscSc
 			}
 			printf(" Colstart +5 = %d.\n", sp.browind[colstart+5]); fflush(stdout);
 			assert(sp.browind[colstart+5] == 10);
+
+			for(int i = 0; i < 6; i++)
+				assert(sp.bpos[colstart+i] == mat.browptr[backrow]+i);
 		}
 		else if(jcol == start+1) {
 			// down column
@@ -282,6 +293,9 @@ void test_fullmatrix_boundaryface(const CartMesh& m, const CRawBSRMatrix<PetscSc
 				assert(sp.browind[colstart+i] == 4+i);
 			assert(sp.browind[colstart+4] == 10);
 			assert(sp.browind[colstart+5] == 14);
+
+			for(int i = 0; i < 6; i++)
+				assert(sp.bpos[colstart+i] == mat.browptr[downrow]+i);
 		}
 		else if(jcol == start+2) {
 			// left column
@@ -290,6 +304,9 @@ void test_fullmatrix_boundaryface(const CartMesh& m, const CRawBSRMatrix<PetscSc
 			for(int i = 2; i < 6; i++)
 				assert(sp.browind[colstart+i] == 6+i);
 			assert(sp.browind[colstart+6] == 15);
+
+			for(int i = 0; i < 7; i++)
+				assert(sp.bpos[colstart+i] == mat.browptr[leftrow]+i);
 		}
 		else if(jcol == start+3) {
 			// centre column
@@ -299,6 +316,9 @@ void test_fullmatrix_boundaryface(const CartMesh& m, const CRawBSRMatrix<PetscSc
 			assert(sp.browind[colstart+3] == 10);
 			assert(sp.browind[colstart+4] == 12);
 			assert(sp.browind[colstart+5] == 16);
+
+			for(int i = 0; i < 6; i++)
+				assert(sp.bpos[colstart+i] == mat.browptr[testrow]+i);
 		}
 		// right column does not exist
 		else if(jcol == start+4) {
@@ -307,12 +327,18 @@ void test_fullmatrix_boundaryface(const CartMesh& m, const CRawBSRMatrix<PetscSc
 			for(int i = 1; i < 5; i++)
 				assert(sp.browind[colstart+i] == 9+i);
 			assert(sp.browind[colstart+5] == 17);
+
+			for(int i = 0; i < 6; i++)
+				assert(sp.bpos[colstart+i] == mat.browptr[uprow]+i);
 		}
 		else if(jcol == start+5) {
 			// front column
 			assert(sp.browind[colstart] == 10);
 			for(int i = 1; i < 6; i++)
 				assert(sp.browind[colstart+i] == 13+i);
+
+			for(int i = 0; i < 6; i++)
+				assert(sp.bpos[colstart+i] == mat.browptr[frontrow]+i);
 		}
 		else
 			throw std::runtime_error("Invalid colummn!");
@@ -338,7 +364,6 @@ int test_sai(const bool fullsai, const CartMesh& m, const Mat A)
 		ierr = MatGetRow(A, testrow, &ncols, NULL, NULL); CHKERRQ(ierr);
 		printf("Number of cols in row %d is %d.\n", testrow, ncols);
 
-		// Test full matrix
 		if(fullsai) {
 			const LeftSAIPattern<int> sp = left_SAI_pattern(mat);
 			test_fullmatrix_interior(m, mat, sp, testpoint);
