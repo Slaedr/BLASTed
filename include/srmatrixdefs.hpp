@@ -113,7 +113,7 @@ CRawBSRMatrix<scalar,index> getUpperTriangularView(const CRawBSRMatrix<scalar,in
 /** CRawBSRMatrix& will have to be reinterpret_cast to RawBSRMatrix&.
  */
 template <typename scalar, typename index>
-void alignedDestroyRawBSRMatrixTriangularView(CRawBSRMatrix<scalar,index>& mat);
+void alignedDestroyRawBSRMatrixTriangularView(RawBSRMatrix<scalar,index>& mat);
 
 }
 #endif

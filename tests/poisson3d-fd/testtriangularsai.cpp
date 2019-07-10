@@ -10,9 +10,30 @@
 
 using namespace blasted;
 
-void test_incomplete_uppertri_interior(const CartMesh& m, const CRawBSRMatrix<PetscScalar,PetscInt>& mat,
-                                       const LeftSAIPattern<int>& sp, const PetscInt testpoint[3])
+void test_fullsai_uppertri_interior(const CartMesh& m, const CRawBSRMatrix<PetscScalar,PetscInt>& mat,
+                                    const LeftSAIPattern<int>& sp, const PetscInt testpoint[3])
 {
+	assert(testpoint[0] >= 2);
+	assert(testpoint[1] >= 2);
+	assert(testpoint[2] >= 2);
+	assert(testpoint[0] <= m.gnpoind(0)-4);
+	assert(testpoint[1] <= m.gnpoind(1)-4);
+	assert(testpoint[2] <= m.gnpoind(2)-4);
+
+	// const PetscInt rightpoint[] = { testpoint[0]+1, testpoint[1], testpoint[2] };
+	// const PetscInt rightrow = getMatRowIdx(m, rightpoint);
+	// const PetscInt uppoint[] = { testpoint[0], testpoint[1]+1, testpoint[2] };
+	// const PetscInt uprow = getMatRowIdx(m, uppoint);
+	// const PetscInt frontpoint[] = { testpoint[0], testpoint[1], testpoint[2]+1 };
+	// const PetscInt frontrow = getMatRowIdx(m, frontpoint);
+
+	const PetscInt testrow = getMatRowIdx(m, testpoint);
+
+	assert(sp.nVars[testrow] == 4);
+	assert(sp.nEqns[testrow] == 10);
+
+	const int firstcol = sp.sairowptr[testrow], lastcol = sp.sairowptr[testrow+1];
+	assert(lastcol-firstcol == 5);
 }
 
 void test_incomplete_lowertri_interior(const CartMesh& m, const CRawBSRMatrix<PetscScalar,PetscInt>& mat,
@@ -83,8 +104,13 @@ int test_sai(const bool fullsai, const bool upper, const CartMesh& m, const Mat 
 
 	const CRawBSRMatrix<PetscScalar,PetscInt> mat = wrapLocalPetscMat(A, 1);
 
-	const CRawBSRMatrix<PetscScalar,PetscInt> tmat = upper ?
+	CRawBSRMatrix<PetscScalar,PetscInt> tmat = upper ?
 		getUpperTriangularView(mat) : getLowerTriangularView(mat);
+
+	// Sanity check of triangular view
+	assert(mat.nbrows == tmat.nbrows);
+	for(int irow = 0; irow < tmat.nbrows; irow++)
+		assert(tmat.diagind[irow] == mat.diagind[irow]);
 
 	// Test interior point
 	{
@@ -100,31 +126,33 @@ int test_sai(const bool fullsai, const bool upper, const CartMesh& m, const Mat 
 		printf("Number of cols in row %d is %d.\n", testrow, ncols);
 
 		if(fullsai) {
-			// const LeftSAIPattern<int> sp = left_SAI_pattern(mat);
-			// test_fullmatrix_interior(m, mat, sp, testpoint);
+			const LeftSAIPattern<int> sp = left_SAI_pattern(tmat);
+			if(upper)
+				test_fullsai_uppertri_interior(m, tmat, sp, testpoint);
 		}
 		else {
 			const LeftSAIPattern<int> sp = left_incomplete_SAI_pattern(tmat);
-			if(upper)
+			if(upper) {
 				// nothing yet
+			}
 			else
 				test_incomplete_lowertri_interior(m, tmat, sp, testpoint);
 		}
 	}
 
 	// Test +i boundary point
-	{
-		const PetscInt testpoint[] = {m.gnpoind(0)-2, 3, 3};
-		if(fullsai) {
-			const LeftSAIPattern<int> sp = left_SAI_pattern(mat);
-			test_fullmatrix_boundaryface(m,mat,sp,testpoint);
-		}
-		else {
-			// const LeftSAIPattern<int> sp = left_incomplete_SAI_pattern(mat);
-		}
-	}
+	// {
+	// 	const PetscInt testpoint[] = {m.gnpoind(0)-2, 3, 3};
+	// 	if(fullsai) {
+	// 		const LeftSAIPattern<int> sp = left_SAI_pattern(mat);
+	// 		test_fullmatrix_boundaryface(m,mat,sp,testpoint);
+	// 	}
+	// 	else {
+	// 		const LeftSAIPattern<int> sp = left_incomplete_SAI_pattern(mat);
+	// 	}
+	// }
 
-	alignedDestroyRawBSRMatrixTriangularView(mat);
+	alignedDestroyRawBSRMatrixTriangularView(reinterpret_cast<RawBSRMatrix<double,int>&>(tmat));
 
 	return ierr;
 }

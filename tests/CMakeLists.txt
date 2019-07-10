@@ -145,6 +145,7 @@ add_test(NAME BSR4ILU0Colmajor COMMAND env OMP_NUM_THREADS=1 ${SEQEXEC} ${SEQTAS
 if(WITH_PETSC)
   add_library(petsctestutils testutils.cpp testutils.c)
   target_link_libraries(petsctestutils blasted_petsc utils)
+  set_property(TARGET petsctestutils PROPERTY POSITION_INDEPENDENT_CODE ON)
 
   add_executable(testpetscsolver runpetsctest.c)
   target_link_libraries(testpetscsolver coomatrix blasted_petsc petsctestutils)

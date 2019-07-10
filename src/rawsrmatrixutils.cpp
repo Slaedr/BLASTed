@@ -82,6 +82,7 @@ CRawBSRMatrix<scalar,index> getLowerTriangularView(const CRawBSRMatrix<scalar,in
 	CRawBSRMatrix<scalar,index> lower;
 	lower.nbrows = mat.nbrows;
 	lower.bcolind = mat.bcolind;
+	lower.diagind = mat.diagind;
 	lower.vals = mat.vals;
 
 	index *lrowptr = (index*)aligned_alloc(CACHE_LINE_LEN, (mat.nbrows+1)*sizeof(index));
@@ -110,6 +111,7 @@ CRawBSRMatrix<scalar,index> getUpperTriangularView(const CRawBSRMatrix<scalar,in
 	CRawBSRMatrix<scalar,index> upper;
 	upper.nbrows = mat.nbrows;
 	upper.bcolind = mat.bcolind;
+	upper.diagind = mat.diagind;
 	upper.vals = mat.vals;
 
 	index *urowptr = (index*)aligned_alloc(CACHE_LINE_LEN, (mat.nbrows+1)*sizeof(index));
@@ -126,6 +128,15 @@ CRawBSRMatrix<scalar,index> getUpperTriangularView(const CRawBSRMatrix<scalar,in
 	urowptr[mat.nbrows] = nnz;
 
 	upper.browptr = urowptr;
+	upper.browendptr = urowendptr;
+
+#ifdef DEBUG
+	for(index irow = 0; irow < upper.nbrows; irow++)
+	{
+		for(index jj = upper.browptr[irow]; jj < upper.browendptr[irow]; jj++)
+			assert(upper.bcolind[jj] > irow || upper.diagind[irow] == jj);
+	}
+#endif
 	return upper;
 }
 

@@ -10,18 +10,10 @@ if(WITH_PETSC)
   add_executable(testsai testsai.cpp)
   target_link_libraries(testsai poisson solverops)
 
+  add_executable(testtriangularsai testtriangularsai.cpp)
+  target_link_libraries(testtriangularsai poisson solverops rawmatrixutils)
+
   # Tests
-  #add_test(NAME SerialPoissonCSRPetscILU0 COMMAND env OMP_NUM_THREADS=1 ${MPIEXEC} -n 1 ./testcsr_poisson 
-  #${CMAKE_CURRENT_SOURCE_DIR}/input/poisson.control 
-  #-options_file ${CMAKE_CURRENT_SOURCE_DIR}/input/poisson_csr_ilu0.perc)
-
-  #add_test(NAME SerialPoissonCSRPetscSGS COMMAND env OMP_NUM_THREADS=1 ${MPIEXEC} -n 1 ./testcsr_poisson 
-  #${CMAKE_CURRENT_SOURCE_DIR}/input/poisson.control 
-  #-options_file  ${CMAKE_CURRENT_SOURCE_DIR}/input/poisson_csr_sgs.perc)
-
-  #add_test(NAME SerialPoissonCSRPetscAMGILU0 COMMAND env OMP_NUM_THREADS=1 ${MPIEXEC} -n 1 ./testcsr_poisson 
-  #  ${CMAKE_CURRENT_SOURCE_DIR}/input/poisson-amg.control 
-  #  -options_file  ${CMAKE_CURRENT_SOURCE_DIR}/input/poisson_csr_amg.perc)
 
   add_test(NAME SAIPatternPoissonFull
 	COMMAND testsai ${CMAKE_CURRENT_SOURCE_DIR}/input/small_poisson.control fullsai
@@ -29,6 +21,12 @@ if(WITH_PETSC)
   add_test(NAME IncompleteSAIPatternPoissonFull
 	COMMAND testsai ${CMAKE_CURRENT_SOURCE_DIR}/input/small_poisson.control incomplete
 	)
+  # add_test(NAME SAIPatternPoissonUpperTriangular
+  # 	COMMAND testtriangularsai ${CMAKE_CURRENT_SOURCE_DIR}/input/small_poisson.control fullsai upper
+  # 	)
+  add_test(NAME IncompleteSAIPatternPoissonLowerTriangular
+  	COMMAND testtriangularsai ${CMAKE_CURRENT_SOURCE_DIR}/input/small_poisson.control incomplete lower
+  	)
 
   add_test(NAME MPIPoissonCSRPetscJacobiRelaxation
 	COMMAND env OMP_NUM_THREADS=1 ${MPIEXEC} -n 4 ./testcsr_poisson

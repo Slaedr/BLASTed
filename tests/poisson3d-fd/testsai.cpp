@@ -351,6 +351,11 @@ int test_sai(const bool fullsai, const CartMesh& m, const Mat A)
 
 	const CRawBSRMatrix<PetscScalar,PetscInt> mat = wrapLocalPetscMat(A, 1);
 
+	// Check
+	for(int irow = 0; irow < mat.nbrows; irow++) {
+		assert(mat.browptr[irow+1] == mat.browendptr[irow]);
+	}
+
 	// Test interior point
 	{
 		const PetscInt testpoint[] = {3,3,3};
