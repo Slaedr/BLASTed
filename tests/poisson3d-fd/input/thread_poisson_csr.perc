@@ -27,7 +27,7 @@
 -pc_type bjacobi
 -sub_pc_type shell
 
--blasted_async_sweeps 3,4
+-blasted_async_sweeps 6,4
 
 -blasted_thread_chunk_size 320
 -blasted_async_fact_init_type init_zero
