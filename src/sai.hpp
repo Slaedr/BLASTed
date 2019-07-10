@@ -35,9 +35,11 @@ struct LeftSAIPattern
 	std::vector<int,aligned_allocator<int,CACHE_LINE_LEN>> nEqns;
 };
 
+/// Compute the assembly pattern for a left sparse approximate inverse of the given matrix
 template <typename scalar, typename index>
 LeftSAIPattern<index> left_SAI_pattern(const CRawBSRMatrix<scalar,index>& mat);
 
+/// Compute the assembly pattern for a left incomplete sparse approximate inverse of the given matrix
 template <typename scalar, typename index>
 LeftSAIPattern<index> left_incomplete_SAI_pattern(const CRawBSRMatrix<scalar,index>& mat);
 

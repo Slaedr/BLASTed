@@ -21,9 +21,9 @@ if(WITH_PETSC)
   add_test(NAME IncompleteSAIPatternPoissonFull
 	COMMAND testsai ${CMAKE_CURRENT_SOURCE_DIR}/input/small_poisson.control incomplete
 	)
-  # add_test(NAME SAIPatternPoissonUpperTriangular
-  # 	COMMAND testtriangularsai ${CMAKE_CURRENT_SOURCE_DIR}/input/small_poisson.control fullsai upper
-  # 	)
+  add_test(NAME SAIPatternPoissonUpperTriangular
+  	COMMAND testtriangularsai ${CMAKE_CURRENT_SOURCE_DIR}/input/small_poisson.control fullsai upper
+  	)
   add_test(NAME IncompleteSAIPatternPoissonLowerTriangular
   	COMMAND testtriangularsai ${CMAKE_CURRENT_SOURCE_DIR}/input/small_poisson.control incomplete lower
   	)

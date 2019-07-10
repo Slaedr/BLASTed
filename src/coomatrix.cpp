@@ -284,6 +284,9 @@ void COOMatrix<scalar,index>::convertToCSR(RawBSRMatrix<scalar,index> *const cma
 
 	if(nrows > 0)
 		cmat->browendptr = &cmat->browptr[1];
+
+	cmat->nnzb = cmat->browptr[nrows];
+	cmat->nbstored = cmat->nnzb;
 }
 
 template <typename scalar, typename index>
@@ -367,15 +370,15 @@ void COOMatrix<scalar,index>::convertToBSR(RawBSRMatrix<scalar,index> *const bma
 		{
 			const index curcol = entries[j].colind;
 			const index curbcol = curcol/bs;
-			const index offset = stor==RowMajor ? 
+			const index offset = stor==RowMajor ?
 				(irow-curbrow*bs)*bs + curcol-curbcol*bs : (curcol-curbcol*bs)*bs + irow-curbrow*bs;
-			
-			index *const bcptr = std::find(bmat->bcolind + bmat->browptr[curbrow], 
-			                               bmat->bcolind + bmat->browptr[curbrow+1], 
+
+			index *const bcptr = std::find(bmat->bcolind + bmat->browptr[curbrow],
+			                               bmat->bcolind + bmat->browptr[curbrow+1],
 			                               curbcol);
 
 			if(bcptr == bmat->bcolind + bmat->browptr[curbrow+1]) {
-				std::cout << "! convertToBSR: Error: Memory not found for " << irow << ", " 
+				std::cout << "! convertToBSR: Error: Memory not found for " << irow << ", "
 					<< curcol << std::endl;
 				std::abort();
 			}
@@ -386,6 +389,8 @@ void COOMatrix<scalar,index>::convertToBSR(RawBSRMatrix<scalar,index> *const bma
 
 	if(nrows > 0)
 		bmat->browendptr = &bmat->browptr[1];
+	bmat->nbstored = bnnz;
+	bmat->nnzb = bnnz;
 }
 
 template <typename scalar, typename index, int bs>

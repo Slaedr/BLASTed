@@ -11,63 +11,75 @@
 
 namespace blasted {
 
-/// An (almost-)immutable compressed sparse block-row square matrix
+/// An (almost-)immutable sparse block-row square matrix
 /** The pointers and the number of (block-)rows are non-const to allow re-wrapping of another matrix.
  * Since objects of this type are used as members of other classes, we allow those classes to handle
  * mutability (or lack thereof) through the use of const member functions.
+ *
+ * Note that the 'actual' or logical matrix may not be the same as what is stored. This is because
+ * pointers denoting ends of rows need not be the same as pointers denoting the start of the following
+ * rows.
  */
 template <typename scalar, typename index>
 struct CRawBSRMatrix
 {
 	static_assert(std::numeric_limits<index>::is_integer, "Integer index type required!");
 	static_assert(std::numeric_limits<index>::is_signed, "Signed index type required!");
-	const index *browptr;      ///< pointers to beginning block-rows as well as nnz blocks at the end
+	const index *browptr;      ///< pointers to beginning block-rows
 	const index *bcolind;      ///< block-column indices of non-zeros
 	const scalar *vals;        ///< values of non-zero blocks
 	const index *diagind;      ///< locations of the diagonal block in every block-row
 	const index *browendptr;   ///< pointers to one-past-the-end of block-rows
 	index nbrows;              ///< number of block rows
+	index nnzb;                ///< total number of non-zero blocks in the matrix
+	index nbstored;            ///< total number of non-zero blocks actually stored in \ref vals
 
 	/// Default constructor
 	CRawBSRMatrix()
 		: browptr{nullptr}, bcolind{nullptr}, vals{nullptr}, diagind{nullptr}, browendptr{nullptr},
-		  nbrows{0}
+		  nbrows{0}, nnzb{0}, nbstored{0}
 	{ }
 
 	/// Set data pointers
 	CRawBSRMatrix(const index *const brptrs, const index *const bcinds,
-	              const scalar *const values, const index *const diag_inds,
-	              const index *const brendptrs, const index n_brows)
+	              const scalar *const values, const index *const diag_inds, const index *const brendptrs,
+	              const index n_brows, const index n_nzb, const index n_bstored)
 		: browptr{brptrs}, bcolind{bcinds}, vals{values}, diagind{diag_inds}, browendptr{brendptrs},
-		  nbrows{n_brows}
+		  nbrows{n_brows}, nnzb{n_nzb}, nbstored{n_bstored}
 	{ }
 };
 
-/// A compressed sparse block-row square matrix
+/// A sparse block-row square matrix
+/** This is a mutable version of \ref CRawBSRMatrix and is supposed to be byte-equivalent to it.
+ * This allows safely reinterpreting a RawBSRMatrix as a CRawBSRMatrix.
+ * Note that CRawBSRMatrix would be unnecessary if we used a vector-like container for the member arrays.
+ */
 template <typename scalar, typename index>
 struct RawBSRMatrix
 {
 	static_assert(std::numeric_limits<index>::is_integer, "Integer index type required!");
 	static_assert(std::numeric_limits<index>::is_signed, "Signed index type required!");
-	index *browptr;            ///< pointers to beginning block-rows, as well as nnz blocks at the end
+	index *browptr;            ///< pointers to beginning block-rows
 	index *bcolind;            ///< block-column indices of non-zeros
 	scalar *vals;              ///< values of non-zero blocks
 	index *diagind;            ///< locations of the diagonal block in every block-row
 	index *browendptr;         ///< pointers to one-past-the-end of block-rows
 	index nbrows;              ///< number of block rows
+	index nnzb;                ///< number of non-zero blocks
+	index nbstored;            ///< total number of non-zero blocks actually stored in the array vals
 
 	/// Default constructor
 	RawBSRMatrix()
 		: browptr{nullptr}, bcolind{nullptr}, vals{nullptr}, diagind{nullptr}, browendptr{nullptr},
-		  nbrows{0}
+		  nbrows{0}, nnzb{0}
 	{ }
 
 	/// Set data pointers
 	RawBSRMatrix(index *const brptrs, index *const bcinds,
 	             scalar *const values, index *const diag_inds,
-	             index *const brendptrs, const index n_brows)
+	             index *const brendptrs, const index n_brows, const index n_nzb, const index n_bstored)
 		: browptr{brptrs}, bcolind{bcinds}, vals{values}, diagind{diag_inds}, browendptr{brendptrs},
-		  nbrows{n_brows}
+		  nbrows{n_brows}, nnzb{n_nzb}, nbstored{n_bstored}
 	{ }
 };
 

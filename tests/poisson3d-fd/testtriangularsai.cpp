@@ -33,7 +33,7 @@ void test_fullsai_uppertri_interior(const CartMesh& m, const CRawBSRMatrix<Petsc
 	assert(sp.nEqns[testrow] == 10);
 
 	const int firstcol = sp.sairowptr[testrow], lastcol = sp.sairowptr[testrow+1];
-	assert(lastcol-firstcol == 5);
+	assert(lastcol-firstcol == 4);
 }
 
 void test_incomplete_lowertri_interior(const CartMesh& m, const CRawBSRMatrix<PetscScalar,PetscInt>& mat,

@@ -33,6 +33,8 @@ void SRPreconditioner<scalar,index>::wrap(const index n_brows, const index *cons
 	mat.diagind = dinds;
 	if(n_brows > 0)
 		mat.browendptr = &brptrs[1];
+	mat.nbstored = mat.browptr[mat.nbrows];
+	mat.nnzb = mat.browptr[mat.nbrows];
 }
 
 template <typename scalar, typename index>

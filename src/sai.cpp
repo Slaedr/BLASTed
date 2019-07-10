@@ -152,14 +152,14 @@ LeftSAIPattern<index> left_SAI_pattern(const CRawBSRMatrix<scalar,index>& mat)
 
 		// sanity check
 #ifdef DEBUG
-		printf(" Total nnz = %d\n", mat.browptr[mat.nbrows]);
+		printf(" Total nnz = %d, stored = %d\n", mat.browptr[mat.nbrows], mat.nbstored);
 		for(index icol = tsp.sairowptr[irow]; icol < tsp.sairowptr[irow+1]; icol++)
 		{
 			for(index j = tsp.bcolptr[icol]; j < tsp.bcolptr[icol+1]; j++)
 			{
-				// printf("  Row %d: Col-idx %d: pos = %d.\n", irow, j, tsp.bpos[j]);
-				// fflush(stdout);
-				assert(tsp.bpos[j] < mat.browptr[mat.nbrows]);
+				printf("  Row %d: Col-idx %d: pos = %d.\n", irow, j, tsp.bpos[j]);
+				fflush(stdout);
+				assert(tsp.bpos[j] < mat.nbstored);
 				assert(tsp.browind[j] >= 0);
 				assert(tsp.browind[j] < tsp.nEqns[irow]);
 			}

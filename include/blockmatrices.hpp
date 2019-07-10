@@ -22,7 +22,7 @@
 
 namespace blasted {
 
-/// An abstract matrix view used for wrapping matrices with sparse row storage
+/// An abstract matrix view used for wrapping matrices with compressed (block-)sparse row storage
 template<typename scalar, typename index>
 class SRMatrixView : public MatrixView<scalar, index>
 {
@@ -30,7 +30,7 @@ class SRMatrixView : public MatrixView<scalar, index>
 	static_assert(std::numeric_limits<index>::is_signed, "Signed index type required!");
 
 public:
-	/// A constructor which just wraps a BSR matrix described by 4 arrays
+	/// A constructor which just wraps a compressed BSR matrix described by 4 arrays
 	/** \param[in] n_brows Number of block-rows
 	 * \param[in] brptrs Array of block-row pointers
 	 * \param[in] bcinds Array of block-column indices
@@ -39,14 +39,14 @@ public:
 	 * \param[in] storagetype The type of sparse representation of the matrix data
 	 */
 	SRMatrixView(const index n_brows, const index *const brptrs, const index *const bcinds, 
-			const scalar *const values, const index *const diaginds, const StorageType storagetype);
+	             const scalar *const values, const index *const diaginds, const StorageType storagetype);
 
 	/// Allows immutable access to the underlying matrix storage
 	const CRawBSRMatrix<scalar,index> *getRawSRMatrix() const {
 		return &mat;
 	}
 	
-	/// Just wraps a sparse-row matrix described by 4 arrays
+	/// Just wraps a compressed (block-)sparse-row matrix described by 4 arrays
 	/** \param[in] n_brows Number of (block-)rows
 	 * \param[in] brptrs Array of (block-)row pointers
 	 * \param[in] bcinds Array of (block-)column indices
@@ -56,7 +56,8 @@ public:
 	 * Does not take ownership of the 4 arrays; they are not cleaned up in the destructor either.
 	 */
 	virtual void wrap(const index n_brows, const index *const brptrs,
-		const index *const bcinds, const scalar *const values, const index *const dinds) = 0;
+	                  const index *const bcinds, const scalar *const values,
+	                  const index *const dinds) = 0;
 
 protected:
 
