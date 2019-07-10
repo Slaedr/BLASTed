@@ -3,6 +3,7 @@
  * \author Aditya Kashi
  */
 
+#include <stdexcept>
 #include <boost/align/aligned_alloc.hpp>
 #include <srmatrixdefs.hpp>
 
@@ -36,9 +37,13 @@ RawBSRMatrix<scalar,index> copyRawBSRMatrix(const CRawBSRMatrix<scalar,index>& m
 	for(index i = 0; i < mat.nbrows; i++)
 		nmat.diagind[i] = mat.diagind[i];
 
-	if(mat.browendptr)
+	if(mat.browendptr) {
 		if(mat.nbrows > 0)
 			nmat.browendptr = &nmat.browptr[1];
+	}
+	else {
+		throw std::runtime_error("CRawBSRMatrix does not have row end pointers!");
+	}
 
 	return nmat;
 }
@@ -93,8 +98,7 @@ CRawBSRMatrix<scalar,index> getLowerTriangularView(const CRawBSRMatrix<scalar,in
 	{
 		lrowptr[irow] = mat.browptr[irow];
 		lrowendptr[irow] = mat.diagind[irow]+1;
-		for(index jj = mat.browptr[irow]; jj <= mat.diagind[irow]; jj++)
-			nnz++;
+		nnz += (mat.diagind[irow]-mat.browptr[irow]+1);
 	}
 	lrowptr[mat.nbrows] = nnz;
 
@@ -121,14 +125,15 @@ CRawBSRMatrix<scalar,index> getUpperTriangularView(const CRawBSRMatrix<scalar,in
 	for(index irow = 0; irow < mat.nbrows; irow++)
 	{
 		urowptr[irow] = mat.diagind[irow];
-		urowendptr[irow] = mat.browptr[irow+1];
-		for(index jj = mat.diagind[irow]; jj < mat.browptr[irow+1]; jj++)
-			nnz++;
+		urowendptr[irow] = mat.browendptr[irow];
+		nnz += (mat.browendptr[irow]-mat.diagind[irow]);
 	}
 	urowptr[mat.nbrows] = nnz;
 
 	upper.browptr = urowptr;
 	upper.browendptr = urowendptr;
+
+	assert(upper.browendptr[upper.nbrows-1] == upper.diagind[upper.nbrows-1]+1);
 
 #ifdef DEBUG
 	for(index irow = 0; irow < upper.nbrows; irow++)
