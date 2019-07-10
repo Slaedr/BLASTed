@@ -15,17 +15,23 @@ if(WITH_PETSC)
 
   # Tests
 
-  add_test(NAME SAIPatternPoissonFull
+  add_test(NAME SAIPatternPoisson
 	COMMAND testsai ${CMAKE_CURRENT_SOURCE_DIR}/input/small_poisson.control fullsai
 	)
-  add_test(NAME IncompleteSAIPatternPoissonFull
+  add_test(NAME IncompleteSAIPatternPoisson
 	COMMAND testsai ${CMAKE_CURRENT_SOURCE_DIR}/input/small_poisson.control incomplete
 	)
-  add_test(NAME SAIPatternPoissonUpperTriangular
+  add_test(NAME FullSAIPatternPoissonUpperTriangular
   	COMMAND testtriangularsai ${CMAKE_CURRENT_SOURCE_DIR}/input/small_poisson.control fullsai upper
+  	)
+  add_test(NAME FullSAIPatternPoissonLowerTriangular
+  	COMMAND testtriangularsai ${CMAKE_CURRENT_SOURCE_DIR}/input/small_poisson.control fullsai lower
   	)
   add_test(NAME IncompleteSAIPatternPoissonLowerTriangular
   	COMMAND testtriangularsai ${CMAKE_CURRENT_SOURCE_DIR}/input/small_poisson.control incomplete lower
+  	)
+  add_test(NAME IncompleteSAIPatternPoissonUpperTriangular
+  	COMMAND testtriangularsai ${CMAKE_CURRENT_SOURCE_DIR}/input/small_poisson.control incomplete upper
   	)
 
   add_test(NAME MPIPoissonCSRPetscJacobiRelaxation

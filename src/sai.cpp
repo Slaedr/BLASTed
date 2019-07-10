@@ -49,7 +49,6 @@ LeftSAIPattern<index> left_SAI_pattern(const CRawBSRMatrix<scalar,index>& mat)
 
 	const index totalvars = tsp.sairowptr[mat.nbrows];
 #ifdef DEBUG
-	printf(" Total vars = %d.\n", totalvars);
 	for(index irow = 0; irow < mat.nbrows; irow++)
 		assert(tsp.sairowptr[irow] < totalvars);
 #endif
@@ -76,7 +75,6 @@ LeftSAIPattern<index> left_SAI_pattern(const CRawBSRMatrix<scalar,index>& mat)
 	}
 
 	internal::inclusive_scan(tsp.bcolptr);
-	printf(" Last bcolptr: %d, %d\n", tsp.bcolptr[totalvars], totalcoeffs); fflush(stdout);
 	assert(tsp.bcolptr[tsp.sairowptr[mat.nbrows]] == totalcoeffs);
 
 	// Step 3: For the least-squares problem of each row of A, compute the sparsity pattern
@@ -121,9 +119,6 @@ LeftSAIPattern<index> left_SAI_pattern(const CRawBSRMatrix<scalar,index>& mat)
 		{
 			const int localcolidx = jj - mat.browptr[irow];
 			for(size_t i = 0; i < localrowinds[localcolidx].size(); i++) {
-				// printf("  Row %d: local row,col = (%d,%d).\n",
-				//        irow, localrowinds[localcolidx][i], localcolidx);
-				// fflush(stdout);
 				assert(localrowinds[localcolidx][i] >= 0);
 				assert(localrowinds[localcolidx][i] < tsp.nEqns[irow]);
 			}
@@ -152,13 +147,10 @@ LeftSAIPattern<index> left_SAI_pattern(const CRawBSRMatrix<scalar,index>& mat)
 
 		// sanity check
 #ifdef DEBUG
-		printf(" Total nnz = %d, stored = %d\n", mat.browptr[mat.nbrows], mat.nbstored);
 		for(index icol = tsp.sairowptr[irow]; icol < tsp.sairowptr[irow+1]; icol++)
 		{
 			for(index j = tsp.bcolptr[icol]; j < tsp.bcolptr[icol+1]; j++)
 			{
-				printf("  Row %d: Col-idx %d: pos = %d.\n", irow, j, tsp.bpos[j]);
-				fflush(stdout);
 				assert(tsp.bpos[j] < mat.nbstored);
 				assert(tsp.browind[j] >= 0);
 				assert(tsp.browind[j] < tsp.nEqns[irow]);

@@ -20,12 +20,12 @@ void test_fullsai_uppertri_interior(const CartMesh& m, const CRawBSRMatrix<Petsc
 	assert(testpoint[1] <= m.gnpoind(1)-4);
 	assert(testpoint[2] <= m.gnpoind(2)-4);
 
-	// const PetscInt rightpoint[] = { testpoint[0]+1, testpoint[1], testpoint[2] };
-	// const PetscInt rightrow = getMatRowIdx(m, rightpoint);
-	// const PetscInt uppoint[] = { testpoint[0], testpoint[1]+1, testpoint[2] };
-	// const PetscInt uprow = getMatRowIdx(m, uppoint);
-	// const PetscInt frontpoint[] = { testpoint[0], testpoint[1], testpoint[2]+1 };
-	// const PetscInt frontrow = getMatRowIdx(m, frontpoint);
+	const PetscInt rightpoint[] = { testpoint[0]+1, testpoint[1], testpoint[2] };
+	const PetscInt rightrow = getMatRowIdx(m, rightpoint);
+	const PetscInt uppoint[] = { testpoint[0], testpoint[1]+1, testpoint[2] };
+	const PetscInt uprow = getMatRowIdx(m, uppoint);
+	const PetscInt frontpoint[] = { testpoint[0], testpoint[1], testpoint[2]+1 };
+	const PetscInt frontrow = getMatRowIdx(m, frontpoint);
 
 	const PetscInt testrow = getMatRowIdx(m, testpoint);
 
@@ -33,7 +33,316 @@ void test_fullsai_uppertri_interior(const CartMesh& m, const CRawBSRMatrix<Petsc
 	assert(sp.nEqns[testrow] == 10);
 
 	const int firstcol = sp.sairowptr[testrow], lastcol = sp.sairowptr[testrow+1];
-	assert(lastcol-firstcol == 4);
+	assert(lastcol-firstcol == sp.nVars[testrow]);
+
+	for(int jcol = firstcol; jcol < lastcol; jcol++)
+	{
+		const int colstart = sp.bcolptr[jcol];
+
+		const int colsize = sp.bcolptr[jcol+1]-sp.bcolptr[jcol];
+		assert(colsize == 4);
+
+		if(jcol == firstcol) {
+			// Back
+			assert(sp.browind[colstart] == 0);
+			assert(sp.browind[colstart+1] == 1);
+			assert(sp.browind[colstart+2] == 3);
+			assert(sp.browind[colstart+3] == 6);
+
+			for(int j = 0; j < colsize; j++)
+				assert(sp.bpos[colstart+j] == mat.diagind[testrow]+j);
+		}
+		else if(jcol == firstcol+1) {
+			// right
+			assert(sp.browind[colstart] == 1);
+			assert(sp.browind[colstart+1] == 2);
+			assert(sp.browind[colstart+2] == 4);
+			assert(sp.browind[colstart+3] == 7);
+
+			for(int j = 0; j < colsize; j++)
+				assert(sp.bpos[colstart+j] == mat.diagind[rightrow]+j);
+		}
+		else if(jcol == firstcol+2) {
+			// right
+			assert(sp.browind[colstart] == 3);
+			assert(sp.browind[colstart+1] == 4);
+			assert(sp.browind[colstart+2] == 5);
+			assert(sp.browind[colstart+3] == 8);
+
+			for(int j = 0; j < colsize; j++)
+				assert(sp.bpos[colstart+j] == mat.diagind[uprow]+j);
+		}
+		else if(jcol == firstcol+3) {
+			// right
+			assert(sp.browind[colstart] == 6);
+			assert(sp.browind[colstart+1] == 7);
+			assert(sp.browind[colstart+2] == 8);
+			assert(sp.browind[colstart+3] == 9);
+
+			for(int j = 0; j < colsize; j++)
+				assert(sp.bpos[colstart+j] == mat.diagind[frontrow]+j);
+		}
+		else {
+			throw "Invalid column!";
+		}
+	}
+
+	printf(" >> Full SAI upper triangular test for interior point passed.\n");
+}
+
+/// Test SAI pattern on lower triangular matrix at an interior point of a structured 3D grid
+void test_fullsai_lowertri_interior(const CartMesh& m, const CRawBSRMatrix<PetscScalar,PetscInt>& mat,
+                                    const LeftSAIPattern<int>& sp, const PetscInt testpoint[3])
+{
+	assert(testpoint[0] >= 2);
+	assert(testpoint[1] >= 2);
+	assert(testpoint[2] >= 2);
+	assert(testpoint[0] <= m.gnpoind(0)-4);
+	assert(testpoint[1] <= m.gnpoind(1)-4);
+	assert(testpoint[2] <= m.gnpoind(2)-4);
+
+	const PetscInt backpoint[] = { testpoint[0], testpoint[1], testpoint[2]-1 };
+	const PetscInt backrow = getMatRowIdx(m, backpoint);
+	const PetscInt downpoint[] = { testpoint[0], testpoint[1]-1, testpoint[2] };
+	const PetscInt downrow = getMatRowIdx(m, downpoint);
+	const PetscInt leftpoint[] = { testpoint[0]-1, testpoint[1], testpoint[2] };
+	const PetscInt leftrow = getMatRowIdx(m, leftpoint);
+
+	const PetscInt testrow = getMatRowIdx(m, testpoint);
+
+	assert(sp.nVars[testrow] == 4);
+	assert(sp.nEqns[testrow] == 10);
+
+	const int firstcol = sp.sairowptr[testrow], lastcol = sp.sairowptr[testrow+1];
+	assert(lastcol-firstcol == sp.nVars[testrow]);
+
+	for(int jcol = firstcol; jcol < lastcol; jcol++)
+	{
+		const int colstart = sp.bcolptr[jcol];
+
+		const int colsize = sp.bcolptr[jcol+1]-sp.bcolptr[jcol];
+		assert(colsize == 4);
+
+		if(jcol == firstcol) {
+			// Back
+			assert(sp.browind[colstart] == 0);
+			assert(sp.browind[colstart+1] == 1);
+			assert(sp.browind[colstart+2] == 2);
+			assert(sp.browind[colstart+3] == 3);
+
+			for(int j = 0; j < colsize; j++)
+				assert(sp.bpos[colstart+j] == mat.browptr[backrow]+j);
+		}
+		else if(jcol == firstcol+1) {
+			// down
+			assert(sp.browind[colstart] == 1);
+			assert(sp.browind[colstart+1] == 4);
+			assert(sp.browind[colstart+2] == 5);
+			assert(sp.browind[colstart+3] == 6);
+
+			for(int j = 0; j < colsize; j++)
+				assert(sp.bpos[colstart+j] == mat.browptr[downrow]+j);
+		}
+		else if(jcol == firstcol+2) {
+			// left
+			assert(sp.browind[colstart] == 2);
+			assert(sp.browind[colstart+1] == 5);
+			assert(sp.browind[colstart+2] == 7);
+			assert(sp.browind[colstart+3] == 8);
+
+			for(int j = 0; j < colsize; j++)
+				assert(sp.bpos[colstart+j] == mat.browptr[leftrow]+j);
+		}
+		else if(jcol == firstcol+3) {
+			// centre
+			assert(sp.browind[colstart] == 3);
+			assert(sp.browind[colstart+1] == 6);
+			assert(sp.browind[colstart+2] == 8);
+			assert(sp.browind[colstart+3] == 9);
+
+			for(int j = 0; j < colsize; j++)
+				assert(sp.bpos[colstart+j] == mat.browptr[testrow]+j);
+		}
+		else {
+			throw "Invalid column!";
+		}
+	}
+
+	printf(" >> Full SAI lower triangular test for interior point passed.\n");
+}
+
+/// Test the SAI or incomplete SAI pattern of an upper triangular matrix for a point on the i+ boundary
+void test_uppertri_boundary_i_end(const bool fullsai, const CartMesh& m,
+                                  const CRawBSRMatrix<PetscScalar,PetscInt>& mat,
+                                  const LeftSAIPattern<int>& sp, const PetscInt testpoint[3])
+{
+	assert(testpoint[0] == m.gnpoind(0)-2);
+	assert(testpoint[1] >= 3 && testpoint[1] <= m.gnpoind(1)-4);
+	assert(testpoint[2] >= 3 && testpoint[2] <= m.gnpoind(2)-4);
+
+	const PetscInt uppoint[] = { testpoint[0], testpoint[1]+1, testpoint[2] };
+	const PetscInt uprow = getMatRowIdx(m, uppoint);
+	const PetscInt frontpoint[] = { testpoint[0], testpoint[1], testpoint[2]+1 };
+	const PetscInt frontrow = getMatRowIdx(m, frontpoint);
+
+	const PetscInt testrow = getMatRowIdx(m, testpoint);
+
+	const int firstcol = sp.sairowptr[testrow], lastcol = sp.sairowptr[testrow+1];
+	assert(lastcol-firstcol == sp.nVars[testrow]);
+
+	if(fullsai) {
+		assert(sp.nVars[testrow] == 3);
+		assert(sp.nEqns[testrow] == 6);
+
+		for(int jcol = firstcol; jcol < lastcol; jcol++)
+		{
+			const int colstart = sp.bcolptr[jcol];
+
+			const int colsize = sp.bcolptr[jcol+1]-sp.bcolptr[jcol];
+			assert(colsize == 3);
+
+			if(jcol == firstcol) {
+				// Centre
+				assert(sp.browind[colstart] == 0);
+				assert(sp.browind[colstart+1] == 1);
+				assert(sp.browind[colstart+2] == 3);
+
+				for(int j = 0; j < colsize; j++)
+					assert(sp.bpos[colstart+j] == mat.diagind[testrow]+j);
+			}
+			else if(jcol == firstcol+1) {
+				// up
+				assert(sp.browind[colstart] == 1);
+				assert(sp.browind[colstart+1] == 2);
+				assert(sp.browind[colstart+2] == 4);
+
+				for(int j = 0; j < colsize; j++)
+					assert(sp.bpos[colstart+j] == mat.diagind[uprow]+j);
+			}
+			else if(jcol == firstcol+2) {
+				// front
+				assert(sp.browind[colstart] == 3);
+				assert(sp.browind[colstart+1] == 4);
+				assert(sp.browind[colstart+2] == 5);
+
+				for(int j = 0; j < colsize; j++)
+					assert(sp.bpos[colstart+j] == mat.diagind[frontrow]+j);
+			}
+			else {
+				throw "Invalid column!";
+			}
+		}
+
+		printf(" >> Full SAI upper triangular test for boundary point at i-end passed.\n");
+	}
+	else {
+		assert(sp.nVars[testrow] == 3);
+		assert(sp.nEqns[testrow] == 3);
+
+		for(int jcol = firstcol; jcol < lastcol; jcol++)
+		{
+			const int colstart = sp.bcolptr[jcol];
+
+			const int colsize = sp.bcolptr[jcol+1]-sp.bcolptr[jcol];
+			if(jcol == firstcol)
+				assert(colsize == 3);
+			else
+				assert(colsize == 1);
+
+			if(jcol == firstcol) {
+				// Centre
+				assert(sp.browind[colstart] == 0);
+				assert(sp.browind[colstart+1] == 1);
+				assert(sp.browind[colstart+2] == 2);
+
+				for(int j = 0; j < colsize; j++)
+					assert(sp.bpos[colstart+j] == mat.diagind[testrow]+j);
+			}
+			else if(jcol == firstcol+1) {
+				// up
+				assert(sp.browind[colstart] == 1);
+
+				for(int j = 0; j < colsize; j++)
+					assert(sp.bpos[colstart+j] == mat.diagind[uprow]+j);
+			}
+			else if(jcol == firstcol+2) {
+				// front
+				assert(sp.browind[colstart] == 2);
+
+				for(int j = 0; j < colsize; j++)
+					assert(sp.bpos[colstart+j] == mat.diagind[frontrow]+j);
+			}
+			else {
+				throw "Invalid column!";
+			}
+		}
+
+		printf(" >> Incomplete SAI upper triangular test for boundary point at i-end passed.\n");
+	}
+}
+
+/// Test the SAI pattern for a point on the j- boundary
+void test_fullsai_lowertri_boundary_j_start(const CartMesh& m,
+                                            const CRawBSRMatrix<PetscScalar,PetscInt>& mat,
+                                            const LeftSAIPattern<int>& sp, const PetscInt testpoint[3])
+{
+	assert(testpoint[0] >= 3 && testpoint[0] <= m.gnpoind(0)-4);
+	assert(testpoint[1] == 1);
+	assert(testpoint[2] >= 3 && testpoint[0] <= m.gnpoind(2)-4);
+
+	const PetscInt backpoint[] = { testpoint[0], testpoint[1], testpoint[2]-1 };
+	const PetscInt backrow = getMatRowIdx(m, backpoint);
+	const PetscInt leftpoint[] = { testpoint[0]-1, testpoint[1], testpoint[2] };
+	const PetscInt leftrow = getMatRowIdx(m, leftpoint);
+
+	const PetscInt testrow = getMatRowIdx(m, testpoint);
+
+	assert(sp.nVars[testrow] == 3);
+	assert(sp.nEqns[testrow] == 6);
+
+	const int firstcol = sp.sairowptr[testrow], lastcol = sp.sairowptr[testrow+1];
+	assert(lastcol-firstcol == sp.nVars[testrow]);
+
+	for(int jcol = firstcol; jcol < lastcol; jcol++)
+	{
+		const int colstart = sp.bcolptr[jcol];
+
+		const int colsize = sp.bcolptr[jcol+1]-sp.bcolptr[jcol];
+		assert(colsize == 3);
+
+		if(jcol == firstcol) {
+			// Back
+			assert(sp.browind[colstart] == 0);
+			assert(sp.browind[colstart+1] == 1);
+			assert(sp.browind[colstart+2] == 2);
+
+			for(int j = 0; j < colsize; j++)
+				assert(sp.bpos[colstart+j] == mat.browptr[backrow]+j);
+		}
+		else if(jcol == firstcol+1) {
+			// left
+			assert(sp.browind[colstart] == 1);
+			assert(sp.browind[colstart+1] == 3);
+			assert(sp.browind[colstart+2] == 4);
+
+			for(int j = 0; j < colsize; j++)
+				assert(sp.bpos[colstart+j] == mat.browptr[leftrow]+j);
+		}
+		else if(jcol == firstcol+2) {
+			// centre
+			assert(sp.browind[colstart] == 2);
+			assert(sp.browind[colstart+1] == 4);
+			assert(sp.browind[colstart+2] == 5);
+
+			for(int j = 0; j < colsize; j++)
+				assert(sp.bpos[colstart+j] == mat.browptr[testrow]+j);
+		}
+		else {
+			throw "Invalid column!";
+		}
+	}
+
+	printf(" >> Full SAI lower triangular test for boundary point at j-start passed.\n");
 }
 
 void test_incomplete_lowertri_interior(const CartMesh& m, const CRawBSRMatrix<PetscScalar,PetscInt>& mat,
@@ -96,6 +405,8 @@ void test_incomplete_lowertri_interior(const CartMesh& m, const CRawBSRMatrix<Pe
 			}
 		}
 	}
+
+	printf(" >> Incomplete SAI lower triangular test for interior point passed.\n");
 }
 
 int test_sai(const bool fullsai, const bool upper, const CartMesh& m, const Mat A)
@@ -123,12 +434,15 @@ int test_sai(const bool fullsai, const bool upper, const CartMesh& m, const Mat 
 
 		PetscInt ncols = 0;
 		ierr = MatGetRow(A, testrow, &ncols, NULL, NULL); CHKERRQ(ierr);
-		printf("Number of cols in row %d is %d.\n", testrow, ncols);
+		printf(" Number of cols in row %d is %d.\n", testrow, ncols);
 
 		if(fullsai) {
 			const LeftSAIPattern<int> sp = left_SAI_pattern(tmat);
 			if(upper)
 				test_fullsai_uppertri_interior(m, tmat, sp, testpoint);
+			else {
+				test_fullsai_lowertri_interior(m, tmat, sp, testpoint);
+			}
 		}
 		else {
 			const LeftSAIPattern<int> sp = left_incomplete_SAI_pattern(tmat);
@@ -140,17 +454,27 @@ int test_sai(const bool fullsai, const bool upper, const CartMesh& m, const Mat 
 		}
 	}
 
-	// Test +i boundary point
-	// {
-	// 	const PetscInt testpoint[] = {m.gnpoind(0)-2, 3, 3};
-	// 	if(fullsai) {
-	// 		const LeftSAIPattern<int> sp = left_SAI_pattern(mat);
-	// 		test_fullmatrix_boundaryface(m,mat,sp,testpoint);
-	// 	}
-	// 	else {
-	// 		const LeftSAIPattern<int> sp = left_incomplete_SAI_pattern(mat);
-	// 	}
-	// }
+	// Test +i boundary point for upper triangular matrix
+	if(upper)
+	{
+		const PetscInt testpoint[] = {m.gnpoind(0)-2, 3, 3};
+		const LeftSAIPattern<int> sp = fullsai ? left_SAI_pattern(tmat)
+			: left_incomplete_SAI_pattern(tmat);
+
+		test_uppertri_boundary_i_end(fullsai, m, tmat, sp, testpoint);
+	}
+	// Test -j boundary point for lower triangular matrix
+	else
+	{
+		const PetscInt testpoint[] = {3,1,3};
+		if(fullsai) {
+			const LeftSAIPattern<int> sp = left_SAI_pattern(tmat);
+			test_fullsai_lowertri_boundary_j_start(m, tmat, sp, testpoint);
+		}
+		else {
+			// nothing yet
+		}
+	}
 
 	alignedDestroyRawBSRMatrixTriangularView(reinterpret_cast<RawBSRMatrix<double,int>&>(tmat));
 
@@ -166,6 +490,7 @@ int main(int argc, char *argv[])
 	const std::string uplow = argv[3];
 
 	int ierr = PetscInitialize(&argc, &argv, NULL, NULL);
+	//petsc_throw(ierr);
 
 	{
 		const test::MeshSpec ms = test::readInputFile(PETSC_COMM_WORLD, confile.c_str());
