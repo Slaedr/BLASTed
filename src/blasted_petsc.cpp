@@ -88,7 +88,8 @@ static PetscErrorCode setupDataFromOptions(PC pc)
 	const BlastedSolverType ptype = factory->solverTypeFromString(ctx->prectypestr);
 
 	PetscInt sweeps[2];
-	if(ptype != BLASTED_JACOBI)
+
+	if(ptype != BLASTED_JACOBI && ptype != BLASTED_LEVEL_SGS && ptype != BLASTED_NO_PREC)
 	{
 		// Params for async iterations
 
@@ -98,7 +99,7 @@ static PetscErrorCode setupDataFromOptions(PC pc)
 		PetscOptionsGetIntArray(NULL, NULL, "-blasted_async_sweeps", sweeps, &nmax, &flag);
 			
 		if(flag == PETSC_FALSE || nmax < 2) {
-			printf("BLASTed: Number of async sweeps not set properly!\n");
+			printf("BLASTed: Number of async sweeps not set properly!\n"); fflush(stdout);
 			abort();
 		}
 
@@ -108,12 +109,14 @@ static PetscErrorCode setupDataFromOptions(PC pc)
 #ifdef DEBUG
 		std::printf("BLASTed: setupDataFromOptions:\n");
 		std::printf(" fact init type = %s, apply init type = %s", ctx->factinittype, ctx->applyinittype);
-		std::printf(" Thread chunk size = %d.\n", ctx->threadchunksize);
+		std::printf(" Thread chunk size = %d.\n", ctx->threadchunksize); fflush(stdout);
 #endif
 	}
 	else {
-		sweeps[0] = 1; sweeps[1] = 1;
+		sweeps[0] = 1;
+		sweeps[1] = 1;
 	}
+
 	if(ptype == BLASTED_ILU0 || ptype == BLASTED_ASYNC_LEVEL_ILU0 || ptype == BLASTED_SAPILU0) {
 		ctx->compute_ilu_rem =
 			get_optional_bool_petscoptions("-blasted_compute_factorization_remainder", false);
@@ -191,7 +194,8 @@ PetscErrorCode createNewPreconditioner(PC pc)
 	settings.nbuildsweeps = ctx->nbuildsweeps;
 	settings.napplysweeps = ctx->napplysweeps;
 	settings.thread_chunk_size = ctx->threadchunksize;
-	if(settings.prectype != BLASTED_JACOBI) {
+	if(settings.prectype != BLASTED_JACOBI && settings.prectype != BLASTED_LEVEL_SGS
+	   && settings.prectype != BLASTED_NO_PREC) {
 		settings.fact_inittype = getFactInitFromString(ctx->factinittype);
 		settings.apply_inittype = getApplyInitFromString(ctx->applyinittype);
 		settings.compute_factorization_res = ctx->compute_ilu_rem;
