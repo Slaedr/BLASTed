@@ -20,7 +20,16 @@
 #include <cassert>
 #include <algorithm>
 #include <fstream>
+
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic warning "-Wmaybe-uninitialized"
 #include <boost/algorithm/string.hpp>
+#pragma GCC diagnostic pop
+#else
+#include <boost/algorithm/string.hpp>
+#endif
+
 #include <boost/align/aligned_alloc.hpp>
 #include <coomatrix.hpp>
 
