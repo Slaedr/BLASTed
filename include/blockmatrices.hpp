@@ -224,6 +224,11 @@ public:
 	/// De-allocates memory
 	virtual ~BSRMatrix();
 
+	/// Allows immutable access to the underlying matrix storage
+	const CRawBSRMatrix<scalar,index> *getRawSRMatrix() const {
+		return reinterpret_cast<const CRawBSRMatrix<scalar,index>*>(&mat);
+	}
+
 	/// Set the storage structure of the matrix
 	/** \param[in] nbrows Number of block-rows
 	 * \param[in] bcinds Array of block-column indices for all non-zero blocks
@@ -360,6 +365,11 @@ public:
 
 	/// De-allocates memory
 	virtual ~BSRMatrix();
+
+	/// Allows immutable access to the underlying matrix storage
+	const CRawBSRMatrix<scalar,index> *getRawSRMatrix() const {
+		return reinterpret_cast<const CRawBSRMatrix<scalar,index>*>(&mat);
+	}
 
 	/// Set the storage structure of the matrix
 	/** \param[in] nbrows Number of rows

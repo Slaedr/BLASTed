@@ -354,7 +354,7 @@ void BSRMatrix<scalar,index,bs>::submitBlock(const index starti, const index sta
 	const index startr = starti/bs, startc = startj/bs;
 	constexpr int bs2 = bs*bs;
 	for(index j = mat.browptr[startr]; j < mat.browptr[startr+1]; j++) {
-		if(mat.bcolind[j] == startc) 
+		if(mat.bcolind[j] == startc)
 		{
 			for(int k = 0; k < bs2; k++)
 				mat.vals[j*bs2 + k] = buffer[k];
