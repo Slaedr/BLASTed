@@ -93,7 +93,7 @@ if(WITH_PETSC)
   add_test(NAME ThreadedPoissonCSRPetsc-LevelSGS
 	COMMAND ${SEQEXEC} ${THREADOPTS} ${CMAKE_CURRENT_BINARY_DIR}/testcsr_poisson
 	${CMAKE_CURRENT_SOURCE_DIR}/input/poisson.control 
-	-options_file  ${CMAKE_CURRENT_SOURCE_DIR}/input/thread_poisson_csr.perc 
+	-options_file  ${CMAKE_CURRENT_SOURCE_DIR}/input/thread_poisson_csr.perc
 	-ref_sub_pc_type sor -blasted_pc_type level_sgs -test_type issame)
 
   # Does not work with hyper-threading, for some reason
