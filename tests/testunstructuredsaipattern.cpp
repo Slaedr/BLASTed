@@ -4,11 +4,14 @@
 
 #include <boost/align/align.hpp>
 #include "srmatrixdefs.hpp"
+#include "../src/sai.hpp"
 
-using boost::alignemnt::aligned_alloc;
+using namespace blasted;
 
 CRawBSRMatrix<double,int> generate_small_unstructured_matrix()
 {
+	using boost::alignment::aligned_alloc;
+
 	CRawBSRMatrix<double,int> mat;
 	mat.nbrows = 13;
 
@@ -30,6 +33,7 @@ CRawBSRMatrix<double,int> generate_small_unstructured_matrix()
 
 	colind[rowptr[0]] = 0; colind[rowptr[0]+1] = 2; colind[rowptr[0]+2] = 4;
 	diagind[0] = rowptr[0]; assert(rowptr[1] == rowptr[0]+3);
+
 	colind[rowptr[1]] = 1; colind[rowptr[1]+1] = 2; colind[rowptr[1]+2] = 5;
 	diagind[1] = rowptr[1]; assert(rowptr[2] == rowptr[1]+3);
 
@@ -85,6 +89,35 @@ CRawBSRMatrix<double,int> generate_small_unstructured_matrix()
 
 void test_sai(const bool fullsai)
 {
+	const CRawBSRMatrix<double,int> tmat = generate_small_unstructured_matrix();
+	if(fullsai)
+	{
+		const LeftSAIPattern<int> sp = left_SAI_pattern(tmat);
+
+		const int testcell = 3;
+
+		assert(sp.nVars[testcell] == 5);
+		assert(sp.nEqns[testcell] == 12);
+
+		const int start = sp.sairowptr[testcell], end = sp.sairowptr[testcell+1];
+		assert(end-start == 5);
+		assert(sp.bcolptr[end]-sp.bcolptr[start] == 22);
+
+		for(int jj = tmat.browptr[testcell], spj = start; jj < tmat.browendptr[testcell]; jj++)
+		{
+			const int colind = tmat.bcolind[jj];
+			assert(sp.bcolptr[spj+1] - sp.bcolptr[spj] == tmat.browendptr[colind] - tmat.browptr[colind]);
+
+			for(int kk = tmat.browptr[colind], spk = sp.bcolptr[spj];
+			    kk < tmat.browendptr[colind]; kk++, spk++)
+			{
+				printf("  spk = %d, kk = %d, bpos[spk] = %d.\n", spk, kk, sp.bpos[spk]); fflush(stdout);
+				assert(kk == sp.bpos[spk]);
+			}
+		}
+
+		printf(" >> Test for SAI at interior point passed.\n"); fflush(stdout);
+	}
 }
 
 void test_sai_upper(const bool fullsai)
@@ -95,7 +128,7 @@ void test_sai_lower(const bool fullsai)
 {
 }
 
-int main(int argv, char *argv[])
+int main(int argc, char *argv[])
 {
 	test_sai(true);
 	test_sai(false);

@@ -15,6 +15,9 @@ add_executable(testreorderedsolve testreorderedsolve.cpp)
 target_link_libraries(testreorderedsolve solvers solverops coomatrix )
 set_property(TARGET testreorderedsolve PROPERTY POSITION_INDEPENDENT_CODE ON)
 
+add_executable(testunstructsaipattern testunstructuredsaipattern.cpp)
+target_link_libraries(testunstructsaipattern solverops rawmatrixutils)
+
 # Tests
 
 add_subdirectory(helper_algs)
@@ -23,7 +26,9 @@ add_subdirectory(perftest)
 
 set(TCS 300)
 
-# valgrind --leak-check=full 
+# valgrind --leak-check=full
+
+# add_test(NAME SAIPatternUnstructured COMMAND testunstructsaipattern)
 
 add_test(NAME SPDCSRJacobi COMMAND ${SEQEXEC} ${SEQTASKS}
   ${CMAKE_CURRENT_BINARY_DIR}/testsolve bcgs jacobi init_none init_none csr rowmajor
