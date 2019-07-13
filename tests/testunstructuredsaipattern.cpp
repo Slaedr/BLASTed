@@ -2,6 +2,7 @@
  * \brief Test SAI/ISAI pattern generation for a small unstructured grid
  */
 
+#include <stdexcept>
 #include <boost/align/align.hpp>
 #include "srmatrixdefs.hpp"
 #include "../src/sai.hpp"
@@ -103,20 +104,146 @@ void test_sai(const bool fullsai)
 		assert(end-start == 5);
 		assert(sp.bcolptr[end]-sp.bcolptr[start] == 22);
 
-		for(int jj = tmat.browptr[testcell], spj = start; jj < tmat.browendptr[testcell]; jj++)
+		// check positions
+		for(int jj = tmat.browptr[testcell], spj = start; jj < tmat.browendptr[testcell]; jj++, spj++)
 		{
+			assert(spj < end);
+
 			const int colind = tmat.bcolind[jj];
 			assert(sp.bcolptr[spj+1] - sp.bcolptr[spj] == tmat.browendptr[colind] - tmat.browptr[colind]);
 
 			for(int kk = tmat.browptr[colind], spk = sp.bcolptr[spj];
 			    kk < tmat.browendptr[colind]; kk++, spk++)
 			{
-				printf("  spk = %d, kk = %d, bpos[spk] = %d.\n", spk, kk, sp.bpos[spk]); fflush(stdout);
+				assert(spk < sp.bcolptr[spj+1]);
 				assert(kk == sp.bpos[spk]);
 			}
 		}
 
+		// Check local row indices
+		{
+			const int colstart = sp.bcolptr[start];
+			for(int j = 0; j < 4; j++)
+				assert(sp.browind[colstart+j] == j);
+			assert(sp.browind[colstart+4] == 5);
+		}
+		{
+			const int colstart = sp.bcolptr[start+1];
+			assert(sp.browind[colstart] == 2);
+			assert(sp.browind[colstart+1] == 3);
+			assert(sp.browind[colstart+2] == 6);
+			assert(sp.browind[colstart+3] == 8);
+			assert(sp.browind[colstart+4] == 11);
+		}
+		{
+			const int colstart = sp.bcolptr[start+2];
+			assert(sp.browind[colstart] == 3);
+			assert(sp.browind[colstart+1] == 4);
+			assert(sp.browind[colstart+2] == 6);
+			assert(sp.browind[colstart+3] == 11);
+		}
+		{
+			const int colstart = sp.bcolptr[start+3];
+			assert(sp.browind[colstart] == 3);
+			assert(sp.browind[colstart+1] == 7);
+			assert(sp.browind[colstart+2] == 8);
+			assert(sp.browind[colstart+3] == 9);
+		}
+		{
+			const int colstart = sp.bcolptr[start+4];
+			assert(sp.browind[colstart] == 3);
+			assert(sp.browind[colstart+1] == 6);
+			assert(sp.browind[colstart+2] == 10);
+			assert(sp.browind[colstart+3] == 11);
+		}
+
 		printf(" >> Test for SAI at interior point passed.\n"); fflush(stdout);
+	}
+	else {
+		const LeftSAIPattern<int> sp = left_incomplete_SAI_pattern(tmat);
+
+		const int testcell = 3;
+
+		assert(sp.nVars[testcell] == 5);
+		assert(sp.nEqns[testcell] == 5);
+
+		const int start = sp.sairowptr[testcell], end = sp.sairowptr[testcell+1];
+		assert(end-start == 5);
+		assert(sp.bcolptr[end]-sp.bcolptr[start] == 15);
+
+		// number of non-zeros in each column of the ISAI LHS for the test cell
+		assert(sp.bcolptr[start+1] - sp.bcolptr[start] == 2);
+		assert(sp.bcolptr[start+2] - sp.bcolptr[start+1] == 5);
+		assert(sp.bcolptr[start+3] - sp.bcolptr[start+2] == 3);
+		assert(sp.bcolptr[start+4] - sp.bcolptr[start+3] == 2);
+		assert(sp.bcolptr[start+5] - sp.bcolptr[start+4] == 3);
+
+		// check positions
+		for(int jj = tmat.browptr[testcell], spj = start; jj < tmat.browendptr[testcell]; jj++, spj++)
+		{
+			assert(spj < end);
+
+			const int colind = tmat.bcolind[jj];
+			const int spk = sp.bcolptr[spj];
+			if(colind == 2) {
+				assert(sp.bpos[spk] == tmat.diagind[colind]);
+				assert(sp.bpos[spk+1] == tmat.diagind[colind]+1);
+			}
+			else if(colind == 3) {
+				for(int j = 0; j < 5; j++)
+					assert(sp.bpos[spk+j] == tmat.browptr[colind]+j);
+			}
+			else if(colind == 6) {
+				assert(sp.bpos[spk] == tmat.browptr[colind]);
+				assert(sp.bpos[spk+1] == tmat.diagind[colind]);
+				/*extra*/ assert(sp.bpos[spk+1] == tmat.browptr[colind]+2);
+				assert(sp.bpos[spk+2] == tmat.browptr[colind]+3);
+			}
+			else if(colind == 9) {
+				assert(sp.bpos[spk] == tmat.browptr[colind]);
+				assert(sp.bpos[spk+1] == tmat.diagind[colind]);
+			}
+			else if(colind == 12) {
+				assert(sp.bpos[spk] == tmat.browptr[colind]);
+				assert(sp.bpos[spk+1] == tmat.browptr[colind]+1);
+				assert(sp.bpos[spk+2] == tmat.diagind[colind]);
+				assert(sp.bpos[spk+2] == tmat.browptr[colind]+3);
+			}
+			else {
+				throw std::runtime_error("Bad column index!");
+			}
+		}
+
+		// Check local row indices
+		{
+			const int colstart = sp.bcolptr[start];
+			for(int j = 0; j < 2; j++)
+				assert(sp.browind[colstart+j] == j);
+		}
+		{
+			const int colstart = sp.bcolptr[start+1];
+			for(int j = 0; j < 5; j++)
+				assert(sp.browind[colstart+j] == j);
+		}
+		{
+			const int colstart = sp.bcolptr[start+2];
+			assert(sp.browind[colstart] == 1);
+			assert(sp.browind[colstart+1] == 2);
+			assert(sp.browind[colstart+2] == 4);
+		}
+		{
+			const int colstart = sp.bcolptr[start+3];
+			assert(sp.browind[colstart] == 1);
+			assert(sp.browind[colstart+1] == 3);
+		}
+		{
+			const int colstart = sp.bcolptr[start+4];
+			assert(sp.browind[colstart] == 1);
+			assert(sp.browind[colstart+1] == 2);
+			assert(sp.browind[colstart+2] == 4);
+		}
+
+		printf(" >> Test for incomplete SAI at interior point passed.\n"); fflush(stdout);
 	}
 }
 
