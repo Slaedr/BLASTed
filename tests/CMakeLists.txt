@@ -28,7 +28,7 @@ set(TCS 300)
 
 # valgrind --leak-check=full
 
-add_test(NAME SAIPatternUnstructured COMMAND testunstructsaipattern)
+add_test(NAME SAIAndIncompleteSAIPatternsUnstructured COMMAND testunstructsaipattern)
 
 add_test(NAME SPDCSRJacobi COMMAND ${SEQEXEC} ${SEQTASKS}
   ${CMAKE_CURRENT_BINARY_DIR}/testsolve bcgs jacobi init_none init_none csr rowmajor

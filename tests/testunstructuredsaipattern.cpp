@@ -3,12 +3,89 @@
  */
 
 #include <stdexcept>
+#include <vector>
 #include <boost/align/align.hpp>
 #include "srmatrixdefs.hpp"
 #include "../src/sai.hpp"
 
 using namespace blasted;
 
+std::vector<std::vector<int>> generate_small_unstructured_adjlists()
+{
+	std::vector<std::vector<int>> al(13);
+
+	al[0].resize(3);
+	al[0][0] = 0; al[0][1] = 2; al[0][2] = 4;
+
+	al[1].resize(3);
+	al[1][0] = 1; al[1][1] = 2; al[1][2] = 5;
+
+	al[2].resize(5);
+	al[2][0] = 0; al[2][1] = 1; al[2][2] = 2; al[2][3] = 3; al[2][4] = 5;
+
+	al[3].resize(5);
+	al[3][0] = 2; al[3][1] = 3; al[3][2] = 6; al[3][3] = 9; al[3][4] = 12;
+
+	al[4].resize(3);
+	al[4][0] = 0; al[4][1] = 4; al[4][2] = 6;
+
+	al[5].resize(5);
+	al[5][0] = 1; al[5][1] = 2; al[5][2] = 5; al[5][3] = 7; al[5][4] = 8;
+
+	al[6].resize(4);
+	al[6][0] = 3; al[6][1] = 4; al[6][2] = 6; al[6][3] = 12;
+
+	al[7].resize(3);
+	al[7][0] = 5; al[7][1] = 7; al[7][2] = 8;
+
+	al[8].resize(4);
+	al[8][0] = 5; al[8][1] = 7; al[8][2] = 8; al[8][3] = 9;
+
+	al[9].resize(4);
+	al[9][0] = 3; al[9][1] = 8; al[9][2] = 9; al[9][3] = 10;
+
+	al[10].resize(3); al[10][0] = 9; al[10][1] = 10; al[10][2] = 11;
+
+	al[11].resize(3); al[11][0] = 10; al[11][1] = 11; al[11][2] = 12;
+
+	al[12].resize(4); al[12][0] = 3; al[12][1] = 6; al[12][2] = 11; al[12][3] = 12;
+
+	return al;
+}
+
+int getCSRPosition(const std::vector<std::vector<int>>& meshadj, const int cell, const int nbridx)
+{
+	int pos = 0;
+	for(int i = 0; i < cell; i++)
+		pos += meshadj[i].size();
+
+	pos += nbridx;
+	return pos;
+}
+
+int getUpperCSRPosition(const std::vector<std::vector<int>>& meshadj, const int cell, const int nbridx)
+{
+	if(meshadj[cell][nbridx] < cell)
+		throw std::runtime_error("Requested neighbour is not upper!");
+
+	int pos = 0;
+	for(int i = 0; i < cell; i++)
+		for(int j = 0; j < static_cast<int>(meshadj[i].size()); j++)
+			if(meshadj[i][j] >= i)
+				pos++;
+
+	int selfidx = -1;
+	for(int j = 0; j < static_cast<int>(meshadj[cell].size()); j++)
+		if(meshadj[cell][j] == cell)
+			selfidx = j;
+	if(selfidx == -1)
+		throw std::runtime_error("Problem with adj lists!");
+
+	pos += nbridx-selfidx;
+	return pos;
+}
+
+// Mesh corresponding to generate_small_unstructured_adjlists
 CRawBSRMatrix<double,int> generate_small_unstructured_matrix()
 {
 	using boost::alignment::aligned_alloc;
@@ -90,7 +167,8 @@ CRawBSRMatrix<double,int> generate_small_unstructured_matrix()
 
 void test_sai(const bool fullsai)
 {
-	const CRawBSRMatrix<double,int> tmat = generate_small_unstructured_matrix();
+	CRawBSRMatrix<double,int> tmat = generate_small_unstructured_matrix();
+
 	if(fullsai)
 	{
 		const LeftSAIPattern<int> sp = left_SAI_pattern(tmat);
@@ -245,20 +323,223 @@ void test_sai(const bool fullsai)
 
 		printf(" >> Test for incomplete SAI at interior point passed.\n"); fflush(stdout);
 	}
+
+	alignedDestroyRawBSRMatrix<double,int>(reinterpret_cast<RawBSRMatrix<double,int>&>(tmat));
+}
+
+void test_sai_boundary(const bool fullsai)
+{
+	CRawBSRMatrix<double,int> tmat = generate_small_unstructured_matrix();
+
+	if(fullsai)
+	{
+		const LeftSAIPattern<int> sp = left_SAI_pattern(tmat);
+
+		const int testcell = 6;
+
+		assert(sp.nVars[testcell] == 4);
+		assert(sp.nEqns[testcell] == 8);
+
+		const int start = sp.sairowptr[testcell], end = sp.sairowptr[testcell+1];
+		assert(end-start == 4);
+		assert(sp.bcolptr[end]-sp.bcolptr[start] == 16);
+
+		// check positions
+		for(int jj = tmat.browptr[testcell], spj = start; jj < tmat.browendptr[testcell]; jj++, spj++)
+		{
+			assert(spj < end);
+
+			const int colind = tmat.bcolind[jj];
+			assert(sp.bcolptr[spj+1] - sp.bcolptr[spj] == tmat.browendptr[colind] - tmat.browptr[colind]);
+
+			for(int kk = tmat.browptr[colind], spk = sp.bcolptr[spj];
+			    kk < tmat.browendptr[colind]; kk++, spk++)
+			{
+				assert(spk < sp.bcolptr[spj+1]);
+				assert(kk == sp.bpos[spk]);
+			}
+		}
+
+		// Check local row indices
+		{
+			const int colstart = sp.bcolptr[start];
+			assert(sp.browind[colstart] == 1);
+			assert(sp.browind[colstart+1] == 2);
+			assert(sp.browind[colstart+2] == 4);
+			assert(sp.browind[colstart+3] == 5);
+			assert(sp.browind[colstart+4] == 7);
+		}
+		{
+			const int colstart = sp.bcolptr[start+1];
+			assert(sp.browind[colstart] == 0);
+			assert(sp.browind[colstart+1] == 3);
+			assert(sp.browind[colstart+2] == 4);
+		}
+		{
+			const int colstart = sp.bcolptr[start+2];
+			assert(sp.browind[colstart] == 2);
+			assert(sp.browind[colstart+1] == 3);
+			assert(sp.browind[colstart+2] == 4);
+			assert(sp.browind[colstart+3] == 7);
+		}
+		{
+			const int colstart = sp.bcolptr[start+3];
+			assert(sp.browind[colstart] == 2);
+			assert(sp.browind[colstart+1] == 4);
+			assert(sp.browind[colstart+2] == 6);
+			assert(sp.browind[colstart+3] == 7);
+		}
+
+		printf(" >> Test for SAI at boundary point passed.\n"); fflush(stdout);
+	}
+	else {
+		const LeftSAIPattern<int> sp = left_incomplete_SAI_pattern(tmat);
+
+		const int testcell = 6;
+
+		assert(sp.nVars[testcell] == 4);
+		assert(sp.nEqns[testcell] == 4);
+
+		const int start = sp.sairowptr[testcell], end = sp.sairowptr[testcell+1];
+		assert(end-start == 4);
+		assert(sp.bcolptr[end]-sp.bcolptr[start] == 12);
+
+		// number of non-zeros in each column of the ISAI LHS for the test cell
+		assert(sp.bcolptr[start+1] - sp.bcolptr[start] == 3);
+		assert(sp.bcolptr[start+2] - sp.bcolptr[start+1] == 2);
+		assert(sp.bcolptr[start+3] - sp.bcolptr[start+2] == 4);
+		assert(sp.bcolptr[start+4] - sp.bcolptr[start+3] == 3);
+
+		// check positions
+		for(int jj = tmat.browptr[testcell], spj = start; jj < tmat.browendptr[testcell]; jj++, spj++)
+		{
+			assert(spj < end);
+
+			const int colind = tmat.bcolind[jj];
+			const int spk = sp.bcolptr[spj];
+			if(colind == 3) {
+				assert(sp.bpos[spk] == tmat.diagind[colind]);
+				assert(sp.bpos[spk+1] == tmat.diagind[colind]+1);
+				assert(sp.bpos[spk+2] == tmat.diagind[colind]+3);
+			}
+			else if(colind == 4) {
+				assert(sp.bpos[spk] == tmat.diagind[colind]);
+				assert(sp.bpos[spk+1] == tmat.diagind[colind]+1);
+			}
+			else if(colind == 6) {
+				for(int j = 0; j < 4; j++)
+					assert(sp.bpos[spk+j] == tmat.browptr[colind]+j);
+			}
+			else if(colind == 12) {
+				assert(sp.bpos[spk] == tmat.browptr[colind]);
+				assert(sp.bpos[spk+1] == tmat.browptr[colind]+1);
+				assert(sp.bpos[spk+2] == tmat.diagind[colind]);
+			}
+			else {
+				throw std::runtime_error("Bad column index!");
+			}
+		}
+
+		// Check local row indices
+		{
+			const int colstart = sp.bcolptr[start];
+			assert(sp.browind[colstart] == 0);
+			assert(sp.browind[colstart+1] == 2);
+			assert(sp.browind[colstart+2] == 3);
+		}
+		{
+			const int colstart = sp.bcolptr[start+1];
+			assert(sp.browind[colstart] == 1);
+			assert(sp.browind[colstart+1] == 2);
+		}
+		{
+			const int colstart = sp.bcolptr[start+2];
+			for(int j = 0; j < 4; j++)
+				assert(sp.browind[colstart+j] == j);
+		}
+		{
+			const int colstart = sp.bcolptr[start+3];
+			assert(sp.browind[colstart] == 0);
+			assert(sp.browind[colstart+1] == 2);
+			assert(sp.browind[colstart+2] == 3);
+		}
+
+		printf(" >> Test for incomplete SAI at boundary point passed.\n"); fflush(stdout);
+	}
+
+	alignedDestroyRawBSRMatrix<double,int>(reinterpret_cast<RawBSRMatrix<double,int>&>(tmat));
 }
 
 void test_sai_upper(const bool fullsai)
 {
-}
+	CRawBSRMatrix<double,int> mat = generate_small_unstructured_matrix();
+	CRawBSRMatrix<double,int> tmat = getUpperTriangularView(mat);
 
-void test_sai_lower(const bool fullsai)
-{
+	if(fullsai)
+	{
+		const LeftSAIPattern<int> sp = left_SAI_pattern(tmat);
+
+		const int testcell = 3;
+
+		assert(sp.nVars[testcell] == 4);
+		assert(sp.nEqns[testcell] == 5);
+
+		const int start = sp.sairowptr[testcell], end = sp.sairowptr[testcell+1];
+		assert(end-start == 4);
+		assert(sp.bcolptr[end]-sp.bcolptr[start] == 9);
+
+		// check positions
+		for(int jj = tmat.browptr[testcell], spj = start; jj < tmat.browendptr[testcell]; jj++, spj++)
+		{
+			assert(spj < end);
+
+			const int colind = tmat.bcolind[jj];
+			assert(sp.bcolptr[spj+1] - sp.bcolptr[spj] == tmat.browendptr[colind] - tmat.browptr[colind]);
+
+			for(int kk = tmat.browptr[colind], spk = sp.bcolptr[spj];
+			    kk < tmat.browendptr[colind]; kk++, spk++)
+			{
+				assert(spk < sp.bcolptr[spj+1]);
+				assert(kk == sp.bpos[spk]);
+			}
+		}
+
+		// Check local row indices
+		{
+			const int colstart = sp.bcolptr[start];
+			for(int j = 0; j < 3; j++)
+				assert(sp.browind[colstart+j] == j);
+			assert(sp.browind[colstart+3] == 4);
+		}
+		{
+			const int colstart = sp.bcolptr[start+1];
+			assert(sp.browind[colstart] == 1);
+			assert(sp.browind[colstart+1] == 4);
+		}
+		{
+			const int colstart = sp.bcolptr[start+2];
+			assert(sp.browind[colstart] == 2);
+			assert(sp.browind[colstart+1] == 3);
+		}
+		{
+			const int colstart = sp.bcolptr[start+3];
+			assert(sp.browind[colstart] == 4);
+		}
+
+		printf(" >> Test for SAI if upper triangular matrix at interior point passed.\n"); fflush(stdout);
+	}
+
+	alignedDestroyRawBSRMatrixTriangularView<double,int>(reinterpret_cast<RawBSRMatrix<double,int>&>(tmat));
+	alignedDestroyRawBSRMatrix<double,int>(reinterpret_cast<RawBSRMatrix<double,int>&>(mat));
 }
 
 int main(int argc, char *argv[])
 {
 	test_sai(true);
 	test_sai(false);
+	test_sai_upper(true);
+	test_sai_boundary(true);
+	test_sai_boundary(false);
 
 	return 0;
 }
