@@ -51,7 +51,7 @@ protected:
 
 	const bool fullsai;
 
-	TriangularLeftSAIPattern<index> saipattern;
+	LeftSAIPattern<index> saipattern;
 
 	RawBSRMatrix<scalar,index> saiL;
 	RawBSRMatrix<scalar,index> saiU;

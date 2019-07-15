@@ -43,6 +43,19 @@ LeftSAIPattern<index> left_SAI_pattern(const CRawBSRMatrix<scalar,index>& mat);
 template <typename scalar, typename index>
 LeftSAIPattern<index> left_incomplete_SAI_pattern(const CRawBSRMatrix<scalar,index>& mat);
 
+namespace sai {
+
+/// Storage type for the left-hand side matrix for computing the left SAI/ISAI corresponding to one row
+template <typename scalar>
+using LMatrix = Matrix<scalar,Dynamic,Dynamic,ColMajor>;
+
+/// Compute the SAI/ISAI LHS operator for one (block-)row of the matrix, given the SAI/ISAI pattern
+template <typename scalar, typename index, int bs, StorageOptions stor>
+void compute_lhs_matrix(const CRawBSRMatrix<scalar,index>& mat, const LeftSAIPattern<index>& sp,
+                        const index row, LMatrix<scalar>& lhs);
+
+}
+
 }
 
 #endif

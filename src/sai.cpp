@@ -266,4 +266,24 @@ LeftSAIPattern<index> left_incomplete_SAI_pattern(const CRawBSRMatrix<scalar,ind
 
 template LeftSAIPattern<int> left_incomplete_SAI_pattern(const CRawBSRMatrix<double,int>& mat);
 
+namespace sai {
+
+template <typename scalar, typename index, int bs, StorageOptions stor>
+void compute_lhs_matrix(const CRawBSRMatrix<scalar,index>& mat, const LeftSAIPattern<index>& sp,
+                        const index row, LMatrix<scalar>& lhs)
+{
+	lhs = LMatrix<scalar>::Zero(sp.nEqns[row]*bs, sp.nVars[row]*bs);
+
+	for(int jcol = 0; jcol < sp.nVars[row]; jcol++)
+	{
+		const index start = sp.bcolptr[sp.sairowptr[row]+jcol],
+			end = sp.bcolptr[sp.sairowptr[row]+jcol+1];
+		for(int ii = start; ii < end; ii++)
+		{
+		}
+	}
+}
+
+} // end namespace sai
+
 }
