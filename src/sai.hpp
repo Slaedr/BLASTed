@@ -33,6 +33,11 @@ struct LeftSAIPattern
 	std::vector<int,aligned_allocator<int,CACHE_LINE_LEN>> nVars;
 	/// Number of equations in the least-squares problem for each block-row of the approx inverse
 	std::vector<int,aligned_allocator<int,CACHE_LINE_LEN>> nEqns;
+
+	/// Row indec of central vertex (diagonal location) in each vertex's least-squares LHS matrix
+	std::vector<int,aligned_allocator<int,CACHE_LINE_LEN>> localCentralRow;
+	/// Column index of central vertex (diagonal location) in each vertex's least-squares LHS matrix
+	//std::vector<int,aligned_allocator<int,CACHE_LINE_LEN>> localCentralCol;
 };
 
 /// Compute the assembly pattern for a left sparse approximate inverse of the given matrix
@@ -43,18 +48,16 @@ LeftSAIPattern<index> left_SAI_pattern(const CRawBSRMatrix<scalar,index>& mat);
 template <typename scalar, typename index>
 LeftSAIPattern<index> left_incomplete_SAI_pattern(const CRawBSRMatrix<scalar,index>& mat);
 
-namespace sai {
-
-/// Storage type for the left-hand side matrix for computing the left SAI/ISAI corresponding to one row
-template <typename scalar>
-using LMatrix = Matrix<scalar,Dynamic,Dynamic,ColMajor>;
-
-/// Compute the SAI/ISAI LHS operator for one (block-)row of the matrix, given the SAI/ISAI pattern
+/// Compute the approximate inverse matrix using a given SAI pattern
+/** \param mat The original matrix
+ * \param sp The SAI/ISAI pattern \ref LeftSAIPattern
+ * \param thread_chunk_size Number of work-items per chunk given to a thread at a time
+ * \param fullsai Set to true for computing a SAI, false for computing an incomplete SAI
+ * \param[out] sai The approximate inverse matrix preallocated to the same size as the original matrix
+ */
 template <typename scalar, typename index, int bs, StorageOptions stor>
-void compute_lhs_matrix(const CRawBSRMatrix<scalar,index>& mat, const LeftSAIPattern<index>& sp,
-                        const index row, LMatrix<scalar>& lhs);
-
-}
+void compute_SAI(const CRawBSRMatrix<scalar,index>& mat, const LeftSAIPattern<index>& sp,
+                 const int thread_chunk_size, const bool fullsai, RawBSRMatrix<scalar,index>& sai);
 
 }
 

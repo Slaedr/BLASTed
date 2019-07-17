@@ -41,6 +41,7 @@ void test_incomplete_fullmatrix_interior(const CartMesh& m, const CRawBSRMatrix<
 
 	assert(sp.nVars[testrow] == 7);
 	assert(sp.nEqns[testrow] == 7);
+	assert(sp.localCentralRow[testrow] == 3);
 
 	const int firstcol = sp.sairowptr[testrow], lastcol = sp.sairowptr[testrow+1];
 	assert(lastcol-firstcol == 7);
@@ -133,6 +134,7 @@ void test_fullmatrix_interior(const CartMesh& m, const CRawBSRMatrix<PetscScalar
 
 	assert(sp.nVars[testrow] == 7);
 	assert(sp.nEqns[testrow] == 25);
+	assert(sp.localCentralRow[testrow] == 12);
 
 	const int start = sp.sairowptr[testrow], end = sp.sairowptr[testrow+1];
 	for(int jcol = start; jcol < end; jcol++)
@@ -253,6 +255,7 @@ void test_fullmatrix_boundaryface(const CartMesh& m, const CRawBSRMatrix<PetscSc
 
 	assert(sp.nVars[testrow] == 6);
 	assert(sp.nEqns[testrow] == 19);
+	assert(sp.localCentralRow[testrow] == 10);
 
 	const int start = sp.sairowptr[testrow], end = sp.sairowptr[testrow+1];
 	assert(end-start == 6);

@@ -177,6 +177,7 @@ void test_sai(const bool fullsai)
 
 		assert(sp.nVars[testcell] == 5);
 		assert(sp.nEqns[testcell] == 12);
+		assert(sp.localCentralRow[testcell] == 3);
 
 		const int start = sp.sairowptr[testcell], end = sp.sairowptr[testcell+1];
 		assert(end-start == 5);
@@ -244,6 +245,7 @@ void test_sai(const bool fullsai)
 
 		assert(sp.nVars[testcell] == 5);
 		assert(sp.nEqns[testcell] == 5);
+		assert(sp.localCentralRow[testcell] == 1);
 
 		const int start = sp.sairowptr[testcell], end = sp.sairowptr[testcell+1];
 		assert(end-start == 5);

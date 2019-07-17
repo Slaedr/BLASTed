@@ -3,6 +3,7 @@
  */
 
 #include <set>
+#include <Eigen/Dense>
 #include "sai.hpp"
 #include "helper_algorithms.hpp"
 
@@ -20,6 +21,7 @@ LeftSAIPattern<index> left_SAI_pattern(const CRawBSRMatrix<scalar,index>& mat)
 	tsp.sairowptr.assign(mat.nbrows+1,0);
 	tsp.nVars.assign(mat.nbrows,0);
 	tsp.nEqns.assign(mat.nbrows,0);
+	tsp.localCentralRow.assign(mat.nbrows, -1);
 
 	// Step 1: Compute number of variables and constraints for each least-squares problem
 
@@ -95,6 +97,13 @@ LeftSAIPattern<index> left_SAI_pattern(const CRawBSRMatrix<scalar,index>& mat)
 
 		const std::vector<index> constrvec(constraints.begin(), constraints.end());
 		assert(static_cast<int>(constrvec.size())==tsp.nEqns[irow]);
+
+		// find constraint corresponding to the diagonal entry irow
+		for(int icons = 0; icons < tsp.nEqns[irow]; icons++)
+			if(irow == constrvec[icons])
+				tsp.localCentralRow[irow] = icons;
+
+		assert(tsp.localCentralRow[irow] != -1);
 
 		std::vector<std::vector<int>> localrowinds(tsp.nVars[irow]);
 
@@ -176,6 +185,7 @@ LeftSAIPattern<index> left_incomplete_SAI_pattern(const CRawBSRMatrix<scalar,ind
 	tsp.sairowptr.assign(mat.nbrows+1,0);
 	tsp.nVars.resize(mat.nbrows);
 	tsp.nEqns.resize(mat.nbrows);
+	tsp.localCentralRow.assign(mat.nbrows, -1);
 
 	// Compute sizes
 
@@ -227,7 +237,13 @@ LeftSAIPattern<index> left_incomplete_SAI_pattern(const CRawBSRMatrix<scalar,ind
 					}
 				}
 			}
+
+			if(colind == irow)
+				tsp.localCentralRow[irow] = loccol;
 		}
+
+		assert(tsp.localCentralRow[irow] >= 0);
+		assert(tsp.localCentralRow[irow] < tsp.nVars[irow]);
 	}
 
 	internal::inclusive_scan(tsp.bcolptr);
@@ -266,16 +282,64 @@ LeftSAIPattern<index> left_incomplete_SAI_pattern(const CRawBSRMatrix<scalar,ind
 
 template LeftSAIPattern<int> left_incomplete_SAI_pattern(const CRawBSRMatrix<double,int>& mat);
 
-namespace sai {
+/// Storage type for the left-hand side matrix for computing the left SAI/ISAI corresponding to one row
+template <typename scalar>
+using LMatrix = Matrix<scalar,Dynamic,Dynamic,ColMajor>;
+
+/// Gather the SAI/ISAI LHS operator for one (block-)row of the matrix, given the SAI/ISAI pattern
+template <typename scalar, typename index, int bs, StorageOptions stor>
+LMatrix<scalar> gather_lhs_matrix(const CRawBSRMatrix<scalar,index>& mat, const LeftSAIPattern<index>& sp,
+                                  const index row);
+
+/// Scatter the SAI/ISAI solution for one (block-)row of the approx inverse, given the pattern
+template <typename scalar, typename index, int bs, StorageOptions stor>
+void scatter_solution(const LMatrix<scalar>& sol, const LeftSAIPattern<index>& sp,
+                      const index row, RawBSRMatrix<scalar,index>& mat);
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
-void compute_lhs_matrix(const CRawBSRMatrix<scalar,index>& mat, const LeftSAIPattern<index>& sp,
-                        const index row, LMatrix<scalar>& lhs)
+void compute_SAI(const CRawBSRMatrix<scalar,index>& mat, const LeftSAIPattern<index>& sp,
+                 const int thread_chunk_size, const bool fullsai,
+                 RawBSRMatrix<scalar,index>& sai)
+{
+	assert(mat.nbrows == sai.nbrows);
+	assert(mat.nnzb == sai.nnzb);
+
+	// Solve least-squares problem for each row
+#pragma omp parallel for default(shared) schedule(dynamic,thread_chunk_size)
+	for(index irow = 0; irow < mat.nbrows; irow++)
+	{
+		const LMatrix<scalar> lhs = gather_lhs_matrix<scalar,index,bs,stor>(mat, sp, irow);
+		LMatrix<scalar> rhs = LMatrix<scalar>::Zero(lhs.rows(), bs);
+		for(int i = 0; i < bs; i++)
+			rhs(sp.localCentralRow[irow]*bs + i, i) = 1.0;
+
+		LMatrix<scalar> ans;
+		if (fullsai)
+			ans = lhs.colPivHouseholderQr().solve(rhs);
+		else
+			ans = lhs.partialPivLu().solve(rhs);
+
+		scatter_solution<scalar,index,bs,stor>(ans, sp, irow, sai);
+	}
+}
+
+template void compute_SAI<double,int,1,ColMajor>(const CRawBSRMatrix<double,int>& mat,
+                                                 const LeftSAIPattern<int>& sp,
+                                                 const int thread_chunk_size, const bool fullsai,
+                                                 RawBSRMatrix<double,int>& sai);
+template void compute_SAI<double,int,4,ColMajor>(const CRawBSRMatrix<double,int>& mat,
+                                                 const LeftSAIPattern<int>& sp,
+                                                 const int thread_chunk_size, const bool fullsai,
+                                                 RawBSRMatrix<double,int>& sai);
+
+template <typename scalar, typename index, int bs, StorageOptions stor>
+LMatrix<scalar> gather_lhs_matrix(const CRawBSRMatrix<scalar,index>& mat, const LeftSAIPattern<index>& sp,
+                                  const index row)
 {
 	using Blk = Block_t<scalar,bs,stor>;
 	const Blk *const valb = reinterpret_cast<const Blk*>(mat.vals);
 
-	lhs = LMatrix<scalar>::Zero(sp.nEqns[row]*bs, sp.nVars[row]*bs);
+	LMatrix<scalar> lhs = LMatrix<scalar>::Zero(sp.nEqns[row]*bs, sp.nVars[row]*bs);
 
 	for(int jcol = 0; jcol < sp.nVars[row]; jcol++)
 	{
@@ -290,17 +354,33 @@ void compute_lhs_matrix(const CRawBSRMatrix<scalar,index>& mat, const LeftSAIPat
 			const int lhsrow = sp.browind[ii];
 			const index lhspos = sp.bpos[ii];
 
+			// Note the transpose
 			for(int ib = 0; ib < bs; ib++)
 				for(int jb = 0; jb < bs; jb++)
-					lhs(lhsrow*bs+ib, jcol*bs+jb) = valb[lhspos](ib,jb);
+					lhs(lhsrow*bs+ib, jcol*bs+jb) = valb[lhspos](jb,ib);
 		}
 	}
+
+	return lhs;
 }
 
-template void compute_lhs_matrix<double,int,4,ColMajor>(const CRawBSRMatrix<double,int>& mat,
-                                                        const LeftSAIPattern<int>& sp,
-                                                        const int row, LMatrix<double>& lhs);
+template <typename scalar, typename index, int bs, StorageOptions stor>
+void scatter_solution(const LMatrix<scalar>& sol, const LeftSAIPattern<index>& sp,
+                      const index row, RawBSRMatrix<scalar,index>& saimat)
+{
+	using Blk = Block_t<scalar,bs,stor>;
+	Blk *const saivalb = reinterpret_cast<Blk*>(saimat.vals);
 
-} // end namespace sai
+	assert(sp.nVars[row] == saimat.browendptr[row] - saimat.browptr[row]);
+
+	for(index jj = saimat.browptr[row]; jj < saimat.browendptr[row]; jj++)
+	{
+		const int locloc = jj - saimat.browptr[row];
+
+		for(int i = 0; i < bs; i++)
+			for(int j = 0; j < bs; j++)
+				saivalb[jj](i,j) = sol(locloc*bs+j, i);
+	}
+}
 
 }

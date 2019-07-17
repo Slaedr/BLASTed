@@ -31,6 +31,7 @@ void test_fullsai_uppertri_interior(const CartMesh& m, const CRawBSRMatrix<Petsc
 
 	assert(sp.nVars[testrow] == 4);
 	assert(sp.nEqns[testrow] == 10);
+	assert(sp.localCentralRow[testrow] == 0);
 
 	const int firstcol = sp.sairowptr[testrow], lastcol = sp.sairowptr[testrow+1];
 	assert(lastcol-firstcol == sp.nVars[testrow]);
@@ -112,6 +113,7 @@ void test_fullsai_lowertri_interior(const CartMesh& m, const CRawBSRMatrix<Petsc
 
 	assert(sp.nVars[testrow] == 4);
 	assert(sp.nEqns[testrow] == 10);
+	assert(sp.localCentralRow[testrow] == 9);
 
 	const int firstcol = sp.sairowptr[testrow], lastcol = sp.sairowptr[testrow+1];
 	assert(lastcol-firstcol == sp.nVars[testrow]);
@@ -193,6 +195,7 @@ void test_uppertri_boundary_i_end(const bool fullsai, const CartMesh& m,
 	if(fullsai) {
 		assert(sp.nVars[testrow] == 3);
 		assert(sp.nEqns[testrow] == 6);
+		assert(sp.localCentralRow[testrow] == 0);
 
 		for(int jcol = firstcol; jcol < lastcol; jcol++)
 		{
@@ -238,6 +241,7 @@ void test_uppertri_boundary_i_end(const bool fullsai, const CartMesh& m,
 	else {
 		assert(sp.nVars[testrow] == 3);
 		assert(sp.nEqns[testrow] == 3);
+		assert(sp.localCentralRow[testrow] == 0);
 
 		for(int jcol = firstcol; jcol < lastcol; jcol++)
 		{
@@ -299,6 +303,7 @@ void test_fullsai_lowertri_boundary_j_start(const CartMesh& m,
 
 	assert(sp.nVars[testrow] == 3);
 	assert(sp.nEqns[testrow] == 6);
+	assert(sp.localCentralRow[testrow] == 5);
 
 	const int firstcol = sp.sairowptr[testrow], lastcol = sp.sairowptr[testrow+1];
 	assert(lastcol-firstcol == sp.nVars[testrow]);
@@ -366,6 +371,7 @@ void test_incomplete_lowertri_interior(const CartMesh& m, const CRawBSRMatrix<Pe
 
 	assert(sp.nVars[testrow] == 4);
 	assert(sp.nEqns[testrow] == 4);
+	assert(sp.localCentralRow[testrow] == 3);
 
 	const int firstcol = sp.sairowptr[testrow], lastcol = sp.sairowptr[testrow+1];
 	assert(lastcol-firstcol == 4);
