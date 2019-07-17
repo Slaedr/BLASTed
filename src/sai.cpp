@@ -272,17 +272,34 @@ template <typename scalar, typename index, int bs, StorageOptions stor>
 void compute_lhs_matrix(const CRawBSRMatrix<scalar,index>& mat, const LeftSAIPattern<index>& sp,
                         const index row, LMatrix<scalar>& lhs)
 {
+	using Blk = Block_t<scalar,bs,stor>;
+	const Blk *const valb = reinterpret_cast<const Blk*>(mat.vals);
+
 	lhs = LMatrix<scalar>::Zero(sp.nEqns[row]*bs, sp.nVars[row]*bs);
 
 	for(int jcol = 0; jcol < sp.nVars[row]; jcol++)
 	{
 		const index start = sp.bcolptr[sp.sairowptr[row]+jcol],
 			end = sp.bcolptr[sp.sairowptr[row]+jcol+1];
-		for(int ii = start; ii < end; ii++)
+
+		assert(end-start == sp.nEqns[row]);
+
+#pragma omp simd
+		for(index ii = start; ii < end; ii++)
 		{
+			const int lhsrow = sp.browind[ii];
+			const index lhspos = sp.bpos[ii];
+
+			for(int ib = 0; ib < bs; ib++)
+				for(int jb = 0; jb < bs; jb++)
+					lhs(lhsrow*bs+ib, jcol*bs+jb) = valb[lhspos](ib,jb);
 		}
 	}
 }
+
+template void compute_lhs_matrix<double,int,4,ColMajor>(const CRawBSRMatrix<double,int>& mat,
+                                                        const LeftSAIPattern<int>& sp,
+                                                        const int row, LMatrix<double>& lhs);
 
 } // end namespace sai
 
