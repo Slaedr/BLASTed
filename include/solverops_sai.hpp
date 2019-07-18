@@ -10,17 +10,25 @@
 namespace blasted {
 
 /// Data needed for SAI computations
-template <typename index>
-class LeftSAIImpl;
+template <typename scalar, typename index>
+struct LeftSAIImpl;
 
-/// 
+/// A block SAI(1) preconditioner
+/** Left sparse approximate inverse with static sparsity pattern corresponding to the sparsity
+ * pattern of the original matrix.
+ */
 template <typename scalar, typename index, int bs, StorageOptions stor>
 class LeftSAIPreconditioner : public SRPreconditioner<scalar,index>
 {
+	static_assert(bs > 0, "Block size must be positive!");
+	static_assert(stor == RowMajor || stor == ColMajor, "Invalid storage option!");
 public:
 	LeftSAIPreconditioner();
 
 	bool relaxationAvailable() const { return false; }
+
+	/// Compute the approximate inverse
+	void compute();
 
 	/// To apply the preconditioner
 	void apply(const scalar *const x, scalar *const __restrict y) const;
@@ -30,7 +38,7 @@ public:
 
 protected:
 	/// SAI preprocessing data
-	LeftSAIImpl<index> impl;
+	LeftSAIImpl<scalar,index> impl;
 };
 
 }
