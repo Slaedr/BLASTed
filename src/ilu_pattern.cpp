@@ -24,12 +24,6 @@
 
 namespace blasted {
 
-/// Exclusive prefix-scan over a vector
-/** We assume the first element of the vector is zero, and that the actual element starts at position 1.
- */
-template <typename T>
-static void exclusive_scan(std::vector<T>& v);
-
 /** 
  * \note In the loops, the variable pos is initially set negative.
  * If index is an unsigned type, that might be a problem.

@@ -86,9 +86,6 @@ public:
 	virtual void compute() = 0;
 
 protected:
-	/// Kind of storage that is used
-	StorageType _type;
-
 	/// Matrix wrapper
 	CRawBSRMatrix<scalar,index> mat;
 };
