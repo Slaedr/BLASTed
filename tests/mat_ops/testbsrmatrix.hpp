@@ -15,6 +15,6 @@
  */
 template <int bs>
 int testBSRMatMult(const std::string type, const std::string storageorder,
-		const std::string matfile, const std::string xvec, const std::string prodvec);
+                   const std::string matfile, const std::string xvec, const std::string prodvec);
 
 #endif

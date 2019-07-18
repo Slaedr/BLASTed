@@ -26,7 +26,7 @@ int testCSRMatMult(const std::string type,
 	AbstractLinearOperator<double,int>* testmat = nullptr;
 	if(type == "view") {
 		testmat = new CSRMatrixView<double,int>(rm.nbrows,
-				rm.browptr,rm.bcolind,rm.vals,rm.diagind);
+		                                        rm.browptr,rm.bcolind,rm.vals,rm.diagind);
 	}
 	else
 		testmat = new BSRMatrix<double,int,1>(rm.nbrows,rm.browptr,rm.bcolind,rm.vals,rm.diagind);
@@ -38,7 +38,7 @@ int testCSRMatMult(const std::string type,
 	}
 
 	delete testmat;
-	destroyRawBSRMatrix(rm);
+	alignedDestroyRawBSRMatrix(rm);
 
 	return 0;
 }

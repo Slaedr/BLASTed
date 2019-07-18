@@ -22,12 +22,12 @@
 namespace blasted {
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
-void bsr_matrix_apply(const CRawBSRMatrix<scalar,index> *const mat,
-		const scalar *const xx, scalar *const __restrict yy)
+void bsr_matrix_apply(const SRMatrixStorage<const scalar,const index> *const mat,
+                      const scalar *const xx, scalar *const __restrict yy)
 {
 	using Blk = Block_t<scalar,bs,stor>;
 	using Seg = Segment_t<scalar,bs>;
-	const Blk *data = reinterpret_cast<const Blk*>(mat->vals);
+	const Blk *data = reinterpret_cast<const Blk*>(&mat->vals[0]);
 	const Seg *x = reinterpret_cast<const Seg*>(xx);
 	Seg *y = reinterpret_cast<Seg*>(yy);
 
@@ -47,13 +47,13 @@ void bsr_matrix_apply(const CRawBSRMatrix<scalar,index> *const mat,
 }
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
-void bsr_gemv3(const CRawBSRMatrix<scalar,index> *const mat,
-		const scalar a, const scalar *const __restrict xx, 
-		const scalar b, const scalar *const yy, scalar *const zz)
+void bsr_gemv3(const SRMatrixStorage<const scalar,const index> *const mat,
+               const scalar a, const scalar *const __restrict xx, 
+               const scalar b, const scalar *const yy, scalar *const zz)
 {
 	using Blk = Block_t<scalar,bs,stor>;
 	using Seg = Segment_t<scalar,bs>;
-	const Blk *data = reinterpret_cast<const Blk*>(mat->vals);
+	const Blk *data = reinterpret_cast<const Blk*>(&mat->vals[0]);
 	const Seg *x = reinterpret_cast<const Seg*>(xx);
 	const Seg *y = reinterpret_cast<const Seg*>(yy);
 	Seg *z = reinterpret_cast<Seg*>(zz);
@@ -73,7 +73,7 @@ void bsr_gemv3(const CRawBSRMatrix<scalar,index> *const mat,
 }
 
 template <typename scalar, typename index>
-void csr_matrix_apply(const CRawBSRMatrix<scalar,index> *const mat,
+void csr_matrix_apply(const SRMatrixStorage<const scalar,const index> *const mat,
                       const scalar *const xx, scalar *const __restrict yy) 
 {
 #pragma omp parallel for default(shared)
@@ -89,9 +89,9 @@ void csr_matrix_apply(const CRawBSRMatrix<scalar,index> *const mat,
 }
 
 template <typename scalar, typename index>
-void csr_gemv3(const CRawBSRMatrix<scalar,index> *const mat,
-		const scalar a, const scalar *const __restrict xx, 
-		const scalar b, const scalar *const yy, scalar *const zz)
+void csr_gemv3(const SRMatrixStorage<const scalar,const index> *const mat,
+               const scalar a, const scalar *const __restrict xx, 
+               const scalar b, const scalar *const yy, scalar *const zz)
 {
 #pragma omp parallel for default(shared)
 	for(index irow = 0; irow < mat->nbrows; irow++)
@@ -114,8 +114,6 @@ void bcsc_gemv3(const CRawBSCMatrix<scalar,index> *const mat,
 	using Seg = Segment_t<scalar,bs>;
 	const Blk *data = reinterpret_cast<const Blk*>(mat->vals);
 	const Seg *x = reinterpret_cast<const Seg*>(xx);
-	//const Seg *y = reinterpret_cast<const Seg*>(yy);
-	//Seg *z = reinterpret_cast<Seg*>(zz);
 
 #pragma omp parallel default (shared)
 	{
@@ -146,64 +144,65 @@ void bcsc_gemv3(const CRawBSCMatrix<scalar,index> *const mat,
 // Instantiations
 
 template void
-bsr_matrix_apply<double,int,3,RowMajor>(const CRawBSRMatrix<double,int> *const mat,
+bsr_matrix_apply<double,int,3,RowMajor>(const SRMatrixStorage<const double,const int> *const mat,
                                         const double *const xx, double *const __restrict yy);
 template void
-bsr_matrix_apply<double,int,4,RowMajor>(const CRawBSRMatrix<double,int> *const mat,
+bsr_matrix_apply<double,int,4,RowMajor>(const SRMatrixStorage<const double,const int> *const mat,
                                         const double *const xx, double *const __restrict yy);
 template void
-bsr_matrix_apply<double,int,7,RowMajor>(const CRawBSRMatrix<double,int> *const mat,
+bsr_matrix_apply<double,int,7,RowMajor>(const SRMatrixStorage<const double,const int> *const mat,
                                         const double *const xx, double *const __restrict yy);
 template void
-bsr_matrix_apply<double,int,3,ColMajor>(const CRawBSRMatrix<double,int> *const mat,
+bsr_matrix_apply<double,int,3,ColMajor>(const SRMatrixStorage<const double,const int> *const mat,
                                         const double *const xx, double *const __restrict yy);
 template void
-bsr_matrix_apply<double,int,4,ColMajor>(const CRawBSRMatrix<double,int> *const mat,
+bsr_matrix_apply<double,int,4,ColMajor>(const SRMatrixStorage<const double,const int> *const mat,
                                         const double *const xx, double *const __restrict yy);
 template void
-bsr_matrix_apply<double,int,5,ColMajor>(const CRawBSRMatrix<double,int> *const mat,
+bsr_matrix_apply<double,int,5,ColMajor>(const SRMatrixStorage<const double,const int> *const mat,
                                         const double *const xx, double *const __restrict yy);
 template void
-bsr_matrix_apply<double,int,7,ColMajor>(const CRawBSRMatrix<double,int> *const mat,
+bsr_matrix_apply<double,int,7,ColMajor>(const SRMatrixStorage<const double,const int> *const mat,
                                         const double *const xx, double *const __restrict yy);
 
 template
-void bsr_gemv3<double,int,3,RowMajor>(const CRawBSRMatrix<double,int> *const mat,
+void bsr_gemv3<double,int,3,RowMajor>(const SRMatrixStorage<const double,const int> *const mat,
                                       const double a, const double *const __restrict xx,
                                       const double b, const double *const yy, double *const zz);
 template
-void bsr_gemv3<double,int,4,RowMajor>(const CRawBSRMatrix<double,int> *const mat,
+void bsr_gemv3<double,int,4,RowMajor>(const SRMatrixStorage<const double,const int> *const mat,
                                       const double a, const double *const __restrict xx,
                                       const double b, const double *const yy, double *const zz);
 template
-void bsr_gemv3<double,int,7,RowMajor>(const CRawBSRMatrix<double,int> *const mat,
+void bsr_gemv3<double,int,7,RowMajor>(const SRMatrixStorage<const double,const int> *const mat,
                                       const double a, const double *const __restrict xx,
                                       const double b, const double *const yy, double *const zz);
 template
-void bsr_gemv3<double,int,3,ColMajor>(const CRawBSRMatrix<double,int> *const mat,
+void bsr_gemv3<double,int,3,ColMajor>(const SRMatrixStorage<const double,const int> *const mat,
                                       const double a, const double *const __restrict xx,
                                       const double b, const double *const yy, double *const zz);
 template
-void bsr_gemv3<double,int,4,ColMajor>(const CRawBSRMatrix<double,int> *const mat,
+void bsr_gemv3<double,int,4,ColMajor>(const SRMatrixStorage<const double,const int> *const mat,
                                       const double a, const double *const __restrict xx,
                                       const double b, const double *const yy, double *const zz);
 template
-void bsr_gemv3<double,int,5,ColMajor>(const CRawBSRMatrix<double,int> *const mat,
+void bsr_gemv3<double,int,5,ColMajor>(const SRMatrixStorage<const double,const int> *const mat,
                                       const double a, const double *const __restrict xx,
                                       const double b, const double *const yy, double *const zz);
 template
-void bsr_gemv3<double,int,7,ColMajor>(const CRawBSRMatrix<double,int> *const mat,
+void bsr_gemv3<double,int,7,ColMajor>(const SRMatrixStorage<const double,const int> *const mat,
                                       const double a, const double *const __restrict xx,
                                       const double b, const double *const yy, double *const zz);
 
 template
-void csr_matrix_apply<double,int>(const CRawBSRMatrix<double,int> *const mat,
+void csr_matrix_apply<double,int>(const SRMatrixStorage<const double,const int> *const mat,
                                   const double *const xx, double *const __restrict yy);
 
 template
-void csr_gemv3<double,int>(const CRawBSRMatrix<double,int> *const mat,
+void csr_gemv3<double,int>(const SRMatrixStorage<const double,const int> *const mat,
                            const double a, const double *const __restrict xx, 
                            const double b, const double *const yy, double *const zz);
+
 
 // BSC matrix
 

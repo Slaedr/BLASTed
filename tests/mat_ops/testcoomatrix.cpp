@@ -17,7 +17,7 @@ TestCOOMatrix::TestCOOMatrix() : COOMatrix<double,int>()
 { }
 
 int TestCOOMatrix::readCoordinateMatrix(const std::string matfile, 
-		const std::string sortedfile)
+                                        const std::string sortedfile)
 {
 	std::ifstream matfin(matfile);
 	if(!matfin) {
@@ -74,7 +74,7 @@ int TestCOOMatrix::readCoordinateMatrix(const std::string matfile,
 
 template <int bs, StorageOptions stor>
 int testConvertCOOToBSR(const std::string matfile, 
-		const std::string sortedfile)
+                        const std::string sortedfile)
 {
 	std::ifstream matfin(matfile);
 	if(!matfin) {

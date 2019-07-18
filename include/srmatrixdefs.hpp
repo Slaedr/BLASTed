@@ -8,8 +8,39 @@
 
 #include <limits>
 #include "blasted_config.hpp"
+#include "arrayview.hpp"
 
 namespace blasted {
+
+/// Sparse-row type storage for matrix 
+template <typename scalar, typename index>
+struct SRMatrixStorage
+{
+	static_assert(std::numeric_limits<index>::is_integer, "Integer index type required!");
+	static_assert(std::numeric_limits<index>::is_signed, "Signed index type required!");
+
+	ArrayView<index> browptr;            ///< pointers to beginning block-rows
+	ArrayView<index> bcolind;            ///< block-column indices of non-zeros
+	ArrayView<scalar> vals;              ///< values of non-zero blocks
+	ArrayView<index> diagind;            ///< locations of the diagonal block in every block-row
+	ArrayView<index> browendptr;         ///< pointers to one-past-the-end of block-rows
+	index nbrows;                        ///< number of block rows
+	index nnzb;                          ///< number of non-zero blocks
+	index nbstored;               ///< total number of non-zero blocks actually stored in the array vals
+
+	/// Default constructor
+	SRMatrixStorage() : nbrows{0}, nnzb{0}, nbstored{0}
+	{ }
+
+	/// Wrap data pointers
+	SRMatrixStorage(index *const brptrs, index *const bcinds,
+	                scalar *const values, index *const diag_inds,
+	                index *const brendptrs, const index n_brows, const index n_nzb, const index n_bstored)
+		: browptr(brptrs, n_brows+1), bcolind(bcinds, n_bstored), vals(values, n_bstored),
+		  diagind(diag_inds, n_brows), browendptr(brendptrs, n_brows),
+		  nbrows{n_brows}, nnzb{n_nzb}, nbstored{n_bstored}
+	{ }
+};
 
 /// An (almost-)immutable sparse block-row square matrix
 /** The pointers and the number of (block-)rows are non-const to allow re-wrapping of another matrix.

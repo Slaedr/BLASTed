@@ -55,14 +55,14 @@ public:
 	 *
 	 * Does not take ownership of the 4 arrays; they are not cleaned up in the destructor either.
 	 */
-	virtual void wrap(const index n_brows, const index *const brptrs,
-	                  const index *const bcinds, const scalar *const values,
-	                  const index *const dinds) = 0;
+	// virtual void wrap(const index n_brows, const index *const brptrs,
+	//                   const index *const bcinds, const scalar *const values,
+	//                   const index *const dinds) = 0;
 
 protected:
 
 	/// The SR matrix wrapper
-	CRawBSRMatrix<scalar,index> mat;
+	SRMatrixStorage<const scalar,const index> mat;
 };
 
 /// A BSR matrix that is formed by wrapping a pre-existing read-only matrix
@@ -95,28 +95,16 @@ public:
 	/// Cleans up temporary data needed for preconditioning operations
 	virtual ~BSRMatrixView();
 
-	/// Just wraps a sparse-row matrix described by 4 arrays
-	/** \param[in] n_brows Number of block-rows
-	 * \param[in] brptrs Array of block-row pointers
-	 * \param[in] bcinds Array of block-column indices
-	 * \param[in] values Non-zero values
-	 * \param[in] dinds Array of pointers to diagonal blocks
-	 *
-	 * Does not take ownership of the 4 arrays; they are not cleaned up in the destructor either.
-	 */
-	void wrap(const index n_brows, const index *const brptrs,
-		const index *const bcinds, const scalar *const values, const index *const dinds);
-
 	/// Computes the matrix vector product of this matrix with one vector-- y := Ax
 	virtual void apply(const scalar *const x, scalar *const __restrict y) const;
 
 	/// Almost the BLAS gemv: computes z := a Ax + by for  scalars a and b
 	/** \warning x must not alias z.
 	 */
-	virtual void gemv3(const scalar a, const scalar *const __restrict x, 
-			const scalar b, const scalar *const y,
-			scalar *const z) const;
-	
+	virtual void gemv3(const scalar a, const scalar *const __restrict x,
+	                   const scalar b, const scalar *const y,
+	                   scalar *const z) const;
+
 	/// Returns the dimension (number of rows) of the square matrix
 	index dim() const { return mat.nbrows*bs; }
 
@@ -136,7 +124,7 @@ class CSRMatrixView : public SRMatrixView<scalar, index>
 	static_assert(std::numeric_limits<index>::is_integer, "Integer index type required!");
 
 public:
-	
+
 	/// A constructor which wraps a CSR matrix described by 4 arrays
 	/** \param[in] nrows Number of rows
 	 * \param[in] rptrs Array of row pointers
@@ -151,26 +139,14 @@ public:
 
 	/// De-allocates temporary storage only, not the matrix storage itself
 	virtual ~CSRMatrixView();
-	
-	/// Just wraps a sparse-row matrix described by 4 arrays
-	/** \param[in] n_brows Number of rows
-	 * \param[in] brptrs Array of row pointers
-	 * \param[in] bcinds Array of column indices
-	 * \param[in] values Non-zero values
-	 * \param[in] dinds Array of pointers to diagonal entries
-	 *
-	 * Does not take ownership of the 4 arrays; they are not cleaned up in the destructor either.
-	 */
-	void wrap(const index n_brows, const index *const brptrs,
-		const index *const bcinds, const scalar *const values, const index *const dinds);
 
 	/// Computes the matrix vector product of this matrix with one vector-- y := Ax
 	virtual void apply(const scalar *const x, scalar *const __restrict y) const;
 
 	/// Almost the BLAS gemv: computes z := a Ax + by for  scalars a and b
 	virtual void gemv3(const scalar a, const scalar *const __restrict x, 
-			const scalar b, const scalar *const y,
-			scalar *const z) const;
+	                   const scalar b, const scalar *const y,
+	                   scalar *const z) const;
 	
 	/// Returns the number of rows in the matrix
 	index dim() const { return mat.nbrows; }
@@ -219,6 +195,9 @@ public:
 	          index *const bcinds, scalar *const values, index *const dinds);
 
 	/// Transfers the arrays of a raw BSR matrix to itself and nulls the raw matrix
+	/** Make sure that memory in rmat is allocated using Boost aligned_alloc, because it will be
+	 * freed under that assumption.
+	 */
 	BSRMatrix(RawBSRMatrix<scalar,index>& rmat);
 
 	/// De-allocates memory
@@ -287,8 +266,8 @@ public:
 	/** \warning x must not alias z.
 	 */
 	virtual void gemv3(const scalar a, const scalar *const __restrict x, 
-			const scalar b, const scalar *const y,
-			scalar *const z) const;
+	                   const scalar b, const scalar *const y,
+	                   scalar *const z) const;
 
 	/// Compute some ordering and/or scaling using this matrix
 	void computeOrderingScaling(ReorderingScaling<scalar,index,bs>& rs) const;
@@ -313,13 +292,8 @@ public:
 
 protected:
 
-	/** Indicates whether this objects owns data of \ref vals, \ref bcolind, \ref browptr,
-	 * \ref diagind
-	 */
-	bool owner;
-
 	/// The BSR matrix storage
-	RawBSRMatrix<scalar,index> mat;
+	SRMatrixStorage<scalar,index> mat;
 };
 
 /// Compressed sparse row (CSR) matrix
@@ -332,8 +306,8 @@ class BSRMatrix<scalar,index,1> : public AbstractMatrix<scalar, index>
 	static_assert(std::numeric_limits<index>::is_integer, "Integer index type required!");
 
 public:
-	
-	/// Minimal initialzation; just sets number of async sweeps	
+
+	/// Minimal initialzation; just sets number of async sweeps
 	BSRMatrix();
 
 	/// Deep copy another CSR matrix
@@ -341,19 +315,17 @@ public:
 
 	/// Allocates space for the matrix based on the supplied non-zero structure
 	/** \param[in] n_brows Total number of rows
-	 * \param[in] bcinds Column indices, simply copied over into \ref bcolind
-	 * \param[in] brptrs Row pointers, simply copied into \ref browptr
+	 * \param[in] bcinds Column indices (copied)
+	 * \param[in] brptrs Row pointers (copied)
 	 */
 	BSRMatrix(const index n_brows, const index *const bcinds, const index *const brptrs);
-	
+
 	/// A constructor which just wraps a CSR matrix described by 4 arrays
 	/** \param[in] nrows Number of rows
 	 * \param[in] rptrs Array of row pointers
 	 * \param[in] cinds Array of column indices
 	 * \param[in] values Non-zero values
 	 * \param[in] dinds Array of diagonal entry pointers
-	 * \param[in] n_buildsweeps Number of asynchronous preconditioner build sweeps
-	 * \param[in] n_applysweeps Number of asynchronous preconditioner apply sweeps
 	 *
 	 * Does not take ownership of the 4 arrays; they are not cleaned up in the destructor either.
 	 */
@@ -367,8 +339,8 @@ public:
 	virtual ~BSRMatrix();
 
 	/// Allows immutable access to the underlying matrix storage
-	const CRawBSRMatrix<scalar,index> *getRawSRMatrix() const {
-		return reinterpret_cast<const CRawBSRMatrix<scalar,index>*>(&mat);
+	const SRMatrixStorage<scalar,index>& getRawSRMatrix() const {
+		return mat;
 	}
 
 	/// Set the storage structure of the matrix
@@ -385,7 +357,7 @@ public:
 
 	/// Sets diagonal blocks to zero
 	void setDiagZero();
-	
+
 	/// Insert a block of values into the [matrix](\ref vals); not thread-safe
 	/** \warning NOT thread safe! The caller is responsible for ensuring that no two threads
 	 * write to the same location of the matrix at the same time.
@@ -394,8 +366,8 @@ public:
 	 * \param[in] bsi The number of rows in the block being inserted
 	 * \param[in] bsj The number of columns in the block being inserted
 	 */
-	void submitBlock(const index starti, const index startj, 
-			const scalar *const buffer, const index bsi, const index bsj);
+	void submitBlock(const index starti, const index startj,
+	                 const scalar *const buffer, const index bsi, const index bsj);
 
 	/// Update a (contiguous) block of values into the [matrix](\ref vals)
 	/** This is function is thread-safe: each location that needs to be updated is updated
@@ -405,9 +377,9 @@ public:
 	 * \param[in] bsi The number of rows in the block being inserted
 	 * \param[in] bsj The number of columns in the block being inserted
 	 */
-	void updateBlock(const index starti, const index startj, 
-			const scalar *const buffer, const index bsi, const index bsj);
-	
+	void updateBlock(const index starti, const index startj,
+	                 const scalar *const buffer, const index bsi, const index bsj);
+
 	/// Updates the diagonal block of the specified block-row
 	/** This function is thread-safe.
 	 * \param[in] starti The row whose diagonal block is to be updated
@@ -423,13 +395,13 @@ public:
 	virtual void apply(const scalar *const x, scalar *const __restrict y) const;
 
 	/// Almost the BLAS gemv: computes z := a Ax + by for  scalars a and b
-	virtual void gemv3(const scalar a, const scalar *const __restrict x, 
-			const scalar b, const scalar *const y,
-			scalar *const z) const;
-	
+	virtual void gemv3(const scalar a, const scalar *const __restrict x,
+	                   const scalar b, const scalar *const y,
+	                   scalar *const z) const;
+
 	/// Returns the number of rows in the matrix
 	index dim() const { return mat.nbrows; }
-	
+
 	/// Compute some ordering and/or scaling using this matrix
 	void computeOrderingScaling(ReorderingScaling<scalar,index,1>& rs) const;
 
@@ -464,16 +436,16 @@ public:
 
 	/// Returns the maximum of absolute values of diagonal entries
 	scalar getAbsMaxDiagonalEntry() const;
-	
+
 protected:
-	
+
 	/** Indicates whether the data (\ref vals, \ref bcolind, \ref browptr, \ref diagind)
 	 * is owned by this object
 	 */
 	bool owner;
-	
-	/// The CSR matrix data	
-	RawBSRMatrix<scalar,index> mat;
+
+	/// The CSR matrix data
+	SRMatrixStorage<scalar,index> mat;
 };
 
 }

@@ -98,30 +98,25 @@ BSRMatrixView<scalar,index,bs,stor>::BSRMatrixView(const index n_brows, const in
 	: SRMatrixView<scalar,index>(n_brows, brptrs, bcinds, values, diaginds, VIEWBSR)
 { }
 
-template <typename scalar, typename index, int bs, StorageOptions stor>
-void BSRMatrixView<scalar,index,bs,stor>::wrap(const index n_brows, const index *const brptrs,
-                                               const index *const bcinds, const scalar *const values,
-                                               const index *const dinds)
-{
-	mat.nbrows = n_brows;
-	mat.browptr = brptrs;
-	mat.bcolind = bcinds;
-	mat.vals = values;
-	mat.diagind = dinds;
-	if(n_brows > 0)
-		mat.browendptr = &mat.browptr[1];
-	mat.nbstored = mat.browptr[n_brows];
-	mat.nnzb = mat.nbstored;
-}
+// template <typename scalar, typename index, int bs, StorageOptions stor>
+// void BSRMatrixView<scalar,index,bs,stor>::wrap(const index n_brows, const index *const brptrs,
+//                                                const index *const bcinds, const scalar *const values,
+//                                                const index *const dinds)
+// {
+// 	mat.nbrows = n_brows;
+// 	mat.browptr.wrap(brptrs, n_brows+1);
+// 	mat.bcolind.wrap(bcinds, brptrs[n_brows]);
+// 	mat.vals.wrap(values, brptrs[n_brows]*bs*bs);
+// 	mat.diagind.wrap(dinds, n_brows);
+// 	if(n_brows > 0)
+// 		mat.browendptr.wrap(&mat.browptr[1], n_brows);
+// 	mat.nbstored = mat.browptr[n_brows];
+// 	mat.nnzb = mat.nbstored;
+// }
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
 BSRMatrixView<scalar, index, bs,stor>::~BSRMatrixView()
 {
-	mat.browptr = nullptr;
-	mat.bcolind = nullptr;
-	mat.vals = nullptr;
-	mat.diagind = nullptr;
-	mat.browendptr = nullptr;
 }
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
@@ -133,7 +128,8 @@ void BSRMatrixView<scalar,index,bs,stor>::apply(const scalar *const xx,
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
 void BSRMatrixView<scalar,index,bs,stor>::gemv3(const scalar a, const scalar *const __restrict xx, 
-		const scalar b, const scalar *const yy, scalar *const zz) const
+                                                const scalar b, const scalar *const yy,
+                                                scalar *const zz) const
 {
 	bsr_gemv3<scalar,index,bs,stor>(&mat, a, xx, b, yy, zz);
 }
@@ -148,39 +144,18 @@ CSRMatrixView<scalar,index>::CSRMatrixView(const index nrows, const index *const
 template <typename scalar, typename index>
 CSRMatrixView<scalar,index>::~CSRMatrixView()
 { 
-	mat.browptr = nullptr;
-	mat.bcolind = nullptr;
-	mat.vals = nullptr;
-	mat.diagind = nullptr;
-	mat.browendptr = nullptr;
-}
-
-template <typename scalar, typename index>
-void CSRMatrixView<scalar,index>::wrap(const index n_brows, const index *const brptrs,
-                                       const index *const bcinds, const scalar *const values,
-                                       const index *const dinds)
-{
-	mat.nbrows = n_brows;
-	mat.browptr = brptrs;
-	mat.bcolind = bcinds;
-	mat.vals = values;
-	mat.diagind = dinds;
-	if(n_brows > 0)
-		mat.browendptr = &mat.browptr[1];
-	mat.nbstored = brptrs[n_brows];
-	mat.nnzb = mat.nbstored;
 }
 
 template <typename scalar, typename index>
 void CSRMatrixView<scalar,index>::apply(const scalar *const xx,
-                                       scalar *const __restrict yy) const
+                                        scalar *const __restrict yy) const
 {
 	csr_matrix_apply(&mat, xx, yy);
 }
 
 template <typename scalar, typename index>
 void CSRMatrixView<scalar,index>::gemv3(const scalar a, const scalar *const __restrict__ xx, 
-		const scalar b, const scalar *const yy, scalar *const zz) const
+                                        const scalar b, const scalar *const yy, scalar *const zz) const
 {
 	csr_gemv3(&mat, a, xx, b, yy, zz);
 }
@@ -197,14 +172,13 @@ BSRMatrix<scalar,index,bs>::BSRMatrix()
 template <typename scalar, typename index, int bs>
 BSRMatrix<scalar,index,bs>::BSRMatrix(const index n_brows,
                                       const index *const bcinds, const index *const brptrs)
-	: AbstractMatrix<scalar,index>(BSR), owner{true}, 
-	  mat{nullptr, nullptr, nullptr, nullptr, nullptr, n_brows, brptrs[n_brows], brptrs[n_brows]}
+	: AbstractMatrix<scalar,index>(BSR)
 {
 	constexpr int bs2 = bs*bs;
-	mat.browptr = new index[mat.nbrows+1];
-	mat.bcolind = new index[brptrs[mat.nbrows]];
-	mat.diagind = new index[mat.nbrows];
-	mat.vals = new scalar[brptrs[mat.nbrows]*bs2];
+	mat.browptr.resize(mat.nbrows+1);
+	mat.bcolind.resize(brptrs[mat.nbrows]);
+	mat.diagind.resize(mat.nbrows);
+	mat.vals.resize(brptrs[mat.nbrows]*bs2);
 	for(index i = 0; i < mat.nbrows+1; i++)
 		mat.browptr[i] = brptrs[i];
 	for(index i = 0; i < brptrs[mat.nbrows]; i++)
@@ -221,24 +195,33 @@ BSRMatrix<scalar,index,bs>::BSRMatrix(const index n_brows,
 	}
 
 	if(mat.nbrows > 0)
-		mat.browendptr = &mat.browptr[1];
+		mat.browendptr.wrap(&mat.browptr[1], mat.nbrows);
 	std::cout << "BSRMatrix: Setup with matrix with " << mat.nbrows << " block-rows\n";
 }
 
 template <typename scalar, typename index, int bs>
 BSRMatrix<scalar,index,bs>::BSRMatrix(const index n_brows, index *const brptrs, index *const bcinds,
                                       scalar *const values, index *const diaginds)
-	: AbstractMatrix<scalar,index>(BSR), owner{false},
+	: AbstractMatrix<scalar,index>(BSR),
 	  mat{brptrs, bcinds, values, diaginds, n_brows>0 ? &brptrs[1]:nullptr, n_brows,
 	      brptrs[n_brows], brptrs[n_brows]}
 { }
 
 template <typename scalar, typename index, int bs>
 BSRMatrix<scalar,index,bs>::BSRMatrix(RawBSRMatrix<scalar,index>& rmat)
-	: AbstractMatrix<scalar,index>(BSR), owner{true},
-	  mat{rmat.browptr, rmat.bcolind, rmat.vals, rmat.diagind,
-	      rmat.nbrows>0 ? &rmat.browptr[1]:nullptr, rmat.nbrows, rmat.nnzb, rmat.nbstored}
+	: AbstractMatrix<scalar,index>(BSR)
 {
+	// Make sure to pass aligned memory!
+	mat.browptr.take_control(rmat.browptr, rmat.nbrows);
+	mat.bcolind.take_control(rmat.bcolind, rmat.nbstored);
+	mat.vals.take_control(rmat.vals, rmat.nbstored*bs*bs);
+	mat.nbrows = rmat.nbrows;
+	mat.diagind.take_control(rmat.diagind, rmat.nbrows);
+	if(rmat.nbrows > 0)
+		mat.browendptr.wrap(&rmat.browptr[1], rmat.nbrows);
+	mat.nnzb = rmat.nnzb;
+	mat.nbstored = rmat.nbstored;
+
 	rmat.nbrows=0;
 	rmat.browptr = rmat.bcolind = rmat.diagind = nullptr; rmat.vals = nullptr; rmat.browendptr = nullptr;
 	rmat.nnzb = rmat.nbstored = 0;
@@ -246,14 +229,14 @@ BSRMatrix<scalar,index,bs>::BSRMatrix(RawBSRMatrix<scalar,index>& rmat)
 
 template <typename scalar, typename index, int bs>
 BSRMatrix<scalar,index,bs>::BSRMatrix(const BSRMatrix<scalar,index,bs>& other)
-	: AbstractMatrix<scalar,index>(BSR), owner{true}
+	: AbstractMatrix<scalar,index>(BSR)
 {
 	constexpr int bs2 = bs*bs;
 	mat.nbrows = other.mat.nbrows;
-	mat.browptr = new index[mat.nbrows+1];
-	mat.bcolind = new index[other.mat.browptr[mat.nbrows]];
-	mat.diagind = new index[mat.nbrows];
-	mat.vals = new scalar[other.mat.browptr[mat.nbrows]*bs2];
+	mat.browptr.resize(mat.nbrows+1);
+	mat.bcolind.resize(other.mat.browptr[mat.nbrows]);
+	mat.diagind.resize(mat.nbrows);
+	mat.vals.resize(other.mat.browptr[mat.nbrows]*bs2);
 
 	for(index i = 0; i < mat.nbrows+1; i++)
 		mat.browptr[i] = other.mat.browptr[i];
@@ -268,7 +251,7 @@ BSRMatrix<scalar,index,bs>::BSRMatrix(const BSRMatrix<scalar,index,bs>& other)
 		mat.diagind[irow] = other.mat.diagind[irow];
 
 	if(mat.nbrows > 0)
-		mat.browendptr = mat.browptr+1;
+		mat.browendptr.wrap(&mat.browptr[1], mat.nbrows);
 
 	mat.nbstored = other.mat.nbstored;
 	mat.nnzb = other.mat.nnzb;
@@ -277,34 +260,21 @@ BSRMatrix<scalar,index,bs>::BSRMatrix(const BSRMatrix<scalar,index,bs>& other)
 template <typename scalar, typename index, int bs>
 BSRMatrix<scalar, index, bs>::~BSRMatrix()
 {
-	if(owner) {
-		delete [] mat.vals;
-		delete [] mat.bcolind;
-		delete [] mat.browptr;
-		delete [] mat.diagind;
-	}
-	mat.bcolind = mat.browptr = mat.diagind = nullptr; mat.vals = nullptr; mat.browendptr = nullptr;
 }
 
 template <typename scalar, typename index, int bs>
 void BSRMatrix<scalar,index,bs>::setStructure(const index n_brows,
-		const index *const bcinds, const index *const brptrs)
+                                              const index *const bcinds, const index *const brptrs)
 {
-	delete [] mat.vals;
-	delete [] mat.bcolind;
-	delete [] mat.browptr;
-	delete [] mat.diagind;
-
 	mat.nbrows = n_brows;
 	mat.nbstored = brptrs[n_brows];
 	mat.nnzb = mat.nbstored;
 
 	constexpr int bs2 = bs*bs;
-	mat.browptr = new index[mat.nbrows+1];
-	mat.bcolind = new index[brptrs[mat.nbrows]];
-	mat.diagind = new index[mat.nbrows];
-	mat.vals = new scalar[brptrs[mat.nbrows]*bs2];
-	owner = true;
+	mat.browptr.resize(mat.nbrows+1);
+	mat.bcolind.resize(brptrs[mat.nbrows]);
+	mat.diagind.resize(mat.nbrows);
+	mat.vals.resize(brptrs[mat.nbrows]*bs2);
 	for(index i = 0; i < mat.nbrows+1; i++)
 		mat.browptr[i] = brptrs[i];
 	for(index i = 0; i < brptrs[mat.nbrows]; i++)
@@ -321,14 +291,15 @@ void BSRMatrix<scalar,index,bs>::setStructure(const index n_brows,
 	}
 
 	if(mat.nbrows > 0)
-		mat.browendptr = mat.browptr+1;
+		mat.browendptr.wrap(&mat.browptr[1], n_brows);
 	std::cout << "BSRMatrix:  Allocated storage for matrix with " << mat.nbrows << " block-rows.\n";
 }
 
 template <typename scalar, typename index, int bs>
 void BSRMatrix<scalar,index,bs>::setAllZero()
 {
-	const index nnz = mat.browptr[mat.nbrows]*bs*bs;
+	//const index nnz = mat.browptr[mat.nbrows]*bs*bs;
+	const index nnz = mat.nnzb*bs*bs;
 #pragma omp parallel for simd default(shared)
 	for(index i = 0; i < nnz; i++)
 		mat.vals[i] = 0;
@@ -348,12 +319,13 @@ void BSRMatrix<scalar,index,bs>::setDiagZero()
 
 template <typename scalar, typename index, int bs>
 void BSRMatrix<scalar,index,bs>::submitBlock(const index starti, const index startj,
-		const scalar *const buffer, const index param1, const index param2) 
+                                             const scalar *const buffer,
+                                             const index param1, const index param2)
 {
 	bool found = false;
 	const index startr = starti/bs, startc = startj/bs;
 	constexpr int bs2 = bs*bs;
-	for(index j = mat.browptr[startr]; j < mat.browptr[startr+1]; j++) {
+	for(index j = mat.browptr[startr]; j < mat.browendptr[startr]; j++) {
 		if(mat.bcolind[j] == startc)
 		{
 			for(int k = 0; k < bs2; k++)
@@ -403,7 +375,7 @@ template <typename scalar, typename index, int bs>
 void BSRMatrix<scalar,index,bs>::scaleAll(const scalar factor)
 {
 #pragma omp parallel for default(shared)
-	for(index iz = 0; iz < mat.browptr[mat.nbrows]; iz++)
+	for(index iz = 0; iz < mat.nnzb; iz++)
 	{
 #pragma omp simd
 		for(index k = 0; k < bs*bs; k++)
@@ -415,38 +387,42 @@ template <typename scalar, typename index, int bs>
 void BSRMatrix<scalar,index,bs>::apply(const scalar *const xx,
                                        scalar *const __restrict yy) const
 {
-	bsr_matrix_apply<scalar,index,bs,RowMajor>(
-			reinterpret_cast<const CRawBSRMatrix<scalar,index>*>(&mat), xx, yy);
+	bsr_matrix_apply<scalar,index,bs,RowMajor>
+		(reinterpret_cast<const SRMatrixStorage<const scalar,const index>*>(&mat), xx, yy);
 }
 
 template <typename scalar, typename index, int bs>
 void BSRMatrix<scalar,index,bs>::gemv3(const scalar a, const scalar *const __restrict xx, 
 		const scalar b, const scalar *const yy, scalar *const zz) const
 {
-	bsr_gemv3<scalar,index,bs,RowMajor>(
-			reinterpret_cast<const CRawBSRMatrix<scalar,index>*>(&mat), 
-			a, xx, b, yy, zz);
+	bsr_gemv3<scalar,index,bs,RowMajor>
+		(reinterpret_cast<const SRMatrixStorage<const scalar,const index>*>(&mat), 
+		 a, xx, b, yy, zz);
 }
 
 template <typename scalar, typename index, int bs>
 void BSRMatrix<scalar,index,bs>::computeOrderingScaling(ReorderingScaling<scalar,index,bs>& rs) const
 {
-	const CRawBSRMatrix<scalar,index>* cmat
-		= reinterpret_cast<const CRawBSRMatrix<scalar,index>*>(&mat);
-	rs.compute(*cmat);
+	const CRawBSRMatrix<scalar,index> cmat{&mat.browptr[0], &mat.bcolind[0], &mat.vals[0],
+	                                       &mat.diagind[0], &mat.browendptr[0], mat.nbrows,
+	                                       mat.nnzb, mat.nbstored};
+	rs.compute(cmat);
 }
 
 template <typename scalar, typename index, int bs>
 void BSRMatrix<scalar,index,bs>::reorderScale(const ReorderingScaling<scalar,index,bs>& rs,
                                               const RSApplyMode mode)
 {
+	RawBSRMatrix<scalar,index> rmat{&mat.browptr[0], &mat.bcolind[0], &mat.vals[0],
+	                                &mat.diagind[0], &mat.browendptr[0], mat.nbrows,
+	                                mat.nnzb, mat.nbstored};
 	if(mode == FORWARD) {
-		rs.applyScaling(mat,mode);
-		rs.applyOrdering(mat,mode);
+		rs.applyScaling(rmat,mode);
+		rs.applyOrdering(rmat,mode);
 	}
 	else {
-		rs.applyOrdering(mat,mode);
-		rs.applyScaling(mat,mode);
+		rs.applyOrdering(rmat,mode);
+		rs.applyScaling(rmat,mode);
 	}
 }
 
@@ -454,9 +430,15 @@ template <typename scalar, typename index, int bs>
 std::array<bool,5> BSRMatrix<scalar,index,bs>::isEqual(const BSRMatrix<scalar,index,bs>& other,
                                                        const scalar tol) const
 {
-	return areEqual<scalar,index,bs>(reinterpret_cast<const CRawBSRMatrix<scalar,index>*>(&mat),
-	                                 reinterpret_cast<const CRawBSRMatrix<scalar,index>*>(&other.mat),
-	                                 tol);
+	const CRawBSRMatrix<scalar,index> cmat{&mat.browptr[0], &mat.bcolind[0], &mat.vals[0],
+	                                       &mat.diagind[0], &mat.browendptr[0], mat.nbrows,
+	                                       mat.nnzb, mat.nbstored};
+	const CRawBSRMatrix<scalar,index> othermat{&other.mat.browptr[0], &other.mat.bcolind[0],
+	                                           &other.mat.vals[0], &other.mat.diagind[0],
+	                                           &other.mat.browendptr[0], other.mat.nbrows,
+	                                           other.mat.nnzb, other.mat.nbstored};
+	
+	return areEqual<scalar,index,bs>(&cmat, &othermat, tol);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////
@@ -475,13 +457,13 @@ template <typename scalar, typename index>
 inline
 BSRMatrix<scalar,index,1>::BSRMatrix(const index n_brows,
                                      const index *const bcinds, const index *const brptrs)
-	: AbstractMatrix<scalar,index>(CSR), owner{true}
+	: AbstractMatrix<scalar,index>(CSR)
 {
 	mat.nbrows = n_brows;
-	mat.browptr = new index[mat.nbrows+1];
-	mat.bcolind = new index[brptrs[mat.nbrows]];
-	mat.diagind = new index[mat.nbrows];
-	mat.vals = new scalar[brptrs[mat.nbrows]];
+	mat.browptr.resize(mat.nbrows+1);
+	mat.bcolind.resize(brptrs[mat.nbrows]);
+	mat.diagind.resize(mat.nbrows);
+	mat.vals.resize(brptrs[mat.nbrows]);
 	for(index i = 0; i < mat.nbrows+1; i++)
 		mat.browptr[i] = brptrs[i];
 	for(index i = 0; i < brptrs[mat.nbrows]; i++)
@@ -497,7 +479,7 @@ BSRMatrix<scalar,index,1>::BSRMatrix(const index n_brows,
 	}
 
 	if(mat.nbrows > 0)
-		mat.browendptr = mat.browptr+1;
+		mat.browendptr.wrap(&mat.browptr[1], n_brows);
 	mat.nbstored = brptrs[n_brows];
 	mat.nnzb = mat.nbstored;
 	std::cout << "BSRMatrix<1>: Set up CSR matrix with " << mat.nbrows << " rows\n";
@@ -506,17 +488,34 @@ BSRMatrix<scalar,index,1>::BSRMatrix(const index n_brows,
 template <typename scalar, typename index>
 BSRMatrix<scalar,index,1>::BSRMatrix(const index nrows, index *const brptrs,
                                      index *const bcinds, scalar *const values, index *const diaginds)
-	: AbstractMatrix<scalar,index>(CSR), owner{false},
-	  mat(brptrs,bcinds,values,diaginds, nrows>0 ? &brptrs[1]:nullptr, nrows, brptrs[nrows], brptrs[nrows])
-{ }
+	: AbstractMatrix<scalar,index>(CSR)
+{
+	mat.nbrows = nrows;
+	mat.nnzb = brptrs[nrows+1];
+	mat.nbstored = mat.nnzb;
+	mat.browptr.wrap(brptrs, nrows+1);
+	mat.bcolind.wrap(bcinds, mat.nnzb);
+	mat.vals.wrap(values, mat.nnzb);
+	mat.diagind.wrap(diaginds, nrows);
+	mat.browendptr.wrap(brptrs+1, nrows);
+}
 
 template <typename scalar, typename index>
 BSRMatrix<scalar,index,1>::BSRMatrix(RawBSRMatrix<scalar,index>& rmat)
-	: AbstractMatrix<scalar,index>(CSR), owner{true},
+	: AbstractMatrix<scalar,index>(CSR),
 	  mat{rmat.browptr, rmat.bcolind, rmat.vals, rmat.diagind,
 	      rmat.nbrows>0 ? &rmat.browptr[1]:nullptr, rmat.nbrows, rmat.nnzb, rmat.nbstored}
 {
 	assert(rmat.nnzb == rmat.nbstored);
+	mat.nbrows = rmat.nbrows;
+	mat.nnzb = rmat.nnzb;
+	mat.nbstored = rmat.nbstored;
+	mat.browptr.wrap(rmat.browptr, rmat.nbrows+1);
+	mat.bcolind.wrap(rmat.bcolind, mat.nbstored);
+	mat.vals.wrap(rmat.vals, mat.nbstored);
+	mat.diagind.wrap(rmat.diagind, mat.nbrows);
+	mat.browendptr.wrap(&rmat.browptr[1], mat.nbrows);
+
 	rmat.nbrows=0;
 	rmat.browptr = rmat.bcolind = rmat.diagind = rmat.browendptr = nullptr; rmat.vals = nullptr;
 	rmat.nnzb = rmat.nbstored = 0;
@@ -524,13 +523,13 @@ BSRMatrix<scalar,index,1>::BSRMatrix(RawBSRMatrix<scalar,index>& rmat)
 
 template <typename scalar, typename index>
 BSRMatrix<scalar,index,1>::BSRMatrix(const BSRMatrix<scalar,index,1>& other)
-	: AbstractMatrix<scalar,index>(CSR), owner{true}
+	: AbstractMatrix<scalar,index>(CSR)
 {
 	mat.nbrows = other.mat.nbrows;
-	mat.browptr = new index[mat.nbrows+1];
-	mat.bcolind = new index[other.mat.browptr[mat.nbrows]];
-	mat.diagind = new index[mat.nbrows];
-	mat.vals = new scalar[other.mat.browptr[mat.nbrows]];
+	mat.browptr.resize(other.mat.browptr.size());
+	mat.bcolind.resize(other.mat.bcolind.size());
+	mat.diagind.resize(mat.nbrows);
+	mat.vals.resize(other.mat.vals.size());
 
 	for(index i = 0; i < mat.nbrows+1; i++)
 		mat.browptr[i] = other.mat.browptr[i];
@@ -542,7 +541,7 @@ BSRMatrix<scalar,index,1>::BSRMatrix(const BSRMatrix<scalar,index,1>& other)
 	for(index irow = 0; irow < mat.nbrows; irow++)
 		mat.diagind[irow] = other.mat.diagind[irow];
 	if(mat.nbrows > 0)
-		mat.browendptr = mat.browptr+1;
+		mat.browendptr.wrap(&mat.browptr[1], other.mat.browendptr.size());
 
 	mat.nnzb = other.mat.nnzb;
 	mat.nbstored = other.mat.nbstored;
@@ -551,34 +550,20 @@ BSRMatrix<scalar,index,1>::BSRMatrix(const BSRMatrix<scalar,index,1>& other)
 template <typename scalar, typename index>
 BSRMatrix<scalar,index,1>::~BSRMatrix()
 {
-	if(owner) {
-		delete [] mat.vals;
-		delete [] mat.bcolind;
-		delete [] mat.browptr;
-		delete [] mat.diagind;
-	}
-
-	mat.bcolind = mat.browptr = mat.diagind = mat.browendptr = nullptr;
-	mat.vals = nullptr;
 }
 
 template <typename scalar, typename index>
 void BSRMatrix<scalar,index,1>::setStructure(const index n_brows,
-		const index *const bcinds, const index *const brptrs)
+                                             const index *const bcinds, const index *const brptrs)
 {
-	delete [] mat.vals;
-	delete [] mat.bcolind;
-	delete [] mat.browptr;
-	delete [] mat.diagind;
-
 	mat.nbrows = n_brows;
 	mat.nnzb = brptrs[n_brows];
 	mat.nbstored = mat.nnzb;
-	mat.browptr = new index[mat.nbrows+1];
-	mat.bcolind = new index[brptrs[mat.nbrows]];
-	mat.diagind = new index[mat.nbrows];
-	mat.vals = new scalar[brptrs[mat.nbrows]];
-	owner = true;
+	mat.browptr.resize(mat.nbrows+1);
+	mat.bcolind.resize(brptrs[mat.nbrows]);
+	mat.diagind.resize(mat.nbrows);
+	mat.vals.resize(brptrs[mat.nbrows]);
+
 	for(index i = 0; i < mat.nbrows+1; i++)
 		mat.browptr[i] = brptrs[i];
 	for(index i = 0; i < brptrs[mat.nbrows]; i++)
@@ -592,9 +577,9 @@ void BSRMatrix<scalar,index,1>::setStructure(const index n_brows,
 				break;
 			}
 	}
-	
+
 	if(mat.nbrows > 0)
-		mat.browendptr = mat.browptr+1;
+		mat.browendptr.wrap(&mat.browptr[1], n_brows);
 	std::cout << "BSRMatrix<1>: Set up CSR matrix with " << mat.nbrows << " rows.\n";
 }
 
@@ -619,7 +604,7 @@ void BSRMatrix<scalar,index,1>::setDiagZero()
  */
 template <typename scalar, typename index>
 void BSRMatrix<scalar,index,1>::submitBlock(const index starti, const index startj,
-		const scalar *const buffer, const index bsi, const index bsj)
+                                            const scalar *const buffer, const index bsi, const index bsj)
 {
 	for(index irow = starti; irow < starti+bsi; irow++)
 	{
@@ -646,7 +631,7 @@ void BSRMatrix<scalar,index,1>::submitBlock(const index starti, const index star
  */
 template <typename scalar, typename index>
 void BSRMatrix<scalar,index,1>::updateDiagBlock(const index starti,
-		const scalar *const buffer, const index bs)
+                                                const scalar *const buffer, const index bs)
 {
 	// update the block, row-wise
 	for(index irow = starti; irow < starti+bs; irow++)
@@ -668,7 +653,7 @@ void BSRMatrix<scalar,index,1>::updateDiagBlock(const index starti,
  */
 template <typename scalar, typename index>
 void BSRMatrix<scalar,index,1>::updateBlock(const index starti, const index startj,
-		const scalar *const buffer, const index bsi, const index bsj)
+                                            const scalar *const buffer, const index bsi, const index bsj)
 {
 	for(index irow = starti; irow < starti+bsi; irow++)
 	{
@@ -678,7 +663,7 @@ void BSRMatrix<scalar,index,1>::updateBlock(const index starti, const index star
 		{
 			if(mat.bcolind[jj] < startj)
 				continue;
-			if(k == bsj) 
+			if(k == bsj)
 				break;
 #ifdef DEBUG
 			if(mat.bcolind[jj] != startj+k)
@@ -703,37 +688,42 @@ void BSRMatrix<scalar,index,1>::scaleAll(const scalar factor)
 
 template <typename scalar, typename index>
 void BSRMatrix<scalar,index,1>::apply(const scalar *const xx,
-                                       scalar *const __restrict yy) const
+                                      scalar *const __restrict yy) const
 {
-	csr_matrix_apply(reinterpret_cast<const CRawBSRMatrix<scalar,index>*>(&mat), xx, yy);
+	csr_matrix_apply(reinterpret_cast<const SRMatrixStorage<const scalar,const index>*>(&mat), xx, yy);
 }
 
 template <typename scalar, typename index>
-void BSRMatrix<scalar,index,1>::gemv3(const scalar a, const scalar *const __restrict__ xx, 
-		const scalar b, const scalar *const yy, scalar *const zz) const
+void BSRMatrix<scalar,index,1>::gemv3(const scalar a, const scalar *const __restrict__ xx,
+                                      const scalar b, const scalar *const yy, scalar *const zz) const
 {
-	csr_gemv3(reinterpret_cast<const CRawBSRMatrix<scalar,index>*>(&mat), a, xx, b, yy, zz);
+	csr_gemv3(reinterpret_cast<const SRMatrixStorage<const scalar,const index>*>(&mat), a, xx, b, yy, zz);
 }
 
 template <typename scalar, typename index>
 void BSRMatrix<scalar,index,1>::computeOrderingScaling(ReorderingScaling<scalar,index,1>& rs) const
 {
-	const CRawBSRMatrix<scalar,index>* cmat
-		= reinterpret_cast<const CRawBSRMatrix<scalar,index>*>(&mat);
-	rs.compute(*cmat);
+	const CRawBSRMatrix<scalar,index> cmat{&mat.browptr[0], &mat.bcolind[0], &mat.vals[0],
+	                                       &mat.diagind[0], &mat.browendptr[0], mat.nbrows,
+	                                       mat.nnzb, mat.nbstored};
+	rs.compute(cmat);
 }
 
 template <typename scalar, typename index>
 void BSRMatrix<scalar,index,1>::reorderScale(const ReorderingScaling<scalar,index,1>& rs,
                                              const RSApplyMode mode)
 {
+	RawBSRMatrix<scalar,index> rmat{&mat.browptr[0], &mat.bcolind[0], &mat.vals[0],
+	                                &mat.diagind[0], &mat.browendptr[0], mat.nbrows,
+	                                mat.nnzb, mat.nbstored};
+
 	if(mode == FORWARD) {
-		rs.applyScaling(mat,mode);
-		rs.applyOrdering(mat,mode);
+		rs.applyScaling(rmat,mode);
+		rs.applyOrdering(rmat,mode);
 	}
 	else {
-		rs.applyOrdering(mat,mode);
-		rs.applyScaling(mat,mode);
+		rs.applyOrdering(rmat,mode);
+		rs.applyScaling(rmat,mode);
 	}
 }
 
@@ -741,9 +731,15 @@ template <typename scalar, typename index>
 std::array<bool,5> BSRMatrix<scalar,index,1>::isEqual(const BSRMatrix<scalar,index,1>& other,
                                                       const scalar tol) const
 {
-	return areEqual<scalar,index,1>(reinterpret_cast<const CRawBSRMatrix<scalar,index>*>(&mat),
-	                                reinterpret_cast<const CRawBSRMatrix<scalar,index>*>(&other.mat),
-	                                tol);
+	const CRawBSRMatrix<scalar,index> cmat{&mat.browptr[0], &mat.bcolind[0], &mat.vals[0],
+	                                       &mat.diagind[0], &mat.browendptr[0], mat.nbrows,
+	                                       mat.nnzb, mat.nbstored};
+	const CRawBSRMatrix<scalar,index> othermat{&other.mat.browptr[0], &other.mat.bcolind[0],
+	                                           &other.mat.vals[0], &other.mat.diagind[0],
+	                                           &other.mat.browendptr[0], other.mat.nbrows,
+	                                           other.mat.nnzb, other.mat.nbstored};
+	
+	return areEqual<scalar,index,1>(&cmat, &othermat, tol);
 }
 
 template <typename scalar, typename index>

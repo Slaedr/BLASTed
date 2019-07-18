@@ -17,7 +17,7 @@ namespace blasted {
  * \param[in] N The length of the vectors
  */
 inline void axpby(const a_int N, const a_real p, a_real *const __restrict z, 
-	const a_real q, const a_real *const x)
+                  const a_real q, const a_real *const x)
 {
 #pragma omp parallel for simd default(shared)
 	for(a_int i = 0; i < N; i++) {
@@ -28,8 +28,8 @@ inline void axpby(const a_int N, const a_real p, a_real *const __restrict z,
 /** z <- pz + qx + ry for vectors and matrices
  */
 inline void axpbypcz(const a_int N, const a_real p, a_real *const z, 
-	const a_real q, const a_real *const x,
-	const a_real r, const a_real *const y)
+                     const a_real q, const a_real *const x,
+                     const a_real r, const a_real *const y)
 {
 #pragma omp parallel for simd default(shared)
 	for(a_int i = 0; i < N; i++) {
@@ -39,7 +39,7 @@ inline void axpbypcz(const a_int N, const a_real p, a_real *const z,
 
 /// Dot product of vectors or `double dot' product of matrices
 inline a_real dot(const a_int N, const a_real *const a, 
-	const a_real *const b)
+                  const a_real *const b)
 {
 	a_real sum = 0;
 #pragma omp parallel for simd default(shared) reduction(+:sum)

@@ -17,7 +17,7 @@ using namespace blasted;
 
 template <int bs>
 int testBSRMatMult(const std::string type, const std::string storageorder,
-		const std::string matfile, const std::string xvec, const std::string prodvec)
+                   const std::string matfile, const std::string xvec, const std::string prodvec)
 {
 	RawBSRMatrix<double,int> rm;
 	COOMatrix<double,int> coom;
@@ -34,15 +34,15 @@ int testBSRMatMult(const std::string type, const std::string storageorder,
 	AbstractLinearOperator<double,int>* testmat = nullptr;
 	if(type == "view") {
 		if(storageorder == "rowmajor")
-			testmat = new BSRMatrixView<double,int,bs,RowMajor>(rm.nbrows,
-					rm.browptr,rm.bcolind,rm.vals,rm.diagind);
+			testmat = new BSRMatrixView<double,int,bs,RowMajor>(rm.nbrows, rm.browptr,rm.bcolind,
+			                                                    rm.vals,rm.diagind);
 		else
-			testmat = new BSRMatrixView<double,int,bs,ColMajor>(rm.nbrows,
-					rm.browptr,rm.bcolind,rm.vals,rm.diagind);
+			testmat = new BSRMatrixView<double,int,bs,ColMajor>(rm.nbrows, rm.browptr,rm.bcolind,
+			                                                    rm.vals,rm.diagind);
 	}
 	else
 		testmat = new BSRMatrix<double,int,bs>(rm.nbrows,
-				rm.browptr,rm.bcolind,rm.vals,rm.diagind);
+		                                       rm.browptr,rm.bcolind,rm.vals,rm.diagind);
 	
 	testmat->apply(x.data(), y.data());
 

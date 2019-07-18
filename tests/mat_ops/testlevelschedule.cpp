@@ -32,7 +32,7 @@ int test_levelschedule(const std::string matfile)
 		}
 	}
 
-	destroyRawBSRMatrix(omat);
+	alignedDestroyRawBSRMatrix(omat);
 	return 0;
 }
 
@@ -62,7 +62,7 @@ int test_levelschedule<1>(const std::string matfile)
 		}
 	}
 
-	destroyRawBSRMatrix(omat);
+	alignedDestroyRawBSRMatrix(omat);
 	return 0;
 }
 
