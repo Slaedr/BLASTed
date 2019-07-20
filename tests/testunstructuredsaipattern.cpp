@@ -2,6 +2,7 @@
  * \brief Test SAI/ISAI pattern generation for a small unstructured grid
  */
 
+#undef NDEBUG
 #include <stdexcept>
 #include <vector>
 #include <boost/align/align.hpp>
@@ -9,6 +10,11 @@
 #include "../src/sai.hpp"
 
 using namespace blasted;
+
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic warning "-Wstrict-aliasing"
+#endif
 
 std::vector<std::vector<int>> generate_small_unstructured_adjlists()
 {
@@ -86,11 +92,11 @@ int getUpperCSRPosition(const std::vector<std::vector<int>>& meshadj, const int 
 }
 
 // Mesh corresponding to generate_small_unstructured_adjlists
-CRawBSRMatrix<double,int> generate_small_unstructured_matrix()
+RawBSRMatrix<double,int> generate_small_unstructured_matrix()
 {
 	using boost::alignment::aligned_alloc;
 
-	CRawBSRMatrix<double,int> mat;
+	RawBSRMatrix<double,int> mat;
 	mat.nbrows = 13;
 
 	int *rowptr = (int*)aligned_alloc(CACHE_LINE_LEN, 14*sizeof(int));
@@ -167,11 +173,11 @@ CRawBSRMatrix<double,int> generate_small_unstructured_matrix()
 
 void test_sai(const bool fullsai)
 {
-	CRawBSRMatrix<double,int> tmat = generate_small_unstructured_matrix();
+	RawBSRMatrix<double,int> tmat = generate_small_unstructured_matrix();
 
 	if(fullsai)
 	{
-		const LeftSAIPattern<int> sp = left_SAI_pattern(tmat);
+		const LeftSAIPattern<int> sp = left_SAI_pattern(reinterpret_cast<CRawBSRMatrix<double,int>&>(tmat));
 
 		const int testcell = 3;
 
@@ -239,7 +245,8 @@ void test_sai(const bool fullsai)
 		printf(" >> Test for SAI at interior point passed.\n"); fflush(stdout);
 	}
 	else {
-		const LeftSAIPattern<int> sp = left_incomplete_SAI_pattern(tmat);
+		const LeftSAIPattern<int> sp
+			= left_incomplete_SAI_pattern(reinterpret_cast<CRawBSRMatrix<double,int>&>(tmat));
 
 		const int testcell = 3;
 
@@ -276,7 +283,7 @@ void test_sai(const bool fullsai)
 			else if(colind == 6) {
 				assert(sp.bpos[spk] == tmat.browptr[colind]);
 				assert(sp.bpos[spk+1] == tmat.diagind[colind]);
-				/*extra*/ assert(sp.bpos[spk+1] == tmat.browptr[colind]+2);
+				assert(sp.bpos[spk+1] == tmat.browptr[colind]+2);
 				assert(sp.bpos[spk+2] == tmat.browptr[colind]+3);
 			}
 			else if(colind == 9) {
@@ -326,16 +333,16 @@ void test_sai(const bool fullsai)
 		printf(" >> Test for incomplete SAI at interior point passed.\n"); fflush(stdout);
 	}
 
-	alignedDestroyRawBSRMatrix<double,int>(reinterpret_cast<RawBSRMatrix<double,int>&>(tmat));
+	alignedDestroyRawBSRMatrix<double,int>(tmat);
 }
 
 void test_sai_boundary(const bool fullsai)
 {
-	CRawBSRMatrix<double,int> tmat = generate_small_unstructured_matrix();
+	RawBSRMatrix<double,int> tmat = generate_small_unstructured_matrix();
 
 	if(fullsai)
 	{
-		const LeftSAIPattern<int> sp = left_SAI_pattern(tmat);
+		const LeftSAIPattern<int> sp = left_SAI_pattern(reinterpret_cast<CRawBSRMatrix<double,int>&>(tmat));
 
 		const int testcell = 6;
 
@@ -394,8 +401,10 @@ void test_sai_boundary(const bool fullsai)
 
 		printf(" >> Test for SAI at boundary point passed.\n"); fflush(stdout);
 	}
-	else {
-		const LeftSAIPattern<int> sp = left_incomplete_SAI_pattern(tmat);
+	else
+	{
+		const LeftSAIPattern<int> sp
+			= left_incomplete_SAI_pattern(reinterpret_cast<CRawBSRMatrix<double,int>&>(tmat));
 
 		const int testcell = 6;
 
@@ -474,8 +483,8 @@ void test_sai_boundary(const bool fullsai)
 
 void test_sai_upper(const bool fullsai)
 {
-	CRawBSRMatrix<double,int> mat = generate_small_unstructured_matrix();
-	CRawBSRMatrix<double,int> tmat = getUpperTriangularView(mat);
+	RawBSRMatrix<double,int> mat = generate_small_unstructured_matrix();
+	CRawBSRMatrix<double,int> tmat = getUpperTriangularView(reinterpret_cast<CRawBSRMatrix<double,int>&>(mat));
 
 	if(fullsai)
 	{
@@ -545,3 +554,7 @@ int main(int argc, char *argv[])
 
 	return 0;
 }
+
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif

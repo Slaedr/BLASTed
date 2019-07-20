@@ -27,7 +27,7 @@ namespace blasted {
 
 /// For a reordering or scaling, whether to apply it directly or apply its inverse
 enum RSApplyMode {FORWARD, INVERSE};
-/// For a reordering or scaling, whether to apply it to rows or columns of a matrix 
+/// For a reordering or scaling, whether to apply it to rows or columns of a matrix
 enum RSApplyDir {ROW, COLUMN};
 
 /// Handler for computing a reordering of a matrix stored in a sparse-(block-)row format

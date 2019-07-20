@@ -89,7 +89,9 @@ public:
 	 */
 	void convertToCSR(RawBSRMatrix<scalar,index> *const cmat) const;
 
-	/// Converts to a compressed sparse block-row (BSR) matrix 
+	SRMatrixStorage<scalar,index> convertToCSR() const;
+
+	/// Converts to a compressed sparse block-row (BSR) matrix
 	/** The block size is given by the template parameter bs.
 	 * The template parameter stor specifies whether the scalars within a block are stored
 	 * row-major or column-major.
@@ -98,6 +100,9 @@ public:
 	 */
 	template<int bs, StorageOptions stor>
 	void convertToBSR(RawBSRMatrix<scalar,index> *const bmat) const;
+
+	template<int bs, StorageOptions stor>
+	SRMatrixStorage<scalar,index> convertToBSR() const;
 
 protected:
 

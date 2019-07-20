@@ -17,11 +17,23 @@ namespace blasted {
 using boost::alignment::aligned_alloc;
 using boost::alignment::aligned_free;
 
+template <typename T>
+class ArrayView;
+
+/// Moves the argument into the immutable return type (the argument is then nulled)
+template <typename T>
+inline ArrayView<typename std::add_const<T>::type> move_to_const(ArrayView<T>&& array);
+
 /// An array type that can either wrap a memory block allocated externally or manage its own
+/** There is no copy constructor because (a) it could silently make deep copies and (b) if the data
+ * type is a const, it's invalid and won't compile.
+ */
 template <typename T>
 class ArrayView
 {
 public:
+	friend ArrayView<typename std::add_const<T>::type> move_to_const<>(ArrayView<T>&& array);
+
 	/// Null constructor
 	ArrayView() : data{nullptr}, len{0}, owner{false}
 	{ }
@@ -35,6 +47,14 @@ public:
 	ArrayView(T *const arr, const int length) : data{arr}, len{length}, owner{false}
 	{ }
 
+	/// Wrap constructor with optional ownership transfer
+	ArrayView(T *arr, const int length, const bool make_owner)
+		: data{arr}, len{length}, owner{make_owner}
+	{
+		if(make_owner)
+			arr = nullptr;
+	}
+
 	/// Move
 	ArrayView(ArrayView<T>&& other) : data{other.data}, len{other.len}, owner{other.owner}
 	{
@@ -44,12 +64,12 @@ public:
 	}
 
 	/// Copy
-	ArrayView(const ArrayView<T>& other) 
-		: data{(T*)aligned_alloc(CACHE_LINE_LEN, other.len*sizeof(T))}, len{other.len}, owner{true}
-	{
-		for(int i = 0; i < len; i++)
-			data[i] = other.data[i];
-	}
+	// ArrayView(const ArrayView<T>& other) 
+	// 	: data{(T*)aligned_alloc(CACHE_LINE_LEN, other.len*sizeof(T))}, len{other.len}, owner{true}
+	// {
+	// 	for(int i = 0; i < len; i++)
+	// 		data[i] = other.data[i];
+	// }
 
 	/// Free if owner, otherwise null
 	~ArrayView()
@@ -116,6 +136,18 @@ private:
 	int len;
 	bool owner;
 };
+
+template <typename T>
+ArrayView<typename std::add_const<T>::type> move_to_const(ArrayView<T>&& array)
+{
+	ArrayView<typename std::add_const<T>::type> out(array.data, array.len, array.owner);
+
+	array.data = nullptr;
+	array.len = 0;
+	array.owner = false;
+
+	return out;
+}
 
 }
 #endif

@@ -21,6 +21,9 @@
 #include <algorithm>
 #include <fstream>
 
+/*  Due to a minor bug in Boost string library versions earlier than 1.69 and GCC version 9,
+ * the following pragams are used.
+ */
 #ifdef __GNUC__
 #pragma GCC diagnostic push
 #pragma GCC diagnostic warning "-Wmaybe-uninitialized"
@@ -299,6 +302,42 @@ void COOMatrix<scalar,index>::convertToCSR(RawBSRMatrix<scalar,index> *const cma
 }
 
 template <typename scalar, typename index>
+SRMatrixStorage<scalar,index> COOMatrix<scalar,index>::convertToCSR() const
+{
+	SRMatrixStorage<scalar,index> cmat;
+
+	cmat.nbrows = nrows;
+	cmat.browptr.resize(nrows+1);
+	cmat.bcolind.resize(nnz);
+	cmat.vals.resize(nnz);
+	cmat.diagind.resize(nrows);
+
+	for(index i = 0; i < nnz; i++) {
+		cmat.bcolind[i] = entries[i].colind;
+		cmat.vals[i] = entries[i].value;
+	}
+	for(index i = 0; i < nrows+1; i++)
+		cmat.browptr[i] = rowptr[i];
+
+	for(index i=0; i < nrows; i++)
+	{
+		for(index j = rowptr[i]; j < rowptr[i+1]; j++)
+		{
+			if(entries[j].colind == entries[j].rowind)
+				cmat.diagind[i] = j;
+		}
+	}
+
+	if(nrows > 0)
+		cmat.browendptr.wrap(&cmat.browptr[1], nrows);
+
+	cmat.nnzb = cmat.browptr[nrows];
+	cmat.nbstored = cmat.nnzb;
+
+	return cmat;
+}
+
+template <typename scalar, typename index>
 template<int bs, StorageOptions stor>
 void COOMatrix<scalar,index>::convertToBSR(RawBSRMatrix<scalar,index> *const bmat) const
 {
@@ -354,7 +393,6 @@ void COOMatrix<scalar,index>::convertToBSR(RawBSRMatrix<scalar,index> *const bma
 		}
 	}
 
-	//std::cout << "convertToBSR: Number of nonzero blocks = " << bnnz << std::endl;
 	bmat->browptr[bmat->nbrows] = bnnz;
 
 	// fix browptr for empty block rows
@@ -402,6 +440,114 @@ void COOMatrix<scalar,index>::convertToBSR(RawBSRMatrix<scalar,index> *const bma
 	bmat->nnzb = bnnz;
 }
 
+template <typename scalar, typename index>
+template<int bs, StorageOptions stor>
+SRMatrixStorage<scalar,index> COOMatrix<scalar,index>::convertToBSR() const
+{
+	static_assert(bs > 0, "Block size must be positive!");
+	static_assert(stor == RowMajor || stor == ColMajor, "Invalid storage option!");
+
+	// only for square matrices
+	assert(nrows==ncols);
+
+	// the dimension of the matrix must be a multiple of the block size
+	assert(nrows % bs == 0);
+
+	SRMatrixStorage<scalar,index> bmat;
+
+	bmat.nbrows = nrows/bs;
+	bmat.browptr.resize(bmat.nbrows+1);
+	bmat.diagind.resize(bmat.nbrows);
+	for(index i = 0; i < bmat.nbrows; i++)
+		bmat.diagind[i] = -1;
+	for(index i = 0; i < bmat.nbrows+1; i++)
+		bmat.browptr[i] = 0;
+	index bnnz = 0;                             //< Running count of number of nonzero blocks
+
+	std::vector<index> bcolidxs;
+	bcolidxs.reserve(nnz/bs);
+	std::vector<bool> tallybrows(bmat.nbrows, false);
+
+	/** If nonzeros in each row were sorted by column initially, 
+	 * blocks in each block-row would end up sorted by block-column.
+	 */
+
+	for(index irow = 0; irow < nrows; irow++)
+	{
+		const index curbrow = irow/bs;
+		for(index j = rowptr[irow]; j < rowptr[irow+1]; j++)
+		{
+			const index curcol = entries[j].colind;
+			const index curbcol = curcol/bs;
+
+			if(!tallybrows[curbrow]) {
+				bmat.browptr[curbrow] = bnnz;
+				tallybrows[curbrow] = true;
+			}
+
+			// find the current block-column of the current block-row in the array of column indices
+			auto it = std::find(bcolidxs.begin()+bmat.browptr[curbrow], bcolidxs.end(), curbcol);
+
+			// if it does not exist, add the current block col index
+			if(it == bcolidxs.end()) {
+				bcolidxs.push_back(curbcol);
+				if(curbcol == curbrow)
+					bmat.diagind[curbrow] = bnnz;
+				bnnz++;
+			}
+		}
+	}
+
+	//std::cout << "convertToBSR: Number of nonzero blocks = " << bnnz << std::endl;
+	bmat.browptr[bmat.nbrows] = bnnz;
+
+	// fix browptr for empty block rows
+	for(index i = bmat.nbrows-1; i > 0; i--)
+		if(bmat.browptr[i] == 0)
+			bmat.browptr[i] = bmat.browptr[i+1];
+
+	bmat.bcolind.resize(bnnz);
+	bmat.vals.resize(bnnz*bs*bs);
+
+	for(index i = 0; i < bnnz*bs*bs; i++)
+		bmat.vals[i] = 0;
+
+	for(index i = 0; i < bnnz; i++)
+		bmat.bcolind[i] = bcolidxs[i];
+
+	// copy non-zero values
+	for(index irow = 0; irow < nrows; irow++)
+	{
+		const index curbrow = irow/bs;
+		for(index j = rowptr[irow]; j < rowptr[irow+1]; j++)
+		{
+			const index curcol = entries[j].colind;
+			const index curbcol = curcol/bs;
+			const index offset = stor==RowMajor ?
+				(irow-curbrow*bs)*bs + curcol-curbcol*bs : (curcol-curbcol*bs)*bs + irow-curbrow*bs;
+
+			index *const bcptr = std::find(&bmat.bcolind[0] + bmat.browptr[curbrow],
+			                               &bmat.bcolind[0] + bmat.browptr[curbrow+1],
+			                               curbcol);
+
+			if(bcptr == &bmat.bcolind[0] + bmat.browptr[curbrow+1]) {
+				std::cout << "! convertToBSR: Error: Memory not found for " << irow << ", "
+					<< curcol << std::endl;
+				std::abort();
+			}
+
+			*(&bmat.vals[0] + (ptrdiff_t)(bcptr-&bmat.bcolind[0])*bs*bs + offset) = entries[j].value;
+		}
+	}
+
+	if(nrows > 0)
+		bmat.browendptr.wrap(&bmat.browptr[1], bmat.nbrows);
+	bmat.nbstored = bnnz;
+	bmat.nnzb = bnnz;
+
+	return bmat;
+}
+
 template <typename scalar, typename index, int bs>
 BSRMatrix<scalar,index,bs> constructBSRMatrixFromMatrixMarketFile(const std::string file)
 {
@@ -420,7 +566,6 @@ MatrixReadException::MatrixReadException(const std::string& msg) : std::runtime_
 { }
 
 template class COOMatrix<double,int>;
-template class COOMatrix<float,int>;
 
 template
 void COOMatrix<double,int>::convertToBSR<2,RowMajor>(RawBSRMatrix<double,int> *const bmat) const;
@@ -446,30 +591,11 @@ template
 void COOMatrix<double,int>::convertToBSR<6,ColMajor>(RawBSRMatrix<double,int> *const bmat) const;
 template
 void COOMatrix<double,int>::convertToBSR<7,ColMajor>(RawBSRMatrix<double,int> *const bmat) const;
-template
-void COOMatrix<float,int>::convertToBSR<2,RowMajor>(RawBSRMatrix<float,int> *const bmat) const;
-template
-void COOMatrix<float,int>::convertToBSR<3,RowMajor>(RawBSRMatrix<float,int> *const bmat) const;
-template
-void COOMatrix<float,int>::convertToBSR<4,RowMajor>(RawBSRMatrix<float,int> *const bmat) const;
-template
-void COOMatrix<float,int>::convertToBSR<5,RowMajor>(RawBSRMatrix<float,int> *const bmat) const;
-template
-void COOMatrix<float,int>::convertToBSR<6,RowMajor>(RawBSRMatrix<float,int> *const bmat) const;
-template
-void COOMatrix<float,int>::convertToBSR<7,RowMajor>(RawBSRMatrix<float,int> *const bmat) const;
-template
-void COOMatrix<float,int>::convertToBSR<2,ColMajor>(RawBSRMatrix<float,int> *const bmat) const;
-template
-void COOMatrix<float,int>::convertToBSR<3,ColMajor>(RawBSRMatrix<float,int> *const bmat) const;
-template
-void COOMatrix<float,int>::convertToBSR<4,ColMajor>(RawBSRMatrix<float,int> *const bmat) const;
-template
-void COOMatrix<float,int>::convertToBSR<5,ColMajor>(RawBSRMatrix<float,int> *const bmat) const;
-template
-void COOMatrix<float,int>::convertToBSR<6,ColMajor>(RawBSRMatrix<float,int> *const bmat) const;
-template
-void COOMatrix<float,int>::convertToBSR<7,ColMajor>(RawBSRMatrix<float,int> *const bmat) const;
+
+template SRMatrixStorage<double,int> COOMatrix<double,int>::convertToBSR<3,RowMajor>() const;
+
+template SRMatrixStorage<double,int> COOMatrix<double,int>::convertToBSR<3,ColMajor>() const;
+template SRMatrixStorage<double,int> COOMatrix<double,int>::convertToBSR<4,ColMajor>() const;
 
 template 
 BSRMatrix<double,int,1> constructBSRMatrixFromMatrixMarketFile(const std::string file);

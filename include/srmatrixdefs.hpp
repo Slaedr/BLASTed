@@ -12,7 +12,18 @@
 
 namespace blasted {
 
-/// Sparse-row type storage for matrix 
+template <typename scalar, typename index>
+struct SRMatrixStorage;
+
+/// Moves the argument into the immutable return type (the argument is then nulled)
+/** This is useful for 'casting' SRMatrixStorage<double,int> into
+ * SRMatrixStorage<const double, const int>, for example.
+ */
+template <typename scalar, typename index>
+SRMatrixStorage<typename std::add_const<scalar>::type, typename std::add_const<index>::type>
+move_to_const(SRMatrixStorage<scalar,index>&& smat);
+
+/// Sparse-row type storage for matrix
 template <typename scalar, typename index>
 struct SRMatrixStorage
 {
@@ -28,18 +39,22 @@ struct SRMatrixStorage
 	index nnzb;                          ///< number of non-zero blocks
 	index nbstored;               ///< total number of non-zero blocks actually stored in the array vals
 
-	/// Default constructor
-	SRMatrixStorage() : nbrows{0}, nnzb{0}, nbstored{0}
-	{ }
+	/// Default constructor - trivially sets as a zero matrix with no allocation
+	SRMatrixStorage();
 
 	/// Wrap data pointers
 	SRMatrixStorage(index *const brptrs, index *const bcinds,
-	                scalar *const values, index *const diag_inds,
-	                index *const brendptrs, const index n_brows, const index n_nzb, const index n_bstored)
-		: browptr(brptrs, n_brows+1), bcolind(bcinds, n_bstored), vals(values, n_bstored),
-		  diagind(diag_inds, n_brows), browendptr(brendptrs, n_brows),
-		  nbrows{n_brows}, nnzb{n_nzb}, nbstored{n_bstored}
-	{ }
+	                scalar *const values, index *const diag_inds, index *const brendptrs,
+	                const index n_brows, const index n_nzb, const index n_bstored);
+
+	/// Move arrays into this object
+	SRMatrixStorage(ArrayView<index>&& brptrs, ArrayView<index>&& bcinds, ArrayView<scalar>&& vals,
+	                ArrayView<index>&& diag_inds, ArrayView<index>&& brendptrs,
+	                const index n_brows, const index n_nzb, const index n_bstored);
+
+	friend
+	SRMatrixStorage<typename std::add_const<scalar>::type, typename std::add_const<index>::type>
+	move_to_const<>(SRMatrixStorage<scalar,index>&& smat);
 };
 
 /// An (almost-)immutable sparse block-row square matrix

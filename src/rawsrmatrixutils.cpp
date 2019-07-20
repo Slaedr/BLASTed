@@ -12,6 +12,54 @@ namespace blasted {
 using boost::alignment::aligned_alloc;
 using boost::alignment::aligned_free;
 
+template <typename scalar, typename index>
+SRMatrixStorage<scalar,index>::SRMatrixStorage() : nbrows{0}, nnzb{0}, nbstored{0}
+{ }
+
+template <typename scalar, typename index>
+SRMatrixStorage<scalar,index>::SRMatrixStorage(index *const brptrs, index *const bcinds,
+                                               scalar *const values, index *const diag_inds,
+                                               index *const brendptrs,
+                                               const index n_brows, const index n_nzb,
+                                               const index n_bstored)
+	: browptr(brptrs, n_brows+1), bcolind(bcinds, n_bstored), vals(values, n_bstored),
+	  diagind(diag_inds, n_brows), browendptr(brendptrs, n_brows),
+	  nbrows{n_brows}, nnzb{n_nzb}, nbstored{n_bstored}
+{ }
+
+template <typename scalar, typename index>
+SRMatrixStorage<scalar,index>::SRMatrixStorage(ArrayView<index>&& brptrs, ArrayView<index>&& bcinds,
+                                               ArrayView<scalar>&& values,
+                                               ArrayView<index>&& diaginds, ArrayView<index>&& brendptrs,
+                                               const index n_brows, const index n_nzb,
+                                               const index n_bstored)
+	: browptr(std::move(brptrs)), bcolind(std::move(bcinds)), vals(std::move(values)),
+	  diagind(std::move(diaginds)), browendptr(std::move(brendptrs)),
+	  nbrows{n_brows}, nnzb{n_nzb}, nbstored{n_bstored}
+{ }
+
+template <typename scalar, typename index>
+SRMatrixStorage<typename std::add_const<scalar>::type, typename std::add_const<index>::type>
+move_to_const(SRMatrixStorage<scalar,index>&& smat)
+{
+	SRMatrixStorage<typename std::add_const<scalar>::type, typename std::add_const<index>::type>
+		cm(std::move(move_to_const(std::move(smat.browptr))),
+		   std::move(move_to_const(std::move(smat.bcolind))),
+		   std::move(move_to_const(std::move(smat.vals))),
+		   std::move(move_to_const(std::move(smat.diagind))),
+		   std::move(move_to_const(std::move(smat.browendptr))),
+		   smat.nbrows, smat.nnzb, smat.nbstored
+		   );
+
+	smat.nbrows = smat.nnzb = smat.nbstored = 0;
+	return cm;
+}
+
+template struct SRMatrixStorage<double,int>;
+template struct SRMatrixStorage<const double,const int>;
+template SRMatrixStorage<typename std::add_const<double>::type, typename std::add_const<int>::type>
+move_to_const(SRMatrixStorage<double,int>&& smat);
+
 template <typename scalar, typename index, int bs>
 RawBSRMatrix<scalar,index> copyRawBSRMatrix(const CRawBSRMatrix<scalar,index>& mat)
 {

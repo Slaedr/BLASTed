@@ -114,13 +114,16 @@ int testConvertCOOToBSR(const std::string matfile,
 	for(int i = 0; i < snrows; i++)
 		sortedfin >> sdiaginds[i];
 
-	RawBSRMatrix<double,int> bm;
-	cmat.convertToBSR<bs,stor>(&bm);
+	//RawBSRMatrix<double,int> bm;
+	//cmat.convertToBSR<bs,stor>(&bm);
+	const SRMatrixStorage<double,int> bm = cmat.convertToBSR<bs,stor>();
 
 	// test
-	
+
 	assert(snrows == bm.nbrows);
 	assert(snnz == bm.browptr[bm.nbrows]);
+	assert(snnz == bm.nnzb);
+	assert(snnz == bm.nbstored);
 
 	for(int i = 0; i < snnz; i++) {
 		assert(scolinds[i]-1 == bm.bcolind[i]);
@@ -136,10 +139,11 @@ int testConvertCOOToBSR(const std::string matfile,
 	matfin.close();
 	sortedfin.close();
 
-	delete [] bm.vals;
-	delete [] bm.browptr;
-	delete [] bm.bcolind;
-	delete [] bm.diagind;
+	printf(" COO conversion to BSR SRMatrixStorage passed.\n");
+	// delete [] bm.vals;
+	// delete [] bm.browptr;
+	// delete [] bm.bcolind;
+	// delete [] bm.diagind;
 	return 0;
 }
 
@@ -188,11 +192,12 @@ int testConvertCOOToCSR(const std::string matfile, const std::string sortedfile)
 	for(int i = 0; i < snrows; i++)
 		sortedfin >> sdiaginds[i];
 
-	RawBSRMatrix<double,int> bm;
-	cmat.convertToCSR(&bm);
+	// RawBSRMatrix<double,int> bm;
+	// cmat.convertToCSR(&bm);
+	const SRMatrixStorage<const double, const int> bm = move_to_const(cmat.convertToCSR());
 
 	// test
-	
+
 	assert(snrows == bm.nbrows);
 	assert(snnz == bm.browptr[bm.nbrows]);
 
@@ -210,10 +215,12 @@ int testConvertCOOToCSR(const std::string matfile, const std::string sortedfile)
 	matfin.close();
 	sortedfin.close();
 
-	delete [] bm.vals;
-	delete [] bm.browptr;
-	delete [] bm.bcolind;
-	delete [] bm.diagind;
+	printf(" COO conversion to CSR SRMatrixStorage passed.\n");
+
+	// delete [] bm.vals;
+	// delete [] bm.browptr;
+	// delete [] bm.bcolind;
+	// delete [] bm.diagind;
 	return 0;
 }
 
