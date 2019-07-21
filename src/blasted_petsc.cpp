@@ -204,32 +204,6 @@ PetscErrorCode createNewPreconditioner(PC pc)
 	settings.relax = false;
 	precop = factory->create_preconditioner(ndim, settings);
 
-	ctx->bprec = reinterpret_cast<void*>(precop);
-	return ierr;
-}
-
-/// Gives a new matrix to the preconditioner and also re-computes it
-PetscErrorCode updatePreconditioner(PC pc)
-{
-	PetscErrorCode ierr = 0;
-	PetscInt firstrow, lastrow, localrows, localcols, globalrows, globalcols;
-	
-	// get control structure
-	Blasted_data* ctx;
-	ierr = PCShellGetContext(pc, (void**)&ctx); CHKERRQ(ierr);
-	BlastedPreconditioner* precop = reinterpret_cast<BlastedPreconditioner*>(ctx->bprec);
-
-	/* get the local preconditioning matrix
-	 * we operate on the diagonal matrix block corresponding to this process
-	 */
-	Mat A;
-	ierr = PCGetOperators(pc, NULL, &A); CHKERRQ(ierr);
-	ierr = MatGetOwnershipRange(A, &firstrow, &lastrow); CHKERRQ(ierr);	
-	ierr = MatGetLocalSize(A, &localrows, &localcols); CHKERRQ(ierr);
-	ierr = MatGetSize(A, &globalrows, &globalcols); CHKERRQ(ierr);
-	assert(localrows == localcols);
-	assert(globalrows == globalcols);
-
 	// get access to local matrix entries
 	const Mat_SeqAIJ *const Adiag = (const Mat_SeqAIJ*)A->data;
 	const Mat_SeqBAIJ *const Abdiag = (const Mat_SeqBAIJ*)A->data;
@@ -244,6 +218,17 @@ PetscErrorCode updatePreconditioner(PC pc)
 	else {
 		precop->wrap(localrows/ctx->bs, Abdiag->i, Abdiag->j, Abdiag->a, Abdiag->diag);
 	}
+
+	ctx->bprec = reinterpret_cast<void*>(precop);
+	return ierr;
+}
+
+/// Re-computes the preconditioner using current values of the associated matrix
+PetscErrorCode updatePreconditioner(PC pc)
+{
+	Blasted_data* ctx;
+	int ierr = PCShellGetContext(pc, (void**)&ctx); CHKERRQ(ierr);
+	BlastedPreconditioner* precop = reinterpret_cast<BlastedPreconditioner*>(ctx->bprec);
 
 	precop->compute();
 
