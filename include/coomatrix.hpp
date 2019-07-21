@@ -118,6 +118,11 @@ protected:
 template <typename scalar, typename index, int bs>
 BSRMatrix<scalar,index,bs> constructBSRMatrixFromMatrixMarketFile(const std::string file);
 
+/// Build a BSR or CSR matrix from a Matrix Market file in COO format
+template <typename scalar, typename index, int bs>
+SRMatrixStorage<scalar,index> getSRMatrixFromCOO(const COOMatrix<scalar,index>& coo_mat,
+                                                 const std::string block_storage_order);
+
 /// Exception thrown if the matrix (or vector) file is incorrect or unsupported
 class MatrixReadException : public std::runtime_error
 {

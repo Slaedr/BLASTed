@@ -562,6 +562,19 @@ BSRMatrix<scalar,index,bs> constructBSRMatrixFromMatrixMarketFile(const std::str
 	return bmat;
 }
 
+template <typename scalar, typename index, int bs>
+SRMatrixStorage<scalar,index> getSRMatrixFromCOO(const COOMatrix<scalar,index>& coom,
+                                                 const std::string storageorder)
+{
+	if (bs == 1)
+		return coom.convertToCSR();
+	else
+		if(storageorder == "rowmajor")
+			return coom.template convertToBSR<bs,RowMajor>();
+		else
+			return coom.template convertToBSR<bs,ColMajor>();
+}
+
 MatrixReadException::MatrixReadException(const std::string& msg) : std::runtime_error(msg)
 { }
 
@@ -601,6 +614,13 @@ template
 BSRMatrix<double,int,1> constructBSRMatrixFromMatrixMarketFile(const std::string file);
 template 
 BSRMatrix<double,int,7> constructBSRMatrixFromMatrixMarketFile(const std::string file);
+
+template SRMatrixStorage<double,int>
+getSRMatrixFromCOO<double,int,1>(const COOMatrix<double,int>& coom,
+                                 const std::string storageorder);
+template SRMatrixStorage<double,int>
+getSRMatrixFromCOO<double,int,4>(const COOMatrix<double,int>& coom,
+                                 const std::string storageorder);
 
 #ifdef BUILD_BLOCK_SIZE
 template 

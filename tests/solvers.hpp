@@ -7,7 +7,8 @@
 #ifndef BLASTED_SOLVERS_H
 #define BLASTED_SOLVERS_H
 
-#include <solverops_base.hpp>
+#include "solverops_base.hpp"
+#include "blockmatrices.hpp"
 
 namespace blasted {
 
@@ -46,11 +47,11 @@ public:
 class IterativeSolver : public IterativeSolverBase
 {
 protected:
-	const MatrixView<a_real,a_int>& A;            ///< The LHS matrix context
+	const SRMatrixView<a_real,a_int>& A;            ///< The LHS matrix context
 	const Preconditioner<a_real,a_int>& prec;     ///< Preconditioner context
 
 public:
-	IterativeSolver(const MatrixView<a_real,a_int>& mat, const Preconditioner<a_real,a_int>& precond);
+	IterativeSolver(const SRMatrixView<a_real,a_int>& mat, const Preconditioner<a_real,a_int>& precond);
 
 	/// Solves the linear system A du = -r
 	/** Note that usually, the two arguments cannot alias each other.
@@ -74,7 +75,7 @@ class RichardsonSolver : public IterativeSolver
 	using IterativeSolver::prec;
 
 public:
-	RichardsonSolver(const MatrixView<a_real,a_int>& mat, const Preconditioner<a_real,a_int>& precond);
+	RichardsonSolver(const SRMatrixView<a_real,a_int>& mat, const Preconditioner<a_real,a_int>& precond);
 
 	/** \param[in] res The right hand side vector
 	 * \param[in] du The solution vector which is assumed to contain an initial solution
@@ -97,7 +98,7 @@ class BiCGSTAB : public IterativeSolver
 	using IterativeSolver::prec;
 
 public:
-	BiCGSTAB(const MatrixView<a_real,a_int>& mat, const Preconditioner<a_real,a_int>& precond);
+	BiCGSTAB(const SRMatrixView<a_real,a_int>& mat, const Preconditioner<a_real,a_int>& precond);
 
 	int solve(const a_real *const res, a_real *const __restrict du) const;
 };

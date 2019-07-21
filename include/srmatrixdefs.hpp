@@ -52,6 +52,9 @@ struct SRMatrixStorage
 	                ArrayView<index>&& diag_inds, ArrayView<index>&& brendptrs,
 	                const index n_brows, const index n_nzb, const index n_bstored);
 
+	/// Move constructor from another SRMatrixStorage
+	SRMatrixStorage(SRMatrixStorage<scalar,index>&& other);
+
 	friend
 	SRMatrixStorage<typename std::add_const<scalar>::type, typename std::add_const<index>::type>
 	move_to_const<>(SRMatrixStorage<scalar,index>&& smat);

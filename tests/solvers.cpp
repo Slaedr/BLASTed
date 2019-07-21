@@ -67,12 +67,12 @@ void IterativeSolverBase::getRunTimes(double& wall_time, double& cpu_time) const
 	wall_time = walltime; cpu_time = cputime;
 }
 
-IterativeSolver::IterativeSolver(const MatrixView<a_real,a_int>& mat,
+IterativeSolver::IterativeSolver(const SRMatrixView<a_real,a_int>& mat,
                                  const Preconditioner<a_real,a_int>& precond)
 	: A(mat), prec(precond)
 { }
 
-RichardsonSolver::RichardsonSolver(const MatrixView<a_real,a_int>& mat,
+RichardsonSolver::RichardsonSolver(const SRMatrixView<a_real,a_int>& mat,
                                    const Preconditioner<a_real,a_int>& precond)
 	: IterativeSolver(mat, precond)
 { }
@@ -117,7 +117,7 @@ int RichardsonSolver::solve(const a_real *const res, a_real *const __restrict du
 	return step;
 }
 
-BiCGSTAB::BiCGSTAB(const MatrixView<a_real,a_int>& mat, const Preconditioner<a_real,a_int>& precond)
+BiCGSTAB::BiCGSTAB(const SRMatrixView<a_real,a_int>& mat, const Preconditioner<a_real,a_int>& precond)
 	: IterativeSolver(mat, precond)
 { }
 
@@ -215,8 +215,8 @@ int BiCGSTAB::solve(const a_real *const res, a_real *const __restrict du) const
 	std::cout << "  Final rel res norm = " << resnorm/bnorm << std::endl;
 	
 	gettimeofday(&time2, NULL);
-	double finalwtime = (double)time2.tv_sec + (double)time2.tv_usec * 1.0e-6;
-	double finalctime = (double)clock() / (double)CLOCKS_PER_SEC;
+	const double finalwtime = (double)time2.tv_sec + (double)time2.tv_usec * 1.0e-6;
+	const double finalctime = (double)clock() / (double)CLOCKS_PER_SEC;
 	walltime += (finalwtime-initialwtime); cputime += (finalctime-initialctime);
 	return step+1;
 }

@@ -34,33 +34,25 @@ int testSolve(const std::string solvertype, const std::string precontype,
 		<< ", tolerance = " << tol << " maxiter = " << maxiter
 		<< ",\n  Num build sweeps = " << nbuildswps << ", num apply sweeps = " << napplyswps << '\n';
 
-	RawBSRMatrix<double,int> rm;
 	COOMatrix<double,int> coom;
 	coom.readMatrixMarket(matfile);
 
-	if (bs == 1)
-		coom.convertToCSR(&rm);
-	else
-		if(storageorder == "rowmajor")
-			coom.convertToBSR<bs,RowMajor>(&rm);
-		else
-			coom.convertToBSR<bs,ColMajor>(&rm);
-
 	const std::vector<double> ans = readDenseMatrixMarket<double>(xfile);
 	const std::vector<double> b = readDenseMatrixMarket<double>(bfile);
-	std::vector<double> x(rm.nbrows*bs,0.0);
 
-	MatrixView<double,int>* mat = nullptr;
+	SRMatrixView<double,int>* mat = nullptr;
 	if (bs==1)
-		mat = new CSRMatrixView<double,int>(rm.nbrows,
-				rm.browptr,rm.bcolind,rm.vals,rm.diagind);
+		mat = new CSRMatrixView<double,int>(move_to_const<double,int>
+		                                    (getSRMatrixFromCOO<double,int,bs>(coom, storageorder)));
 	else
 		if(storageorder == "rowmajor")
-			mat = new BSRMatrixView<double,int,bs,RowMajor>(rm.nbrows, rm.browptr,rm.bcolind,
-			                                                rm.vals,rm.diagind);
+			mat = new BSRMatrixView<double,int,bs,RowMajor>
+				(move_to_const<double,int>(getSRMatrixFromCOO<double,int,bs>(coom, storageorder)));
 		else
-			mat = new BSRMatrixView<double,int,bs,ColMajor>(rm.nbrows, rm.browptr,rm.bcolind,
-			                                                rm.vals,rm.diagind);
+			mat = new BSRMatrixView<double,int,bs,ColMajor>
+				(move_to_const<double,int>(getSRMatrixFromCOO<double,int,bs>(coom, storageorder)));
+
+	std::vector<double> x(mat->dim(),0.0);
 
 	// construct preconditioner context
 
@@ -81,9 +73,10 @@ int testSolve(const std::string solvertype, const std::string precontype,
 		params.blockstorage = ColMajor;
 	params.relax = false;
 
-	prec = fctry.create_preconditioner(rm.nbrows*bs, params);
+	prec = fctry.create_preconditioner(mat->dim(), params);
 
-	prec->wrap(rm.nbrows, rm.browptr, rm.bcolind, rm.vals, rm.diagind);
+	prec->wrap(mat->getSRStorage().nbrows, &mat->getSRStorage().browptr[0], &mat->getSRStorage().bcolind[0],
+	           &mat->getSRStorage().vals[0], &mat->getSRStorage().diagind[0]);
 	prec->compute();
 
 	IterativeSolver* solver = nullptr;
@@ -112,7 +105,6 @@ int testSolve(const std::string solvertype, const std::string precontype,
 	delete solver;
 	delete prec;
 	delete mat;
-	alignedDestroyRawBSRMatrix(rm);
 
 	return 0;
 }

@@ -56,16 +56,16 @@ int testSolve(const std::string solvertype,
 		<< ", tolerance = " << tol << " maxiter = " << maxiter
 		<< ",\n  Num build sweeps = " << nbuildswps << ", num apply sweeps = " << napplyswps << '\n';
 
-	RawBSRMatrix<double,int> rm;
 	COOMatrix<double,int> coom;
 	coom.readMatrixMarket(matfile);
-	coom.convertToCSR(&rm);
 
 	const std::vector<double> ans = readDenseMatrixMarket<double>(xfile);
 	const std::vector<double> b = readDenseMatrixMarket<double>(bfile);
-	std::vector<double> x(rm.nbrows,0.0);
 
-	const CSRMatrixView<double,int> mat(rm.nbrows, rm.browptr,rm.bcolind,rm.vals,rm.diagind);
+	const CSRMatrixView<double,int> mat(move_to_const<double,int>
+	                                    (getSRMatrixFromCOO<double,int,1>(coom, storageorder)));
+
+	std::vector<double> x(mat.dim(),0.0);
 
 	// reference solve
 	SRPreconditioner<double,int>* prec = nullptr;
@@ -74,7 +74,8 @@ int testSolve(const std::string solvertype,
 	                                                  getFactInitFromString(factinittype),
 	                                                  getApplyInitFromString(applyinittype),
 	                                                  false, false);
-	prec->wrap(rm.nbrows, rm.browptr, rm.bcolind, rm.vals, rm.diagind);
+	prec->wrap(mat.getSRStorage().nbrows, &mat.getSRStorage().browptr[0], &mat.getSRStorage().bcolind[0],
+	           &mat.getSRStorage().vals[0], &mat.getSRStorage().diagind[0]);
 	prec->compute();
 
 	IterativeSolver* solver = nullptr;
@@ -104,16 +105,17 @@ int testSolve(const std::string solvertype,
 	// solve with reordered preconditioning
 	std::cout << " Prec = ReorderedAsyncILU0" << std::endl;
 
-	x.assign(rm.nbrows, 0.0);
+	x.assign(mat.dim(), 0.0);
 
-	TrivialReorderingScaling rs = createTrivialColReordering(rm.nbrows);
+	TrivialReorderingScaling rs = createTrivialColReordering(mat.dim());
 	prec = new ReorderedAsyncILU0_SRPreconditioner<double,int>(&rs, nbuildswps, napplyswps,
 	                                                           threadchunksize,
 	                                                           getFactInitFromString(factinittype),
 	                                                           getApplyInitFromString(applyinittype),
 	                                                           false, false);
 
-	prec->wrap(rm.nbrows, rm.browptr, rm.bcolind, rm.vals, rm.diagind);
+	prec->wrap(mat.getSRStorage().nbrows, &mat.getSRStorage().browptr[0], &mat.getSRStorage().bcolind[0],
+	           &mat.getSRStorage().vals[0], &mat.getSRStorage().diagind[0]);
 	prec->compute();
 
 	if(solvertype == "richardson")
@@ -139,7 +141,6 @@ int testSolve(const std::string solvertype,
 
 	delete solver;
 	delete prec;
-	alignedDestroyRawBSRMatrix(rm);
 
 	return 0;
 }

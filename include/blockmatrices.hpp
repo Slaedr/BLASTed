@@ -38,26 +38,16 @@ public:
 	 * \param[in] dinds Array of pointers to diagonal blocks
 	 * \param[in] storagetype The type of sparse representation of the matrix data
 	 */
-	SRMatrixView(const index n_brows, const index *const brptrs, const index *const bcinds, 
+	SRMatrixView(const index n_brows, const index *const brptrs, const index *const bcinds,
 	             const scalar *const values, const index *const diaginds, const StorageType storagetype);
 
+	/// Construct from a SRMatrixStorage
+	SRMatrixView(SRMatrixStorage<const scalar,const index>&& srmat, const StorageType storagetype);
+
 	/// Allows immutable access to the underlying matrix storage
-	const CRawBSRMatrix<scalar,index> *getRawSRMatrix() const {
-		return &mat;
+	const SRMatrixStorage<const scalar,const index>& getSRStorage() const {
+		return mat;
 	}
-	
-	/// Just wraps a compressed (block-)sparse-row matrix described by 4 arrays
-	/** \param[in] n_brows Number of (block-)rows
-	 * \param[in] brptrs Array of (block-)row pointers
-	 * \param[in] bcinds Array of (block-)column indices
-	 * \param[in] values Non-zero values
-	 * \param[in] dinds Array of pointers to diagonal entries/blocks
-	 *
-	 * Does not take ownership of the 4 arrays; they are not cleaned up in the destructor either.
-	 */
-	// virtual void wrap(const index n_brows, const index *const brptrs,
-	//                   const index *const bcinds, const scalar *const values,
-	//                   const index *const dinds) = 0;
 
 protected:
 
@@ -91,6 +81,9 @@ public:
 	 */
 	BSRMatrixView(const index n_brows, const index *const brptrs,
 	              const index *const bcinds, const scalar *const values, const index *const dinds);
+
+	/// Construct from a SRMatrixStorage
+	BSRMatrixView(SRMatrixStorage<const scalar,const index>&& srmat);
 
 	/// Cleans up temporary data needed for preconditioning operations
 	virtual ~BSRMatrixView();
@@ -136,6 +129,9 @@ public:
 	 */
 	CSRMatrixView(const index nrows, const index *const rptrs,
 	              const index *const cinds, const scalar *const values, const index *const dinds);
+
+	/// Construct from a SRMatrixStorage
+	CSRMatrixView(SRMatrixStorage<const scalar,const index>&& srmat);
 
 	/// De-allocates temporary storage only, not the matrix storage itself
 	virtual ~CSRMatrixView();

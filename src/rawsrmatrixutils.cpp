@@ -39,6 +39,14 @@ SRMatrixStorage<scalar,index>::SRMatrixStorage(ArrayView<index>&& brptrs, ArrayV
 { }
 
 template <typename scalar, typename index>
+SRMatrixStorage<scalar,index>::SRMatrixStorage(SRMatrixStorage<scalar,index>&& other)
+	: browptr(std::move(other.browptr)), bcolind(std::move(other.bcolind)), vals(std::move(other.vals)),
+	  diagind(std::move(other.diagind)), browendptr(std::move(other.browendptr)),
+	  nbrows{other.nbrows}, nnzb{other.nnzb}, nbstored{other.nbstored}
+{
+}
+
+template <typename scalar, typename index>
 SRMatrixStorage<typename std::add_const<scalar>::type, typename std::add_const<index>::type>
 move_to_const(SRMatrixStorage<scalar,index>&& smat)
 {

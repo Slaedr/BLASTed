@@ -90,6 +90,12 @@ SRMatrixView<scalar,index>::SRMatrixView(const index n_brows,
 	      brptrs[n_brows]}
 { }
 
+template<typename scalar, typename index>
+SRMatrixView<scalar,index>::SRMatrixView(SRMatrixStorage<const scalar,const index>&& srmat,
+                                         const StorageType storagetype)
+	: MatrixView<scalar,index>(storagetype), mat(std::move(srmat))
+{ }
+
 template <typename scalar, typename index, int bs, StorageOptions stor>
 BSRMatrixView<scalar,index,bs,stor>::BSRMatrixView(const index n_brows, const index *const brptrs,
                                                    const index *const bcinds,
@@ -98,21 +104,10 @@ BSRMatrixView<scalar,index,bs,stor>::BSRMatrixView(const index n_brows, const in
 	: SRMatrixView<scalar,index>(n_brows, brptrs, bcinds, values, diaginds, VIEWBSR)
 { }
 
-// template <typename scalar, typename index, int bs, StorageOptions stor>
-// void BSRMatrixView<scalar,index,bs,stor>::wrap(const index n_brows, const index *const brptrs,
-//                                                const index *const bcinds, const scalar *const values,
-//                                                const index *const dinds)
-// {
-// 	mat.nbrows = n_brows;
-// 	mat.browptr.wrap(brptrs, n_brows+1);
-// 	mat.bcolind.wrap(bcinds, brptrs[n_brows]);
-// 	mat.vals.wrap(values, brptrs[n_brows]*bs*bs);
-// 	mat.diagind.wrap(dinds, n_brows);
-// 	if(n_brows > 0)
-// 		mat.browendptr.wrap(&mat.browptr[1], n_brows);
-// 	mat.nbstored = mat.browptr[n_brows];
-// 	mat.nnzb = mat.nbstored;
-// }
+template <typename scalar, typename index, int bs, StorageOptions stopt>
+BSRMatrixView<scalar,index,bs,stopt>::BSRMatrixView(SRMatrixStorage<const scalar,const index>&& srmat)
+	: SRMatrixView<scalar,index>(std::move(srmat), VIEWBSR)
+{ }
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
 BSRMatrixView<scalar, index, bs,stor>::~BSRMatrixView()
@@ -139,6 +134,11 @@ CSRMatrixView<scalar,index>::CSRMatrixView(const index nrows, const index *const
                                            const index *const bcinds, const scalar *const values,
                                            const index *const diaginds)
 	: SRMatrixView<scalar,index>(nrows, brptrs, bcinds, values, diaginds, VIEWCSR)
+{ }
+
+template<typename scalar, typename index>
+CSRMatrixView<scalar,index>::CSRMatrixView(SRMatrixStorage<const scalar,const index>&& srmat)
+	: SRMatrixView<scalar,index>(std::move(srmat), VIEWCSR)
 { }
 
 template <typename scalar, typename index>
