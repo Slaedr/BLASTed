@@ -123,11 +123,13 @@ public:
 
 	/// Const accessor
 	const T& operator[](const int i) const {
+		assert(i < len);
 		return data[i];
 	}
 
 	/// Modifiable accessor
 	T& operator[](const int i) {
+		assert(i < len);
 		return data[i];
 	}
 

@@ -19,39 +19,33 @@ template <int bs>
 int testBSRMatMult(const std::string type, const std::string storageorder,
                    const std::string matfile, const std::string xvec, const std::string prodvec)
 {
-	RawBSRMatrix<double,int> rm;
 	COOMatrix<double,int> coom;
 	coom.readMatrixMarket(matfile);
-	if(storageorder == "rowmajor")
-		coom.convertToBSR<bs,RowMajor>(&rm);
-	else
-		coom.convertToBSR<bs,ColMajor>(&rm);
 
 	const std::vector<double> x = readDenseMatrixMarket<double>(xvec);
 	const std::vector<double> ans = readDenseMatrixMarket<double>(prodvec);
-	std::vector<double> y(rm.nbrows*bs);
 
 	AbstractLinearOperator<double,int>* testmat = nullptr;
 	if(type == "view") {
 		if(storageorder == "rowmajor")
-			testmat = new BSRMatrixView<double,int,bs,RowMajor>(rm.nbrows, rm.browptr,rm.bcolind,
-			                                                    rm.vals,rm.diagind);
+			testmat = new BSRMatrixView<double,int,bs,RowMajor>
+				(move_to_const<double,int>(getSRMatrixFromCOO<double,int,bs>(coom, storageorder)));
 		else
-			testmat = new BSRMatrixView<double,int,bs,ColMajor>(rm.nbrows, rm.browptr,rm.bcolind,
-			                                                    rm.vals,rm.diagind);
+			testmat = new BSRMatrixView<double,int,bs,ColMajor>
+				(move_to_const<double,int>(getSRMatrixFromCOO<double,int,bs>(coom, storageorder)));
 	}
 	else
-		testmat = new BSRMatrix<double,int,bs>(rm.nbrows,
-		                                       rm.browptr,rm.bcolind,rm.vals,rm.diagind);
+		testmat = new BSRMatrix<double,int,bs>(getSRMatrixFromCOO<double,int,bs>(coom, "rowmajor"));
 	
+	std::vector<double> y(testmat->dim());
+
 	testmat->apply(x.data(), y.data());
 
-	for(int i = 0; i < rm.nbrows*bs; i++) {
+	for(int i = 0; i < testmat->dim(); i++) {
 		assert(std::fabs(y[i]-ans[i]) < 10*DBL_EPSILON);
 	}
 
 	delete testmat;
-	destroyRawBSRMatrix<double,int>(rm);
 
 	return 0;
 }

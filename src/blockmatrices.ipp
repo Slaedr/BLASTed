@@ -258,6 +258,11 @@ BSRMatrix<scalar,index,bs>::BSRMatrix(const BSRMatrix<scalar,index,bs>& other)
 }
 
 template <typename scalar, typename index, int bs>
+BSRMatrix<scalar,index,bs>::BSRMatrix(SRMatrixStorage<scalar,index>&& srmat)
+	: AbstractMatrix<scalar,index>(BSR), mat(std::move(srmat))
+{ }
+
+template <typename scalar, typename index, int bs>
 BSRMatrix<scalar, index, bs>::~BSRMatrix()
 {
 }
@@ -546,6 +551,11 @@ BSRMatrix<scalar,index,1>::BSRMatrix(const BSRMatrix<scalar,index,1>& other)
 	mat.nnzb = other.mat.nnzb;
 	mat.nbstored = other.mat.nbstored;
 }
+
+template <typename scalar, typename index>
+BSRMatrix<scalar,index,1>::BSRMatrix(SRMatrixStorage<scalar,index>&& srmat)
+	: AbstractMatrix<scalar,index>(CSR), mat(std::move(srmat))
+{ }
 
 template <typename scalar, typename index>
 BSRMatrix<scalar,index,1>::~BSRMatrix()

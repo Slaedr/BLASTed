@@ -61,7 +61,7 @@ BlastedSolverType SRFactory<scalar,index>::solverTypeFromString(const std::strin
 template <typename scalar, typename index>
 template <int bs, StorageOptions stor>
 SRPreconditioner<scalar,index>*
-SRFactory<scalar,index>::create_srpreconditioner_of_type(const int ndim,
+SRFactory<scalar,index>::create_srpreconditioner_of_type(SRMatrixStorage<const scalar, const index>& mat,
                                                          const AsyncSolverSettings& opts) const
 {
 	if(opts.prectype == BLASTED_JACOBI) {
@@ -93,20 +93,25 @@ SRFactory<scalar,index>::create_srpreconditioner_of_type(const int ndim,
 		                                                       opts.compute_factorization_res);
 	}
 	else if(opts.prectype == BLASTED_NO_PREC) {
-		return new NoPreconditioner<scalar,index>(ndim);
+		return new NoPreconditioner<scalar,index>(mat.nbrows*bs);
 	}
 	else
 		throw std::invalid_argument("Invalid preconditioner!");
 }
 
+/** Right now, this factory fails if mat actually owns its storage because it gets destroyed at the
+ * end of this function. But, eventually it'll be moved to the preconditioners' SRMatrixStorages and
+ * it should be fine.
+ */
 template <typename scalar, typename index>
 SRPreconditioner<scalar,index>*
-SRFactory<scalar,index>::create_preconditioner(const index ndim, const SolverSettings& set) const
+SRFactory<scalar,index>::create_preconditioner(SRMatrixStorage<const scalar, const index>&& mat,
+                                               const SolverSettings& set) const
 {
 	SRPreconditioner<scalar,index> *p = nullptr;
 
-	const AsyncSolverSettings& opts = reinterpret_cast<const AsyncSolverSettings&>(set);
-		
+	const AsyncSolverSettings& opts = dynamic_cast<const AsyncSolverSettings&>(set);
+
 	if(opts.bs == 1) {
 		if(opts.prectype == BLASTED_JACOBI) {
 			p = new JacobiSRPreconditioner<scalar,index>();
@@ -115,14 +120,14 @@ SRFactory<scalar,index>::create_preconditioner(const index ndim, const SolverSet
 			p = new ChaoticRelaxation<scalar,index>(opts.napplysweeps, opts.thread_chunk_size);
 		}
 		else if(opts.prectype == BLASTED_CSC_BGS) {
-			return new CSC_BGS_Preconditioner<scalar,index>(opts.napplysweeps, opts.thread_chunk_size);
+			p = new CSC_BGS_Preconditioner<scalar,index>(opts.napplysweeps, opts.thread_chunk_size);
 		}
 		else if(opts.prectype == BLASTED_SGS) {
 			p = new AsyncSGS_SRPreconditioner<scalar,index>
 				(opts.napplysweeps, opts.apply_inittype, opts.thread_chunk_size);
 		}
 		else if(opts.prectype == BLASTED_LEVEL_SGS) {
-			return new Level_SGS<scalar,index>();
+			p = new Level_SGS<scalar,index>();
 		}
 		else if(opts.prectype == BLASTED_ILU0) {
 			p = new AsyncILU0_SRPreconditioner<scalar,index>
@@ -131,18 +136,18 @@ SRFactory<scalar,index>::create_preconditioner(const index ndim, const SolverSet
 				 opts.fact_inittype, opts.apply_inittype, true,true);
 		}
 		else if(opts.prectype == BLASTED_SAPILU0) {
-			return new AsyncILU0_SRPreconditioner<scalar,index>
+			p = new AsyncILU0_SRPreconditioner<scalar,index>
 				(opts.nbuildsweeps, opts.napplysweeps,
 				 opts.thread_chunk_size,
 				 opts.fact_inittype, opts.apply_inittype, true,false);
 		}
 		else if(opts.prectype == BLASTED_ASYNC_LEVEL_ILU0) {
-			return new Async_Level_ILU0<scalar,index>(opts.nbuildsweeps, opts.thread_chunk_size,
-			                                          opts.fact_inittype, true,
-			                                          opts.compute_factorization_res);
+			p = new Async_Level_ILU0<scalar,index>(opts.nbuildsweeps, opts.thread_chunk_size,
+			                                       opts.fact_inittype, true,
+			                                       opts.compute_factorization_res);
 		}
 		else if(opts.prectype == BLASTED_NO_PREC) {
-			return new NoPreconditioner<scalar,index>(ndim);
+			p = new NoPreconditioner<scalar,index>(mat.nbrows);
 		}
 		else
 			throw std::invalid_argument("Invalid preconditioner!");
@@ -150,11 +155,11 @@ SRFactory<scalar,index>::create_preconditioner(const index ndim, const SolverSet
 	else if(opts.blockstorage == RowMajor) 
 	{
 		if(opts.bs == 4) {
-			p = create_srpreconditioner_of_type<4,RowMajor>(ndim,opts);
+			p = create_srpreconditioner_of_type<4,RowMajor>(mat,opts);
 		}
 #ifdef BUILD_BLOCK_SIZE
 		else if(opts.bs == BUILD_BLOCK_SIZE) {
-			p = create_srpreconditioner_of_type<scalar,index,BUILD_BLOCK_SIZE,RowMajor>(ndim,opts);
+			p = create_srpreconditioner_of_type<scalar,index,BUILD_BLOCK_SIZE,RowMajor>(mat,opts);
 		}
 #endif
 		else {
@@ -165,13 +170,13 @@ SRFactory<scalar,index>::create_preconditioner(const index ndim, const SolverSet
 	else if(opts.blockstorage == ColMajor)
 	{
 		if(opts.bs==4)
-			p = create_srpreconditioner_of_type<4,ColMajor>(ndim,opts);
+			p = create_srpreconditioner_of_type<4,ColMajor>(mat,opts);
 		else if(opts.bs == 5) {
-			p = create_srpreconditioner_of_type<5,ColMajor>(ndim,opts);
+			p = create_srpreconditioner_of_type<5,ColMajor>(mat,opts);
 		}
 #ifdef BUILD_BLOCK_SIZE
 		else if(opts.bs == BUILD_BLOCK_SIZE) {
-			p = create_srpreconditioner_of_type<BUILD_BLOCK_SIZE,ColMajor>(ndim,opts);
+			p = create_srpreconditioner_of_type<BUILD_BLOCK_SIZE,ColMajor>(mat,opts);
 		}
 #endif
 		else {
@@ -183,11 +188,10 @@ SRFactory<scalar,index>::create_preconditioner(const index ndim, const SolverSet
 		throw std::invalid_argument("Block ordering must be either rowmajor or colmajor!");
 	}
 
+	p->wrap(mat.nbrows, &mat.browptr[0], &mat.bcolind[0], &mat.vals[0], &mat.diagind[0]);
 	return p;
 }
 
-// template SRPreconditioner<double,int>* create_sr_preconditioner<double,int>
-// (const int ndim, const SolverSettings& opts);
 template class SRFactory<double,int>;
 
 }

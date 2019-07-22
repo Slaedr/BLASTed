@@ -553,12 +553,7 @@ BSRMatrix<scalar,index,bs> constructBSRMatrixFromMatrixMarketFile(const std::str
 {
 	COOMatrix<scalar,index> coomat;
 	coomat.readMatrixMarket(file);
-	RawBSRMatrix<scalar,index> rmat;
-	if(bs == 1)
-		coomat.convertToCSR(&rmat);
-	else
-		coomat.template convertToBSR<bs,RowMajor>(&rmat);
-	BSRMatrix<scalar,index,bs> bmat(rmat);
+	BSRMatrix<scalar,index,bs> bmat(getSRMatrixFromCOO<scalar,index,bs>(coomat, "rowmajor"));
 	return bmat;
 }
 
@@ -571,8 +566,10 @@ SRMatrixStorage<scalar,index> getSRMatrixFromCOO(const COOMatrix<scalar,index>& 
 	else
 		if(storageorder == "rowmajor")
 			return coom.template convertToBSR<bs,RowMajor>();
-		else
+		else if(storageorder == "colmajor")
 			return coom.template convertToBSR<bs,ColMajor>();
+		else
+			throw std::runtime_error("getSRMatrixFromCOO: invalid storage order!");
 }
 
 MatrixReadException::MatrixReadException(const std::string& msg) : std::runtime_error(msg)
@@ -581,19 +578,7 @@ MatrixReadException::MatrixReadException(const std::string& msg) : std::runtime_
 template class COOMatrix<double,int>;
 
 template
-void COOMatrix<double,int>::convertToBSR<2,RowMajor>(RawBSRMatrix<double,int> *const bmat) const;
-template
 void COOMatrix<double,int>::convertToBSR<3,RowMajor>(RawBSRMatrix<double,int> *const bmat) const;
-template
-void COOMatrix<double,int>::convertToBSR<4,RowMajor>(RawBSRMatrix<double,int> *const bmat) const;
-template
-void COOMatrix<double,int>::convertToBSR<5,RowMajor>(RawBSRMatrix<double,int> *const bmat) const;
-template
-void COOMatrix<double,int>::convertToBSR<6,RowMajor>(RawBSRMatrix<double,int> *const bmat) const;
-template
-void COOMatrix<double,int>::convertToBSR<7,RowMajor>(RawBSRMatrix<double,int> *const bmat) const;
-template
-void COOMatrix<double,int>::convertToBSR<2,ColMajor>(RawBSRMatrix<double,int> *const bmat) const;
 template
 void COOMatrix<double,int>::convertToBSR<3,ColMajor>(RawBSRMatrix<double,int> *const bmat) const;
 template
@@ -605,11 +590,6 @@ void COOMatrix<double,int>::convertToBSR<6,ColMajor>(RawBSRMatrix<double,int> *c
 template
 void COOMatrix<double,int>::convertToBSR<7,ColMajor>(RawBSRMatrix<double,int> *const bmat) const;
 
-template SRMatrixStorage<double,int> COOMatrix<double,int>::convertToBSR<3,RowMajor>() const;
-
-template SRMatrixStorage<double,int> COOMatrix<double,int>::convertToBSR<3,ColMajor>() const;
-template SRMatrixStorage<double,int> COOMatrix<double,int>::convertToBSR<4,ColMajor>() const;
-
 template 
 BSRMatrix<double,int,1> constructBSRMatrixFromMatrixMarketFile(const std::string file);
 template 
@@ -619,13 +599,22 @@ template SRMatrixStorage<double,int>
 getSRMatrixFromCOO<double,int,1>(const COOMatrix<double,int>& coom,
                                  const std::string storageorder);
 template SRMatrixStorage<double,int>
+getSRMatrixFromCOO<double,int,3>(const COOMatrix<double,int>& coom,
+                                 const std::string storageorder);
+template SRMatrixStorage<double,int>
 getSRMatrixFromCOO<double,int,4>(const COOMatrix<double,int>& coom,
+                                 const std::string storageorder);
+template SRMatrixStorage<double,int>
+getSRMatrixFromCOO<double,int,7>(const COOMatrix<double,int>& coom,
                                  const std::string storageorder);
 
 #ifdef BUILD_BLOCK_SIZE
 template 
 BSRMatrix<double,int,BUILD_BLOCK_SIZE>
 constructBSRMatrixFromMatrixMarketFile(const std::string file);
+template SRMatrixStorage<double,int>
+getSRMatrixFromCOO<double,int,BUILD_BLOCK_SIZE>(const COOMatrix<double,int>& coom,
+                                                const std::string storageorder);
 #endif
 
 }

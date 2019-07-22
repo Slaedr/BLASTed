@@ -48,6 +48,9 @@ struct SolverSettings {
 	 */
 	bool relax;
 	int thread_chunk_size;                ///< Number of work-items (iterations) in each thread chunk
+
+	/// Default destructor
+	virtual ~SolverSettings() = default;
 };
 
 /// Settings needed for most asynchronous iterations
@@ -68,7 +71,8 @@ public:
 
 	/// Creates a preconditioner or relaxation object
 	virtual SRPreconditioner<scalar,index>*
-	create_preconditioner(const index ndim, const SolverSettings& settings) const = 0;
+	create_preconditioner(SRMatrixStorage<const scalar, const index>&& prec_matrix,
+	                      const SolverSettings& settings) const = 0;
 
 	/// Convert a string into a preconditioner type if possible.
 	/// Should throw a invalid_argument if not possible.
@@ -80,12 +84,17 @@ class SRFactory : public FactoryBase<scalar,index>
 {
 public:
 	/// Creates a preconditioner or relaxation object, for matrices stored by sparse rows
-	/** \param ndim Number of rows in the matrix; the dimension of the problem
+	/** \param prec_matrix The matrix from which to construct the preconditioner. The output
+	 *   SRPreconditioner will store a view of this matrix. This object gets invalidated, so
+	 *   do not use the object after calling this fucntion.
 	 * \param settings Solver settings
-	 * 
-	 * Throws an instance of invalid_argument in case of invalid argument(s). */
-	SRPreconditioner<scalar,index> *create_preconditioner(const index ndim,
-	                                                      const SolverSettings& settings) const;
+	 *
+	 * The output preconditioner context stores a reference to the given prec_matrix.
+	 * Throws an instance of std::invalid_argument in case of invalid argument(s).
+	 */
+	SRPreconditioner<scalar,index> *
+	create_preconditioner(SRMatrixStorage<const scalar, const index>&& prec_matrix,
+	                      const SolverSettings& settings) const;
 
 	/// Convert a string into a preconditioner type if possible. Throws a invalid_argument if not possible.
 	BlastedSolverType solverTypeFromString(const std::string precstr) const;
@@ -93,7 +102,8 @@ public:
 private:
 	template <int bs, StorageOptions stor>
 	SRPreconditioner<scalar,index> *
-	create_srpreconditioner_of_type(const int ndim, const AsyncSolverSettings& opts) const;
+	create_srpreconditioner_of_type(SRMatrixStorage<const scalar, const index>& prec_matrix,
+	                                const AsyncSolverSettings& opts) const;
 };
 
 }

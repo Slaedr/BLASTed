@@ -196,6 +196,9 @@ public:
 	 */
 	BSRMatrix(RawBSRMatrix<scalar,index>& rmat);
 
+	/// Construct from a SRMatrixStorage
+	BSRMatrix(SRMatrixStorage<scalar,index>&& srmat);
+
 	/// De-allocates memory
 	virtual ~BSRMatrix();
 
@@ -330,6 +333,9 @@ public:
 
 	/// Transfers the arrays of a raw CSR matrix to itself and nulls the raw matrix
 	BSRMatrix(RawBSRMatrix<scalar,index>& rmat);
+
+	/// Construct from a SRMatrixStorage
+	BSRMatrix(SRMatrixStorage<scalar,index>&& srmat);
 
 	/// De-allocates memory
 	virtual ~BSRMatrix();

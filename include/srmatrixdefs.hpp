@@ -60,6 +60,14 @@ struct SRMatrixStorage
 	move_to_const<>(SRMatrixStorage<scalar,index>&& smat);
 };
 
+/// Wraps the arrays of the argument in an immutable matrix, while keeping the argument unchanged
+/** After this function returns, the returned matrix and the argument matrix refer to the same CSR
+ * arrays.
+ */
+template <typename scalar, typename index>
+SRMatrixStorage<typename std::add_const<scalar>::type, typename std::add_const<index>::type>
+share_with_const(const SRMatrixStorage<scalar,index>& smat);
+
 /// An (almost-)immutable sparse block-row square matrix
 /** The pointers and the number of (block-)rows are non-const to allow re-wrapping of another matrix.
  * Since objects of this type are used as members of other classes, we allow those classes to handle

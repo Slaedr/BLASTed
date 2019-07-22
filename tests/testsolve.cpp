@@ -52,6 +52,9 @@ int testSolve(const std::string solvertype, const std::string precontype,
 			mat = new BSRMatrixView<double,int,bs,ColMajor>
 				(move_to_const<double,int>(getSRMatrixFromCOO<double,int,bs>(coom, storageorder)));
 
+	SRMatrixStorage<const double, const int> cmat = move_to_const<double,int>
+		(getSRMatrixFromCOO<double,int,bs>(coom, storageorder));
+
 	std::vector<double> x(mat->dim(),0.0);
 
 	// construct preconditioner context
@@ -73,10 +76,13 @@ int testSolve(const std::string solvertype, const std::string precontype,
 		params.blockstorage = ColMajor;
 	params.relax = false;
 
-	prec = fctry.create_preconditioner(mat->dim(), params);
+	// prec = fctry.create_preconditioner(move_to_const<double,int>
+	//                                    (getSRMatrixFromCOO<double,int,bs>(coom, storageorder)),
+	//                                    params);
+	prec = fctry.create_preconditioner(std::move(cmat), params);
 
-	prec->wrap(mat->getSRStorage().nbrows, &mat->getSRStorage().browptr[0], &mat->getSRStorage().bcolind[0],
-	           &mat->getSRStorage().vals[0], &mat->getSRStorage().diagind[0]);
+	// prec->wrap(mat->getSRStorage().nbrows, &mat->getSRStorage().browptr[0], &mat->getSRStorage().bcolind[0],
+	//            &mat->getSRStorage().vals[0], &mat->getSRStorage().diagind[0]);
 	prec->compute();
 
 	IterativeSolver* solver = nullptr;
@@ -124,13 +130,4 @@ int testSolve<4>(const std::string solvertype, const std::string precontype,
                  const std::string matfile, const std::string xfile, const std::string bfile,
                  const double tol, const int maxiter, const int nbuildswps, const int napplyswps,
                  const int threadchunksize);
-
-/*template
-int testSolve<7>(const std::string solvertype, const std::string precontype,
-const std::string factinittype, const std::string applyinittype,
-const std::string mattype, const std::string storageorder, const double testtol,
-const std::string matfile, const std::string xfile, const std::string bfile,
-const double tol, const int maxiter, const int nbuildswps, const int napplyswps,
-const int threadchunksize);
-*/
 

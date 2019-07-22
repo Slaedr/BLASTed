@@ -114,8 +114,6 @@ int testConvertCOOToBSR(const std::string matfile,
 	for(int i = 0; i < snrows; i++)
 		sortedfin >> sdiaginds[i];
 
-	//RawBSRMatrix<double,int> bm;
-	//cmat.convertToBSR<bs,stor>(&bm);
 	const SRMatrixStorage<double,int> bm = cmat.convertToBSR<bs,stor>();
 
 	// test
@@ -140,10 +138,6 @@ int testConvertCOOToBSR(const std::string matfile,
 	sortedfin.close();
 
 	printf(" COO conversion to BSR SRMatrixStorage passed.\n");
-	// delete [] bm.vals;
-	// delete [] bm.browptr;
-	// delete [] bm.bcolind;
-	// delete [] bm.diagind;
 	return 0;
 }
 
@@ -192,8 +186,6 @@ int testConvertCOOToCSR(const std::string matfile, const std::string sortedfile)
 	for(int i = 0; i < snrows; i++)
 		sortedfin >> sdiaginds[i];
 
-	// RawBSRMatrix<double,int> bm;
-	// cmat.convertToCSR(&bm);
 	const SRMatrixStorage<const double, const int> bm = move_to_const(cmat.convertToCSR());
 
 	// test
@@ -216,11 +208,6 @@ int testConvertCOOToCSR(const std::string matfile, const std::string sortedfile)
 	sortedfin.close();
 
 	printf(" COO conversion to CSR SRMatrixStorage passed.\n");
-
-	// delete [] bm.vals;
-	// delete [] bm.browptr;
-	// delete [] bm.bcolind;
-	// delete [] bm.diagind;
 	return 0;
 }
 

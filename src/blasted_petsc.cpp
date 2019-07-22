@@ -172,8 +172,6 @@ PetscErrorCode createNewPreconditioner(PC pc)
 	assert(localrows == localcols);
 	assert(globalrows == globalcols);
 
-	const int ndim = localrows;
-	
 	// ensure diagonal entry locations have been computed; this is necessary for BAIJ matrices
 	// as a bonus, check for singular diagonals
 	PetscBool diagmissing = PETSC_FALSE;
@@ -202,7 +200,6 @@ PetscErrorCode createNewPreconditioner(PC pc)
 	}
 
 	settings.relax = false;
-	precop = factory->create_preconditioner(ndim, settings);
 
 	// get access to local matrix entries
 	const Mat_SeqAIJ *const Adiag = (const Mat_SeqAIJ*)A->data;
@@ -213,11 +210,32 @@ PetscErrorCode createNewPreconditioner(PC pc)
 
 	// update and recompute
 	if(ctx->bs == 1) {
-		precop->wrap(localrows/ctx->bs, Adiag->i, Adiag->j, Adiag->a, Adiag->diag);
+		//precop->wrap(localrows/ctx->bs, Adiag->i, Adiag->j, Adiag->a, Adiag->diag);
+		// SRMatrixStorage<const PetscReal,const PetscInt> smat(Adiag->i, Adiag->j, Adiag->a, Adiag->diag,
+		//                                                      Adiag->i+1, localrows/ctx->bs,
+		//                                                      Adiag->i[localrows], Adiag->i[localrows]);
+		precop = factory->create_preconditioner(SRMatrixStorage<const PetscReal,const PetscInt>
+		                                        (Adiag->i, Adiag->j, Adiag->a, Adiag->diag,
+		                                         Adiag->i+1, localrows/ctx->bs,
+		                                         Adiag->i[localrows], Adiag->i[localrows]),
+		                                        settings);
 	}
 	else {
-		precop->wrap(localrows/ctx->bs, Abdiag->i, Abdiag->j, Abdiag->a, Abdiag->diag);
+		//precop->wrap(localrows/ctx->bs, Abdiag->i, Abdiag->j, Abdiag->a, Abdiag->diag);
+
+		// SRMatrixStorage<const PetscReal,const PetscInt> smat
+		// 	(Abdiag->i, Abdiag->j, Abdiag->a, Abdiag->diag, Abdiag->i+1,
+		// 	 localrows/ctx->bs, Abdiag->i[localrows]/ctx->bs, Abdiag->i[localrows]/ctx->bs);
+
+		// precop = factory->create_preconditioner(std::move(smat), settings);
+
+		precop = factory->create_preconditioner(SRMatrixStorage<const PetscReal,const PetscInt>
+		                                        (Abdiag->i, Abdiag->j, Abdiag->a, Abdiag->diag,
+		                                         Abdiag->i+1, localrows/ctx->bs,
+		                                         Abdiag->i[localrows], Abdiag->i[localrows]),
+		                                        settings);
 	}
+
 
 	ctx->bprec = reinterpret_cast<void*>(precop);
 	return ierr;

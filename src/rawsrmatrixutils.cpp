@@ -63,10 +63,23 @@ move_to_const(SRMatrixStorage<scalar,index>&& smat)
 	return cm;
 }
 
+template <typename scalar, typename index>
+SRMatrixStorage<typename std::add_const<scalar>::type, typename std::add_const<index>::type>
+share_with_const(const SRMatrixStorage<scalar,index>& smat)
+{
+	return
+		SRMatrixStorage<typename std::add_const<scalar>::type, typename std::add_const<index>::type>
+		(&smat.browptr[0], &smat.bcolind[0], &smat.vals[0], &smat.diagind[0], &smat.browendptr[0],
+		 smat.nbrows, smat.nnzb, smat.nbstored);
+}
+
 template struct SRMatrixStorage<double,int>;
 template struct SRMatrixStorage<const double,const int>;
 template SRMatrixStorage<typename std::add_const<double>::type, typename std::add_const<int>::type>
 move_to_const(SRMatrixStorage<double,int>&& smat);
+
+template SRMatrixStorage<typename std::add_const<double>::type, typename std::add_const<int>::type>
+share_with_const(const SRMatrixStorage<double,int>& smat);
 
 template <typename scalar, typename index, int bs>
 RawBSRMatrix<scalar,index> copyRawBSRMatrix(const CRawBSRMatrix<scalar,index>& mat)
