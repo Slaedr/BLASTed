@@ -11,10 +11,13 @@
 namespace blasted {
 
 template<typename scalar, typename index, int bs, StorageOptions stor>
-ChaoticBlockRelaxation<scalar,index,bs,stor>::ChaoticBlockRelaxation(const int nas, const int tcs)
-	: napplysweeps{nas}, thread_chunk_size{tcs}
+ChaoticBlockRelaxation<scalar,index,bs,stor>
+::ChaoticBlockRelaxation(SRMatrixStorage<const scalar, const index>&& matrix, const int nas,
+                         const int tcs)
+	: BJacobiSRPreconditioner<scalar,index,bs,stor>(std::move(matrix)), napplysweeps{nas},
+	  thread_chunk_size{tcs}
 { }
-	
+
 template<typename scalar, typename index, int bs, StorageOptions stor>
 void ChaoticBlockRelaxation<scalar,index,bs,stor>::apply(const scalar *const bb, 
                                                          scalar *const __restrict xx) const
@@ -40,7 +43,7 @@ void ChaoticBlockRelaxation<scalar,index,bs,stor>::apply(const scalar *const bb,
 		}
 	}
 }
-	
+
 template<typename scalar, typename index, int bs, StorageOptions stor>
 void ChaoticBlockRelaxation<scalar,index,bs,stor>::apply_relax(const scalar *const bb, 
                                                                scalar *const __restrict xx) const
@@ -78,18 +81,21 @@ template class ChaoticBlockRelaxation<double,int,BUILD_BLOCK_SIZE,RowMajor>;
 #endif
 
 template<typename scalar, typename index>
-ChaoticRelaxation<scalar,index>::ChaoticRelaxation(const int nas, const int threadchunksize)
-	: napplysweeps{nas}, thread_chunk_size{threadchunksize}
+ChaoticRelaxation<scalar,index>
+::ChaoticRelaxation(SRMatrixStorage<const scalar,const index>&& matrix, const int nas,
+                    const int threadchunksize)
+	: JacobiSRPreconditioner<scalar,index>(std::move(matrix)), napplysweeps{nas},
+	  thread_chunk_size{threadchunksize}
 { }
 
 template<typename scalar, typename index>
-void ChaoticRelaxation<scalar,index>::apply(const scalar *const bb, 
+void ChaoticRelaxation<scalar,index>::apply(const scalar *const bb,
 		scalar *const __restrict xx) const
 {
 #pragma omp parallel default(shared)
 	for(int step = 0; step < napplysweeps; step++)
 	{
-#pragma omp for schedule(dynamic, thread_chunk_size) nowait		
+#pragma omp for schedule(dynamic, thread_chunk_size) nowait
 		for(index irow = 0; irow < mat.nbrows; irow++)
 		{
 			xx[irow] = scalar_relax<scalar,index>(mat.vals, mat.bcolind, mat.browptr[irow],
@@ -100,13 +106,13 @@ void ChaoticRelaxation<scalar,index>::apply(const scalar *const bb,
 }
 
 template<typename scalar, typename index>
-void ChaoticRelaxation<scalar,index>::apply_relax(const scalar *const bb, 
+void ChaoticRelaxation<scalar,index>::apply_relax(const scalar *const bb,
                                                   scalar *const __restrict xx) const
 {
 #pragma omp parallel default(shared)
 	for(int step = 0; step < solveparams.maxits; step++)
 	{
-#pragma omp for schedule(dynamic, thread_chunk_size) nowait		
+#pragma omp for schedule(dynamic, thread_chunk_size) nowait
 		for(index irow = 0; irow < mat.nbrows; irow++)
 		{
 			xx[irow] = scalar_relax<scalar,index>(mat.vals, mat.bcolind, mat.browptr[irow],

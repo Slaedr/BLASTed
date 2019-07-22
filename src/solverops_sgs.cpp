@@ -16,9 +16,11 @@ using boost::alignment::aligned_free;
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
 AsyncBlockSGS_SRPreconditioner<scalar,index,bs,stor>::
-AsyncBlockSGS_SRPreconditioner(const int naswps, const ApplyInit apply_inittype,
+AsyncBlockSGS_SRPreconditioner(SRMatrixStorage<const scalar, const index>&& matrix,
+                               const int naswps, const ApplyInit apply_inittype,
                                const int threadchunksize)
-	: ytemp{nullptr}, napplysweeps{naswps}, ainit{apply_inittype}, thread_chunk_size{threadchunksize}
+	: BJacobiSRPreconditioner<scalar,index,bs,stor>(std::move(matrix)), ytemp{nullptr},
+	  napplysweeps{naswps}, ainit{apply_inittype}, thread_chunk_size{threadchunksize}
 { }
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
@@ -54,7 +56,7 @@ void AsyncBlockSGS_SRPreconditioner<scalar,index,bs,stor>::apply(const scalar *c
 #pragma omp parallel for simd default(shared)
 		for(index i = 0; i < mat.nbrows*bs; i++)
 			ytemp[i] = 0;
-	
+
 	for(int isweep = 0; isweep < napplysweeps; isweep++)
 	{
 		// forward sweep ytemp := D^(-1) (r - L ytemp)
@@ -78,7 +80,7 @@ void AsyncBlockSGS_SRPreconditioner<scalar,index,bs,stor>::apply(const scalar *c
 }
 
 template<typename scalar, typename index, int bs, StorageOptions stor>
-void AsyncBlockSGS_SRPreconditioner<scalar,index,bs,stor>::apply_relax(const scalar *const bb, 
+void AsyncBlockSGS_SRPreconditioner<scalar,index,bs,stor>::apply_relax(const scalar *const bb,
                                                                        scalar *const __restrict xx) const
 {
 	const Blk *mvals = reinterpret_cast<const Blk*>(mat.vals);
@@ -111,10 +113,11 @@ void AsyncBlockSGS_SRPreconditioner<scalar,index,bs,stor>::apply_relax(const sca
 }
 
 template <typename scalar, typename index>
-AsyncSGS_SRPreconditioner<scalar,index>::AsyncSGS_SRPreconditioner(const int naswps,
-                                                                   const ApplyInit apply_inittype,
-                                                                   const int threadchunksize)
-	: ytemp{nullptr}, napplysweeps{naswps}, ainit{apply_inittype}, thread_chunk_size{threadchunksize}
+AsyncSGS_SRPreconditioner<scalar,index>
+::AsyncSGS_SRPreconditioner(SRMatrixStorage<const scalar, const index>&& matrix,
+                            const int naswps, const ApplyInit apply_inittype, const int threadchunksize)
+	: JacobiSRPreconditioner<scalar,index>(std::move(matrix)), ytemp{nullptr},
+	  napplysweeps{naswps}, ainit{apply_inittype}, thread_chunk_size{threadchunksize}
 { }
 
 template <typename scalar, typename index>
@@ -168,13 +171,13 @@ void AsyncSGS_SRPreconditioner<scalar,index>::apply(const scalar *const rr,
 }
 
 template<typename scalar, typename index>
-void AsyncSGS_SRPreconditioner<scalar,index>::apply_relax(const scalar *const b, 
+void AsyncSGS_SRPreconditioner<scalar,index>::apply_relax(const scalar *const b,
                                                           scalar *const __restrict x) const
 {
 #pragma omp parallel default(shared)
 	for(int step = 0; step < solveparams.maxits; step++)
 	{
-#pragma omp for schedule(dynamic, thread_chunk_size) nowait		
+#pragma omp for schedule(dynamic, thread_chunk_size) nowait
 		for(index irow = 0; irow < mat.nbrows; irow++)
 		{
 			x[irow] = scalar_relax<scalar,index>
@@ -182,28 +185,29 @@ void AsyncSGS_SRPreconditioner<scalar,index>::apply_relax(const scalar *const b,
 				 mat.browptr[irow], mat.diagind[irow], mat.browptr[irow+1],
 				 dblocks[irow], b[irow], x, x);
 		}
-#pragma omp for schedule(dynamic, thread_chunk_size) nowait		
+#pragma omp for schedule(dynamic, thread_chunk_size) nowait
 		for(index irow = mat.nbrows-1; irow >= 0; irow--)
 		{
 			x[irow] = scalar_relax<scalar,index>
-				(mat.vals, mat.bcolind, 
+				(mat.vals, mat.bcolind,
 				 mat.browptr[irow], mat.diagind[irow], mat.browptr[irow+1],
 				 dblocks[irow], b[irow], x, x);
-		}		
+		}
 	}
 }
 
 template <typename scalar, typename index>
-CSC_BGS_Preconditioner<scalar,index>::CSC_BGS_Preconditioner(const int naswps,
-                                                             const int threadchunksize)
-	: napplysweeps{naswps}, thread_chunk_size{threadchunksize},
-	  cmat{nullptr, nullptr, nullptr, nullptr,0}
+CSC_BGS_Preconditioner<scalar,index>
+::CSC_BGS_Preconditioner(SRMatrixStorage<const scalar, const index>&& matrix,
+                         const int naswps, const int threadchunksize)
+	: JacobiSRPreconditioner<scalar,index>(std::move(matrix)), napplysweeps{naswps},
+	  thread_chunk_size{threadchunksize}, cmat{nullptr, nullptr, nullptr, nullptr,0}
 { }
 
 template <typename scalar, typename index>
 CSC_BGS_Preconditioner<scalar,index>::~CSC_BGS_Preconditioner()
 {
-	destroyRawBSCMatrix(cmat);
+	alignedDestroyCRawBSCMatrix<scalar,index>(cmat);
 }
 
 template <typename scalar, typename index>
@@ -211,7 +215,7 @@ void CSC_BGS_Preconditioner<scalar,index>::compute()
 {
 	JacobiSRPreconditioner<scalar,index>::compute();
 
-	destroyRawBSCMatrix(cmat);
+	alignedDestroyCRawBSCMatrix<scalar,index>(cmat);
 	convert_BSR_to_BSC<scalar,index,1>(&mat, &cmat);
 }
 

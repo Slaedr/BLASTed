@@ -208,31 +208,27 @@ PetscErrorCode createNewPreconditioner(PC pc)
 	if(ctx->bs <= 0 || ctx->bs > 5 || ctx->bs == 2)
 		SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_SUP, "BLASTed: Block size %d is not supported!", ctx->bs);
 
-	// update and recompute
 	if(ctx->bs == 1) {
-		//precop->wrap(localrows/ctx->bs, Adiag->i, Adiag->j, Adiag->a, Adiag->diag);
 		// SRMatrixStorage<const PetscReal,const PetscInt> smat(Adiag->i, Adiag->j, Adiag->a, Adiag->diag,
-		//                                                      Adiag->i+1, localrows/ctx->bs,
+		//                                                      Adiag->i+1, localrows,
 		//                                                      Adiag->i[localrows], Adiag->i[localrows]);
 		precop = factory->create_preconditioner(SRMatrixStorage<const PetscReal,const PetscInt>
 		                                        (Adiag->i, Adiag->j, Adiag->a, Adiag->diag,
-		                                         Adiag->i+1, localrows/ctx->bs,
+		                                         Adiag->i+1, localrows,
 		                                         Adiag->i[localrows], Adiag->i[localrows]),
 		                                        settings);
 	}
 	else {
-		//precop->wrap(localrows/ctx->bs, Abdiag->i, Abdiag->j, Abdiag->a, Abdiag->diag);
-
 		// SRMatrixStorage<const PetscReal,const PetscInt> smat
 		// 	(Abdiag->i, Abdiag->j, Abdiag->a, Abdiag->diag, Abdiag->i+1,
-		// 	 localrows/ctx->bs, Abdiag->i[localrows]/ctx->bs, Abdiag->i[localrows]/ctx->bs);
+		// 	 localrows/ctx->bs, Abdiag->i[localrows/ctx->bs], Abdiag->i[localrows/ctx->bs]);
 
 		// precop = factory->create_preconditioner(std::move(smat), settings);
 
 		precop = factory->create_preconditioner(SRMatrixStorage<const PetscReal,const PetscInt>
 		                                        (Abdiag->i, Abdiag->j, Abdiag->a, Abdiag->diag,
 		                                         Abdiag->i+1, localrows/ctx->bs,
-		                                         Abdiag->i[localrows], Abdiag->i[localrows]),
+		                                         Abdiag->i[localrows/ctx->bs], Abdiag->i[localrows/ctx->bs]),
 		                                        settings);
 	}
 

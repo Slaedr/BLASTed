@@ -16,7 +16,7 @@ template <typename scalar, typename index, int bs, StorageOptions stor>
 class Level_BSGS : public BJacobiSRPreconditioner<scalar,index,bs,stor>
 {
 public:
-	Level_BSGS();
+	Level_BSGS(SRMatrixStorage<const scalar, const index>&& matrix);
 	~Level_BSGS();
 
 	bool relaxationAvailable() const { return true; }
@@ -33,6 +33,7 @@ public:
 protected:
 	using Preconditioner<scalar,index>::solveparams;
 	using SRPreconditioner<scalar,index>::mat;
+	using SRPreconditioner<scalar,index>::pmat;
 	using BJacobiSRPreconditioner<scalar,index,bs,stor>::dblocks;
 
 	using Blk = Block_t<scalar,bs,stor>;
@@ -50,7 +51,7 @@ template <typename scalar, typename index>
 class Level_SGS : public JacobiSRPreconditioner<scalar,index>
 {
 public:
-	Level_SGS();
+	Level_SGS(SRMatrixStorage<const scalar, const index>&& matrix);
 	~Level_SGS();
 
 	bool relaxationAvailable() const { return true; }
@@ -67,6 +68,7 @@ public:
 protected:
 	using Preconditioner<scalar,index>::solveparams;
 	using SRPreconditioner<scalar,index>::mat;
+	using SRPreconditioner<scalar,index>::pmat;
 	using JacobiSRPreconditioner<scalar,index>::dblocks;
 	
 	/// Temporary storage for the result of the forward Gauss-Seidel sweep

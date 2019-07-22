@@ -17,29 +17,16 @@ Preconditioner<scalar,index>::~Preconditioner()
 { }
 
 template <typename scalar, typename index>
-SRPreconditioner<scalar,index>::SRPreconditioner()
-	: Preconditioner<scalar,index>(SPARSEROW)
+SRPreconditioner<scalar,index>::SRPreconditioner(SRMatrixStorage<const scalar, const index>&& matrix)
+	: Preconditioner<scalar,index>(SPARSEROW), pmat(std::move(matrix)),
+	  mat(&pmat.browptr[0], &pmat.bcolind[0], &pmat.vals[0], &pmat.diagind[0], &pmat.browendptr[0],
+	      pmat.nbrows, pmat.nnzb, pmat.nbstored)
 { }
 
 template <typename scalar, typename index>
-void SRPreconditioner<scalar,index>::wrap(const index n_brows, const index *const brptrs,
-                                          const index *const bcinds, const scalar *const values,
-                                          const index *const dinds)
-{
-	mat.nbrows = n_brows;
-	mat.browptr = brptrs;
-	mat.bcolind = bcinds;
-	mat.vals = values;
-	mat.diagind = dinds;
-	if(n_brows > 0)
-		mat.browendptr = &brptrs[1];
-	mat.nbstored = mat.browptr[mat.nbrows];
-	mat.nnzb = mat.browptr[mat.nbrows];
-}
-
-template <typename scalar, typename index>
-NoPreconditioner<scalar,index>::NoPreconditioner(const index matrixdim)
-	: SRPreconditioner<scalar,index>(), ndim{matrixdim}
+NoPreconditioner<scalar,index>::NoPreconditioner(SRMatrixStorage<const scalar, const index>&& matrix,
+                                                 const index bs)
+	: SRPreconditioner<scalar,index>(std::move(matrix)), ndim{pmat.nbrows*bs}
 { }
 
 template <typename scalar, typename index>

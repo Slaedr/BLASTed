@@ -11,6 +11,24 @@
 
 using namespace blasted;
 
+template <typename scalar, typename index>
+void destroyRawBSCMatrix(const RawBSCMatrix<scalar,index>& mat)
+{
+	delete [] mat.bcolptr;
+	delete [] mat.browind;
+	delete [] mat.vals;
+	delete [] mat.diagind;
+}
+
+template <typename scalar, typename index>
+void destroyRawBSCMatrix(const CRawBSCMatrix<scalar,index>& mat)
+{
+	delete [] mat.bcolptr;
+	delete [] mat.browind;
+	delete [] mat.vals;
+	delete [] mat.diagind;
+}
+
 /// Compares a CSC matrix with one read from a file in CSC format
 /** The function returns iff the two matrices are the same.
  */
@@ -71,8 +89,8 @@ int testConvertCSRToCSC(const std::string mfile, const std::string solnfile)
 
 	int ierr = checkCSCMatrix(cmat, solnfile);
 
-	destroyRawBSRMatrix(rmat);
-	destroyRawBSCMatrix(cmat);
+	alignedDestroyRawBSRMatrix(rmat);
+	alignedDestroyCRawBSCMatrix(cmat);
 	return ierr;
 }
 

@@ -32,7 +32,8 @@ public:
 	 *   (ignored for relaxation)
 	 * \param threadchunksize Number of iterations assigned to a thread at a time
 	 */
-	AsyncBlockSGS_SRPreconditioner(const int napplysweeps, const ApplyInit apply_inittype,
+	AsyncBlockSGS_SRPreconditioner(SRMatrixStorage<const scalar, const index>&& matrix,
+	                               const int napplysweeps, const ApplyInit apply_inittype,
 	                               const int threadchunksize);
 
 	~AsyncBlockSGS_SRPreconditioner();
@@ -78,7 +79,8 @@ public:
 	 *   (ignored for relaxation)
 	 * \param threadchunksize Number of iterations assigned to a thread at a time
 	 */
-	AsyncSGS_SRPreconditioner(const int napplysweeps, const ApplyInit apply_inittype,
+	AsyncSGS_SRPreconditioner(SRMatrixStorage<const scalar, const index>&& matrix,
+	                          const int napplysweeps, const ApplyInit apply_inittype,
 	                          const int threadchunksize);
 
 	~AsyncSGS_SRPreconditioner();
@@ -122,7 +124,8 @@ class CSC_BGS_Preconditioner : public JacobiSRPreconditioner<scalar,index>
 	static_assert(std::is_signed<index>::value, "Signed index type required!");
 
 public:
-	CSC_BGS_Preconditioner(const int napplysweeps, const int threadchunksize);
+	CSC_BGS_Preconditioner(SRMatrixStorage<const scalar, const index>&& matrix,
+	                       const int napplysweeps, const int threadchunksize);
 	~CSC_BGS_Preconditioner();
 
 	index dim() const { return mat.nbrows; }

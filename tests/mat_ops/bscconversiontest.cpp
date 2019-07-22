@@ -56,8 +56,8 @@ int testConvertBSRToBSC(const std::string mfile)
 	fflush(stdout);
 	assert(pass);
 
-	destroyRawBSRMatrix(rmat);
-	destroyRawBSCMatrix(cmat);
+	alignedDestroyRawBSRMatrix(rmat);
+	alignedDestroyCRawBSCMatrix(cmat);
 	return 0;
 }
 
@@ -78,8 +78,8 @@ int testConvertBSRToBSC<1>(const std::string mfile)
 	fflush(stdout);
 	assert(pass);
 
-	destroyRawBSRMatrix(rmat);
-	destroyRawBSCMatrix(cmat);
+	alignedDestroyRawBSRMatrix(rmat);
+	alignedDestroyCRawBSCMatrix(cmat);
 	return 0;
 }
 

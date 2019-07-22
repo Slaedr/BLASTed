@@ -69,13 +69,15 @@ int testSolve(const std::string solvertype,
 
 	// reference solve
 	SRPreconditioner<double,int>* prec = nullptr;
-	prec = new AsyncILU0_SRPreconditioner<double,int>(nbuildswps, napplyswps,
+	prec = new AsyncILU0_SRPreconditioner<double,int>(move_to_const<double,int>
+	                                                  (getSRMatrixFromCOO<double,int,1>(coom, storageorder)),
+	                                                  nbuildswps, napplyswps,
 	                                                  threadchunksize,
 	                                                  getFactInitFromString(factinittype),
 	                                                  getApplyInitFromString(applyinittype),
 	                                                  false, false);
-	prec->wrap(mat.getSRStorage().nbrows, &mat.getSRStorage().browptr[0], &mat.getSRStorage().bcolind[0],
-	           &mat.getSRStorage().vals[0], &mat.getSRStorage().diagind[0]);
+	// prec->wrap(mat.getSRStorage().nbrows, &mat.getSRStorage().browptr[0], &mat.getSRStorage().bcolind[0],
+	//            &mat.getSRStorage().vals[0], &mat.getSRStorage().diagind[0]);
 	prec->compute();
 
 	IterativeSolver* solver = nullptr;
@@ -108,14 +110,13 @@ int testSolve(const std::string solvertype,
 	x.assign(mat.dim(), 0.0);
 
 	TrivialReorderingScaling rs = createTrivialColReordering(mat.dim());
-	prec = new ReorderedAsyncILU0_SRPreconditioner<double,int>(&rs, nbuildswps, napplyswps,
-	                                                           threadchunksize,
-	                                                           getFactInitFromString(factinittype),
-	                                                           getApplyInitFromString(applyinittype),
-	                                                           false, false);
+	prec = new ReorderedAsyncILU0_SRPreconditioner<double,int>
+		(move_to_const<double,int>(getSRMatrixFromCOO<double,int,1>(coom, storageorder)),
+		 &rs, nbuildswps, napplyswps, threadchunksize,
+		 getFactInitFromString(factinittype), getApplyInitFromString(applyinittype), false, false);
 
-	prec->wrap(mat.getSRStorage().nbrows, &mat.getSRStorage().browptr[0], &mat.getSRStorage().bcolind[0],
-	           &mat.getSRStorage().vals[0], &mat.getSRStorage().diagind[0]);
+	// prec->wrap(mat.getSRStorage().nbrows, &mat.getSRStorage().browptr[0], &mat.getSRStorage().bcolind[0],
+	//            &mat.getSRStorage().vals[0], &mat.getSRStorage().diagind[0]);
 	prec->compute();
 
 	if(solvertype == "richardson")

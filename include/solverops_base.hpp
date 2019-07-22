@@ -67,36 +67,25 @@ template<typename scalar, typename index>
 class SRPreconditioner : public Preconditioner<scalar,index>
 {
 public:
-	SRPreconditioner();
-	
-	/// Wraps a sparse-row matrix described by 4 arrays. Does NOT recompute the preconditioner.
-	/** Users should call \ref Preconditioner::compute after this function returns.
-	 * \param[in] n_brows Number of (block-)rows
-	 * \param[in] brptrs Array of (block-)row pointers
-	 * \param[in] bcinds Array of (block-)column indices
-	 * \param[in] values Non-zero values
-	 * \param[in] dinds Array of pointers to diagonal entries/blocks
-	 *
-	 * Does not take ownership of the 4 arrays; they are not cleaned up in the destructor either.
-	 */
-	void wrap(const index n_brows, const index *const brptrs,
-	          const index *const bcinds, const scalar *const values, const index *const dinds);
-	
+	SRPreconditioner(SRMatrixStorage<const scalar, const index>&& matrix);
+
 	/// Compute the preconditioner
 	virtual void compute() = 0;
 
 protected:
+	/// Matrix view
+	SRMatrixStorage<const scalar, const index> pmat;
 	/// Matrix wrapper
 	CRawBSRMatrix<scalar,index> mat;
 };
 
-/// Identity operator as preconditioner 
+/// Identity operator as preconditioner
 template<typename scalar, typename index>
 class NoPreconditioner : public SRPreconditioner<scalar,index>
 {
 public:
 	/// Set the dimension of the preconditioning operator
-	NoPreconditioner(const index n_dim);
+	NoPreconditioner(SRMatrixStorage<const scalar, const index>&& matrix, const index bs);
 
 	/// Returns the dimension (number of rows) of the operator
 	index dim() const { return ndim; }
@@ -105,7 +94,7 @@ public:
 
 	/// Does nothing
 	void compute() { }
-	
+
 	/// Does nothing but copy the input argument into the output argument
 	void apply(const scalar *const x, scalar *const __restrict y) const;
 
@@ -113,6 +102,8 @@ public:
 	void apply_relax(const scalar *const x, scalar *const __restrict y) const;
 
 protected:
+	using SRPreconditioner<scalar,index>::pmat;
+
 	index ndim;
 };
 

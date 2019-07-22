@@ -81,6 +81,27 @@ move_to_const(SRMatrixStorage<double,int>&& smat);
 template SRMatrixStorage<typename std::add_const<double>::type, typename std::add_const<int>::type>
 share_with_const(const SRMatrixStorage<double,int>& smat);
 
+// Makes a shallow copy of a matrix
+/* Copies over pointers to the underlying storage to create new ArrayViews and uses them to create
+ * a SRMatrixStorage. The arrays DO NOT take ownership of the underlying storage, which is not
+ * de-allocated when the copied matrix is destroyed.
+ */
+// template <typename scalar, typename index>
+// SRMatrixStorage<scalar,index> shallow_copy(const SRMatrixStorage<scalar,index>& mat)
+// {
+// 	ArrayView<index> brptrs(&mat.browptr[0], mat.browptr.size());
+// 	ArrayView<index> bcinds(&mat.bcolind[0], mat.bcolind.size());
+// 	ArrayView<scalar> values(&mat.vals[0], mat.vals.size());
+// 	ArrayView<index> brendptrs(&mat.browendptr[0], mat.browendptr.size());
+// 	ArrayView<index> dinds(&mat.diagind[0], mat.diagind.size());
+
+// 	return SRMatrixStorage<scalar,index>(std::move(brptrs), std::move(bcinds), std::move(values),
+// 	                                     std::move(dinds), std::move(brendptrs), mat.nbrows,
+// 	                                     mat.nnzb, mat.nbstored);
+// }
+
+// template SRMatrixStorage<double,int> shallow_copy(const SRMatrixStorage<double,int>&);
+
 template <typename scalar, typename index, int bs>
 RawBSRMatrix<scalar,index> copyRawBSRMatrix(const CRawBSRMatrix<scalar,index>& mat)
 {
@@ -138,26 +159,6 @@ void alignedDestroyRawBSRMatrix(RawBSRMatrix<scalar,index>& rmat)
 }
 
 template void alignedDestroyRawBSRMatrix(RawBSRMatrix<double,int>& rmat);
-
-template <typename scalar, typename index>
-void destroyCRawBSRMatrix(CRawBSRMatrix<scalar,index>& rmat)
-{
-	delete [] rmat.browptr;
-	delete [] rmat.bcolind;
-	delete [] rmat.vals;
-	delete [] rmat.diagind;
-	if(rmat.nnzb != rmat.nbstored)
-		delete [] rmat.browendptr;
-}
-
-template void destroyCRawBSRMatrix(CRawBSRMatrix<double,int>& rmat);
-
-template <typename scalar, typename index>
-void destroyRawBSRMatrix(RawBSRMatrix<scalar,index>& rmat) {
-	destroyCRawBSRMatrix(reinterpret_cast<CRawBSRMatrix<scalar,index>&>(rmat));
-}
-
-template void destroyRawBSRMatrix(RawBSRMatrix<double,int>& rmat);
 
 template <typename scalar, typename index>
 CRawBSRMatrix<scalar,index> getLowerTriangularView(const CRawBSRMatrix<scalar,index>& mat)

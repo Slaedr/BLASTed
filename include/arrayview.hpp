@@ -63,14 +63,6 @@ public:
 		other.owner = false;
 	}
 
-	/// Copy
-	// ArrayView(const ArrayView<T>& other) 
-	// 	: data{(T*)aligned_alloc(CACHE_LINE_LEN, other.len*sizeof(T))}, len{other.len}, owner{true}
-	// {
-	// 	for(int i = 0; i < len; i++)
-	// 		data[i] = other.data[i];
-	// }
-
 	/// Free if owner, otherwise null
 	~ArrayView()
 	{

@@ -14,7 +14,8 @@ template <typename scalar, typename index, int bs, StorageOptions stor>
 class Async_Level_BlockILU0 : public AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>
 {
 public:
-	Async_Level_BlockILU0(const int nbuildsweeps, const int thread_chunk_size,
+	Async_Level_BlockILU0(SRMatrixStorage<const scalar, const index>&& matrix,
+	                      const int nbuildsweeps, const int thread_chunk_size,
 	                      const FactInit fact_inittype, const bool threadedfactor=true,
 	                      const bool compute_remainder = false);
 
@@ -31,6 +32,7 @@ public:
 
 protected:
 	using SRPreconditioner<scalar,index>::mat;
+	using SRPreconditioner<scalar,index>::pmat;
 	using AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>::plist;
 	using AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>::iluvals;
 	using AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>::scale;
@@ -49,9 +51,10 @@ template <typename scalar, typename index>
 class Async_Level_ILU0 : public AsyncILU0_SRPreconditioner<scalar,index>
 {
 public:
-	Async_Level_ILU0(const int nbuildsweeps, const int thread_chunk_size,
-	                      const FactInit fact_inittype, const bool threadedfactor=true,
-	                      const bool compute_remainder = false);
+	Async_Level_ILU0(SRMatrixStorage<const scalar, const index>&& matrix,
+	                 const int nbuildsweeps, const int thread_chunk_size,
+	                 const FactInit fact_inittype, const bool threadedfactor=true,
+	                 const bool compute_remainder = false);
 
 	~Async_Level_ILU0();
 
@@ -66,6 +69,7 @@ public:
 
 protected:
 	using SRPreconditioner<scalar,index>::mat;
+	using SRPreconditioner<scalar,index>::pmat;
 	using AsyncILU0_SRPreconditioner<scalar,index>::plist;
 	using AsyncILU0_SRPreconditioner<scalar,index>::iluvals;
 	using AsyncILU0_SRPreconditioner<scalar,index>::scale;

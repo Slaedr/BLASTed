@@ -30,10 +30,12 @@ using boost::alignment::aligned_free;
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
 Async_Level_BlockILU0<scalar,index,bs,stor>
-::Async_Level_BlockILU0(const int nbuildsweeps, const int thread_chunk_size,
+::Async_Level_BlockILU0(SRMatrixStorage<const scalar, const index>&& matrix,
+                        const int nbuildsweeps, const int thread_chunk_size,
                         const FactInit fact_inittype, const bool threadedfactor,
                         const bool compute_remainder)
-	: AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>(nbuildsweeps,1,thread_chunk_size,
+	: AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>(std::move(matrix),
+	                                                        nbuildsweeps,1,thread_chunk_size,
 	                                                        fact_inittype, INIT_A_NONE, threadedfactor,
 	                                                        true, compute_remainder)
 { }
@@ -102,10 +104,11 @@ template class Async_Level_BlockILU0<double,int,BUILD_BLOCK_SIZE,RowMajor>;
 
 template <typename scalar, typename index>
 Async_Level_ILU0<scalar,index>
-::Async_Level_ILU0(const int nbuildsweeps, const int thread_chunk_size,
+::Async_Level_ILU0(SRMatrixStorage<const scalar, const index>&& matrix,
+                   const int nbuildsweeps, const int thread_chunk_size,
                    const FactInit fact_inittype, const bool threadedfactor,
                    const bool compute_remainder)
-	: AsyncILU0_SRPreconditioner<scalar,index>(nbuildsweeps,1,thread_chunk_size,
+	: AsyncILU0_SRPreconditioner<scalar,index>(std::move(matrix), nbuildsweeps,1,thread_chunk_size,
 	                                           fact_inittype, INIT_A_NONE, threadedfactor, true)
 { }
 

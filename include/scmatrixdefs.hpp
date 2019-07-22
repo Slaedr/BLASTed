@@ -65,17 +65,13 @@ void convert_BSR_to_BSC(const CRawBSRMatrix<scalar,index> *const rmat,
 template <typename scalar, typename index, int bs>
 CRawBSCMatrix<scalar,index> convert_BSR_to_BSC_1based(const CRawBSRMatrix<scalar,index> *const rmat);
 
-/// Frees storage
-/** Because deletion of const pointers is allowed.
- */
+/// Frees aligned storage
 template <typename scalar, typename index>
-void destroyRawBSCMatrix(const RawBSCMatrix<scalar,index>& mat);
+void alignedDestroyRawBSCMatrix(RawBSCMatrix<scalar,index>& cmat);
 
-/// Frees storage
-/** Because deletion of const pointers is allowed.
- */
+/// Frees aligned storage
 template <typename scalar, typename index>
-void destroyRawBSCMatrix(const CRawBSCMatrix<scalar,index>& mat);
+void alignedDestroyCRawBSCMatrix(CRawBSCMatrix<scalar,index>& cmat);
 
 }
 #endif

@@ -140,18 +140,6 @@ struct RawBSRMatrix
 	{ }
 };
 
-/// Frees all memory in case the memory was allocated with a simple new
-template <typename scalar, typename index>
-void destroyCRawBSRMatrix(CRawBSRMatrix<scalar,index>& rmat);
-
-/// Frees all memory in case the memory was allocated with a simple new
-template <typename scalar, typename index>
-void destroyRawBSRMatrix(RawBSRMatrix<scalar,index>& rmat);
-
-/// Frees all memory in case the memory was allocated with Boost align
-template <typename scalar, typename index>
-void alignedDestroyCRawBSRMatrix(CRawBSRMatrix<scalar,index>& rmat);
-
 /// Frees all memory in case the memory was allocated with Boost align
 template <typename scalar, typename index>
 void alignedDestroyRawBSRMatrix(RawBSRMatrix<scalar,index>& rmat);

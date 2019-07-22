@@ -15,7 +15,9 @@ struct LeftSAIImpl
 };
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
-LeftSAIPreconditioner<scalar,index,bs,stor>::LeftSAIPreconditioner()
+LeftSAIPreconditioner<scalar,index,bs,stor>
+::LeftSAIPreconditioner(SRMatrixStorage<const scalar,const index>&& matrix)
+	: SRPreconditioner<scalar,index>(std::move(matrix))
 { }
 
 template <typename scalar, typename index, int bs, StorageOptions stor>

@@ -27,7 +27,8 @@ class AsyncBlockILU0_SRPreconditioner : public SRPreconditioner<scalar,index>
 	static_assert(stor == RowMajor || stor == ColMajor, "Invalid storage option!");
 
 public:
-	/** \param nbuildsweeps Number of asynchronous sweeps used to compute the LU factors
+	/** \param matrix An approximation of the linear system matrix to compute the preconditioner from
+	 * \param nbuildsweeps Number of asynchronous sweeps used to compute the LU factors
 	 * \param napplysweeps Number of asynchronous sweeps used to apply the preconditioner
 	 * \param thread_chunk_size Size of thread chunks in dynamically parallel loops
 	 * \param fact_inittype Type of initialization to use for factorization
@@ -35,7 +36,8 @@ public:
 	 * \param threadedfactor If false, the preconditioner is computed sequentially
 	 * \param threadedapply If false, the preconditioner is applied sequentially
 	 */
-	AsyncBlockILU0_SRPreconditioner(const int nbuildsweeps, const int napplysweeps,
+	AsyncBlockILU0_SRPreconditioner(SRMatrixStorage<const scalar, const index>&& matrix,
+	                                const int nbuildsweeps, const int napplysweeps,
 	                                const int thread_chunk_size,
 	                                const FactInit fact_inittype, const ApplyInit apply_inittype,
 	                                const bool threadedfactor=true, const bool threadedapply=true,
@@ -107,7 +109,8 @@ public:
 	 * \param threadedfactor If false, the preconditioner is computed sequentially
 	 * \param threadedapply If false, the preconditioner is applied sequentially
 	 */
-	AsyncILU0_SRPreconditioner(const int nbuildsweeps, const int napplysweeps,
+	AsyncILU0_SRPreconditioner(SRMatrixStorage<const scalar, const index>&& matrix,
+	                           const int nbuildsweeps, const int napplysweeps,
 	                           const int thread_chunk_size,
 	                           const FactInit fact_inittype, const ApplyInit apply_inittype,
 	                           const bool threadedfactor=true, const bool threadedapply=true);
@@ -173,7 +176,8 @@ public:
 	/** \see AsyncILU0_SRPreconditioner
 	 * \param reorderscale The reordering and scaling object use at every iteration
 	 */
-	ReorderedAsyncILU0_SRPreconditioner(ReorderingScaling<scalar,index,1> *const reorderscale,
+	ReorderedAsyncILU0_SRPreconditioner(SRMatrixStorage<const scalar, const index>&& matrix,
+	                                    ReorderingScaling<scalar,index,1> *const reorderscale,
 	                                    const int nbuildsweeps, const int napplysweeps,
 	                                    const int thread_chunk_size,
 	                                    const FactInit fact_init_type, const ApplyInit apply_init_type,
@@ -192,6 +196,7 @@ public:
 
 protected:
 	using SRPreconditioner<scalar,index>::mat;
+	using SRPreconditioner<scalar,index>::pmat;
 	using AsyncILU0_SRPreconditioner<scalar,index>::plist;
 	using AsyncILU0_SRPreconditioner<scalar,index>::iluvals;
 	using AsyncILU0_SRPreconditioner<scalar,index>::scale;

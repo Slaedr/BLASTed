@@ -16,7 +16,7 @@ class ColumnAdjacency
 {
 public:
 	/// Constructor that computes the adjacency lists of a CSR-type matrix
-	ColumnAdjacency(const CRawBSRMatrix<scalar,index>& mat);
+	ColumnAdjacency(const SRMatrixStorage<scalar,index>& mat);
 
 	/// Access lists of rows having non-zeros in any column
 	const std::vector<index>& col_nonzero_rows() const { return col_rows; }
@@ -40,7 +40,7 @@ protected:
 	std::vector<index> ptrs;
 
 	/// Computes the adjacency lists of a CSR-type matrix
-	void compute(const CRawBSRMatrix<scalar,index>& mat);
+	void compute(const SRMatrixStorage<scalar,index>& mat);
 };
 
 }

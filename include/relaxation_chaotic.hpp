@@ -23,7 +23,8 @@ public:
 	 *    application. Ignored for relaxation.
 	 * \param threadchunksize Number of iterations to assign to a thread at a time
 	 */
-	ChaoticBlockRelaxation(const int napplysweeps, const int threadchunksize);
+	ChaoticBlockRelaxation(SRMatrixStorage<const scalar, const index>&& matrix,
+	                       const int napplysweeps, const int threadchunksize);
 
 	/// Async. forward block-Gauss-Seidel preconditioner
 	void apply(const scalar *const b, scalar *const __restrict x) const;
@@ -39,6 +40,7 @@ public:
 	void apply_relax(const scalar *const x, scalar *const __restrict y) const;
 
 protected:
+	using SRPreconditioner<scalar,index>::pmat;
 	using SRPreconditioner<scalar,index>::mat;
 	using BJacobiSRPreconditioner<scalar,index,bs,stor>::dblocks;
 	using Preconditioner<scalar,index>::solveparams;
@@ -62,7 +64,8 @@ public:
 	 *    application. Ignored for relaxation.
 	 * \param threadchunksize Number of iterations to assign to a thread at a time
 	 */
-	ChaoticRelaxation(const int n_applysweeps, const int threadchunksize);
+	ChaoticRelaxation(SRMatrixStorage<const scalar, const index>&& matrix,
+	                  const int n_applysweeps, const int threadchunksize);
 
 	/// Async. forward Gauss-Seidel preconditioner
 	void apply(const scalar *const b, scalar *const __restrict x) const;
@@ -78,6 +81,7 @@ public:
 	void apply_relax(const scalar *const x, scalar *const __restrict y) const;
 
 protected:
+	using SRPreconditioner<scalar,index>::pmat;
 	using SRPreconditioner<scalar,index>::mat;
 	using JacobiSRPreconditioner<scalar,index>::dblocks;
 	using Preconditioner<scalar,index>::solveparams;

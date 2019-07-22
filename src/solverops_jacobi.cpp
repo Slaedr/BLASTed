@@ -16,8 +16,9 @@ using boost::alignment::aligned_alloc;
 using boost::alignment::aligned_free;
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
-BJacobiSRPreconditioner<scalar,index,bs,stor>::BJacobiSRPreconditioner()
-	: dblocks{nullptr}
+BJacobiSRPreconditioner<scalar,index,bs,stor>
+::BJacobiSRPreconditioner(SRMatrixStorage<const scalar,const index>&& matrix)
+	: SRPreconditioner<scalar,index>(std::move(matrix)), dblocks{nullptr}
 { }
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
@@ -118,8 +119,9 @@ void BJacobiSRPreconditioner<scalar,index,bs,stor>::apply_relax(const scalar *co
 }
 
 template <typename scalar, typename index>
-JacobiSRPreconditioner<scalar,index>::JacobiSRPreconditioner()
-	: dblocks{nullptr}
+JacobiSRPreconditioner<scalar,index>
+::JacobiSRPreconditioner(SRMatrixStorage<const scalar, const index>&& matrix)
+	: SRPreconditioner<scalar,index>(std::move(matrix)), dblocks{nullptr}
 { }
 
 template <typename scalar, typename index>

@@ -18,10 +18,10 @@ int main(int argc, char *argv[])
 
 	COOMatrix<double,int> coomat;
 	coomat.readMatrixMarket(mfile);
-	RawBSRMatrix<double,int> rmat;
-	coomat.convertToCSR(&rmat);
 
-	const ColumnAdjacency<double,int> ca(reinterpret_cast<CRawBSRMatrix<double,int>&>(rmat));
+	const SRMatrixStorage<double,int> rmat = coomat.convertToCSR();
+
+	const ColumnAdjacency<double,int> ca(rmat);
 	const std::vector<int>& cnzrow = ca.col_nonzero_rows();
 	const std::vector<int>& cnzloc = ca.col_nonzero_locations();
 	const std::vector<int>& cptr = ca.col_pointers();
@@ -37,7 +37,5 @@ int main(int argc, char *argv[])
 			assert(pos < rmat.browptr[rowind+1]);
 		}
 	}
-
-	destroyRawBSRMatrix(rmat);
 	return 0;
 }

@@ -18,7 +18,7 @@ class BJacobiSRPreconditioner : public SRPreconditioner<scalar,index>
 	static_assert(stopt == RowMajor || stopt == ColMajor, "Invalid storage option!");
 
 public:
-	BJacobiSRPreconditioner();
+	BJacobiSRPreconditioner(SRMatrixStorage<const scalar, const index>&& matrix);
 
 	~BJacobiSRPreconditioner();
 
@@ -55,7 +55,7 @@ template <typename scalar, typename index>
 class JacobiSRPreconditioner : public SRPreconditioner<scalar,index>
 {
 public:
-	JacobiSRPreconditioner();
+	JacobiSRPreconditioner(SRMatrixStorage<const scalar, const index>&& matrix);
 
 	~JacobiSRPreconditioner();
 

@@ -102,7 +102,7 @@ public:
 private:
 	template <int bs, StorageOptions stor>
 	SRPreconditioner<scalar,index> *
-	create_srpreconditioner_of_type(SRMatrixStorage<const scalar, const index>& prec_matrix,
+	create_srpreconditioner_of_type(SRMatrixStorage<const scalar, const index>&& prec_matrix,
 	                                const AsyncSolverSettings& opts) const;
 };
 

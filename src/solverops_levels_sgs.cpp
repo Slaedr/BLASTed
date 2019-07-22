@@ -29,8 +29,8 @@ using boost::alignment::aligned_alloc;
 using boost::alignment::aligned_free;
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
-Level_BSGS<scalar,index,bs,stor>::Level_BSGS()
-	: BJacobiSRPreconditioner<scalar,index,bs,stor>(), ytemp{nullptr}
+Level_BSGS<scalar,index,bs,stor>::Level_BSGS(SRMatrixStorage<const scalar, const index>&& matrix)
+	: BJacobiSRPreconditioner<scalar,index,bs,stor>(std::move(matrix)), ytemp{nullptr}
 { }
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
@@ -135,7 +135,8 @@ template class Level_BSGS<double,int,BUILD_BLOCK_SIZE,RowMajor>;
 #endif
 
 template <typename scalar, typename index>
-Level_SGS<scalar,index>::Level_SGS() : JacobiSRPreconditioner<scalar,index>(), ytemp{nullptr}
+Level_SGS<scalar,index>::Level_SGS(SRMatrixStorage<const scalar,const index>&& matrix)
+	: JacobiSRPreconditioner<scalar,index>(std::move(matrix)), ytemp{nullptr}
 { }
 
 template <typename scalar, typename index>

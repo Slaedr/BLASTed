@@ -36,10 +36,10 @@ void convert_BSR_to_BSC(const CRawBSRMatrix<scalar,index> *const rmat,
 	const index bnnz = rmat->browptr[rmat->nbrows];
 	const index N = rmat->nbrows;
 	cmat.nbcols = N;
-	cmat.bcolptr = new index[N+1];
-	cmat.browind = new index[bnnz];
-	cmat.vals = new scalar[bnnz*bs2];
-	cmat.diagind = new index[N];
+	cmat.bcolptr = (index*)aligned_alloc(CACHE_LINE_LEN, (N+1)*sizeof(index));
+	cmat.browind = (index*)aligned_alloc(CACHE_LINE_LEN, bnnz*sizeof(index));
+	cmat.vals = (scalar*)aligned_alloc(CACHE_LINE_LEN, bnnz*bs2*sizeof(scalar));
+	cmat.diagind = (index*)aligned_alloc(CACHE_LINE_LEN, N*sizeof(index));
 
 	// copy the values into a temporary column-wise storage
 
@@ -135,25 +135,20 @@ template CRawBSCMatrix<double,int>
 convert_BSR_to_BSC_1based<double,int,1>(const CRawBSRMatrix<double,int> *const rmat);
 
 template <typename scalar, typename index>
-void destroyRawBSCMatrix(const RawBSCMatrix<scalar,index>& mat)
+void alignedDestroyRawBSCMatrix(RawBSCMatrix<scalar,index>& cmat)
 {
-	delete [] mat.bcolptr;
-	delete [] mat.browind;
-	delete [] mat.vals;
-	delete [] mat.diagind;
+	aligned_free(cmat.bcolptr);
+	aligned_free(cmat.browind);
+	aligned_free(cmat.vals);
+	aligned_free(cmat.diagind);
 }
-
-template void destroyRawBSCMatrix<double,int>(const RawBSCMatrix<double,int>& mat);
 
 template <typename scalar, typename index>
-void destroyRawBSCMatrix(const CRawBSCMatrix<scalar,index>& mat)
+void alignedDestroyCRawBSCMatrix(CRawBSCMatrix<scalar,index>& cmat)
 {
-	delete [] mat.bcolptr;
-	delete [] mat.browind;
-	delete [] mat.vals;
-	delete [] mat.diagind;
+	alignedDestroyRawBSCMatrix<scalar,index>(reinterpret_cast<RawBSCMatrix<scalar,index>&>(cmat));
 }
 
-template void destroyRawBSCMatrix<double,int>(const CRawBSCMatrix<double,int>& mat);
+template void alignedDestroyCRawBSCMatrix(CRawBSCMatrix<double,int>& cmat);
 
 }

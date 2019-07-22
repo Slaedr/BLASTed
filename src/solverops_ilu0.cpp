@@ -17,11 +17,13 @@ using boost::alignment::aligned_alloc;
 using boost::alignment::aligned_free;
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
-AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>::
-AsyncBlockILU0_SRPreconditioner(const int nbuildswp, const int napplyswp, const int tcs,
-                                const FactInit finit, const ApplyInit ainit,
-                                const bool tf, const bool ta, const bool comp_rem)
-	: iluvals{nullptr}, scale{nullptr}, ytemp{nullptr}, threadedfactor{tf}, threadedapply{ta},
+AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>
+::AsyncBlockILU0_SRPreconditioner(SRMatrixStorage<const scalar, const index>&& matrix,
+                                  const int nbuildswp, const int napplyswp, const int tcs,
+                                  const FactInit finit, const ApplyInit ainit,
+                                  const bool tf, const bool ta, const bool comp_rem)
+	: SRPreconditioner<scalar,index>(std::move(matrix)),
+	  iluvals{nullptr}, scale{nullptr}, ytemp{nullptr}, threadedfactor{tf}, threadedapply{ta},
 	  rowscale{false}, nbuildsweeps{nbuildswp}, napplysweeps{napplyswp}, thread_chunk_size{tcs},
 	  factinittype{finit}, applyinittype{ainit}, compute_remainder{comp_rem}
 {
@@ -197,10 +199,12 @@ void AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>::apply_relax(const sc
 
 template <typename scalar, typename index>
 AsyncILU0_SRPreconditioner<scalar,index>::
-AsyncILU0_SRPreconditioner(const int nbuildswp, const int napplyswp, const int tcs,
+AsyncILU0_SRPreconditioner(SRMatrixStorage<const scalar, const index>&& matrix,
+                           const int nbuildswp, const int napplyswp, const int tcs,
                            const FactInit fi, const ApplyInit ai,
                            const bool tf, const bool ta)
-	: iluvals{nullptr}, scale{nullptr}, ytemp{nullptr}, threadedfactor{tf}, threadedapply{ta},
+	: SRPreconditioner<scalar,index>(std::move(matrix)),
+	  iluvals{nullptr}, scale{nullptr}, ytemp{nullptr}, threadedfactor{tf}, threadedapply{ta},
 	  nbuildsweeps{nbuildswp}, napplysweeps{napplyswp}, thread_chunk_size{tcs},
 	  factinittype{fi}, applyinittype{ai}
 { }
@@ -364,13 +368,14 @@ template class AsyncBlockILU0_SRPreconditioner<double,int,BUILD_BLOCK_SIZE,RowMa
 
 
 template <typename scalar, typename index>
-ReorderedAsyncILU0_SRPreconditioner<scalar,index>::
-ReorderedAsyncILU0_SRPreconditioner(ReorderingScaling<scalar,index,1> *const reorderscale,
-                                    const int nbuildsweeps, const int napplysweeps, const int tcs,
-                                    const FactInit finit, const ApplyInit ainit,
-                                    const bool threadedfactor, const bool threadedapply)
-	: AsyncILU0_SRPreconditioner<scalar,index>(nbuildsweeps,napplysweeps, tcs, finit, ainit,
-	                                           threadedfactor,threadedapply),
+ReorderedAsyncILU0_SRPreconditioner<scalar,index>
+::ReorderedAsyncILU0_SRPreconditioner(SRMatrixStorage<const scalar, const index>&& matrix,
+                                      ReorderingScaling<scalar,index,1> *const reorderscale,
+                                      const int nbuildsweeps, const int napplysweeps, const int tcs,
+                                      const FactInit finit, const ApplyInit ainit,
+                                      const bool threadedfactor, const bool threadedapply)
+	: AsyncILU0_SRPreconditioner<scalar,index>(std::move(matrix),nbuildsweeps,napplysweeps, tcs,
+	                                           finit, ainit, threadedfactor,threadedapply),
 	  reord{reorderscale}
 { }
 

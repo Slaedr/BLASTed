@@ -23,7 +23,7 @@ class LeftSAIPreconditioner : public SRPreconditioner<scalar,index>
 	static_assert(bs > 0, "Block size must be positive!");
 	static_assert(stor == RowMajor || stor == ColMajor, "Invalid storage option!");
 public:
-	LeftSAIPreconditioner();
+	LeftSAIPreconditioner(SRMatrixStorage<const scalar, const index>&& matrix);
 
 	bool relaxationAvailable() const { return false; }
 
