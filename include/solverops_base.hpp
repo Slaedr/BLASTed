@@ -7,11 +7,17 @@
 #define BLASTED_SOLVEROPS_BASE_H
 
 #include <limits>
+#include <vector>
+#include <boost/align/aligned_allocator.hpp>
 
 #include "linearoperator.hpp"
 #include "srmatrixdefs.hpp"
 
 namespace blasted {
+
+/// An aligned dynamic array
+template <typename T>
+using aligned_vector = std::vector<T, boost::alignment::aligned_allocator<T,CACHE_LINE_LEN>>;
 
 /// Application parameters for certain operators - usually relaxations
 template <typename scalar>
@@ -22,7 +28,7 @@ struct SolveParams {
 	bool ctol;          ///< Whether to check for the tolerances
 	int maxits;         ///< Maximum iterations
 };
-	
+
 /// Generic 'preconditioner' interface
 /** We use "preconditioner" for want of a better term. It is used here in the general sense of
  * a single iteration of any linear iterative solver.

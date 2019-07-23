@@ -38,6 +38,7 @@ public:
 
 protected:
 	
+	using SRPreconditioner<scalar,index>::pmat;
 	using SRPreconditioner<scalar,index>::mat;
 	using Preconditioner<scalar,index>::solveparams;
 	using Blk = Block_t<scalar,bs,stopt>;
@@ -45,6 +46,7 @@ protected:
 	
 	/// Storage for factored or inverted diagonal blocks
 	scalar *dblocks;
+	//aligned_vector<scalar> dblocks;
 };
 
 /// Scalar Jacobi operator for sparse-row matrices
