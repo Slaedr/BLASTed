@@ -44,41 +44,20 @@ int testConvertBSRToBSC(const std::string mfile)
 {
 	COOMatrix<double,int> coomat;
 	coomat.readMatrixMarket(mfile);
-	RawBSRMatrix<double,int> rmat;
-	coomat.convertToBSR<bs,ColMajor>(&rmat);
+	SRMatrixStorage<const double,const int> smat =
+		move_to_const<double,int>(getSRMatrixFromCOO<double,int,bs>(coomat, "colmajor"));
+	CRawBSRMatrix<double,int> rmat(&smat.browptr[0], &smat.bcolind[0], &smat.vals[0],
+	                               &smat.diagind[0], &smat.browendptr[0], smat.nbrows,
+	                               smat.nnzb, smat.nbstored);
 
 	CRawBSCMatrix<double,int> cmat;
-	convert_BSR_to_BSC<double,int,bs>(reinterpret_cast<const CRawBSRMatrix<double,int>*>(&rmat),
-	                                  &cmat);
+	convert_BSR_to_BSC<double,int,bs>(&rmat, &cmat);
 
-	const bool pass = compare<bs>(reinterpret_cast<const CRawBSRMatrix<double,int>*>(&rmat), &cmat);
+	const bool pass = compare<bs>(&rmat, &cmat);
 
 	fflush(stdout);
 	assert(pass);
 
-	alignedDestroyRawBSRMatrix(rmat);
-	alignedDestroyCRawBSCMatrix(cmat);
-	return 0;
-}
-
-template <>
-int testConvertBSRToBSC<1>(const std::string mfile)
-{
-	COOMatrix<double,int> coomat;
-	coomat.readMatrixMarket(mfile);
-	RawBSRMatrix<double,int> rmat;
-	coomat.convertToCSR(&rmat);
-
-	CRawBSCMatrix<double,int> cmat;
-	convert_BSR_to_BSC<double,int,1>(reinterpret_cast<const CRawBSRMatrix<double,int>*>(&rmat),
-	                                 &cmat);
-
-	const bool pass = compare<1>(reinterpret_cast<const CRawBSRMatrix<double,int>*>(&rmat), &cmat);
-
-	fflush(stdout);
-	assert(pass);
-
-	alignedDestroyRawBSRMatrix(rmat);
 	alignedDestroyCRawBSCMatrix(cmat);
 	return 0;
 }
@@ -106,10 +85,10 @@ int main(int argc, char *argv[])
 		printf("Checking for block size %d\n", blocksize);
 		testConvertBSRToBSC<4>(matfile);
 		break;
-	case 5:
-		printf("Checking for block size %d\n", blocksize);
-		testConvertBSRToBSC<5>(matfile);
-		break;
+	// case 5:
+	// 	printf("Checking for block size %d\n", blocksize);
+	// 	testConvertBSRToBSC<5>(matfile);
+	// 	break;
 	case 7:
 		printf("Checking for block size %d\n", blocksize);
 		testConvertBSRToBSC<7>(matfile);

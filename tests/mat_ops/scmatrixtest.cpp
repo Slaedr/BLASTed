@@ -81,15 +81,17 @@ int testConvertCSRToCSC(const std::string mfile, const std::string solnfile)
 {
 	COOMatrix<double,int> coomat;
 	coomat.readMatrixMarket(mfile);
-	RawBSRMatrix<double,int> rmat;
-	coomat.convertToCSR(&rmat);
+	SRMatrixStorage<const double,const int> smat =
+		move_to_const<double,int>(getSRMatrixFromCOO<double,int,1>(coomat, "colmajor"));
+	CRawBSRMatrix<double,int> rmat(&smat.browptr[0], &smat.bcolind[0], &smat.vals[0],
+	                               &smat.diagind[0], &smat.browendptr[0], smat.nbrows,
+	                               smat.nnzb, smat.nbstored);
 
 	CRawBSCMatrix<double,int> cmat;
-	convert_BSR_to_BSC<double,int,1>(reinterpret_cast<const CRawBSRMatrix<double,int>*>(&rmat), &cmat);
+	convert_BSR_to_BSC<double,int,1>(&rmat, &cmat);
 
 	int ierr = checkCSCMatrix(cmat, solnfile);
 
-	alignedDestroyRawBSRMatrix(rmat);
 	alignedDestroyCRawBSCMatrix(cmat);
 	return ierr;
 }

@@ -33,13 +33,9 @@
 #include <boost/algorithm/string.hpp>
 #endif
 
-#include <boost/align/aligned_alloc.hpp>
 #include <coomatrix.hpp>
 
 namespace blasted {
-
-using boost::alignment::aligned_alloc;
-using boost::alignment::aligned_free;
 
 /// Returns a [description](\ref MMDescription) of the matrix if it's in Matrix Market format
 inline
@@ -270,38 +266,6 @@ void COOMatrix<scalar,index>::readMatrixMarket(const std::string file)
 }
 
 template <typename scalar, typename index>
-void COOMatrix<scalar,index>::convertToCSR(RawBSRMatrix<scalar,index> *const cmat) const
-{ 
-	cmat->nbrows = nrows;
-	cmat->browptr = (index*)aligned_alloc(CACHE_LINE_LEN,(nrows+1)*sizeof(index));
-	cmat->bcolind = (index*)aligned_alloc(CACHE_LINE_LEN,nnz*sizeof(index));
-	cmat->vals = (scalar*)aligned_alloc(CACHE_LINE_LEN,nnz*sizeof(scalar));
-	cmat->diagind = (index*)aligned_alloc(CACHE_LINE_LEN,nrows*sizeof(index));
-
-	for(index i = 0; i < nnz; i++) {
-		cmat->bcolind[i] = entries[i].colind;
-		cmat->vals[i] = entries[i].value;
-	}
-	for(index i = 0; i < nrows+1; i++)
-		cmat->browptr[i] = rowptr[i];
-
-	for(index i=0; i < nrows; i++)
-	{
-		for(index j = rowptr[i]; j < rowptr[i+1]; j++)
-		{
-			if(entries[j].colind == entries[j].rowind)
-				cmat->diagind[i] = j;
-		}
-	}
-
-	if(nrows > 0)
-		cmat->browendptr = &cmat->browptr[1];
-
-	cmat->nnzb = cmat->browptr[nrows];
-	cmat->nbstored = cmat->nnzb;
-}
-
-template <typename scalar, typename index>
 SRMatrixStorage<scalar,index> COOMatrix<scalar,index>::convertToCSR() const
 {
 	SRMatrixStorage<scalar,index> cmat;
@@ -335,109 +299,6 @@ SRMatrixStorage<scalar,index> COOMatrix<scalar,index>::convertToCSR() const
 	cmat.nbstored = cmat.nnzb;
 
 	return cmat;
-}
-
-template <typename scalar, typename index>
-template<int bs, StorageOptions stor>
-void COOMatrix<scalar,index>::convertToBSR(RawBSRMatrix<scalar,index> *const bmat) const
-{
-	static_assert(bs > 0, "Block size must be positive!");
-	static_assert(stor == RowMajor || stor == ColMajor, "Invalid storage option!");
-
-	// only for square matrices
-	assert(nrows==ncols);
-
-	// the dimension of the matrix must be a multiple of the block size
-	assert(nrows % bs == 0);
-
-	bmat->nbrows = nrows/bs;
-	bmat->browptr = (index*)aligned_alloc(CACHE_LINE_LEN,(bmat->nbrows+1)*sizeof(index));
-	bmat->diagind = (index*)aligned_alloc(CACHE_LINE_LEN,bmat->nbrows*sizeof(index));
-	for(index i = 0; i < bmat->nbrows; i++)
-		bmat->diagind[i] = -1;
-	for(index i = 0; i < bmat->nbrows+1; i++)
-		bmat->browptr[i] = 0;
-	index bnnz = 0;                             //< Running count of number of nonzero blocks
-
-	std::vector<index> bcolidxs;
-	bcolidxs.reserve(nnz/bs);
-	std::vector<bool> tallybrows(bmat->nbrows, false);
-
-	/** If nonzeros in each row were sorted by column initially, 
-	 * blocks in each block-row would end up sorted by block-column.
-	 */
-
-	for(index irow = 0; irow < nrows; irow++)
-	{
-		const index curbrow = irow/bs;
-		for(index j = rowptr[irow]; j < rowptr[irow+1]; j++)
-		{
-			const index curcol = entries[j].colind;
-			const index curbcol = curcol/bs;
-
-			if(!tallybrows[curbrow]) {
-				bmat->browptr[curbrow] = bnnz;
-				tallybrows[curbrow] = true;
-			}
-
-			// find the current block-column of the current block-row in the array of column indices
-			auto it = std::find(bcolidxs.begin()+bmat->browptr[curbrow], bcolidxs.end(), curbcol);
-			
-			// if it does not exist, add the current block col index
-			if(it == bcolidxs.end()) {
-				bcolidxs.push_back(curbcol);
-				if(curbcol == curbrow)
-					bmat->diagind[curbrow] = bnnz;
-				bnnz++;
-			}
-		}
-	}
-
-	bmat->browptr[bmat->nbrows] = bnnz;
-
-	// fix browptr for empty block rows
-	for(index i = bmat->nbrows-1; i > 0; i--)
-		if(bmat->browptr[i] == 0)
-			bmat->browptr[i] = bmat->browptr[i+1];
-
-	bmat->bcolind = (index*)aligned_alloc(CACHE_LINE_LEN, bnnz*sizeof(index));
-	bmat->vals = (scalar*)aligned_alloc(CACHE_LINE_LEN, bnnz*bs*bs*sizeof(scalar));
-
-	for(index i = 0; i < bnnz*bs*bs; i++)
-		bmat->vals[i] = 0;
-
-	for(index i = 0; i < bnnz; i++)
-		bmat->bcolind[i] = bcolidxs[i];
-
-	// copy non-zero values
-	for(index irow = 0; irow < nrows; irow++)
-	{
-		const index curbrow = irow/bs;
-		for(index j = rowptr[irow]; j < rowptr[irow+1]; j++)
-		{
-			const index curcol = entries[j].colind;
-			const index curbcol = curcol/bs;
-			const index offset = stor==RowMajor ?
-				(irow-curbrow*bs)*bs + curcol-curbcol*bs : (curcol-curbcol*bs)*bs + irow-curbrow*bs;
-
-			index *const bcptr = std::find(bmat->bcolind + bmat->browptr[curbrow],
-			                               bmat->bcolind + bmat->browptr[curbrow+1],
-			                               curbcol);
-
-			if(bcptr == bmat->bcolind + bmat->browptr[curbrow+1]) {
-				std::cout << "! convertToBSR: Error: Memory not found for " << irow << ", "
-					<< curcol << std::endl;
-				std::abort();
-			}
-
-			*(bmat->vals + (ptrdiff_t)(bcptr-bmat->bcolind)*bs*bs + offset) = entries[j].value;
-		}
-	}
-
-	if(nrows > 0)
-		bmat->browendptr = &bmat->browptr[1];
-	bmat->nbstored = bnnz;
-	bmat->nnzb = bnnz;
 }
 
 template <typename scalar, typename index>
@@ -576,19 +437,6 @@ MatrixReadException::MatrixReadException(const std::string& msg) : std::runtime_
 { }
 
 template class COOMatrix<double,int>;
-
-template
-void COOMatrix<double,int>::convertToBSR<3,RowMajor>(RawBSRMatrix<double,int> *const bmat) const;
-template
-void COOMatrix<double,int>::convertToBSR<3,ColMajor>(RawBSRMatrix<double,int> *const bmat) const;
-template
-void COOMatrix<double,int>::convertToBSR<4,ColMajor>(RawBSRMatrix<double,int> *const bmat) const;
-template
-void COOMatrix<double,int>::convertToBSR<5,ColMajor>(RawBSRMatrix<double,int> *const bmat) const;
-template
-void COOMatrix<double,int>::convertToBSR<6,ColMajor>(RawBSRMatrix<double,int> *const bmat) const;
-template
-void COOMatrix<double,int>::convertToBSR<7,ColMajor>(RawBSRMatrix<double,int> *const bmat) const;
 
 template 
 BSRMatrix<double,int,1> constructBSRMatrixFromMatrixMarketFile(const std::string file);

@@ -24,45 +24,55 @@ SRMatrixStorage<typename std::add_const<scalar>::type, typename std::add_const<i
 move_to_const(SRMatrixStorage<scalar,index>&& smat);
 
 /// Sparse-row type storage for matrix
-template <typename scalar, typename index>
+/** The mscalar and mindex template parameters denote the scalar type of non-zeros values stored
+ * by the matrix and the index type used in indexing arrays, but not the type of POD members like nnzb.
+ * 
+ * The template parameters can be const-qualified. This is necessary if it is required to
+ * wrap const pointers provided by some other library, for instance. In such a case, the
+ * entries of the arrays will, of course, be immutable, but the matrix object itself may or may not be
+ * immutable. A SRMatrixStorage<const double, const int> allows one to re-wrap the internal arrays to
+ * refer to a different martrix and to change the POD entries such as nbrows, whereas a
+ * const SRMatrixStorage<const double, const int> would not allow that.
+ */
+template <typename mscalar, typename mindex>
 struct SRMatrixStorage
 {
 	/// The base scalar type
-	typedef typename std::remove_cv<scalar>::type wscalar;
+	typedef typename std::remove_cv<mscalar>::type scalar;
 	/// The base index type
-	typedef typename std::remove_cv<index>::type windex;
+	typedef typename std::remove_cv<mindex>::type index;
 
-	static_assert(std::numeric_limits<windex>::is_integer, "Integer index type required!");
-	static_assert(std::numeric_limits<windex>::is_signed, "Signed index type required!");
+	static_assert(std::numeric_limits<index>::is_integer, "Integer index type required!");
+	static_assert(std::numeric_limits<index>::is_signed, "Signed index type required!");
 
-	ArrayView<index> browptr;            ///< pointers to beginning block-rows
-	ArrayView<index> bcolind;            ///< block-column indices of non-zeros
-	ArrayView<scalar> vals;              ///< values of non-zero blocks
-	ArrayView<index> diagind;            ///< locations of the diagonal block in every block-row
-	ArrayView<index> browendptr;         ///< pointers to one-past-the-end of block-rows
-	windex nbrows;                       ///< number of block rows
-	windex nnzb;                         ///< number of non-zero blocks
-	windex nbstored;               ///< total number of non-zero blocks actually stored in the array vals
+	ArrayView<mindex> browptr;      ///< pointers to beginning block-rows
+	ArrayView<mindex> bcolind;      ///< block-column indices of non-zeros
+	ArrayView<mscalar> vals;        ///< values of non-zero blocks
+	ArrayView<mindex> diagind;      ///< locations of the diagonal block in every block-row
+	ArrayView<mindex> browendptr;   ///< pointers to one-past-the-end of block-rows
+	index nbrows;                   ///< number of block rows
+	index nnzb;                     ///< number of non-zero blocks
+	index nbstored;                 ///< total number of non-zero blocks actually stored in array vals
 
 	/// Default constructor - trivially sets as a zero matrix with no allocation
 	SRMatrixStorage();
 
 	/// Wrap data pointers
-	SRMatrixStorage(index *const brptrs, index *const bcinds,
-	                scalar *const values, index *const diag_inds, index *const brendptrs,
+	SRMatrixStorage(mindex *const brptrs, mindex *const bcinds,
+	                mscalar *const values, mindex *const diag_inds, mindex *const brendptrs,
 	                const index n_brows, const index n_nzb, const index n_bstored);
 
 	/// Move arrays into this object
-	SRMatrixStorage(ArrayView<index>&& brptrs, ArrayView<index>&& bcinds, ArrayView<scalar>&& vals,
-	                ArrayView<index>&& diag_inds, ArrayView<index>&& brendptrs,
+	SRMatrixStorage(ArrayView<mindex>&& brptrs, ArrayView<mindex>&& bcinds, ArrayView<mscalar>&& vals,
+	                ArrayView<mindex>&& diag_inds, ArrayView<mindex>&& brendptrs,
 	                const index n_brows, const index n_nzb, const index n_bstored);
 
 	/// Move constructor from another SRMatrixStorage
-	SRMatrixStorage(SRMatrixStorage<scalar,index>&& other);
+	SRMatrixStorage(SRMatrixStorage<mscalar,mindex>&& other);
 
 	friend
-	SRMatrixStorage<typename std::add_const<scalar>::type, typename std::add_const<index>::type>
-	move_to_const<>(SRMatrixStorage<scalar,index>&& smat);
+	SRMatrixStorage<typename std::add_const<mscalar>::type, typename std::add_const<mindex>::type>
+	move_to_const<>(SRMatrixStorage<mscalar,mindex>&& smat);
 };
 
 /// Wraps the arrays of the argument in an immutable matrix, while keeping the argument unchanged

@@ -103,7 +103,7 @@ public:
 		assert(length >= 0);
 
 		if(owner)
-			aligned_free(data);
+			aligned_free(const_cast<typename std::remove_const<T>::type*>(data));
 		data = arr;
 		len = length;
 		owner = false;

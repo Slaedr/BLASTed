@@ -63,7 +63,7 @@ void block_ilu0_apply(const CRawBSRMatrix<scalar,index> *const mat,
 {
 	using Blk = Block_t<scalar,bs,stor>;
 	using Seg = Segment_t<scalar,bs>;
-	
+
 	const Blk *ilu = reinterpret_cast<const Blk*>(iluvals);
 	const Seg *r = reinterpret_cast<const Seg*>(rr);
 	Seg *z = reinterpret_cast<Seg*>(zz);
@@ -83,7 +83,7 @@ void block_ilu0_apply(const CRawBSRMatrix<scalar,index> *const mat,
 	default:
 		;
 	}
-	
+
 	/** solves Ly = Sr by asynchronous Jacobi iterations.
 	 * Note that if done serially, this is a forward-substitution.
 	 */

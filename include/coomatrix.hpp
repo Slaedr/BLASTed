@@ -61,6 +61,8 @@ struct Entry {
 template <typename scalar, typename index>
 class COOMatrix
 {
+	static_assert(!std::is_const<index>::value, "Index type should be mutable.");
+	static_assert(!std::is_const<scalar>::value, "Scalar type should be mutable.");
 	static_assert(std::numeric_limits<index>::is_signed, "Signed index type required!");
 	static_assert(std::numeric_limits<index>::is_integer, "Integer index type required!");
 
@@ -82,25 +84,19 @@ public:
 	 */
 	void readMatrixMarket(const std::string file);
 
-	/// Converts to a raw CSR struct \ref RawBSRMatrix
-	/** Member nbrows of RawBSRMatrix is set to the total number of rows.
-	 * The necessary memory allocation is done in this function. It is necessary to manually
-	 * [destroy](\ref destroyRawBSRMatrix) the RawBSRMatrix later.
+	/// Creates a new sparse-row matrix from the COO matrix
+	/** The returned matrix owns its storage and frees it when destroyed.
+	 * Member nbrows of the SRMatrixStorage is set to the total number of rows.
 	 */
-	void convertToCSR(RawBSRMatrix<scalar,index> *const cmat) const;
-
 	SRMatrixStorage<scalar,index> convertToCSR() const;
 
-	/// Converts to a compressed sparse block-row (BSR) matrix
+	/// Creates a new block sparse-row matrix from the COO matrix
 	/** The block size is given by the template parameter bs.
 	 * The template parameter stor specifies whether the scalars within a block are stored
 	 * row-major or column-major.
-	 * The storage required for the matrix is allocated here in the arrays of bmat.
-	 * RawBSRMatrix::nbrows is set to the number of block-rows.
+	 * The returned matrix owns its storage and frees it when destroyed.
+	 * SRMatrixStorage::nbrows is set to the number of block-rows.
 	 */
-	template<int bs, StorageOptions stor>
-	void convertToBSR(RawBSRMatrix<scalar,index> *const bmat) const;
-
 	template<int bs, StorageOptions stor>
 	SRMatrixStorage<scalar,index> convertToBSR() const;
 

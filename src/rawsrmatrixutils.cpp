@@ -12,34 +12,35 @@ namespace blasted {
 using boost::alignment::aligned_alloc;
 using boost::alignment::aligned_free;
 
-template <typename scalar, typename index>
-SRMatrixStorage<scalar,index>::SRMatrixStorage() : nbrows{0}, nnzb{0}, nbstored{0}
+template <typename mscalar, typename mindex>
+SRMatrixStorage<mscalar,mindex>::SRMatrixStorage() : nbrows{0}, nnzb{0}, nbstored{0}
 { }
 
-template <typename scalar, typename index>
-SRMatrixStorage<scalar,index>::SRMatrixStorage(index *const brptrs, index *const bcinds,
-                                               scalar *const values, index *const diag_inds,
-                                               index *const brendptrs,
-                                               const index n_brows, const index n_nzb,
-                                               const index n_bstored)
+template <typename mscalar, typename mindex>
+SRMatrixStorage<mscalar,mindex>::SRMatrixStorage(mindex *const brptrs, mindex *const bcinds,
+                                                 mscalar *const values, mindex *const diag_inds,
+                                                 mindex *const brendptrs,
+                                                 const index n_brows, const index n_nzb,
+                                                 const index n_bstored)
 	: browptr(brptrs, n_brows+1), bcolind(bcinds, n_bstored), vals(values, n_bstored),
 	  diagind(diag_inds, n_brows), browendptr(brendptrs, n_brows),
 	  nbrows{n_brows}, nnzb{n_nzb}, nbstored{n_bstored}
 { }
 
-template <typename scalar, typename index>
-SRMatrixStorage<scalar,index>::SRMatrixStorage(ArrayView<index>&& brptrs, ArrayView<index>&& bcinds,
-                                               ArrayView<scalar>&& values,
-                                               ArrayView<index>&& diaginds, ArrayView<index>&& brendptrs,
-                                               const index n_brows, const index n_nzb,
-                                               const index n_bstored)
+template <typename mscalar, typename mindex>
+SRMatrixStorage<mscalar,mindex>::SRMatrixStorage(ArrayView<mindex>&& brptrs, ArrayView<mindex>&& bcinds,
+                                                 ArrayView<mscalar>&& values,
+                                                 ArrayView<mindex>&& diaginds,
+                                                 ArrayView<mindex>&& brendptrs,
+                                                 const index n_brows, const index n_nzb,
+                                                 const index n_bstored)
 	: browptr(std::move(brptrs)), bcolind(std::move(bcinds)), vals(std::move(values)),
 	  diagind(std::move(diaginds)), browendptr(std::move(brendptrs)),
 	  nbrows{n_brows}, nnzb{n_nzb}, nbstored{n_bstored}
 { }
 
-template <typename scalar, typename index>
-SRMatrixStorage<scalar,index>::SRMatrixStorage(SRMatrixStorage<scalar,index>&& other)
+template <typename mscalar, typename mindex>
+SRMatrixStorage<mscalar,mindex>::SRMatrixStorage(SRMatrixStorage<mscalar,mindex>&& other)
 	: browptr(std::move(other.browptr)), bcolind(std::move(other.bcolind)), vals(std::move(other.vals)),
 	  diagind(std::move(other.diagind)), browendptr(std::move(other.browendptr)),
 	  nbrows{other.nbrows}, nnzb{other.nnzb}, nbstored{other.nbstored}

@@ -6,6 +6,7 @@
 #undef NDEBUG
 
 #include <float.h>
+#include <memory>
 #include <string>
 #include <iomanip>
 #include <vector>
@@ -25,17 +26,18 @@ int testBSRMatMult(const std::string type, const std::string storageorder,
 	const std::vector<double> x = readDenseMatrixMarket<double>(xvec);
 	const std::vector<double> ans = readDenseMatrixMarket<double>(prodvec);
 
-	AbstractLinearOperator<double,int>* testmat = nullptr;
+	std::unique_ptr<AbstractLinearOperator<double,int>> testmat;
 	if(type == "view") {
 		if(storageorder == "rowmajor")
-			testmat = new BSRMatrixView<double,int,bs,RowMajor>
+			testmat = std::make_unique<BSRMatrixView<double,int,bs,RowMajor>>
 				(move_to_const<double,int>(getSRMatrixFromCOO<double,int,bs>(coom, storageorder)));
 		else
-			testmat = new BSRMatrixView<double,int,bs,ColMajor>
+			testmat = std::make_unique<BSRMatrixView<double,int,bs,ColMajor>>
 				(move_to_const<double,int>(getSRMatrixFromCOO<double,int,bs>(coom, storageorder)));
 	}
 	else
-		testmat = new BSRMatrix<double,int,bs>(getSRMatrixFromCOO<double,int,bs>(coom, "rowmajor"));
+		testmat = std::make_unique<BSRMatrix<double,int,bs>>
+			(getSRMatrixFromCOO<double,int,bs>(coom, "rowmajor"));
 	
 	std::vector<double> y(testmat->dim());
 
@@ -44,8 +46,6 @@ int testBSRMatMult(const std::string type, const std::string storageorder,
 	for(int i = 0; i < testmat->dim(); i++) {
 		assert(std::fabs(y[i]-ans[i]) < 10*DBL_EPSILON);
 	}
-
-	delete testmat;
 
 	return 0;
 }
