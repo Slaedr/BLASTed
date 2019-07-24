@@ -7,9 +7,6 @@
 
 #include <Eigen/Core>
 
-/// Cache line length in bytes, used for aligned allocation
-#define CACHE_LINE_LEN 64
-
 namespace blasted {
 
 using Eigen::Dynamic;

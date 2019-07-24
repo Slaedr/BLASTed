@@ -118,7 +118,7 @@ template <typename scalar, typename index, int bs, StorageOptions stor>
 void BSRMatrixView<scalar,index,bs,stor>::apply(const scalar *const xx,
                                        scalar *const __restrict yy) const
 {
-	bsr_matrix_apply<scalar,index,bs,stor>(&mat, xx, yy);
+	BLAS_BSR<const scalar,const index,bs,stor>::matrix_apply(std::move(mat), xx, yy);
 }
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
@@ -126,7 +126,7 @@ void BSRMatrixView<scalar,index,bs,stor>::gemv3(const scalar a, const scalar *co
                                                 const scalar b, const scalar *const yy,
                                                 scalar *const zz) const
 {
-	bsr_gemv3<scalar,index,bs,stor>(&mat, a, xx, b, yy, zz);
+	BLAS_BSR<const scalar, const index,bs,stor>::gemv3(std::move(mat), a, xx, b, yy, zz);
 }
 
 template <typename scalar, typename index>
@@ -150,14 +150,14 @@ template <typename scalar, typename index>
 void CSRMatrixView<scalar,index>::apply(const scalar *const xx,
                                         scalar *const __restrict yy) const
 {
-	csr_matrix_apply(&mat, xx, yy);
+	BLAS_CSR<const scalar,const index>::matrix_apply(std::forward<const MatrixWrapper>(mat), xx, yy);
 }
 
 template <typename scalar, typename index>
 void CSRMatrixView<scalar,index>::gemv3(const scalar a, const scalar *const __restrict__ xx, 
                                         const scalar b, const scalar *const yy, scalar *const zz) const
 {
-	csr_gemv3(&mat, a, xx, b, yy, zz);
+	BLAS_CSR<const scalar,const index>::gemv3(std::move(mat), a, xx, b, yy, zz);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -392,17 +392,14 @@ template <typename scalar, typename index, int bs>
 void BSRMatrix<scalar,index,bs>::apply(const scalar *const xx,
                                        scalar *const __restrict yy) const
 {
-	bsr_matrix_apply<scalar,index,bs,RowMajor>
-		(reinterpret_cast<const SRMatrixStorage<const scalar,const index>*>(&mat), xx, yy);
+	BLAS_BSR<scalar,index,bs,RowMajor>::matrix_apply(std::move(mat), xx, yy);
 }
 
 template <typename scalar, typename index, int bs>
-void BSRMatrix<scalar,index,bs>::gemv3(const scalar a, const scalar *const __restrict xx, 
+void BSRMatrix<scalar,index,bs>::gemv3(const scalar a, const scalar *const __restrict xx,
 		const scalar b, const scalar *const yy, scalar *const zz) const
 {
-	bsr_gemv3<scalar,index,bs,RowMajor>
-		(reinterpret_cast<const SRMatrixStorage<const scalar,const index>*>(&mat), 
-		 a, xx, b, yy, zz);
+	BLAS_BSR<scalar,index,bs,RowMajor>::gemv3(std::move(mat), a, xx, b, yy, zz);
 }
 
 template <typename scalar, typename index, int bs>
@@ -700,14 +697,14 @@ template <typename scalar, typename index>
 void BSRMatrix<scalar,index,1>::apply(const scalar *const xx,
                                       scalar *const __restrict yy) const
 {
-	csr_matrix_apply(reinterpret_cast<const SRMatrixStorage<const scalar,const index>*>(&mat), xx, yy);
+	BLAS_CSR<scalar,index>::matrix_apply(std::move(mat), xx, yy);
 }
 
 template <typename scalar, typename index>
 void BSRMatrix<scalar,index,1>::gemv3(const scalar a, const scalar *const __restrict__ xx,
                                       const scalar b, const scalar *const yy, scalar *const zz) const
 {
-	csr_gemv3(reinterpret_cast<const SRMatrixStorage<const scalar,const index>*>(&mat), a, xx, b, yy, zz);
+	BLAS_CSR<scalar,index>::gemv3(std::move(mat), a, xx, b, yy, zz);
 }
 
 template <typename scalar, typename index>

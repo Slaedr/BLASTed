@@ -75,15 +75,25 @@ void inclusive_scan(std::vector<index>& v)
 
 template void inclusive_scan(std::vector<int>& v);
 
-template <typename index, typename allocator>
-void inclusive_scan(std::vector<index,allocator>& v)
+// template <typename index, typename allocator>
+// void inclusive_scan(std::vector<index,allocator>& v)
+// {
+// 	// serial
+// 	for(size_t i = 1; i < v.size(); i++)
+// 		v[i] += v[i-1];
+// }
+
+// template void inclusive_scan(std::vector<int,boost::alignment::aligned_allocator<int,CACHE_LINE_LEN>>& v);
+
+template <typename index>
+void inclusive_scan(device_vector<index>& v)
 {
 	// serial
 	for(size_t i = 1; i < v.size(); i++)
 		v[i] += v[i-1];
 }
 
-template void inclusive_scan(std::vector<int,boost::alignment::aligned_allocator<int,CACHE_LINE_LEN>>& v);
+template void inclusive_scan(device_vector<int>& v);
 
 template <typename index>
 std::vector<index> inclusive_scan(const std::vector<index>& v)

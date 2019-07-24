@@ -12,31 +12,49 @@
 
 namespace blasted {
 
-/// Matrix-vector product for BSR matrices
-template <typename scalar, typename index, int bs, StorageOptions stor>
-void bsr_matrix_apply(const SRMatrixStorage<const scalar, const index> *const mat,
-                      const scalar *const xx, scalar *const __restrict yy);
+/// BLAS-2 operations for BSR matrices
+template <typename mscalar, typename mindex, int bs, StorageOptions stor>
+struct BLAS_BSR {
+	/// The working (base) scalar type
+	typedef typename std::remove_cv<mscalar>::type scalar;
+	/// The working (base) index type
+	typedef typename std::remove_cv<mindex>::type index;
 
-/// Computes z := a Ax + by for  scalars a and b and vectors x and y
-/**
- * \param[in] mat The BSR matrix
- * \warning xx must not alias zz.
- */
-template <typename scalar, typename index, int bs, StorageOptions stor>
-void bsr_gemv3(const SRMatrixStorage<const scalar, const index> *const mat,
-               const scalar a, const scalar *const __restrict xx,
-               const scalar b, const scalar *const yy, scalar *const zz);
+	/// Matrix-vector product for BSR matrices
+	static void matrix_apply(const SRMatrixStorage<mscalar,mindex>&& mat,
+	                         const scalar *const xx, scalar *const __restrict yy);
 
-/// Matrix-vector product for CSR matrices
-template <typename scalar, typename index>
-void csr_matrix_apply(const SRMatrixStorage<const scalar, const index> *const mat,
-                      const scalar *const xx, scalar *const __restrict yy);
+	/// Computes z := a Ax + by for  scalars a and b and vectors x and y
+	/**
+	 * \param[in] mat The BSR matrix
+	 * \warning xx must not alias zz.
+	 */
+	static void gemv3(const SRMatrixStorage<mscalar,mindex>&& mat,
+	                  const scalar a, const scalar *const __restrict xx,
+	                  const scalar b, const scalar *const yy, scalar *const zz);
+};
 
-/// Computes z := a Ax + by for CSR matrix A, scalars a and b and vectors x and y
-template <typename scalar, typename index>
-void csr_gemv3(const SRMatrixStorage<const scalar, const index> *const mat,
-               const scalar a, const scalar *const __restrict xx,
-               const scalar b, const scalar *const yy, scalar *const zz);
+/// BLAS-2 operations for CSR matrices
+template <typename mscalar, typename mindex>
+struct BLAS_CSR {
+	/// The working (base) scalar type
+	typedef typename std::remove_cv<mscalar>::type scalar;
+	/// The working (base) index type
+	typedef typename std::remove_cv<mindex>::type index;
+
+	/// Matrix-vector product for CSR matrices
+	static void matrix_apply(const SRMatrixStorage<mscalar,mindex>&& mat,
+	                         const scalar *const xx, scalar *const __restrict yy);
+
+	/// Computes z := a Ax + by for  scalars a and b and vectors x and y
+	/**
+	 * \param[in] mat The CSR matrix
+	 * \warning xx must not alias zz.
+	 */
+	static void gemv3(const SRMatrixStorage<mscalar,mindex>&& mat,
+	                  const scalar a, const scalar *const __restrict xx,
+	                  const scalar b, const scalar *const yy, scalar *const zz);
+};
 
 /// GeMV for block compressed sparse column matrix
 /** Computes z := a Ax + by for  scalars a and b and vectors x and y

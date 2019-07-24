@@ -51,6 +51,8 @@ public:
 
 protected:
 
+	typedef SRMatrixStorage<const scalar, const index> MatrixWrapper;
+
 	/// The SR matrix wrapper
 	SRMatrixStorage<const scalar,const index> mat;
 };
@@ -148,8 +150,9 @@ public:
 	index dim() const { return mat.nbrows; }
 
 protected:
-	
-	/// The CSR matrix data	
+	typedef SRMatrixStorage<const scalar, const index> MatrixWrapper;
+
+	/// The CSR matrix data
 	using SRMatrixView<scalar,index>::mat;
 };
 

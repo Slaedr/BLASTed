@@ -21,6 +21,7 @@
 #define BLASTED_HELPER_ALGORITHMS_H
 
 #include <vector>
+#include "device_container.hpp"
 
 namespace blasted {
 
@@ -69,8 +70,10 @@ void inclusive_scan(std::vector<index>& v);
 /// Each entry is replaced with the cumulative sum of all previous entries including itself
 /** The first entry is not modified, but is considered in the accumulation process.
  */
-template <typename index, typename allocator>
-void inclusive_scan(std::vector<index,allocator>& v);
+// template <typename index, typename allocator>
+// void inclusive_scan(std::vector<index,allocator>& v);
+template <typename index>
+void inclusive_scan(device_vector<index>& v);
 
 /// Each entry is computed as the cumulative sum of all entries upto and including its position in
 ///  the input vector

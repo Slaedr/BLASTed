@@ -27,17 +27,22 @@ move_to_const(SRMatrixStorage<scalar,index>&& smat);
 template <typename scalar, typename index>
 struct SRMatrixStorage
 {
-	static_assert(std::numeric_limits<index>::is_integer, "Integer index type required!");
-	static_assert(std::numeric_limits<index>::is_signed, "Signed index type required!");
+	/// The base scalar type
+	typedef typename std::remove_cv<scalar>::type wscalar;
+	/// The base index type
+	typedef typename std::remove_cv<index>::type windex;
+
+	static_assert(std::numeric_limits<windex>::is_integer, "Integer index type required!");
+	static_assert(std::numeric_limits<windex>::is_signed, "Signed index type required!");
 
 	ArrayView<index> browptr;            ///< pointers to beginning block-rows
 	ArrayView<index> bcolind;            ///< block-column indices of non-zeros
 	ArrayView<scalar> vals;              ///< values of non-zero blocks
 	ArrayView<index> diagind;            ///< locations of the diagonal block in every block-row
 	ArrayView<index> browendptr;         ///< pointers to one-past-the-end of block-rows
-	index nbrows;                        ///< number of block rows
-	index nnzb;                          ///< number of non-zero blocks
-	index nbstored;               ///< total number of non-zero blocks actually stored in the array vals
+	windex nbrows;                       ///< number of block rows
+	windex nnzb;                         ///< number of non-zero blocks
+	windex nbstored;               ///< total number of non-zero blocks actually stored in the array vals
 
 	/// Default constructor - trivially sets as a zero matrix with no allocation
 	SRMatrixStorage();
