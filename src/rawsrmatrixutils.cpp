@@ -234,6 +234,77 @@ CRawBSRMatrix<scalar,index> getUpperTriangularView(const CRawBSRMatrix<scalar,in
 template CRawBSRMatrix<double,int> getUpperTriangularView(const CRawBSRMatrix<double,int>& mat);
 
 template <typename scalar, typename index>
+SRMatrixStorage<const scalar,const index>
+getLowerTriangularView(const SRMatrixStorage<const scalar,const index>&& mat)
+{
+	ArrayView<const index> lbcolind(&mat.bcolind[0], mat.bcolind.size());
+	ArrayView<const index> ldiagind(&mat.diagind[0], mat.diagind.size());
+	ArrayView<const scalar> lvals(&mat.vals[0], mat.vals.size());
+
+	ArrayView<index> lrowptr(mat.nbrows);
+	ArrayView<index> lrowendptr(mat.nbrows);
+
+	index nnz = 0;
+	for(index irow = 0; irow < mat.nbrows; irow++)
+	{
+		lrowptr[irow] = mat.browptr[irow];
+		lrowendptr[irow] = mat.diagind[irow]+1;
+		nnz += (mat.diagind[irow]-mat.browptr[irow]+1);
+	}
+
+	SRMatrixStorage<const scalar,const index>
+		lower(std::move(move_to_const(std::move(lrowptr))), std::move(lbcolind), std::move(lvals),
+		      std::move(ldiagind), std::move(move_to_const(std::move(lrowendptr))),
+		      mat.nbrows, nnz, mat.nbstored);
+
+	return lower;
+}
+
+template SRMatrixStorage<const double,const int>
+getLowerTriangularView(const SRMatrixStorage<const double,const int>&& mat);
+
+template <typename scalar, typename index>
+SRMatrixStorage<const scalar,const index>
+getUpperTriangularView(const SRMatrixStorage<const scalar,const index>&& mat)
+{
+	assert(mat.browendptr[mat.nbrows-1] == mat.diagind[mat.nbrows-1]+1);
+
+	ArrayView<const index> ubcolind(&mat.bcolind[0], mat.bcolind.size());
+	ArrayView<const index> udiagind(&mat.diagind[0], mat.diagind.size());
+	ArrayView<const scalar> uvals(&mat.vals[0], mat.vals.size());
+
+	ArrayView<index> urowptr(mat.nbrows);
+	ArrayView<index> urowendptr(mat.nbrows);
+
+	index nnz = 0;
+	for(index irow = 0; irow < mat.nbrows; irow++)
+	{
+		urowptr[irow] = mat.diagind[irow];
+		urowendptr[irow] = mat.browendptr[irow];
+		nnz += (mat.browendptr[irow]-mat.diagind[irow]);
+	}
+
+	SRMatrixStorage<const scalar,const index>
+		upper(std::move(move_to_const(std::move(urowptr))), std::move(ubcolind), std::move(uvals),
+		      std::move(udiagind), std::move(move_to_const(std::move(urowendptr))),
+		      mat.nbrows, nnz, mat.nbstored);
+
+#ifdef DEBUG
+	assert(upper.browendptr[upper.nbrows-1] == upper.diagind[upper.nbrows-1]+1);
+
+	for(index irow = 0; irow < upper.nbrows; irow++)
+	{
+		for(index jj = upper.browptr[irow]; jj < upper.browendptr[irow]; jj++)
+			assert(upper.bcolind[jj] > irow || upper.diagind[irow] == jj);
+	}
+#endif
+	return upper;
+}
+
+template SRMatrixStorage<const double,const int>
+getUpperTriangularView(const SRMatrixStorage<const double,const int>&& mat);
+
+template <typename scalar, typename index>
 void alignedDestroyRawBSRMatrixTriangularView(RawBSRMatrix<scalar,index>& mat)
 {
 	aligned_free(mat.browptr);

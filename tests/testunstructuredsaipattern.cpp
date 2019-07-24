@@ -11,11 +11,6 @@
 
 using namespace blasted;
 
-#ifdef __GNUC__
-#pragma GCC diagnostic push
-#pragma GCC diagnostic warning "-Wstrict-aliasing"
-#endif
-
 std::vector<std::vector<int>> generate_small_unstructured_adjlists()
 {
 	std::vector<std::vector<int>> al(13);
@@ -92,92 +87,96 @@ int getUpperCSRPosition(const std::vector<std::vector<int>>& meshadj, const int 
 }
 
 // Mesh corresponding to generate_small_unstructured_adjlists
-RawBSRMatrix<double,int> generate_small_unstructured_matrix()
+SRMatrixStorage<double,int> generate_small_unstructured_matrix()
 {
-	using boost::alignment::aligned_alloc;
-
-	RawBSRMatrix<double,int> mat;
+	SRMatrixStorage<double,int> mat;
 	mat.nbrows = 13;
 
-	int *rowptr = (int*)aligned_alloc(CACHE_LINE_LEN, 14*sizeof(int));
-	rowptr[0] = 0;
-	rowptr[1] = 3; rowptr[2] = 3; rowptr[3] = 5; rowptr[4] = 5; rowptr[5] = 3; rowptr[6] = 5;
-	rowptr[7] = 4; rowptr[8] = 3; rowptr[9] = 4; rowptr[10] = 4; rowptr[11] = 3; rowptr[12] = 3;
-	rowptr[13] = 4;
+	mat.browptr.resize(14);
+
+	mat.browptr[0] = 0;
+	mat.browptr[1] = 3; mat.browptr[2] = 3; mat.browptr[3] = 5; mat.browptr[4] = 5; mat.browptr[5] = 3;
+	mat.browptr[6] = 5;
+	mat.browptr[7] = 4; mat.browptr[8] = 3; mat.browptr[9] = 4; mat.browptr[10] = 4;
+	mat.browptr[11] = 3; mat.browptr[12] = 3;
+	mat.browptr[13] = 4;
 
 	for(int i = 0; i < mat.nbrows; i++)
-		rowptr[i+1] += rowptr[i];
-	assert(rowptr[mat.nbrows] == 49);
-	mat.nnzb = rowptr[mat.nbrows];
+		mat.browptr[i+1] += mat.browptr[i];
+	assert(mat.browptr[mat.nbrows] == 49);
+	mat.nnzb = mat.browptr[mat.nbrows];
 	mat.nbstored = mat.nnzb;
 
-	int *colind = (int*)aligned_alloc(CACHE_LINE_LEN, mat.nnzb*sizeof(int));
-	double *vals = (double*)aligned_alloc(CACHE_LINE_LEN, mat.nnzb*sizeof(double));
-	int *diagind = (int*)aligned_alloc(CACHE_LINE_LEN, mat.nbrows*sizeof(int));
+	mat.bcolind.resize(mat.nnzb);
+	mat.vals.resize(mat.nnzb);
+	mat.diagind.resize(mat.nbrows);
 
-	colind[rowptr[0]] = 0; colind[rowptr[0]+1] = 2; colind[rowptr[0]+2] = 4;
-	diagind[0] = rowptr[0]; assert(rowptr[1] == rowptr[0]+3);
+	mat.bcolind[mat.browptr[0]] = 0; mat.bcolind[mat.browptr[0]+1] = 2; mat.bcolind[mat.browptr[0]+2] = 4;
+	mat.diagind[0] = mat.browptr[0]; assert(mat.browptr[1] == mat.browptr[0]+3);
 
-	colind[rowptr[1]] = 1; colind[rowptr[1]+1] = 2; colind[rowptr[1]+2] = 5;
-	diagind[1] = rowptr[1]; assert(rowptr[2] == rowptr[1]+3);
+	mat.bcolind[mat.browptr[1]] = 1; mat.bcolind[mat.browptr[1]+1] = 2; mat.bcolind[mat.browptr[1]+2] = 5;
+	mat.diagind[1] = mat.browptr[1]; assert(mat.browptr[2] == mat.browptr[1]+3);
 
-	colind[rowptr[2]] = 0; colind[rowptr[2]+1] = 1; colind[rowptr[2]+2] = 2; colind[rowptr[2]+3] = 3;
-	colind[rowptr[2]+4] = 5;
-	diagind[2] = rowptr[2]+2; assert(rowptr[3] == rowptr[2]+5);
+	mat.bcolind[mat.browptr[2]] = 0; mat.bcolind[mat.browptr[2]+1] = 1; mat.bcolind[mat.browptr[2]+2] = 2;
+	mat.bcolind[mat.browptr[2]+3] = 3;
+	mat.bcolind[mat.browptr[2]+4] = 5;
+	mat.diagind[2] = mat.browptr[2]+2; assert(mat.browptr[3] == mat.browptr[2]+5);
 
-	colind[rowptr[3]] = 2; colind[rowptr[3]+1] = 3; colind[rowptr[3]+2] = 6; colind[rowptr[3]+3] = 9;
-	colind[rowptr[3]+4] = 12;
-	diagind[3] = rowptr[3]+1; assert(rowptr[4] == rowptr[3]+5);
+	mat.bcolind[mat.browptr[3]] = 2; mat.bcolind[mat.browptr[3]+1] = 3; mat.bcolind[mat.browptr[3]+2] = 6;
+	mat.bcolind[mat.browptr[3]+3] = 9;
+	mat.bcolind[mat.browptr[3]+4] = 12;
+	mat.diagind[3] = mat.browptr[3]+1; assert(mat.browptr[4] == mat.browptr[3]+5);
 
-	colind[rowptr[4]] = 0; colind[rowptr[4]+1] = 4; colind[rowptr[4]+2] = 6;
-	diagind[4] = rowptr[4]+1; assert(rowptr[5] == rowptr[4]+3);
+	mat.bcolind[mat.browptr[4]] = 0; mat.bcolind[mat.browptr[4]+1] = 4; mat.bcolind[mat.browptr[4]+2] = 6;
+	mat.diagind[4] = mat.browptr[4]+1; assert(mat.browptr[5] == mat.browptr[4]+3);
 
-	colind[rowptr[5]] = 1; colind[rowptr[5]+1] = 2; colind[rowptr[5]+2] = 5; colind[rowptr[5]+3] = 7;
-	colind[rowptr[5]+4] = 8;
-	diagind[5] = rowptr[5]+2; assert(rowptr[6] == rowptr[5]+5);
+	mat.bcolind[mat.browptr[5]] = 1; mat.bcolind[mat.browptr[5]+1] = 2; mat.bcolind[mat.browptr[5]+2] = 5;
+	mat.bcolind[mat.browptr[5]+3] = 7;
+	mat.bcolind[mat.browptr[5]+4] = 8;
+	mat.diagind[5] = mat.browptr[5]+2; assert(mat.browptr[6] == mat.browptr[5]+5);
 
-	colind[rowptr[6]] = 3; colind[rowptr[6]+1] = 4; colind[rowptr[6]+2] = 6; colind[rowptr[6]+3] = 12;
-	diagind[6] = rowptr[6]+2; assert(rowptr[7] == rowptr[6]+4);
+	mat.bcolind[mat.browptr[6]] = 3; mat.bcolind[mat.browptr[6]+1] = 4; mat.bcolind[mat.browptr[6]+2] = 6;
+	mat.bcolind[mat.browptr[6]+3] = 12;
+	mat.diagind[6] = mat.browptr[6]+2; assert(mat.browptr[7] == mat.browptr[6]+4);
 
-	colind[rowptr[7]] = 5; colind[rowptr[7]+1] = 7; colind[rowptr[7]+2] = 8;
-	diagind[7] = rowptr[7]+1; assert(rowptr[8] == rowptr[7]+3);
+	mat.bcolind[mat.browptr[7]] = 5; mat.bcolind[mat.browptr[7]+1] = 7; mat.bcolind[mat.browptr[7]+2] = 8;
+	mat.diagind[7] = mat.browptr[7]+1; assert(mat.browptr[8] == mat.browptr[7]+3);
 
-	colind[rowptr[8]] = 5; colind[rowptr[8]+1] = 7; colind[rowptr[8]+2] = 8; colind[rowptr[8]+3] = 9;
-	diagind[8] = rowptr[8]+2; assert(rowptr[9] == rowptr[8]+4);
+	mat.bcolind[mat.browptr[8]] = 5; mat.bcolind[mat.browptr[8]+1] = 7; mat.bcolind[mat.browptr[8]+2] = 8;
+	mat.bcolind[mat.browptr[8]+3] = 9;
+	mat.diagind[8] = mat.browptr[8]+2; assert(mat.browptr[9] == mat.browptr[8]+4);
 
-	colind[rowptr[9]] = 3; colind[rowptr[9]+1] = 8; colind[rowptr[9]+2] = 9; colind[rowptr[9]+3] = 10;
-	diagind[9] = rowptr[9]+2; assert(rowptr[10] == rowptr[9]+4);
+	mat.bcolind[mat.browptr[9]] = 3; mat.bcolind[mat.browptr[9]+1] = 8; mat.bcolind[mat.browptr[9]+2] = 9;
+	mat.bcolind[mat.browptr[9]+3] = 10;
+	mat.diagind[9] = mat.browptr[9]+2; assert(mat.browptr[10] == mat.browptr[9]+4);
 
-	colind[rowptr[10]] = 9; colind[rowptr[10]+1] = 10; colind[rowptr[10]+2] = 11;
-	diagind[10] = rowptr[10]+1; assert(rowptr[11] == rowptr[10]+3);
+	mat.bcolind[mat.browptr[10]] = 9; mat.bcolind[mat.browptr[10]+1] = 10; mat.bcolind[mat.browptr[10]+2] = 11;
+	mat.diagind[10] = mat.browptr[10]+1; assert(mat.browptr[11] == mat.browptr[10]+3);
 
-	colind[rowptr[11]] = 10; colind[rowptr[11]+1] = 11; colind[rowptr[11]+2] = 12;
-	diagind[11] = rowptr[11]+1; assert(rowptr[12] == rowptr[11]+3);
+	mat.bcolind[mat.browptr[11]] = 10; mat.bcolind[mat.browptr[11]+1] = 11; mat.bcolind[mat.browptr[11]+2] = 12;
+	mat.diagind[11] = mat.browptr[11]+1; assert(mat.browptr[12] == mat.browptr[11]+3);
 
-	colind[rowptr[12]] = 3; colind[rowptr[12]+1] = 6; colind[rowptr[12]+2] = 11; colind[rowptr[12]+3] = 12;
-	diagind[12] = rowptr[12]+3; assert(rowptr[13] == rowptr[12]+4);
+	mat.bcolind[mat.browptr[12]] = 3; mat.bcolind[mat.browptr[12]+1] = 6; mat.bcolind[mat.browptr[12]+2] = 11;
+	mat.bcolind[mat.browptr[12]+3] = 12;
+	mat.diagind[12] = mat.browptr[12]+3; assert(mat.browptr[13] == mat.browptr[12]+4);
 
 	for(int i = 0; i < mat.nnzb; i++)
-		vals[i] = -0.1;
+		mat.vals[i] = -0.1;
 	for(int i = 0; i < mat.nbrows; i++)
-		vals[diagind[i]] = 4.0;
+		mat.vals[mat.diagind[i]] = 4.0;
 
-	mat.browptr = rowptr;
-	mat.bcolind = colind;
-	mat.diagind = diagind;
-	mat.browendptr = rowptr+1;
-	mat.vals = vals;
+	mat.browendptr.wrap(&mat.browptr[1], mat.nbrows);
 
 	return mat;
 }
 
 void test_sai(const bool fullsai)
 {
-	RawBSRMatrix<double,int> tmat = generate_small_unstructured_matrix();
+	const SRMatrixStorage<double,int> tmat = generate_small_unstructured_matrix();
 
 	if(fullsai)
 	{
-		const LeftSAIPattern<int> sp = left_SAI_pattern(reinterpret_cast<CRawBSRMatrix<double,int>&>(tmat));
+		const LeftSAIPattern<int> sp = left_SAI_pattern(share_with_const<double,int>(tmat));
 
 		const int testcell = 3;
 
@@ -245,8 +244,7 @@ void test_sai(const bool fullsai)
 		printf(" >> Test for SAI at interior point passed.\n"); fflush(stdout);
 	}
 	else {
-		const LeftSAIPattern<int> sp
-			= left_incomplete_SAI_pattern(reinterpret_cast<CRawBSRMatrix<double,int>&>(tmat));
+		const LeftSAIPattern<int> sp = left_incomplete_SAI_pattern(share_with_const(tmat));
 
 		const int testcell = 3;
 
@@ -332,17 +330,15 @@ void test_sai(const bool fullsai)
 
 		printf(" >> Test for incomplete SAI at interior point passed.\n"); fflush(stdout);
 	}
-
-	alignedDestroyRawBSRMatrix<double,int>(tmat);
 }
 
 void test_sai_boundary(const bool fullsai)
 {
-	RawBSRMatrix<double,int> tmat = generate_small_unstructured_matrix();
+	const SRMatrixStorage<double,int> tmat = generate_small_unstructured_matrix();
 
 	if(fullsai)
 	{
-		const LeftSAIPattern<int> sp = left_SAI_pattern(reinterpret_cast<CRawBSRMatrix<double,int>&>(tmat));
+		const LeftSAIPattern<int> sp = left_SAI_pattern(share_with_const(tmat));
 
 		const int testcell = 6;
 
@@ -403,8 +399,7 @@ void test_sai_boundary(const bool fullsai)
 	}
 	else
 	{
-		const LeftSAIPattern<int> sp
-			= left_incomplete_SAI_pattern(reinterpret_cast<CRawBSRMatrix<double,int>&>(tmat));
+		const LeftSAIPattern<int> sp = left_incomplete_SAI_pattern(share_with_const(tmat));
 
 		const int testcell = 6;
 
@@ -477,18 +472,17 @@ void test_sai_boundary(const bool fullsai)
 
 		printf(" >> Test for incomplete SAI at boundary point passed.\n"); fflush(stdout);
 	}
-
-	alignedDestroyRawBSRMatrix<double,int>(reinterpret_cast<RawBSRMatrix<double,int>&>(tmat));
 }
 
 void test_sai_upper(const bool fullsai)
 {
-	RawBSRMatrix<double,int> mat = generate_small_unstructured_matrix();
-	CRawBSRMatrix<double,int> tmat = getUpperTriangularView(reinterpret_cast<CRawBSRMatrix<double,int>&>(mat));
+	const SRMatrixStorage<const double,const int> mat = move_to_const(generate_small_unstructured_matrix());
+	const SRMatrixStorage<const double,const int> tmat
+		= getUpperTriangularView(std::forward<const SRMatrixStorage<const double,const int>>(mat));
 
 	if(fullsai)
 	{
-		const LeftSAIPattern<int> sp = left_SAI_pattern(tmat);
+		const LeftSAIPattern<int> sp = left_SAI_pattern(std::move(tmat));
 
 		const int testcell = 3;
 
@@ -539,9 +533,6 @@ void test_sai_upper(const bool fullsai)
 
 		printf(" >> Test for SAI if upper triangular matrix at interior point passed.\n"); fflush(stdout);
 	}
-
-	alignedDestroyRawBSRMatrixTriangularView<double,int>(reinterpret_cast<RawBSRMatrix<double,int>&>(tmat));
-	alignedDestroyRawBSRMatrix<double,int>(reinterpret_cast<RawBSRMatrix<double,int>&>(mat));
 }
 
 int main(int argc, char *argv[])
@@ -555,6 +546,3 @@ int main(int argc, char *argv[])
 	return 0;
 }
 
-#ifdef __GNUC__
-#pragma GCC diagnostic pop
-#endif

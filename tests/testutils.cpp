@@ -21,7 +21,7 @@
 
 namespace blasted {
 
-CRawBSRMatrix<PetscScalar,PetscInt> wrapLocalPetscMat(Mat A, const int bs)
+SRMatrixStorage<const PetscScalar,const PetscInt> wrapLocalPetscMat(Mat A, const int bs)
 {
 	PetscInt firstrow, lastrow, localrows, localcols, globalrows, globalcols;
 	int ierr = MatGetOwnershipRange(A, &firstrow, &lastrow); petsc_throw(ierr);
@@ -31,33 +31,24 @@ CRawBSRMatrix<PetscScalar,PetscInt> wrapLocalPetscMat(Mat A, const int bs)
 	assert(globalrows == globalcols);
 
 	// get access to local matrix entries
-	const Mat_SeqAIJ *const Adiag = (const Mat_SeqAIJ*)A->data;
-	const Mat_SeqBAIJ *const Abdiag = (const Mat_SeqBAIJ*)A->data;
-
-	CRawBSRMatrix<PetscScalar,PetscInt> rmat;
-	rmat.nbrows = localrows/bs;
 	if(bs == 1) {
+		const Mat_SeqAIJ *const Adiag = (const Mat_SeqAIJ*)A->data;
 		assert(Adiag != NULL);
-		rmat.browptr = Adiag->i;
-		rmat.browendptr = Adiag->i + 1;
-		rmat.bcolind = Adiag->j;
-		rmat.diagind = Adiag->diag;
-		rmat.vals = Adiag->a;
-		rmat.nbstored = rmat.browptr[rmat.nbrows];
-		rmat.nnzb = rmat.nbstored;
+
+		return SRMatrixStorage<const PetscScalar, const PetscInt>(Adiag->i, Adiag->j, Adiag->a,
+		                                                          Adiag->diag, Adiag->i + 1,
+		                                                          localrows, Adiag->i[localrows],
+		                                                          Adiag->i[localrows]);
 	}
 	else {
-		assert(Abdiag != NULL);
-		rmat.browptr = Abdiag->i;
-		rmat.browendptr = Abdiag->i + 1;
-		rmat.bcolind = Abdiag->j;
-		rmat.diagind = Abdiag->diag;
-		rmat.vals = Abdiag->a;
-		rmat.nbstored = rmat.browptr[rmat.nbrows];
-		rmat.nnzb = rmat.nbstored;
-	}
+		const Mat_SeqBAIJ *const Adiag = (const Mat_SeqBAIJ*)A->data;
+		assert(Adiag != NULL);
 
-	return rmat;
+		return SRMatrixStorage<const PetscScalar, const PetscInt>(Adiag->i, Adiag->j, Adiag->a,
+		                                                          Adiag->diag, Adiag->i + 1,
+		                                                          localrows, Adiag->i[localrows],
+		                                                          Adiag->i[localrows]);
+	}
 }
 
 extern "C" {

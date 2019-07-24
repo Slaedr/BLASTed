@@ -43,7 +43,7 @@ struct LeftSAIPattern
  * simply be copied onto the device).
  */
 template <typename scalar, typename index>
-LeftSAIPattern<index> left_SAI_pattern(const CRawBSRMatrix<scalar,index>& mat);
+LeftSAIPattern<index> left_SAI_pattern(const SRMatrixStorage<const scalar,const index>&& mat);
 
 /// Compute the assembly pattern for a left incomplete sparse approximate inverse of the given matrix
 /** Currently, assumes CPU as the device, but it changing it for any other device should not be too
@@ -51,7 +51,7 @@ LeftSAIPattern<index> left_SAI_pattern(const CRawBSRMatrix<scalar,index>& mat);
  * simply be copied onto the device).
  */
 template <typename scalar, typename index>
-LeftSAIPattern<index> left_incomplete_SAI_pattern(const CRawBSRMatrix<scalar,index>& mat);
+LeftSAIPattern<index> left_incomplete_SAI_pattern(const SRMatrixStorage<const scalar,const index>&& mat);
 
 /// Compute the approximate inverse matrix using a given SAI pattern
 /** \param mat The original matrix

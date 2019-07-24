@@ -14,7 +14,8 @@
 
 using namespace blasted;
 
-void test_incomplete_fullmatrix_interior(const CartMesh& m, const CRawBSRMatrix<PetscScalar,PetscInt>& mat,
+void test_incomplete_fullmatrix_interior(const CartMesh& m,
+                                         const SRMatrixStorage<const PetscScalar,const PetscInt>& mat,
                                          const LeftSAIPattern<int>& sp, const PetscInt testpoint[3])
 {
 	assert(testpoint[0] >= 2);
@@ -107,7 +108,8 @@ void test_incomplete_fullmatrix_interior(const CartMesh& m, const CRawBSRMatrix<
 	}
 }
 
-void test_fullmatrix_interior(const CartMesh& m, const CRawBSRMatrix<PetscScalar,PetscInt>& mat,
+void test_fullmatrix_interior(const CartMesh& m,
+                              const SRMatrixStorage<const PetscScalar,const PetscInt>& mat,
                               const LeftSAIPattern<int>& sp, const PetscInt testpoint[3])
 {
 	assert(testpoint[0] >= 2);
@@ -229,7 +231,8 @@ void test_fullmatrix_interior(const CartMesh& m, const CRawBSRMatrix<PetscScalar
 	}
 }
 
-void test_fullmatrix_boundaryface(const CartMesh& m, const CRawBSRMatrix<PetscScalar,PetscInt>& mat,
+void test_fullmatrix_boundaryface(const CartMesh& m,
+                                  const SRMatrixStorage<const PetscScalar,const PetscInt>& mat,
                                   const LeftSAIPattern<int>& sp, const PetscInt testpoint[3])
 {
 	// let's do the +i face
@@ -352,7 +355,7 @@ int test_sai(const bool fullsai, const CartMesh& m, const Mat A)
 {
 	int ierr = 0;
 
-	const CRawBSRMatrix<PetscScalar,PetscInt> mat = wrapLocalPetscMat(A, 1);
+	const SRMatrixStorage<const PetscScalar,const PetscInt> mat = wrapLocalPetscMat(A, 1);
 
 	// Check
 	for(int irow = 0; irow < mat.nbrows; irow++) {
@@ -373,11 +376,12 @@ int test_sai(const bool fullsai, const CartMesh& m, const Mat A)
 		printf("Number of cols in row %d is %d.\n", testrow, ncols);
 
 		if(fullsai) {
-			const LeftSAIPattern<int> sp = left_SAI_pattern(mat);
+			const LeftSAIPattern<int> sp = left_SAI_pattern
+				(std::forward<const SRMatrixStorage<const PetscScalar,const PetscInt>>(mat));
 			test_fullmatrix_interior(m, mat, sp, testpoint);
 		}
 		else {
-			const LeftSAIPattern<int> sp = left_incomplete_SAI_pattern(mat);
+			const LeftSAIPattern<int> sp = left_incomplete_SAI_pattern(std::move(mat));
 			test_incomplete_fullmatrix_interior(m, mat, sp, testpoint);
 		}
 	}
@@ -386,7 +390,8 @@ int test_sai(const bool fullsai, const CartMesh& m, const Mat A)
 	{
 		const PetscInt testpoint[] = {m.gnpoind(0)-2, 3, 3};
 		if(fullsai) {
-			const LeftSAIPattern<int> sp = left_SAI_pattern(mat);
+			const LeftSAIPattern<int> sp = left_SAI_pattern
+				(std::forward<const SRMatrixStorage<const PetscScalar,const PetscInt>>(mat));
 			test_fullmatrix_boundaryface(m,mat,sp,testpoint);
 		}
 		else {

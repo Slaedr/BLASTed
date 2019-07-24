@@ -10,7 +10,7 @@
 namespace blasted {
 
 template <typename scalar, typename index>
-LeftSAIPattern<index> left_SAI_pattern(const CRawBSRMatrix<scalar,index>& mat)
+LeftSAIPattern<index> left_SAI_pattern(const SRMatrixStorage<const scalar,const index>&& mat)
 {
 	LeftSAIPattern<index> tsp;
 
@@ -171,10 +171,10 @@ LeftSAIPattern<index> left_SAI_pattern(const CRawBSRMatrix<scalar,index>& mat)
 	return tsp;
 }
 
-template LeftSAIPattern<int> left_SAI_pattern(const CRawBSRMatrix<double,int>& mat);
+template LeftSAIPattern<int> left_SAI_pattern(const SRMatrixStorage<const double,const int>&& mat);
 
 template <typename scalar, typename index>
-LeftSAIPattern<index> left_incomplete_SAI_pattern(const CRawBSRMatrix<scalar,index>& mat)
+LeftSAIPattern<index> left_incomplete_SAI_pattern(const SRMatrixStorage<const scalar,const index>&& mat)
 {
 	LeftSAIPattern<index> tsp;
 
@@ -280,7 +280,8 @@ LeftSAIPattern<index> left_incomplete_SAI_pattern(const CRawBSRMatrix<scalar,ind
 	return tsp;
 }
 
-template LeftSAIPattern<int> left_incomplete_SAI_pattern(const CRawBSRMatrix<double,int>& mat);
+template LeftSAIPattern<int>
+left_incomplete_SAI_pattern(const SRMatrixStorage<const double,const int>&& mat);
 
 /// Storage type for the left-hand side matrix for computing the left SAI/ISAI corresponding to one row
 template <typename scalar>
@@ -288,18 +289,19 @@ using LMatrix = Matrix<scalar,Dynamic,Dynamic,ColMajor>;
 
 /// Gather the SAI/ISAI LHS operator for one (block-)row of the matrix, given the SAI/ISAI pattern
 template <typename scalar, typename index, int bs, StorageOptions stor>
-LMatrix<scalar> gather_lhs_matrix(const CRawBSRMatrix<scalar,index>& mat, const LeftSAIPattern<index>& sp,
+LMatrix<scalar> gather_lhs_matrix(const SRMatrixStorage<const scalar,const index>& mat,
+                                  const LeftSAIPattern<index>& sp,
                                   const index row);
 
 /// Scatter the SAI/ISAI solution for one (block-)row of the approx inverse, given the pattern
 template <typename scalar, typename index, int bs, StorageOptions stor>
 void scatter_solution(const LMatrix<scalar>& sol, const LeftSAIPattern<index>& sp,
-                      const index row, RawBSRMatrix<scalar,index>& mat);
+                      const index row, SRMatrixStorage<scalar,index>& mat);
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
-void compute_SAI(const CRawBSRMatrix<scalar,index>& mat, const LeftSAIPattern<index>& sp,
+void compute_SAI(const SRMatrixStorage<const scalar,const index>& mat, const LeftSAIPattern<index>& sp,
                  const int thread_chunk_size, const bool fullsai,
-                 RawBSRMatrix<scalar,index>& sai)
+                 SRMatrixStorage<scalar,index>& sai)
 {
 	assert(mat.nbrows == sai.nbrows);
 	assert(mat.nnzb == sai.nnzb);
@@ -323,21 +325,22 @@ void compute_SAI(const CRawBSRMatrix<scalar,index>& mat, const LeftSAIPattern<in
 	}
 }
 
-template void compute_SAI<double,int,1,ColMajor>(const CRawBSRMatrix<double,int>& mat,
+template void compute_SAI<double,int,1,ColMajor>(const SRMatrixStorage<const double,const int>& mat,
                                                  const LeftSAIPattern<int>& sp,
                                                  const int thread_chunk_size, const bool fullsai,
-                                                 RawBSRMatrix<double,int>& sai);
-template void compute_SAI<double,int,4,ColMajor>(const CRawBSRMatrix<double,int>& mat,
+                                                 SRMatrixStorage<double,int>& sai);
+template void compute_SAI<double,int,4,ColMajor>(const SRMatrixStorage<const double,const int>& mat,
                                                  const LeftSAIPattern<int>& sp,
                                                  const int thread_chunk_size, const bool fullsai,
-                                                 RawBSRMatrix<double,int>& sai);
+                                                 SRMatrixStorage<double,int>& sai);
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
-LMatrix<scalar> gather_lhs_matrix(const CRawBSRMatrix<scalar,index>& mat, const LeftSAIPattern<index>& sp,
+LMatrix<scalar> gather_lhs_matrix(const SRMatrixStorage<const scalar,const index>& mat,
+                                  const LeftSAIPattern<index>& sp,
                                   const index row)
 {
 	using Blk = Block_t<scalar,bs,stor>;
-	const Blk *const valb = reinterpret_cast<const Blk*>(mat.vals);
+	const Blk *const valb = reinterpret_cast<const Blk*>(&mat.vals[0]);
 
 	LMatrix<scalar> lhs = LMatrix<scalar>::Zero(sp.nEqns[row]*bs, sp.nVars[row]*bs);
 
@@ -366,10 +369,10 @@ LMatrix<scalar> gather_lhs_matrix(const CRawBSRMatrix<scalar,index>& mat, const 
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
 void scatter_solution(const LMatrix<scalar>& sol, const LeftSAIPattern<index>& sp,
-                      const index row, RawBSRMatrix<scalar,index>& saimat)
+                      const index row, SRMatrixStorage<scalar,index>& saimat)
 {
 	using Blk = Block_t<scalar,bs,stor>;
-	Blk *const saivalb = reinterpret_cast<Blk*>(saimat.vals);
+	Blk *const saivalb = reinterpret_cast<Blk*>(&saimat.vals[0]);
 
 	assert(sp.nVars[row] == saimat.browendptr[row] - saimat.browptr[row]);
 

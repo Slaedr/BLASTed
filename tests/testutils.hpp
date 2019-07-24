@@ -13,9 +13,7 @@
 namespace blasted {
 
 /// Wrap a local PETSc matrix
-/** Do not destroy the returned raw matrix! It's managed by PETSc.
- */
-CRawBSRMatrix<PetscScalar,PetscInt> wrapLocalPetscMat(Mat A, const int bs);
+SRMatrixStorage<const PetscScalar,const PetscInt> wrapLocalPetscMat(Mat A, const int bs);
 
 }
 #endif

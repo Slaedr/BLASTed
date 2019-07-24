@@ -173,6 +173,10 @@ RawBSRMatrix<scalar,index> copyRawBSRMatrix(const CRawBSRMatrix<scalar,index>& m
 template <typename scalar, typename index>
 CRawBSRMatrix<scalar,index> getLowerTriangularView(const CRawBSRMatrix<scalar,index>& mat);
 
+template <typename scalar, typename index>
+SRMatrixStorage<const scalar,const index>
+getLowerTriangularView(const SRMatrixStorage<const scalar,const index>&& mat);
+
 /// Returns a view to the upper triangular part of the matrix
 /** Creates a new array for row pointers and row-end pointers, but reuses values and column indices.
  * \warning Once done with the upper triangular matrix, ONLY browptr needs to be deleted.
@@ -180,6 +184,10 @@ CRawBSRMatrix<scalar,index> getLowerTriangularView(const CRawBSRMatrix<scalar,in
  */
 template <typename scalar, typename index>
 CRawBSRMatrix<scalar,index> getUpperTriangularView(const CRawBSRMatrix<scalar,index>& mat);
+
+template <typename scalar, typename index>
+SRMatrixStorage<const scalar,const index>
+getUpperTriangularView(const SRMatrixStorage<const scalar,const index>&& mat);
 
 /// Destroys a lower triangular view extracted using getLowerTriangularView or getUpperTriangularView
 /** CRawBSRMatrix& will have to be reinterpret_cast to RawBSRMatrix&.
