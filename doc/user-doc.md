@@ -19,7 +19,7 @@ There are three main PETSc options controlling the use of BLASTed. These options
 * `-blasted_async_apply_init_type` A string specifying what type of initialization to use for asynchronous triangular solves. Options: 
   - `init_zero`
   - `init_jacobi`
-* `-blasted_compute_factorization_remainder` Boolean value (specifying this option with no value amounts to true; not specifying it at all amounts to false) to request reporting of factorization remainder for the ILU preconditioners.
+* `-blasted_compute_preconditioner info` Boolean value (specifying this option with no value amounts to true; not specifying it at all amounts to false) to request computation and reporting of extra information about the preconditioner to aid analysis. Note that these may be expensive and not well-optimized.
 
 * `-blasted_thread_chunk_size` An integer specifying the number of work-items assigned at a time to a thread in a dynamically-scheduled loop.
 

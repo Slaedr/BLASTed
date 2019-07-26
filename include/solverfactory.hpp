@@ -59,7 +59,7 @@ struct AsyncSolverSettings : public SolverSettings {
 	int napplysweeps;                     ///< Number of apply sweeps
 	FactInit fact_inittype;               ///< Initialization type for asynchronous factorization
 	ApplyInit apply_inittype;             ///< Initialization type for asynchronous triangular solves
-	bool compute_factorization_res;       ///< Set to true if ILU residual computation is needed
+	bool compute_precinfo;                ///< Set to true if extra information is needed
 };
 
 template <typename scalar, typename index>

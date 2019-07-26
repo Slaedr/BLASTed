@@ -18,6 +18,7 @@
 #include "solverops_ilu0.hpp"
 #include "solverfactory.hpp"
 #include "blasted_petsc_ext.hpp"
+#include "preconditioner_diagnostics.hpp"
 
 using namespace blasted;
 
@@ -97,7 +98,7 @@ static PetscErrorCode setupDataFromOptions(PC pc)
 		PetscBool flag = PETSC_FALSE;
 		PetscInt nmax = 2;
 		PetscOptionsGetIntArray(NULL, NULL, "-blasted_async_sweeps", sweeps, &nmax, &flag);
-			
+
 		if(flag == PETSC_FALSE || nmax < 2) {
 			printf("BLASTed: Number of async sweeps not set properly!\n"); fflush(stdout);
 			abort();
@@ -107,9 +108,9 @@ static PetscErrorCode setupDataFromOptions(PC pc)
 		get_string_petscoptions("-blasted_async_apply_init_type", &ctx->applyinittype);
 		ctx->threadchunksize = get_int_petscoptions("-blasted_thread_chunk_size");
 #ifdef DEBUG
-		std::printf("BLASTed: setupDataFromOptions:\n");
-		std::printf(" fact init type = %s, apply init type = %s", ctx->factinittype, ctx->applyinittype);
-		std::printf(" Thread chunk size = %d.\n", ctx->threadchunksize); fflush(stdout);
+		printf("BLASTed: setupDataFromOptions:\n");
+		printf(" fact init type = %s, apply init type = %s", ctx->factinittype, ctx->applyinittype);
+		printf(" Thread chunk size = %d.\n", ctx->threadchunksize); fflush(stdout);
 #endif
 	}
 	else {
@@ -117,28 +118,26 @@ static PetscErrorCode setupDataFromOptions(PC pc)
 		sweeps[1] = 1;
 	}
 
-	if(ptype == BLASTED_ILU0 || ptype == BLASTED_ASYNC_LEVEL_ILU0 || ptype == BLASTED_SAPILU0) {
-		ctx->compute_ilu_rem =
-			get_optional_bool_petscoptions("-blasted_compute_factorization_remainder", false);
-	}
+	ctx->compute_precinfo =
+		get_optional_bool_petscoptions("-blasted_compute_preconditioner_info", false);
 
 #ifdef DEBUG
-	std::printf("BLASTed: setupDataFromOptions: Setting up preconditioner with\n");
-	std::printf(" ptype = %d and sweeps = %d,%d.\n", ptype, sweeps[0], sweeps[1]);
+	printf("BLASTed: setupDataFromOptions: Setting up preconditioner with\n");
+	printf(" ptype = %d and sweeps = %d,%d.\n", ptype, sweeps[0], sweeps[1]);
 #endif
 
-	ctx->bprec = nullptr; 
+	ctx->bprec = nullptr;
 	ctx->prectype = ptype;
-	ctx->nbuildsweeps = sweeps[0]; 
+	ctx->nbuildsweeps = sweeps[0];
 	ctx->napplysweeps = sweeps[1];
 	ctx->first_setup_done = true;
 	ctx->cputime = ctx->walltime = ctx->factorcputime = ctx->factorwalltime =
 		ctx->applycputime = ctx->applywalltime = 0;
 
 	const std::string pcname = std::string("Blasted-") + ctx->prectypestr;
-	
+
 	ierr = PCShellSetName(pc, pcname.c_str()); CHKERRQ(ierr);
-	
+
 	return ierr;
 }
 
@@ -152,7 +151,7 @@ PetscErrorCode createNewPreconditioner(PC pc)
 {
 	PetscErrorCode ierr = 0;
 	PetscInt firstrow, lastrow, localrows, localcols, globalrows, globalcols;
-	
+
 	// get control structure
 	Blasted_data* ctx;
 	ierr = PCShellGetContext(pc, (void**)&ctx); CHKERRQ(ierr);
@@ -166,7 +165,7 @@ PetscErrorCode createNewPreconditioner(PC pc)
 	 */
 	Mat A;
 	ierr = PCGetOperators(pc, NULL, &A); CHKERRQ(ierr);
-	ierr = MatGetOwnershipRange(A, &firstrow, &lastrow); CHKERRQ(ierr);	
+	ierr = MatGetOwnershipRange(A, &firstrow, &lastrow); CHKERRQ(ierr);
 	ierr = MatGetLocalSize(A, &localrows, &localcols); CHKERRQ(ierr);
 	ierr = MatGetSize(A, &globalrows, &globalcols); CHKERRQ(ierr);
 	assert(localrows == localcols);
@@ -192,11 +191,11 @@ PetscErrorCode createNewPreconditioner(PC pc)
 	settings.nbuildsweeps = ctx->nbuildsweeps;
 	settings.napplysweeps = ctx->napplysweeps;
 	settings.thread_chunk_size = ctx->threadchunksize;
+	settings.compute_precinfo = ctx->compute_precinfo;
 	if(settings.prectype != BLASTED_JACOBI && settings.prectype != BLASTED_LEVEL_SGS
 	   && settings.prectype != BLASTED_NO_PREC) {
 		settings.fact_inittype = getFactInitFromString(ctx->factinittype);
 		settings.apply_inittype = getApplyInitFromString(ctx->applyinittype);
-		settings.compute_factorization_res = ctx->compute_ilu_rem;
 	}
 
 	settings.relax = false;
@@ -234,6 +233,13 @@ PetscErrorCode createNewPreconditioner(PC pc)
 
 
 	ctx->bprec = reinterpret_cast<void*>(precop);
+
+	ctx->infolist = NULL;
+	if(ctx->compute_precinfo) {
+		BlastedPrecInfoList *bpinfo = new BlastedPrecInfoList;
+		ctx->infolist = static_cast<void*>(bpinfo);
+	}
+
 	return ierr;
 }
 
@@ -307,7 +313,7 @@ void appendBlastedDataContext(Blasted_data_list *const bdl, const Blasted_data b
 PetscErrorCode cleanup_blasted(PC pc)
 {
 	PetscErrorCode ierr = 0;
-	
+
 	Blasted_data* ctx;
 	ierr = PCShellGetContext(pc, (void**)&ctx); CHKERRQ(ierr);
 	BlastedPreconditioner* prec = reinterpret_cast<BlastedPreconditioner*>(ctx->bprec);
@@ -317,13 +323,18 @@ PetscErrorCode cleanup_blasted(PC pc)
 	delete [] ctx->factinittype;
 	delete [] ctx->applyinittype;
 
+	if(ctx->compute_precinfo) {
+		BlastedPrecInfoList *list = static_cast<BlastedPrecInfoList*>(ctx->infolist);
+		delete list;
+	}
+
 	return ierr;
 }
 
 PetscErrorCode compute_preconditioner_blasted(PC pc)
 {
 	PetscErrorCode ierr = 0;
-	
+
 	// get control structure
 	Blasted_data* ctx;
 	ierr = PCShellGetContext(pc, (void**)&ctx); CHKERRQ(ierr);
@@ -339,7 +350,7 @@ PetscErrorCode compute_preconditioner_blasted(PC pc)
 	double initialctime = (double)clock() / (double)CLOCKS_PER_SEC;
 
 	ierr = updatePreconditioner(pc); CHKERRQ(ierr);
-	
+
 	gettimeofday(&time2, NULL);
 	double finalwtime = (double)time2.tv_sec + (double)time2.tv_usec * 1.0e-6;
 	ctx->factorwalltime += (finalwtime - initialwtime);
@@ -359,18 +370,18 @@ PetscErrorCode apply_local_base(Blasted_data *const ctx,
 	PetscReal *za;
 	PetscInt start, end;
 	ierr = VecGetOwnershipRange(r, &start, &end); CHKERRQ(ierr);
-	
+
 #ifdef DEBUG
 	if(bp->dim() != end-start) {
-		SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, 
-				"BLASTed: Dimension of vector does not match that of the matrix- %d vs %d!\n", 
+		SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ,
+				"BLASTed: Dimension of vector does not match that of the matrix- %d vs %d!\n",
 				bp->dim(), end-start);
 	}
 #endif
-	
+
 	ierr = VecGetArray(z, &za); CHKERRQ(ierr);
 	ierr = VecGetArrayRead(r, &ra); CHKERRQ(ierr);
-	
+
 	struct timeval time1, time2;
 	gettimeofday(&time1, NULL);
 	double initialwtime = (double)time1.tv_sec + (double)time1.tv_usec * 1.0e-6;
@@ -386,7 +397,7 @@ PetscErrorCode apply_local_base(Blasted_data *const ctx,
 
 	VecRestoreArrayRead(r, &ra);
 	VecRestoreArray(z, &za);
-	
+
 	return ierr;
 }
 #endif
@@ -404,18 +415,18 @@ PetscErrorCode apply_local_blasted(PC pc, Vec r, Vec z)
 		PetscReal *za;
 		PetscInt start, end;
 		ierr = VecGetOwnershipRange(r, &start, &end); CHKERRQ(ierr);
-	
+
 #ifdef DEBUG
 		if(prec->dim() != end-start) {
-			SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, 
-			         "BLASTed: Dimension of vector does not match that of the matrix- %d vs %d!\n", 
+			SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ,
+			         "BLASTed: Dimension of vector does not match that of the matrix- %d vs %d!\n",
 			         prec->dim(), end-start);
 		}
 #endif
-	
+
 		ierr = VecGetArray(z, &za); CHKERRQ(ierr);
 		ierr = VecGetArrayRead(r, &ra); CHKERRQ(ierr);
-	
+
 		struct timeval time1, time2;
 		gettimeofday(&time1, NULL);
 		double initialwtime = (double)time1.tv_sec + (double)time1.tv_usec * 1.0e-6;
@@ -436,8 +447,8 @@ PetscErrorCode apply_local_blasted(PC pc, Vec r, Vec z)
 	return ierr;
 }
 
-PetscErrorCode relax_local_blasted(PC pc, Vec rhs, Vec x, Vec w, 
-		const PetscReal rtol, const PetscReal abstol, const PetscReal dtol, const PetscInt it, 
+PetscErrorCode relax_local_blasted(PC pc, Vec rhs, Vec x, Vec w,
+		const PetscReal rtol, const PetscReal abstol, const PetscReal dtol, const PetscInt it,
 		const PetscBool guesszero, PetscInt *const outits, PCRichardsonConvergedReason *const reason)
 {
 	PetscErrorCode ierr = 0;
@@ -460,18 +471,18 @@ PetscErrorCode relax_local_blasted(PC pc, Vec rhs, Vec x, Vec w,
 		PetscReal *za;
 		PetscInt start, end;
 		ierr = VecGetOwnershipRange(rhs, &start, &end); CHKERRQ(ierr);
-	
+
 #ifdef DEBUG
 		if(relaxation->dim() != end-start) {
-			SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, 
-			         "BLASTed: Dimension of vector does not match that of the matrix- %d vs %d!\n", 
+			SETERRQ2(PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ,
+			         "BLASTed: Dimension of vector does not match that of the matrix- %d vs %d!\n",
 			         relaxation->dim(), end-start);
 		}
 #endif
-	
+
 		ierr = VecGetArray(x, &za); CHKERRQ(ierr);
 		ierr = VecGetArrayRead(rhs, &ra); CHKERRQ(ierr);
-	
+
 		struct timeval time1, time2;
 		gettimeofday(&time1, NULL);
 		double initialwtime = (double)time1.tv_sec + (double)time1.tv_usec * 1.0e-6;
@@ -522,13 +533,13 @@ int setup_blasted_stack_ext(KSP ksp, const FactoryBase<double,int> *const fctry,
 			ierr = PCASMGetSubKSP(pc, &nlocalblocks, &firstlocalblock, &subksp); CHKERRQ(ierr);
 		}
 		if(nlocalblocks != 1)
-			SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE, 
+			SETERRQ(PETSC_COMM_SELF, PETSC_ERR_ARG_WRONGSTATE,
 					"Only one subdomain per rank is supported.");
 
 		ierr = setup_blasted_stack(subksp[0], bctv); CHKERRQ(ierr);
 	}
 	else if(ismg || isgamg) {
-		ierr = KSPSetUp(ksp); CHKERRQ(ierr); 
+		ierr = KSPSetUp(ksp); CHKERRQ(ierr);
 		ierr = PCSetUp(pc); CHKERRQ(ierr);
 		PetscInt nlevels;
 		ierr = PCMGGetLevels(pc, &nlevels); CHKERRQ(ierr);
@@ -549,7 +560,7 @@ int setup_blasted_stack_ext(KSP ksp, const FactoryBase<double,int> *const fctry,
 		ierr = setup_blasted_stack(coarsesolver, bctv); CHKERRQ(ierr);
 	}
 	else if(isksp) {
-		ierr = KSPSetUp(ksp); CHKERRQ(ierr); 
+		ierr = KSPSetUp(ksp); CHKERRQ(ierr);
 		ierr = PCSetUp(pc); CHKERRQ(ierr);
 		KSP subksp;
 		ierr = PCKSPGetKSP(pc, &subksp); CHKERRQ(ierr);
@@ -613,7 +624,7 @@ PetscErrorCode setup_localpreconditioner_blasted(KSP ksp, Blasted_data *const bc
 		subpc = pc;
 		// only for single-process runs
 		if(!islocal)
-			SETERRQ(comm, PETSC_ERR_SUP, 
+			SETERRQ(comm, PETSC_ERR_SUP,
 					"PC as PCSHELL is only supported for local solvers.");
 	}
 	else {
@@ -621,7 +632,7 @@ PetscErrorCode setup_localpreconditioner_blasted(KSP ksp, Blasted_data *const bc
 	}
 
 	// setup the PC
-	bctx->bs = isBlockMat ? matbs : 1; 
+	bctx->bs = isBlockMat ? matbs : 1;
 	bctx->first_setup_done = false;
 	ierr = PCShellSetContext(subpc, (void*)bctx);                   CHKERRQ(ierr);
 	ierr = PCShellSetSetUp(subpc, &compute_preconditioner_blasted); CHKERRQ(ierr);

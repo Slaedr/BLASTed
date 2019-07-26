@@ -41,20 +41,20 @@ public:
 	/// Returns the dimension (number of rows) of the operator
 	virtual index dim() const = 0;
 
-	/// For querying whether a valid relaxation is available via \ref apply_relax
-	virtual bool relaxationAvailable() const = 0;
-
 	/// Compute the preconditioner
 	virtual void compute() = 0;
-
-	/// Set parameters that may be used by subclasses
-	void setApplyParams(const SolveParams<scalar> sparams) { solveparams = sparams; }
 
 	/// To apply the preconditioner
 	virtual void apply(const scalar *const x, scalar *const __restrict y) const = 0;
 
 	/// To apply relaxation
 	virtual void apply_relax(const scalar *const x, scalar *const __restrict y) const = 0;
+
+	/// For querying whether a valid relaxation is available via \ref apply_relax
+	virtual bool relaxationAvailable() const = 0;
+
+	/// Set parameters that may be used by subclasses
+	void setApplyParams(const SolveParams<scalar> sparams) { solveparams = sparams; }
 
 protected:
 

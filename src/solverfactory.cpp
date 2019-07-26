@@ -79,12 +79,12 @@ SRFactory<scalar,index>
 	else if(opts.prectype == BLASTED_ILU0) {
 		return new AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>
 			(std::move(mat), opts.nbuildsweeps, opts.napplysweeps, opts.thread_chunk_size,
-			 opts.fact_inittype, opts.apply_inittype, true, true, opts.compute_factorization_res);
+			 opts.fact_inittype, opts.apply_inittype, true, true, opts.compute_precinfo);
 	}
 	else if(opts.prectype == BLASTED_SAPILU0) {
 		return new AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>
 			(std::move(mat), opts.nbuildsweeps, opts.napplysweeps, opts.thread_chunk_size,
-			 opts.fact_inittype, opts.apply_inittype, true, false, opts.compute_factorization_res);
+			 opts.fact_inittype, opts.apply_inittype, true, false, opts.compute_precinfo);
 	}
 	else if(opts.prectype == BLASTED_LEVEL_SGS) {
 		return new Level_BSGS<scalar,index,bs,stor>(std::move(mat));
@@ -93,7 +93,7 @@ SRFactory<scalar,index>
 		return new Async_Level_BlockILU0<scalar,index,bs,stor>(std::move(mat),opts.nbuildsweeps,
 		                                                       opts.thread_chunk_size,
 		                                                       opts.fact_inittype, true,
-		                                                       opts.compute_factorization_res);
+		                                                       opts.compute_precinfo);
 	}
 	else if(opts.prectype == BLASTED_NO_PREC) {
 		return new NoPreconditioner<scalar,index>(std::move(mat), bs);
@@ -149,7 +149,7 @@ SRFactory<scalar,index>::create_preconditioner(SRMatrixStorage<const scalar, con
 		else if(opts.prectype == BLASTED_ASYNC_LEVEL_ILU0) {
 			p = new Async_Level_ILU0<scalar,index>(std::move(mat), opts.nbuildsweeps,
 			                                       opts.thread_chunk_size, opts.fact_inittype, true,
-			                                       opts.compute_factorization_res);
+			                                       opts.compute_precinfo);
 		}
 		else if(opts.prectype == BLASTED_NO_PREC) {
 			p = new NoPreconditioner<scalar,index>(std::move(mat), 1);
@@ -157,7 +157,7 @@ SRFactory<scalar,index>::create_preconditioner(SRMatrixStorage<const scalar, con
 		else
 			throw std::invalid_argument("Invalid preconditioner!");
 	}
-	else if(opts.blockstorage == RowMajor) 
+	else if(opts.blockstorage == RowMajor)
 	{
 		if(opts.bs == 4) {
 			p = create_srpreconditioner_of_type<4,RowMajor>(std::move(mat),opts);
@@ -169,7 +169,7 @@ SRFactory<scalar,index>::create_preconditioner(SRMatrixStorage<const scalar, con
 		}
 #endif
 		else {
-			throw std::invalid_argument("Block size " + std::to_string(opts.bs) + 
+			throw std::invalid_argument("Block size " + std::to_string(opts.bs) +
 					" not supported for row major!");
 		}
 	}
@@ -186,7 +186,7 @@ SRFactory<scalar,index>::create_preconditioner(SRMatrixStorage<const scalar, con
 		}
 #endif
 		else {
-			throw std::invalid_argument("Block size " + std::to_string(opts.bs) + 
+			throw std::invalid_argument("Block size " + std::to_string(opts.bs) +
 					" not supported for column major!");
 		}
 	}
@@ -194,7 +194,6 @@ SRFactory<scalar,index>::create_preconditioner(SRMatrixStorage<const scalar, con
 		throw std::invalid_argument("Block ordering must be either rowmajor or colmajor!");
 	}
 
-	//p->wrap(mat.nbrows, &mat.browptr[0], &mat.bcolind[0], &mat.vals[0], &mat.diagind[0]);
 	return p;
 }
 
