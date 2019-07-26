@@ -28,7 +28,7 @@ public:
 	bool relaxationAvailable() const { return false; }
 
 	/// Compute the approximate inverse
-	void compute();
+	PrecInfo compute();
 
 	/// To apply the preconditioner
 	void apply(const scalar *const x, scalar *const __restrict y) const;

@@ -10,6 +10,7 @@
 #include "ilu_pattern.hpp"
 #include "reorderingscaling.hpp"
 #include "async_initialization_decl.hpp"
+#include "preconditioner_diagnostics.hpp"
 
 namespace blasted {
 
@@ -21,15 +22,16 @@ namespace blasted {
  * \param[in] thread_chunk_size The batch size of allocation of work-items to threads
  * \param[in] usethreads Whether to use asynchronous threaded (true) or serial (false) factorization
  * \param[in] factinittype Method to use for initializing the ILU factor matrix
+ * \param[in] compute_info Whether to compute extra information such as diagonal dominance of factors
  * \param[in,out] iluvals A pre-allocated array for storage of the ILU0 factorization
  * \param[in,out] scale A pre-allocated array for storage of diagonal scaling factors
  */
 template <typename scalar, typename index>
-void scalar_ilu0_factorize(const CRawBSRMatrix<scalar,index> *const mat,
-                           const ILUPositions<index>& plist,
-                           const int nbuildsweeps, const int thread_chunk_size, const bool usethreads,
-                           const FactInit factinittype,
-                           scalar *const __restrict iluvals, scalar *const __restrict scale);
+PrecInfo scalar_ilu0_factorize(const CRawBSRMatrix<scalar,index> *const mat,
+                               const ILUPositions<index>& plist,
+                               const int nbuildsweeps, const int thread_chunk_size, const bool usethreads,
+                               const FactInit factinittype, const bool compute_info,
+                               scalar *const __restrict iluvals, scalar *const __restrict scale);
 
 /// Computes the scalar ILU0 factorization using asynch iterations \cite ilu:chowpatel
 ///  Does not scale the matrix

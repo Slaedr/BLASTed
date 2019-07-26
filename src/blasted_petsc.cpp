@@ -236,7 +236,8 @@ PetscErrorCode createNewPreconditioner(PC pc)
 
 	ctx->infolist = NULL;
 	if(ctx->compute_precinfo) {
-		BlastedPrecInfoList *bpinfo = new BlastedPrecInfoList;
+		PrecInfoList *bpinfo = new PrecInfoList;
+		bpinfo->infolist.reserve(250);  // some reasonable number of linear solves expected
 		ctx->infolist = static_cast<void*>(bpinfo);
 	}
 
@@ -248,9 +249,13 @@ PetscErrorCode updatePreconditioner(PC pc)
 {
 	Blasted_data* ctx;
 	int ierr = PCShellGetContext(pc, (void**)&ctx); CHKERRQ(ierr);
-	BlastedPreconditioner* precop = reinterpret_cast<BlastedPreconditioner*>(ctx->bprec);
+	BlastedPreconditioner *const precop = reinterpret_cast<BlastedPreconditioner*>(ctx->bprec);
+	PrecInfoList *const pilist = static_cast<PrecInfoList*>(ctx->infolist);
 
-	precop->compute();
+	PrecInfo pinfo = precop->compute();
+
+	if(ctx->compute_precinfo)
+		pilist->infolist.push_back(pinfo);
 
 	return ierr;
 }
@@ -261,6 +266,7 @@ Blasted_data_list newBlastedDataList()
 {
 	Blasted_data_list b;
 	b.ctxlist = NULL;
+	b.bfactory = NULL;
 	b.size = 0;
 	b.factorcputime = b.factorwalltime = b.applycputime = b.applywalltime = 0.0;
 	b._defaultfactory = 0;
@@ -324,7 +330,7 @@ PetscErrorCode cleanup_blasted(PC pc)
 	delete [] ctx->applyinittype;
 
 	if(ctx->compute_precinfo) {
-		BlastedPrecInfoList *list = static_cast<BlastedPrecInfoList*>(ctx->infolist);
+		PrecInfoList *list = static_cast<PrecInfoList*>(ctx->infolist);
 		delete list;
 	}
 

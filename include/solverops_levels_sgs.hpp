@@ -22,7 +22,7 @@ public:
 	bool relaxationAvailable() const { return true; }
 
 	/// Compute the preconditioner
-	void compute();
+	PrecInfo compute();
 
 	/// To apply the preconditioner
 	void apply(const scalar *const r, scalar *const __restrict z) const;
@@ -57,7 +57,7 @@ public:
 	bool relaxationAvailable() const { return true; }
 
 	/// Compute the preconditioner
-	void compute();
+	PrecInfo compute();
 
 	/// To apply the preconditioner
 	void apply(const scalar *const r, scalar *const __restrict z) const;

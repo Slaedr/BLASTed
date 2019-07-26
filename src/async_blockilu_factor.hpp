@@ -9,6 +9,7 @@
 #include "srmatrixdefs.hpp"
 #include "async_initialization_decl.hpp"
 #include "ilu_pattern.hpp"
+#include "preconditioner_diagnostics.hpp"
 
 namespace blasted {
 
@@ -28,14 +29,15 @@ namespace blasted {
  *   factorization loop
  * \param[out] iluvals The ILU factorization non-zeros, accessed using the block-row pointers, 
  *   block-column indices and diagonal pointers of the original BSR matrix
+ * \return ILU remainder
  */
 template <typename scalar, typename index, int bs, StorageOptions stor>
-void block_ilu0_factorize(const CRawBSRMatrix<scalar,index> *const mat,
-                          const ILUPositions<index>& plist,
-                          const int nbuildsweeps, const int thread_chunk_size, const bool usethreads,
-                          const FactInit init_type,
-                          const bool compute_remainder,
-                          scalar *const __restrict iluvals);
+PrecInfo block_ilu0_factorize(const CRawBSRMatrix<scalar,index> *const mat,
+                              const ILUPositions<index>& plist,
+                              const int nbuildsweeps, const int thread_chunk_size, const bool usethreads,
+                              const FactInit init_type,
+                              const bool compute_remainder,
+                              scalar *const __restrict iluvals);
 
 /// Computes the ILU remainder A - LU restricted to the sparsity pattern of A
 /** \param[in] mat The matrix A
@@ -43,11 +45,11 @@ void block_ilu0_factorize(const CRawBSRMatrix<scalar,index> *const mat,
  * \param[in] thread_chunk_size
  * \param[in,out] remvals Pre-allocated storage for the entries of the remainder matrix
  */
-template <typename scalar, typename index, int bs, StorageOptions stor>
-void compute_ILU_remainder(const CRawBSRMatrix<scalar,index> *const mat,
-                           const ILUPositions<index>& plist, const scalar *const iluvals,
-                           const int thread_chunk_size,
-                           scalar *const __restrict remvals);
+// template <typename scalar, typename index, int bs, StorageOptions stor>
+// void compute_ILU_remainder(const CRawBSRMatrix<scalar,index> *const mat,
+//                            const ILUPositions<index>& plist, const scalar *const iluvals,
+//                            const int thread_chunk_size,
+//                            scalar *const __restrict remvals);
 
 }
 

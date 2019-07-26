@@ -9,18 +9,20 @@
 
 namespace blasted {
 
-template <typename scalar, typename index>
-scalar maxnorm(const index N, const scalar *const vec)
+template <typename scalar>
+scalar maxnorm(const device_vector<scalar>& vec)
 {
 	scalar smax = std::numeric_limits<scalar>::min();
+	const int N = static_cast<int>(vec.size());
+
 #pragma omp parallel for default(shared) reduction(max:smax)
-	for(index i = 0; i < N; i++)
+	for(int i = 0; i < N; i++)
 		if(smax < std::abs(vec[i]))
 			smax = std::abs(vec[i]);
 
 	return smax;
 }
 
-template double maxnorm<double,int>(const int N, const double *const vec);
+template double maxnorm(const device_vector<double>& vec);
 
 }

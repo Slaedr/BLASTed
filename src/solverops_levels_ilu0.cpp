@@ -46,12 +46,12 @@ Async_Level_BlockILU0<scalar,index,bs,stor>::~Async_Level_BlockILU0()
 }
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
-void Async_Level_BlockILU0<scalar,index,bs,stor>::compute()
+PrecInfo Async_Level_BlockILU0<scalar,index,bs,stor>::compute()
 {
 	if(!iluvals)
 		levels = computeLevels(&mat);
 
-	AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>::compute();
+	return AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>::compute();
 }
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
@@ -118,12 +118,12 @@ Async_Level_ILU0<scalar,index>::~Async_Level_ILU0()
 }
 
 template <typename scalar, typename index>
-void Async_Level_ILU0<scalar,index>::compute()
+PrecInfo Async_Level_ILU0<scalar,index>::compute()
 {
 	if(!iluvals)
 		levels = computeLevels(&mat);
 
-	AsyncILU0_SRPreconditioner<scalar,index>::compute();
+	return AsyncILU0_SRPreconditioner<scalar,index>::compute();
 }
 
 template <typename scalar, typename index>

@@ -21,14 +21,18 @@
 #include "async_blockilu_factor.hpp"
 #include "helper_algorithms.hpp"
 #include "blas1.hpp"
+#include "matrix_properties.hpp"
 
 #include <boost/align.hpp>
 #include <iostream>
 
 namespace blasted {
 
-using boost::alignment::aligned_alloc;
-using boost::alignment::aligned_free;
+template <typename scalar, typename index, int bs, StorageOptions stor>
+void compute_ILU_remainder(const CRawBSRMatrix<scalar,index> *const mat,
+                           const ILUPositions<index>& plist, const scalar *const iluvals,
+                           const int thread_chunk_size,
+                           device_vector<scalar>& __restrict resvals);
 
 /// Initialize the factorization such that async. ILU(0) factorization gives async. SGS at worst
 /**
@@ -68,16 +72,17 @@ void fact_init_sgs(const CRawBSRMatrix<scalar,index> *const mat, scalar *const _
 /** \todo Revisit the requirement for non-aligned block types for the original matrix
  */
 template <typename scalar, typename index, int bs, StorageOptions stor>
-void block_ilu0_factorize(const CRawBSRMatrix<scalar,index> *const mat,
-                          const ILUPositions<index>& plist,
-                          const int nbuildsweeps, const int thread_chunk_size, const bool usethreads,
-                          const FactInit init_type,
-                          const bool compute_residuals,
-                          scalar *const __restrict iluvals)
+PrecInfo block_ilu0_factorize(const CRawBSRMatrix<scalar,index> *const mat,
+                              const ILUPositions<index>& plist,
+                              const int nbuildsweeps,
+                              const int thread_chunk_size, const bool usethreads,
+                              const FactInit init_type,
+                              const bool compute_info,
+                              scalar *const __restrict iluvals)
 {
 	using NABlk = Block_t<scalar,bs,static_cast<StorageOptions>(stor|Eigen::DontAlign)>;
 	using Blk = Block_t<scalar,bs,stor>;
-	
+
 	const NABlk *mvals = reinterpret_cast<const NABlk*>(mat->vals);
 	Blk *ilu = reinterpret_cast<Blk*>(iluvals);
 
@@ -100,14 +105,18 @@ void block_ilu0_factorize(const CRawBSRMatrix<scalar,index> *const mat,
 		// do nothing
 	}
 
-	if(compute_residuals)
+	PrecInfo pinfo;
+
+	if(compute_info)
 	{
-		scalar *const remvals = (scalar*)aligned_alloc(CACHE_LINE_LEN,
-		                                               mat->browptr[mat->nbrows]*bs*bs*sizeof(scalar));
+		// scalar *const remvals = (scalar*)aligned_alloc(CACHE_LINE_LEN,
+		//                                                mat->browptr[mat->nbrows]*bs*bs*sizeof(scalar));
+		device_vector<scalar> remvals(mat->browptr[mat->nbrows]*bs*bs);
 		compute_ILU_remainder<scalar,index,bs,stor>(mat, plist, iluvals, thread_chunk_size, remvals);
-		const scalar maxrem = maxnorm<scalar,index>(mat->browptr[mat->nbrows]*bs*bs, remvals);
+		const scalar maxrem = maxnorm(remvals);
 		std::cout << "   ILU(0) residuals: Initial = " << maxrem;
-		aligned_free(remvals);
+		pinfo.prec_rem_initial_norm = maxrem;
+		// aligned_free(remvals);
 	}
 
 	// compute L and U
@@ -115,7 +124,7 @@ void block_ilu0_factorize(const CRawBSRMatrix<scalar,index> *const mat,
 	 * If index is an unsigned type, that might be a problem. However,
 	 * it should usually be okay as we are only comparing equality later.
 	 */
-	
+
 	for(int isweep = 0; isweep < nbuildsweeps; isweep++)
 	{
 #pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size) if(usethreads)
@@ -144,37 +153,45 @@ void block_ilu0_factorize(const CRawBSRMatrix<scalar,index> *const mat,
 		}
 	}
 
-	if(compute_residuals)
+	if(compute_info)
 	{
-		scalar *const resvals = (scalar*)aligned_alloc(CACHE_LINE_LEN,
-		                                               mat->browptr[mat->nbrows]*bs*bs*sizeof(scalar));
+		device_vector<scalar> resvals(mat->browptr[mat->nbrows]*bs*bs);
 		compute_ILU_remainder<scalar,index,bs,stor>(mat, plist, iluvals, thread_chunk_size, resvals);
-		const scalar maxres = maxnorm<scalar,index>(mat->browptr[mat->nbrows]*bs*bs, resvals);
+		const scalar maxres = maxnorm(resvals);
 		std::cout << ", final = " << maxres << std::endl;
-		aligned_free(resvals);
+		pinfo.prec_remainder_norm = maxres;
+
+		std::array<scalar,2> arr = diagonal_dominance_lower<scalar,index,bs,stor>
+			(SRMatrixStorage<const scalar,const index>(mat->browptr, mat->bcolind, iluvals,
+			                                           mat->diagind, mat->browendptr, mat->nbrows,
+			                                           mat->nnzb, mat->nbstored));
+		pinfo.lower_avg_diag_dom = arr[0];
+		pinfo.lower_min_diag_dom = arr[1];
 	}
 
 	// invert diagonal blocks
 #pragma omp parallel for default(shared)
 	for(index irow = 0; irow < mat->nbrows; irow++)
 		ilu[mat->diagind[irow]] = ilu[mat->diagind[irow]].inverse().eval();
+
+	return pinfo;
 }
 
-template void
+template PrecInfo
 block_ilu0_factorize<double,int,4,ColMajor> (const CRawBSRMatrix<double,int> *const mat,
                                              const ILUPositions<int>& plist,
                                              const int nbuildsweeps, const int thread_chunk_size,
                                              const bool usethreads, const FactInit inittype,
                                              const bool compute_residuals,
                                              double *const __restrict iluvals);
-template void
+template PrecInfo
 block_ilu0_factorize<double,int,5,ColMajor> (const CRawBSRMatrix<double,int> *const mat,
                                              const ILUPositions<int>& plist,
                                              const int nbuildsweeps, const int thread_chunk_size,
                                              const bool usethreads, const FactInit inittype,
                                              const bool compute_residuals,
                                              double *const __restrict iluvals);
-template void
+template PrecInfo
 block_ilu0_factorize<double,int,4,RowMajor> (const CRawBSRMatrix<double,int> *const mat,
                                              const ILUPositions<int>& plist,
                                              const int nbuildsweeps, const int thread_chunk_size,
@@ -183,7 +200,7 @@ block_ilu0_factorize<double,int,4,RowMajor> (const CRawBSRMatrix<double,int> *co
                                              double *const __restrict iluvals);
 
 #ifdef BUILD_BLOCK_SIZE
-template void block_ilu0_factorize<double,int,BUILD_BLOCK_SIZE,ColMajor>
+template PrecInfo block_ilu0_factorize<double,int,BUILD_BLOCK_SIZE,ColMajor>
 (const CRawBSRMatrix<double,int> *const mat,
  const ILUPositions<int>& plist,
  const int nbuildsweeps, const int thread_chunk_size, const bool usethreads, const FactInit inittype,
@@ -195,14 +212,14 @@ template <typename scalar, typename index, int bs, StorageOptions stor>
 void compute_ILU_remainder(const CRawBSRMatrix<scalar,index> *const mat,
                            const ILUPositions<index>& plist, const scalar *const iluvals,
                            const int thread_chunk_size,
-                           scalar *const __restrict resvals)
+                           device_vector<scalar>& __restrict resvals)
 {
 	//using Blk = Block_t<scalar,bs,stor>;
 	using Blk = Block_t<scalar,bs,static_cast<StorageOptions>(stor|Eigen::DontAlign)>;
 
 	const Blk *const mvals = reinterpret_cast<const Blk*>(mat->vals);
 	const Blk *const ilu = reinterpret_cast<const Blk*>(iluvals);
-	Blk *const res = reinterpret_cast<Blk*>(resvals);
+	Blk *const res = reinterpret_cast<Blk*>(&resvals[0]);
 
 #pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size)
 	for(index irow = 0; irow < mat->nbrows; irow++)
@@ -213,10 +230,10 @@ void compute_ILU_remainder(const CRawBSRMatrix<scalar,index> *const mat,
 
 			if(irow > mat->bcolind[j])
 			{
-				for( index k = mat->browptr[irow]; 
-				     (k < mat->browptr[irow+1]) && (mat->bcolind[k] <= mat->bcolind[j]); 
+				for( index k = mat->browptr[irow];
+				     (k < mat->browptr[irow+1]) && (mat->bcolind[k] <= mat->bcolind[j]);
 				     k++
-				     ) 
+				     )
 				{
 					index pos = -1;
 					internal::inner_search<index>(mat->bcolind,
@@ -231,13 +248,13 @@ void compute_ILU_remainder(const CRawBSRMatrix<scalar,index> *const mat,
 			}
 			else
 			{
-				for(index k = mat->browptr[irow]; 
-				    (k < mat->browptr[irow+1]) && (mat->bcolind[k] <= irow); k++) 
+				for(index k = mat->browptr[irow];
+				    (k < mat->browptr[irow+1]) && (mat->bcolind[k] <= irow); k++)
 				{
 					index pos = -1;
 
 					/* search for column index mat->bcolind[j],
-					 * between the diagonal index of row mat->bcolind[k] 
+					 * between the diagonal index of row mat->bcolind[k]
 					 * and the last index of row bcolind[k]
 					 */
 					internal::inner_search(mat->bcolind,
@@ -257,23 +274,23 @@ void compute_ILU_remainder(const CRawBSRMatrix<scalar,index> *const mat,
 	}
 }
 
-template
-void compute_ILU_remainder<double,int,4,RowMajor>(const CRawBSRMatrix<double,int> *const mat,
-                                                  const ILUPositions<int>& plist,
-                                                  const double *const iluvals,
-                                                  const int thread_chunk_size,
-                                                  double *const __restrict resvals);
-template
-void compute_ILU_remainder<double,int,4,ColMajor>(const CRawBSRMatrix<double,int> *const mat,
-                                                  const ILUPositions<int>& plist,
-                                                  const double *const iluvals,
-                                                  const int thread_chunk_size,
-                                                  double *const __restrict resvals);
-template
-void compute_ILU_remainder<double,int,5,ColMajor>(const CRawBSRMatrix<double,int> *const mat,
-                                                  const ILUPositions<int>& plist,
-                                                  const double *const iluvals,
-                                                  const int thread_chunk_size,
-                                                  double *const __restrict resvals);
+// template
+// void compute_ILU_remainder<double,int,4,RowMajor>(const CRawBSRMatrix<double,int> *const mat,
+//                                                   const ILUPositions<int>& plist,
+//                                                   const double *const iluvals,
+//                                                   const int thread_chunk_size,
+//                                                   double *const __restrict resvals);
+// template
+// void compute_ILU_remainder<double,int,4,ColMajor>(const CRawBSRMatrix<double,int> *const mat,
+//                                                   const ILUPositions<int>& plist,
+//                                                   const double *const iluvals,
+//                                                   const int thread_chunk_size,
+//                                                   double *const __restrict resvals);
+// template
+// void compute_ILU_remainder<double,int,5,ColMajor>(const CRawBSRMatrix<double,int> *const mat,
+//                                                   const ILUPositions<int>& plist,
+//                                                   const double *const iluvals,
+//                                                   const int thread_chunk_size,
+//                                                   double *const __restrict resvals);
 
 }

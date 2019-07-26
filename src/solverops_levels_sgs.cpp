@@ -40,14 +40,14 @@ Level_BSGS<scalar,index,bs,stor>::~Level_BSGS()
 }
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
-void Level_BSGS<scalar,index,bs,stor>::compute()
+PrecInfo Level_BSGS<scalar,index,bs,stor>::compute()
 {
 	if(!ytemp) {
 		ytemp = (scalar*)aligned_alloc(CACHE_LINE_LEN, mat.nbrows*bs*sizeof(scalar));
 		levels = computeLevels(&mat);
 	}
 
-	BJacobiSRPreconditioner<scalar,index,bs,stor>::compute();
+	return BJacobiSRPreconditioner<scalar,index,bs,stor>::compute();
 }
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
@@ -146,14 +146,14 @@ Level_SGS<scalar,index>::~Level_SGS()
 }
 
 template <typename scalar, typename index>
-void Level_SGS<scalar,index>::compute()
+PrecInfo Level_SGS<scalar,index>::compute()
 {
 	if(!ytemp) {
 		ytemp = (scalar*)aligned_alloc(CACHE_LINE_LEN, mat.nbrows*sizeof(scalar));
 		levels = computeLevels(&mat);
 	}
 
-	JacobiSRPreconditioner<scalar,index>::compute();
+	return JacobiSRPreconditioner<scalar,index>::compute();
 }
 
 template <typename scalar, typename index>

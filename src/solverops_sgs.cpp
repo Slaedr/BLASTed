@@ -30,7 +30,7 @@ AsyncBlockSGS_SRPreconditioner<scalar,index,bs,stor>::~AsyncBlockSGS_SRPrecondit
 }
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
-void AsyncBlockSGS_SRPreconditioner<scalar,index,bs,stor>::compute()
+PrecInfo AsyncBlockSGS_SRPreconditioner<scalar,index,bs,stor>::compute()
 {
 	BJacobiSRPreconditioner<scalar,index,bs,stor>::compute();
 	if(!ytemp) {
@@ -40,6 +40,8 @@ void AsyncBlockSGS_SRPreconditioner<scalar,index,bs,stor>::compute()
 		for(index i = 0; i < mat.nbrows*bs; i++)
 			ytemp[i] = 0;
 	}
+
+	return PrecInfo();
 }
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
@@ -127,7 +129,7 @@ AsyncSGS_SRPreconditioner<scalar,index>::~AsyncSGS_SRPreconditioner()
 }
 
 template <typename scalar, typename index>
-void AsyncSGS_SRPreconditioner<scalar,index>::compute()
+PrecInfo AsyncSGS_SRPreconditioner<scalar,index>::compute()
 {
 	JacobiSRPreconditioner<scalar,index>::compute();
 	if(!ytemp) {
@@ -137,6 +139,8 @@ void AsyncSGS_SRPreconditioner<scalar,index>::compute()
 		for(index i = 0; i < mat.nbrows; i++)
 			ytemp[i] = 0;
 	}
+
+	return PrecInfo();
 }
 
 template <typename scalar, typename index>
@@ -211,12 +215,14 @@ CSC_BGS_Preconditioner<scalar,index>::~CSC_BGS_Preconditioner()
 }
 
 template <typename scalar, typename index>
-void CSC_BGS_Preconditioner<scalar,index>::compute()
+PrecInfo CSC_BGS_Preconditioner<scalar,index>::compute()
 {
 	JacobiSRPreconditioner<scalar,index>::compute();
 
 	alignedDestroyCRawBSCMatrix<scalar,index>(cmat);
 	convert_BSR_to_BSC<scalar,index,1>(&mat, &cmat);
+
+	return PrecInfo();
 }
 
 template <typename scalar, typename index>

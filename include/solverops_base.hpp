@@ -10,6 +10,7 @@
 
 #include "linearoperator.hpp"
 #include "srmatrixdefs.hpp"
+#include "preconditioner_diagnostics.hpp"
 
 namespace blasted {
 
@@ -42,7 +43,7 @@ public:
 	virtual index dim() const = 0;
 
 	/// Compute the preconditioner
-	virtual void compute() = 0;
+	virtual PrecInfo compute() = 0;
 
 	/// To apply the preconditioner
 	virtual void apply(const scalar *const x, scalar *const __restrict y) const = 0;
@@ -69,9 +70,6 @@ class SRPreconditioner : public Preconditioner<scalar,index>
 public:
 	SRPreconditioner(SRMatrixStorage<const scalar, const index>&& matrix);
 
-	/// Compute the preconditioner
-	virtual void compute() = 0;
-
 protected:
 	/// Matrix view
 	SRMatrixStorage<const scalar, const index> pmat;
@@ -93,7 +91,7 @@ public:
 	bool relaxationAvailable() const { return false; }
 
 	/// Does nothing
-	void compute() { }
+	PrecInfo compute() { return PrecInfo(); }
 
 	/// Does nothing but copy the input argument into the output argument
 	void apply(const scalar *const x, scalar *const __restrict y) const;

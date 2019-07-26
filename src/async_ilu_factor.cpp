@@ -7,6 +7,7 @@
 #include "async_ilu_factor.hpp"
 #include "kernels/kernels_ilu0_factorize.hpp"
 #include "helper_algorithms.hpp"
+#include "matrix_properties.hpp"
 
 namespace blasted {
 
@@ -82,11 +83,11 @@ static void executeILU0Factorization(const CRawBSRMatrix<scalar,index> *const ma
 }
 
 template <typename scalar, typename index>
-void scalar_ilu0_factorize(const CRawBSRMatrix<scalar,index> *const mat,
-                           const ILUPositions<index>& plist,
-                           const int nbuildsweeps, const int thread_chunk_size, const bool usethreads,
-                           const FactInit factinittype,
-                           scalar *const __restrict iluvals, scalar *const __restrict scale)
+PrecInfo scalar_ilu0_factorize(const CRawBSRMatrix<scalar,index> *const mat,
+                               const ILUPositions<index>& plist,
+                               const int nbuildsweeps, const int thread_chunk_size, const bool usethreads,
+                               const FactInit factinittype, const bool compute_info,
+                               scalar *const __restrict iluvals, scalar *const __restrict scale)
 {
 	// get the diagonal scaling matrix
 #pragma omp parallel for simd default(shared)
@@ -110,13 +111,25 @@ void scalar_ilu0_factorize(const CRawBSRMatrix<scalar,index> *const mat,
 
 	executeILU0Factorization<scalar,index,true,true>(mat, plist, nbuildsweeps, thread_chunk_size,
 	                                                 usethreads, scale, scale, iluvals);
+
+	PrecInfo pinfo;
+	if(compute_info)
+	{
+		std::array<scalar,2> arr = diagonal_dominance_lower<scalar,index,1,ColMajor>
+			(SRMatrixStorage<const scalar,const index>(mat->browptr, mat->bcolind, iluvals,
+			                                           mat->diagind, mat->browendptr, mat->nbrows,
+			                                           mat->nnzb, mat->nbstored));
+		pinfo.lower_avg_diag_dom = arr[0];
+		pinfo.lower_min_diag_dom = arr[1];
+	}
+	return pinfo;
 }
 
-template void
+template PrecInfo
 scalar_ilu0_factorize<double,int>(const CRawBSRMatrix<double,int> *const mat,
                                   const ILUPositions<int>& plist,
                                   const int nbuildsweeps, const int thread_chunk_size,
-                                  const bool usethreads, const FactInit finit,
+                                  const bool usethreads, const FactInit finit, const bool compute_info,
                                   double *const __restrict iluvals, double *const __restrict scale);
 
 /////////////////////---//////////////////////

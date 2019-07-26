@@ -95,5 +95,12 @@ std::array<scalar,2> diagonal_dominance_lower(const SRMatrixStorage<const scalar
 
 template std::array<double,2>
 diagonal_dominance_lower<double,int,1,ColMajor>(const SRMatrixStorage<const double,const int>&& mat);
+template std::array<double,2>
+diagonal_dominance_lower<double,int,4,ColMajor>(const SRMatrixStorage<const double,const int>&& mat);
+template std::array<double,2>
+diagonal_dominance_lower<double,int,5,ColMajor>(const SRMatrixStorage<const double,const int>&& mat);
+
+template std::array<double,2>
+diagonal_dominance_lower<double,int,4,RowMajor>(const SRMatrixStorage<const double,const int>&& mat);
 
 }

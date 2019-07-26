@@ -54,7 +54,7 @@ public:
 	/** We assume that sucessive calls to this function maintain the same sparsity pattern of the
 	 * original matrix. ILU location precomputations are not repeated.
 	 */
-	void compute();
+	PrecInfo compute();
 
 	/// Applies a block LU factorization L U z = r
 	void apply(const scalar *const x, scalar *const __restrict y) const;
@@ -123,7 +123,7 @@ public:
 	bool relaxationAvailable() const { return false; }
 	
 	/// Compute the preconditioner
-	void compute();
+	PrecInfo compute();
 
 	/// To apply the preconditioner
 	void apply(const scalar *const x, scalar *const __restrict y) const;
@@ -156,6 +156,7 @@ protected:
 
 	const FactInit factinittype;
 	const ApplyInit applyinittype;
+	const bool compute_precinfo;                 ///< Whether to compute expensive quantities for analysis
 
 	/// Allocates memory for storing LU factors and initializes it, as well as temporary data
 	/** \param scaling Set to true to allocate storage for the scaling vector that's applied to
@@ -186,7 +187,7 @@ public:
 	~ReorderedAsyncILU0_SRPreconditioner();
 
 	/// Apply the ordering and scaling and then compute the preconditioner
-	void compute();
+	PrecInfo compute();
 
 	/// Apply the preconditioner and apply ordering and scaling to the output
 	void apply(const scalar *const x, scalar *const __restrict y) const;

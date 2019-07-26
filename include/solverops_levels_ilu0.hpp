@@ -22,7 +22,7 @@ public:
 	~Async_Level_BlockILU0();
 
 	/// Calls the asynchronous factorization routine. The first invocation also computes levels.
-	void compute();
+	PrecInfo compute();
 
 	/// Applies a block LU factorization L U z = r
 	void apply(const scalar *const x, scalar *const __restrict y) const;
@@ -59,7 +59,7 @@ public:
 	~Async_Level_ILU0();
 
 	/// Calls the asynchronous factorization routine. The first invocation also computes levels.
-	void compute();
+	PrecInfo compute();
 
 	/// Applies a block LU factorization L U z = r
 	void apply(const scalar *const x, scalar *const __restrict y) const;

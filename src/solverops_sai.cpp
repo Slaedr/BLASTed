@@ -21,8 +21,9 @@ LeftSAIPreconditioner<scalar,index,bs,stor>
 { }
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
-void LeftSAIPreconditioner<scalar,index,bs,stor>::compute()
+PrecInfo LeftSAIPreconditioner<scalar,index,bs,stor>::compute()
 {
+	return PrecInfo();
 }
 
 template <typename scalar, typename index, int bs, StorageOptions stor>

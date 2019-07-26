@@ -169,7 +169,7 @@ void AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>::setup_storage()
  * However, we could try a row scaling.
  */
 template <typename scalar, typename index, int bs, StorageOptions stor>
-void AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>::compute()
+PrecInfo AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>::compute()
 {
 	// first-time setup
 	if(!iluvals) {
@@ -177,7 +177,7 @@ void AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>::compute()
 		plist = compute_ILU_positions_CSR_CSR(&mat);
 	}
 
-	block_ilu0_factorize<scalar,index,bs,stor>
+	return block_ilu0_factorize<scalar,index,bs,stor>
 		(&mat, plist, nbuildsweeps, thread_chunk_size, threadedfactor, factinittype,
 		 compute_remainder, iluvals);
 }
@@ -206,7 +206,7 @@ AsyncILU0_SRPreconditioner(SRMatrixStorage<const scalar, const index>&& matrix,
 	: SRPreconditioner<scalar,index>(std::move(matrix)),
 	  iluvals{nullptr}, scale{nullptr}, ytemp{nullptr}, threadedfactor{tf}, threadedapply{ta},
 	  nbuildsweeps{nbuildswp}, napplysweeps{napplyswp}, thread_chunk_size{tcs},
-	  factinittype{fi}, applyinittype{ai}
+	  factinittype{fi}, applyinittype{ai}, compute_precinfo{false}
 { }
 
 template <typename scalar, typename index>
@@ -328,20 +328,21 @@ void AsyncILU0_SRPreconditioner<scalar,index>::setup_storage(const bool scaling)
 }
 
 template <typename scalar, typename index>
-void AsyncILU0_SRPreconditioner<scalar,index>::compute()
+PrecInfo AsyncILU0_SRPreconditioner<scalar,index>::compute()
 {
 	if(!iluvals) {
 		setup_storage(true);
 		plist = compute_ILU_positions_CSR_CSR(&mat);
 	}
 
-	scalar_ilu0_factorize(&mat, plist, nbuildsweeps, thread_chunk_size, threadedfactor,
-	                      factinittype, iluvals, scale);
+	return scalar_ilu0_factorize(&mat, plist, nbuildsweeps, thread_chunk_size, threadedfactor,
+	                             factinittype, compute_precinfo, iluvals, scale);
+
 }
 
 template <typename scalar, typename index>
 void AsyncILU0_SRPreconditioner<scalar,index>::apply(const scalar *const __restrict ra, 
-                                              scalar *const __restrict za) const
+                                                     scalar *const __restrict za) const
 {
 	scalar_ilu0_apply(&mat, iluvals, scale, ytemp, napplysweeps, thread_chunk_size, threadedapply,
 	                  applyinittype, ra, za);
@@ -386,7 +387,7 @@ ReorderedAsyncILU0_SRPreconditioner<scalar,index>::~ReorderedAsyncILU0_SRPrecond
 }
 
 template <typename scalar, typename index>
-void ReorderedAsyncILU0_SRPreconditioner<scalar,index>::compute()
+PrecInfo ReorderedAsyncILU0_SRPreconditioner<scalar,index>::compute()
 {
 	if(!iluvals) {
 		setup_storage(true);
@@ -400,9 +401,9 @@ void ReorderedAsyncILU0_SRPreconditioner<scalar,index>::compute()
 
 	plist = compute_ILU_positions_CSR_CSR(reinterpret_cast<CRawBSRMatrix<scalar,index>*>(&rsmat));
 
-	scalar_ilu0_factorize(reinterpret_cast<CRawBSRMatrix<scalar,index>*>(&rsmat),
-	                      plist, nbuildsweeps, thread_chunk_size, threadedfactor,
-	                      factinittype, iluvals, scale);
+	return scalar_ilu0_factorize(reinterpret_cast<CRawBSRMatrix<scalar,index>*>(&rsmat),
+	                             plist, nbuildsweeps, thread_chunk_size, threadedfactor,
+	                             factinittype, false, iluvals, scale);
 }
 
 template <typename scalar, typename index>

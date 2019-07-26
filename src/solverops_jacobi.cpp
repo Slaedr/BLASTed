@@ -26,9 +26,9 @@ BJacobiSRPreconditioner<scalar,index,bs,stor>::~BJacobiSRPreconditioner()
 {
 	boost::alignment::aligned_free(dblocks);
 }
-	
+
 template <typename scalar, typename index, int bs, StorageOptions stor>
-void BJacobiSRPreconditioner<scalar,index,bs,stor>::compute()
+PrecInfo BJacobiSRPreconditioner<scalar,index,bs,stor>::compute()
 {
 	if(!dblocks) {
 		dblocks = (scalar*)aligned_alloc(CACHE_LINE_LEN, mat.nbrows*bs*bs*sizeof(scalar));
@@ -43,6 +43,8 @@ void BJacobiSRPreconditioner<scalar,index,bs,stor>::compute()
 #pragma omp parallel for default(shared)
 	for(index irow = 0; irow < mat.nbrows; irow++)
 		dblks[irow] = vals[mat.diagind[irow]].inverse();
+
+	return PrecInfo();
 }
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
@@ -129,7 +131,7 @@ JacobiSRPreconditioner<scalar,index>::~JacobiSRPreconditioner()
 {
 	boost::alignment::aligned_free(dblocks);
 }
-	
+
 /// Inverts diagonal entries
 /** \param[in] mat The matrix
  * \param[in,out] dblocks It must be pre-allocated; contains inverse of diagonal entries on exit
@@ -145,7 +147,7 @@ void scalar_jacobi_setup(const CRawBSRMatrix<scalar,index> *const mat,
 }
 
 template <typename scalar, typename index>
-void JacobiSRPreconditioner<scalar,index>::compute()
+PrecInfo JacobiSRPreconditioner<scalar,index>::compute()
 {
 	if(!dblocks) {
 		dblocks = (scalar*)boost::alignment::aligned_alloc(CACHE_LINE_LEN,mat.nbrows*sizeof(scalar));
@@ -155,6 +157,8 @@ void JacobiSRPreconditioner<scalar,index>::compute()
 	}
 
 	scalar_jacobi_setup(&mat, dblocks);
+
+	return PrecInfo();
 }	
 
 template <typename scalar, typename index>

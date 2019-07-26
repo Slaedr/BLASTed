@@ -6,11 +6,13 @@
 #ifndef BLASTED_BLAS1_H
 #define BLASTED_BLAS1_H
 
+#include "device_container.hpp"
+
 namespace blasted {
 
 /// Returns the largest entry in absolute value
-template <typename scalar, typename index>
-scalar maxnorm(const index N, const scalar *const vec);
+template <typename scalar>
+scalar maxnorm(const device_vector<scalar>& vec);
 
 }
 
