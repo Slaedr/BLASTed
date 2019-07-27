@@ -44,9 +44,6 @@ std::array<scalar,2> diagonal_dominance_upper(const SRMatrixStorage<const scalar
 		}
 	}
 
-	// std::array<scalar,2> res;
-	// res[0] = ddavg; res[1] = ddmin;
-	// return res;
 	return {ddavg, ddmin};
 }
 
@@ -54,6 +51,11 @@ template std::array<double,2>
 diagonal_dominance_upper<double,int,1,ColMajor>(const SRMatrixStorage<const double,const int>&& mat);
 template std::array<double,2>
 diagonal_dominance_upper<double,int,4,ColMajor>(const SRMatrixStorage<const double,const int>&& mat);
+template std::array<double,2>
+diagonal_dominance_upper<double,int,5,ColMajor>(const SRMatrixStorage<const double,const int>&& mat);
+
+template std::array<double,2>
+diagonal_dominance_upper<double,int,4,RowMajor>(const SRMatrixStorage<const double,const int>&& mat);
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
 std::array<scalar,2> diagonal_dominance_lower(const SRMatrixStorage<const scalar,const index>&& mat)
@@ -87,9 +89,6 @@ std::array<scalar,2> diagonal_dominance_lower(const SRMatrixStorage<const scalar
 		}
 	}
 
-	// std::array<scalar,2> res;
-	// res[0] = ddavg; res[1] = ddmin;
-	// return res;
 	return {ddavg, ddmin};
 }
 

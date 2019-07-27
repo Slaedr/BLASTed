@@ -167,6 +167,14 @@ PrecInfo block_ilu0_factorize(const CRawBSRMatrix<scalar,index> *const mat,
 			                                           mat->nnzb, mat->nbstored));
 		pinfo.lower_avg_diag_dom = arr[0];
 		pinfo.lower_min_diag_dom = arr[1];
+
+		std::array<scalar,2> uarr = diagonal_dominance_upper<scalar,index,bs,stor>
+			(SRMatrixStorage<const scalar,const index>(mat->browptr, mat->bcolind, iluvals,
+			                                           mat->diagind, mat->browendptr, mat->nbrows,
+			                                           mat->nnzb, mat->nbstored));
+
+		pinfo.upper_avg_diag_dom = uarr[0];
+		pinfo.upper_min_diag_dom = uarr[1];
 	}
 
 	// invert diagonal blocks
