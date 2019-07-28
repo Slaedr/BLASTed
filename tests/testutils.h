@@ -41,6 +41,12 @@ int compareSolverWithRef(const int refkspiters, const int avgkspiters, Vec uref,
 /// Runs a PETSc solver and a BLASTed solver from command line settings
 int runComparisonVsPetsc(const DiscreteLinearProblem lp);
 
+/// Run a BLASTed solver in a C++ function so as to test some C++-only interface features
+/** This function can be called from C.
+ * \warning This is not exactly equivalent to the C version \ref runComparisonVsPetsc.
+ */
+int runComparisonVsPetsc_cpp(const DiscreteLinearProblem lp);
+
 #ifdef __cplusplus
 }
 #endif

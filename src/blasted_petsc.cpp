@@ -80,7 +80,6 @@ static PetscErrorCode setupDataFromOptions(PC pc)
 	Blasted_data* ctx;
 	ierr = PCShellGetContext(pc, (void**)&ctx); CHKERRQ(ierr);
 
-
 	const FactoryBase<PetscReal,PetscInt> *const factory
 		= (const FactoryBase<PetscReal,PetscInt>*)ctx->bfactory;
 
@@ -283,7 +282,15 @@ void destroyBlastedDataList(Blasted_data_list *const b)
 	while(b->ctxlist != NULL) {
 		Blasted_data *temp = b->ctxlist;
 		b->ctxlist = b->ctxlist->next;
+
+		// Delete the diagnostic info object
+		PrecInfoList *list = static_cast<PrecInfoList*>(temp->infolist);
+		delete list;
+		list = nullptr;
+
+		// delete the Blasted node
 		delete temp;
+
 		b->size--;
 	}
 
@@ -298,6 +305,7 @@ Blasted_data newBlastedDataContext()
 	ctx.prectypestr = NULL;
 	ctx.factinittype = NULL;
 	ctx.applyinittype = NULL;
+	ctx.infolist = NULL;
 	ctx.first_setup_done = false;
 	ctx.cputime = ctx.walltime = ctx.factorcputime = ctx.factorwalltime
 		= ctx.applycputime = ctx.applywalltime = 0.0;
@@ -329,10 +337,11 @@ PetscErrorCode cleanup_blasted(PC pc)
 	delete [] ctx->factinittype;
 	delete [] ctx->applyinittype;
 
-	if(ctx->compute_precinfo) {
-		PrecInfoList *list = static_cast<PrecInfoList*>(ctx->infolist);
-		delete list;
-	}
+	// if(ctx->compute_precinfo) {
+	// 	PrecInfoList *list = static_cast<PrecInfoList*>(ctx->infolist);
+	// 	delete list;
+	// 	list = nullptr;
+	// }
 
 	return ierr;
 }

@@ -34,6 +34,7 @@ int main(int argc, char* argv[])
 {
 	char help[] = "This program solves a linear system.\n\
 		Arguments: (1) Matrix file in COO format (2) RHS file (3) Exact soln file\n\
+		Optionally, (4) whether to use the C or C++ function for the test.\n\
 		Additionally, use -options_file to provide a PETSc options file.\n";
 
 	if(argc < 4) {
@@ -45,6 +46,13 @@ int main(int argc, char* argv[])
 	char * matfile = argv[1];
 	char * bfile = argv[2];
 	char * xfile = argv[3];
+
+	char *language = NULL;
+	if(argc >= 5)
+		language = argv[4];
+	else
+		language = "c";
+
 	PetscErrorCode ierr = 0;
 
 	ierr = PetscInitialize(&argc, &argv, NULL, help);
@@ -70,7 +78,13 @@ int main(int argc, char* argv[])
 
 	DiscreteLinearProblem lp;
 	ierr = readLinearSystemFromFiles(matfile, bfile, xfile, &lp); CHKERRQ(ierr);
-	ierr = runComparisonVsPetsc(lp); CHKERRQ(ierr);
+
+	if(!strcmp(language,"c++")) {
+		ierr = runComparisonVsPetsc_cpp(lp); CHKERRQ(ierr);
+	} else {
+		ierr = runComparisonVsPetsc(lp); CHKERRQ(ierr);
+	}
+
 	ierr = destroyDiscreteLinearProblem(&lp); CHKERRQ(ierr);
 
 	ierr = PetscFinalize();

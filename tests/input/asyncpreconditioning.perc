@@ -30,5 +30,5 @@
 #-blasted_pc_type
 
 -blasted_thread_chunk_size 128
--blasted_async_fact_init_type init_none
+-blasted_async_fact_init_type init_original
 -blasted_async_apply_init_type init_zero

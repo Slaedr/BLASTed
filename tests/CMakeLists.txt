@@ -302,6 +302,16 @@ if(WITH_PETSC)
 	-ref_sub_pc_type ilu -blasted_pc_type ilu0 -blasted_async_sweeps 2,3
 	-test_type compare_its -error_tolerance 0.01
 	)
+
+  add_test(NAME ThreadedPreconditioningDiagnostics-Petsc-BSR4-Async-ILU0
+  	COMMAND ${SEQEXEC} ${THREADOPTS} ${SEQTASKS} ${CMAKE_CURRENT_BINARY_DIR}/testpetscsolver
+  	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.pmat
+  	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.pmat 
+  	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.pmat c++
+  	-options_file ${CMAKE_CURRENT_SOURCE_DIR}/input/asyncpreconditioning.perc -mat_type baij
+  	-ref_sub_pc_type ilu -blasted_pc_type ilu0 -blasted_async_sweeps 3,8 -blasted_compute_preconditioner_info
+  	-test_type compare_its -error_tolerance 1e-4 -num_runs 3
+  	)
   
   #add_test(NAME MPIPetscMKL-BSR4-SGS 
   # COMMAND env OMP_NUM_THREADS=1 ${MPIEXEC} -n 3 ${CMAKE_CURRENT_BINARY_DIR}/testpetscsolver
