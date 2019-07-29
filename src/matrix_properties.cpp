@@ -34,7 +34,7 @@ std::array<scalar,2> diagonal_dominance_upper(const SRMatrixStorage<const scalar
 		}
 
 		for(int i = 0; i < bs; i++)
-			rowdd[i] = std::abs(data[diagp](i,i)) / rowdd[i];
+			rowdd[i] = 1.0 - rowdd[i]/std::abs(data[diagp](i,i));
 
 		for(int i = 0; i < bs; i++)
 		{
@@ -44,7 +44,7 @@ std::array<scalar,2> diagonal_dominance_upper(const SRMatrixStorage<const scalar
 		}
 	}
 
-	return {ddavg, ddmin};
+	return {ddavg/(mat.nbrows*bs), ddmin};
 }
 
 template std::array<double,2>
@@ -79,7 +79,7 @@ std::array<scalar,2> diagonal_dominance_lower(const SRMatrixStorage<const scalar
 		}
 
 		for(int i = 0; i < bs; i++)
-			rowdd[i] = 1.0 / rowdd[i];   //< Unit block lower triangular matrix
+			rowdd[i] = 1.0 - rowdd[i];   //< Unit block lower triangular matrix
 
 		for(int i = 0; i < bs; i++)
 		{
@@ -89,7 +89,7 @@ std::array<scalar,2> diagonal_dominance_lower(const SRMatrixStorage<const scalar
 		}
 	}
 
-	return {ddavg, ddmin};
+	return {ddavg/(mat.nbrows*bs), ddmin};
 }
 
 template std::array<double,2>

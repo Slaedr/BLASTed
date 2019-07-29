@@ -10,12 +10,16 @@
 namespace blasted {
 
 /** \defgroup diagonal_dominance Measurement of diagonal dominance
- * The degree of diagonal dominance is defined here as the ratio of the diagonal entry in a row
- * to the sum of off-diagonal entries of that row. If the min of this ratio over all rows is more than 1,
- * the matrix is diagonally dominant.
+ * The degree of diagonal dominance of a row is defined here as
+ * \f[
+ *     \beta_i := (|a_{ii}| - \sum_{j \neq i} |a_{ij}|) / |a_{ii}|.
+ * \f]
+ * 
+ * If the min of this ratio over all rows is positive, the matrix is diagonally dominant. Note that
+ * \f$ \beta_i <= 1 \forall i \f$ always.
  *
- * Note that the inverse of the minimum of this degree of diagonal dominance is an upper bound on the
- * infinity-norm of the iteration matrix of the Jacobi iteration.
+ * Note that \f$ 1 - \min{i} \beta_i  = ||M||_\infty, \f$ the infinity-norm of the iteration matrix
+ * of the Jacobi iteration.
  * @{
  */
 
