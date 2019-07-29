@@ -207,9 +207,6 @@ PetscErrorCode createNewPreconditioner(PC pc)
 		SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_SUP, "BLASTed: Block size %d is not supported!", ctx->bs);
 
 	if(ctx->bs == 1) {
-		// SRMatrixStorage<const PetscReal,const PetscInt> smat(Adiag->i, Adiag->j, Adiag->a, Adiag->diag,
-		//                                                      Adiag->i+1, localrows,
-		//                                                      Adiag->i[localrows], Adiag->i[localrows]);
 		precop = factory->create_preconditioner(SRMatrixStorage<const PetscReal,const PetscInt>
 		                                        (Adiag->i, Adiag->j, Adiag->a, Adiag->diag,
 		                                         Adiag->i+1, localrows,

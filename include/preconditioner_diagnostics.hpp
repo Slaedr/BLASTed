@@ -5,6 +5,7 @@
 #ifndef BLASTED_PRECONDITIONER_DIAGNOSTICS_H
 #define BLASTED_PRECONDITIONER_DIAGNOSTICS_H
 
+#include <array>
 #include <vector>
 
 namespace blasted {
@@ -24,6 +25,11 @@ struct PrecInfo
 struct PrecInfoList
 {
 	std::vector<PrecInfo> infolist;
+
+	/// Strings describing the quantities computed, in the same order as \ref PrecInfo
+	/** Initialized in src/solverfactory.cpp
+	 */
+	static const std::array<std::string,6> descr;
 };
 
 }
