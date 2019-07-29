@@ -265,25 +265,20 @@ int runComparisonVsPetsc_cpp(const DiscreteLinearProblem lp)
 		printf("  Preconditioner build info:\n");
 		printf("  ILU rem, initial ILU rem, upper avg ddom, upper min ddom, lower avg ddom, lower min ddom\n");
 		for(int i = 0; i < nruns+1; i++) {
-			printf("  %f %f %lf %lf %lf %lf\n", pilist->infolist[i].prec_remainder_norm,
-			       pilist->infolist[i].prec_rem_initial_norm, pilist->infolist[i].upper_avg_diag_dom,
-			       pilist->infolist[i].upper_min_diag_dom, pilist->infolist[i].lower_avg_diag_dom,
-			       pilist->infolist[i].lower_min_diag_dom);
+			for(int j = 0; j < 6; j++)
+				printf("  %f ", pilist->infolist[i].f_info[j]);
+			printf("\n");
 			fflush(stdout);
 
 			// Sanity checks
-			assert(std::isfinite(pilist->infolist[i].prec_rem_initial_norm));
-			assert(std::isfinite(pilist->infolist[i].prec_remainder_norm));
-			assert(std::isfinite(pilist->infolist[i].upper_avg_diag_dom));
-			assert(std::isfinite(pilist->infolist[i].upper_min_diag_dom));
-			assert(std::isfinite(pilist->infolist[i].lower_avg_diag_dom));
-			assert(std::isfinite(pilist->infolist[i].lower_min_diag_dom));
-			assert(pilist->infolist[i].prec_rem_initial_norm > 0);
-			assert(pilist->infolist[i].prec_remainder_norm < 100.0);
-			assert(pilist->infolist[i].upper_avg_diag_dom < 1);
-			assert(pilist->infolist[i].upper_min_diag_dom <= 1);
-			assert(pilist->infolist[i].lower_avg_diag_dom < 1);
-			assert(pilist->infolist[i].lower_min_diag_dom <= 1);
+			for(int j = 0; j < 6; j++)
+				assert(std::isfinite(pilist->infolist[i].f_info[j]));
+			assert(pilist->infolist[i].prec_rem_initial_norm() > 0);
+			assert(pilist->infolist[i].prec_remainder_norm() < 100.0);
+			assert(pilist->infolist[i].upper_avg_diag_dom() < 1);
+			assert(pilist->infolist[i].upper_min_diag_dom() <= 1);
+			assert(pilist->infolist[i].lower_avg_diag_dom() < 1);
+			assert(pilist->infolist[i].lower_min_diag_dom() <= 1);
 		}
 	}
 	else {

@@ -115,8 +115,7 @@ PrecInfo block_ilu0_factorize(const CRawBSRMatrix<scalar,index> *const mat,
 		compute_ILU_remainder<scalar,index,bs,stor>(mat, plist, iluvals, thread_chunk_size, remvals);
 		const scalar maxrem = maxnorm(remvals);
 		std::cout << "   ILU(0) residuals: Initial = " << maxrem;
-		pinfo.prec_rem_initial_norm = maxrem;
-		// aligned_free(remvals);
+		pinfo.prec_rem_initial_norm() = maxrem;
 	}
 
 	// compute L and U
@@ -159,22 +158,22 @@ PrecInfo block_ilu0_factorize(const CRawBSRMatrix<scalar,index> *const mat,
 		compute_ILU_remainder<scalar,index,bs,stor>(mat, plist, iluvals, thread_chunk_size, resvals);
 		const scalar maxres = maxnorm(resvals);
 		std::cout << ", final = " << maxres << std::endl;
-		pinfo.prec_remainder_norm = maxres;
+		pinfo.prec_remainder_norm() = maxres;
 
 		std::array<scalar,2> arr = diagonal_dominance_lower<scalar,index,bs,stor>
 			(SRMatrixStorage<const scalar,const index>(mat->browptr, mat->bcolind, iluvals,
 			                                           mat->diagind, mat->browendptr, mat->nbrows,
 			                                           mat->nnzb, mat->nbstored));
-		pinfo.lower_avg_diag_dom = arr[0];
-		pinfo.lower_min_diag_dom = arr[1];
+		pinfo.lower_avg_diag_dom() = arr[0];
+		pinfo.lower_min_diag_dom() = arr[1];
 
 		std::array<scalar,2> uarr = diagonal_dominance_upper<scalar,index,bs,stor>
 			(SRMatrixStorage<const scalar,const index>(mat->browptr, mat->bcolind, iluvals,
 			                                           mat->diagind, mat->browendptr, mat->nbrows,
 			                                           mat->nnzb, mat->nbstored));
 
-		pinfo.upper_avg_diag_dom = uarr[0];
-		pinfo.upper_min_diag_dom = uarr[1];
+		pinfo.upper_avg_diag_dom() = uarr[0];
+		pinfo.upper_min_diag_dom() = uarr[1];
 	}
 
 	// invert diagonal blocks

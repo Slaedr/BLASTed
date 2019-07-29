@@ -119,8 +119,8 @@ PrecInfo scalar_ilu0_factorize(const CRawBSRMatrix<scalar,index> *const mat,
 			(SRMatrixStorage<const scalar,const index>(mat->browptr, mat->bcolind, iluvals,
 			                                           mat->diagind, mat->browendptr, mat->nbrows,
 			                                           mat->nnzb, mat->nbstored));
-		pinfo.lower_avg_diag_dom = arr[0];
-		pinfo.lower_min_diag_dom = arr[1];
+		pinfo.lower_avg_diag_dom() = arr[0];
+		pinfo.lower_min_diag_dom() = arr[1];
 	}
 	return pinfo;
 }
