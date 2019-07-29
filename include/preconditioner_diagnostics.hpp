@@ -22,14 +22,17 @@ struct PrecInfo
 };
 
 /// Information about a preconditioner over a sequence of linear solves
+/** Static members are initialized in src/solverfactory.cpp
+ */
 struct PrecInfoList
 {
 	std::vector<PrecInfo> infolist;
 
 	/// Strings describing the quantities computed, in the same order as \ref PrecInfo
-	/** Initialized in src/solverfactory.cpp
-	 */
 	static const std::array<std::string,6> descr;
+
+	/// Text width required for writing each string in descr
+	static const int field_width;
 };
 
 }

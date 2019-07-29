@@ -17,9 +17,9 @@
 namespace blasted {
 
 const std::array<std::string,6> PrecInfoList::descr = {"factor_remainder", "factor_init_rem",
-                                                       "upperF_min_diagdom",
-                                                       "upperF_avg_diagdom", "lowerF_min_diagdom",
-                                                       "lowerF_avg_diagdom"};
+                                                       "upperF_min_dgdom", "upperF_avg_dgdom",
+                                                       "lowerF_min_dgdom", "lowerF_avg_dgdom"};
+const int PrecInfoList::field_width = 18;
 
 template <typename scalar, typename index>
 FactoryBase<scalar,index>::FactoryBase()
