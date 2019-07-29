@@ -65,6 +65,7 @@ std::array<scalar,2> diagonal_dominance_lower(const SRMatrixStorage<const scalar
 
 	scalar ddavg = 0, ddmin = 1e30;
 
+#pragma omp parallel for default(shared) reduction(+:ddavg) reduction(min:ddmin)
 	for(index irow = 0; irow < mat.nbrows; irow++)
 	{
 		scalar rowdd[bs];
