@@ -26,6 +26,12 @@
 namespace blasted {
 
 /// Stores the locations that need to be processed for computing each entry of the ILU factorization
+/** We use the equation A = LU restricted to the sparsity pattern. If we want to compute L, for instance,
+ * we use \f$ l_{ij} = (a_{ij} - \sum_{k < j} l_{ik} u_{kj}) u_{jj}^{-1}. \f$.
+ * We store all the positions in the matrix required to compute the sum in this equation,
+ * for each (i,j) entry. Note that we exlude the location corresponding to \f$ k = j \f$ because it's
+ * easy to access anyway.
+ */
 template<typename index>
 struct ILUPositions
 {

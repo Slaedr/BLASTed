@@ -127,8 +127,6 @@ PrecInfo scalar_ilu0_factorize(const CRawBSRMatrix<scalar,index> *const mat,
 			= scalar_ilu0_remainder<scalar,index,true,true>(mat, plist, thread_chunk_size, scale, scale,
 			                                                iluvals);
 
-		printf("  VALUE %f\n", pinfo.prec_remainder_norm()); fflush(stdout);
-
 		std::array<scalar,2> arr = diagonal_dominance_lower<scalar,index,1,ColMajor>
 			(SRMatrixStorage<const scalar,const index>(mat->browptr, mat->bcolind, iluvals,
 			                                           mat->diagind, mat->browendptr, mat->nbrows,
@@ -167,39 +165,22 @@ scalar scalar_ilu0_remainder(const CRawBSRMatrix<scalar,index> *const mat,
 	{
 		for(index j = mat->browptr[irow]; j < mat->browptr[irow+1]; j++)
 		{
-			scalar absum;
+			scalar sum = mat->vals[j];
+
+			if(needscalerow)
+				sum *= rowscale[irow];
+			if(needscalecol)
+				sum *= colscale[mat->bcolind[j]];
+
+			for(index k = plist.posptr[j]; k < plist.posptr[j+1]; k++)
+				sum -= iluvals[plist.lowerp[k]]*iluvals[plist.upperp[k]];
 
 			if(irow > mat->bcolind[j])
-			{
-				scalar sum = mat->vals[j];
-				if(needscalerow)
-					sum *= rowscale[irow];
-				if(needscalecol)
-					sum *= colscale[mat->bcolind[j]];
-
-				for(index k = plist.posptr[j]; k < plist.posptr[j+1]; k++)
-					sum -= iluvals[plist.lowerp[k]]*iluvals[plist.upperp[k]];
-
-				sum -= iluvals[j]*iluvals[mat->diagind[mat->bcolind[j]]];
-
-				absum = std::abs(sum);
-			}
+				sum -= iluvals[j] * iluvals[mat->diagind[mat->bcolind[j]]];
 			else
-			{
-				// compute u_ij
-				scalar sum = mat->vals[j];
-				if(needscalerow)
-					sum *= rowscale[irow];
-				if(needscalecol)
-					sum *= colscale[mat->bcolind[j]];
-
-				for(index k = plist.posptr[j]; k < plist.posptr[j+1]; k++)
-					sum -= iluvals[plist.lowerp[k]]*iluvals[plist.upperp[k]];
-
 				sum -= iluvals[j];
 
-				absum = std::abs(sum);
-			}
+			const scalar absum = std::abs(sum);
 
 			if(maxrem < absum)
 				maxrem = absum;

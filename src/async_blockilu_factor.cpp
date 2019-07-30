@@ -109,13 +109,8 @@ PrecInfo block_ilu0_factorize(const CRawBSRMatrix<scalar,index> *const mat,
 
 	if(compute_info)
 	{
-		// scalar *const remvals = (scalar*)aligned_alloc(CACHE_LINE_LEN,
-		//                                                mat->browptr[mat->nbrows]*bs*bs*sizeof(scalar));
-		device_vector<scalar> remvals(mat->browptr[mat->nbrows]*bs*bs);
-		compute_ILU_remainder<scalar,index,bs,stor>(mat, plist, iluvals, thread_chunk_size, remvals);
-		const scalar maxrem = maxnorm(remvals);
-		std::cout << "   ILU(0) residuals: Initial = " << maxrem;
-		pinfo.prec_rem_initial_norm() = maxrem;
+		pinfo.prec_rem_initial_norm()
+			= block_ilu0_remainder<scalar,index,bs,stor>(mat, plist, iluvals, thread_chunk_size);
 	}
 
 	// compute L and U
@@ -154,11 +149,8 @@ PrecInfo block_ilu0_factorize(const CRawBSRMatrix<scalar,index> *const mat,
 
 	if(compute_info)
 	{
-		device_vector<scalar> resvals(mat->browptr[mat->nbrows]*bs*bs);
-		compute_ILU_remainder<scalar,index,bs,stor>(mat, plist, iluvals, thread_chunk_size, resvals);
-		const scalar maxres = maxnorm(resvals);
-		std::cout << ", final = " << maxres << std::endl;
-		pinfo.prec_remainder_norm() = maxres;
+		pinfo.prec_remainder_norm()
+			= block_ilu0_remainder<scalar,index,bs,stor>(mat, plist, iluvals, thread_chunk_size);
 
 		std::array<scalar,2> arr = diagonal_dominance_lower<scalar,index,bs,stor>
 			(SRMatrixStorage<const scalar,const index>(mat->browptr, mat->bcolind, iluvals,
@@ -216,88 +208,49 @@ template PrecInfo block_ilu0_factorize<double,int,BUILD_BLOCK_SIZE,ColMajor>
 #endif
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
-void compute_ILU_remainder(const CRawBSRMatrix<scalar,index> *const mat,
-                           const ILUPositions<index>& plist, const scalar *const iluvals,
-                           const int thread_chunk_size,
-                           device_vector<scalar>& __restrict resvals)
+scalar block_ilu0_remainder(const CRawBSRMatrix<scalar,index> *const mat,
+                            const ILUPositions<index>& plist, const scalar *const iluvals,
+                            const int thread_chunk_size)
 {
 	//using Blk = Block_t<scalar,bs,stor>;
 	using Blk = Block_t<scalar,bs,static_cast<StorageOptions>(stor|Eigen::DontAlign)>;
 
 	const Blk *const mvals = reinterpret_cast<const Blk*>(mat->vals);
 	const Blk *const ilu = reinterpret_cast<const Blk*>(iluvals);
-	Blk *const res = reinterpret_cast<Blk*>(&resvals[0]);
 
-#pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size)
+	scalar maxrem = 0;
+
+#pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size) reduction(max:maxrem)
 	for(index irow = 0; irow < mat->nbrows; irow++)
 	{
-		for(index j = mat->browptr[irow]; j < mat->browptr[irow+1]; j++)
+		for(index jj = mat->browptr[irow]; jj < mat->browptr[irow+1]; jj++)
 		{
-			res[j] = mvals[j];
+			Matrix<scalar,bs,bs> sum = mvals[jj];
 
-			if(irow > mat->bcolind[j])
-			{
-				for( index k = mat->browptr[irow];
-				     (k < mat->browptr[irow+1]) && (mat->bcolind[k] <= mat->bcolind[j]);
-				     k++
-				     )
-				{
-					index pos = -1;
-					internal::inner_search<index>(mat->bcolind,
-					                              mat->diagind[mat->bcolind[k]],
-					                              mat->browptr[mat->bcolind[k]+1],
-					                              mat->bcolind[j], &pos );
+			for(index k = plist.posptr[jj]; k < plist.posptr[jj+1]; k++)
+				sum -= ilu[plist.lowerp[k]]*ilu[plist.upperp[k]];
 
-					if(pos == -1) continue;
-
-					res[j].noalias() -= ilu[k]*ilu[pos];
-				}
-			}
+			if(irow > mat->bcolind[jj])
+				sum -= ilu[jj] * ilu[mat->diagind[mat->bcolind[jj]]];
 			else
-			{
-				for(index k = mat->browptr[irow];
-				    (k < mat->browptr[irow+1]) && (mat->bcolind[k] <= irow); k++)
+				sum -= ilu[jj];
+
+			// Take max vector norm of all non-zero entries
+			scalar blockmax = abs(sum(0,0));
+			for(int i = 0; i < bs; i++)
+				for(int j = 0; j < bs; j++)
 				{
-					index pos = -1;
-
-					/* search for column index mat->bcolind[j],
-					 * between the diagonal index of row mat->bcolind[k]
-					 * and the last index of row bcolind[k]
-					 */
-					internal::inner_search(mat->bcolind,
-					                       mat->diagind[mat->bcolind[k]],
-					                       mat->browptr[mat->bcolind[k]+1],
-					                       mat->bcolind[j], &pos);
-
-					if(pos == -1) continue;
-
-					if(mat->bcolind[k] < irow)
-						res[j].noalias() -= ilu[k]*ilu[pos];
-					else
-						res[j].noalias() -= ilu[pos];          //< Diagonal of L is 1
+					const scalar aval = abs(sum(i,j));
+					if(blockmax < aval)
+						blockmax = aval;
 				}
-			}
+
+			if(maxrem < blockmax)
+				maxrem = blockmax;
 		}
 	}
-}
 
-// template
-// void compute_ILU_remainder<double,int,4,RowMajor>(const CRawBSRMatrix<double,int> *const mat,
-//                                                   const ILUPositions<int>& plist,
-//                                                   const double *const iluvals,
-//                                                   const int thread_chunk_size,
-//                                                   double *const __restrict resvals);
-// template
-// void compute_ILU_remainder<double,int,4,ColMajor>(const CRawBSRMatrix<double,int> *const mat,
-//                                                   const ILUPositions<int>& plist,
-//                                                   const double *const iluvals,
-//                                                   const int thread_chunk_size,
-//                                                   double *const __restrict resvals);
-// template
-// void compute_ILU_remainder<double,int,5,ColMajor>(const CRawBSRMatrix<double,int> *const mat,
-//                                                   const ILUPositions<int>& plist,
-//                                                   const double *const iluvals,
-//                                                   const int thread_chunk_size,
-//                                                   double *const __restrict resvals);
+	return maxrem;
+}
 
 }

@@ -322,21 +322,6 @@ add_test(NAME SerialPetscDiagnostics-ILURemainder-CSR-ILU0
   	-test_type compare_its -error_tolerance 1e-4 -num_runs 3
   	)
   
-  #add_test(NAME MPIPetscMKL-BSR4-SGS 
-  # COMMAND env OMP_NUM_THREADS=1 ${MPIEXEC} -n 3 ${CMAKE_CURRENT_BINARY_DIR}/testpetscsolver
-  #	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.pmat
-  #	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.pmat 
-  #	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.pmat
-  #	-options_file ${CMAKE_CURRENT_SOURCE_DIR}/input/2dcyl1_sgs_mkl.perc
-  #)
-  #add_test(NAME MPIPetscMKL-BSR4-ILU0 
-  # COMMAND env OMP_NUM_THREADS=1 ${MPIEXEC} -n 3 ${CMAKE_CURRENT_BINARY_DIR}/testpetscsolver
-  #	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.pmat
-  #	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.pmat 
-  #	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.pmat
-  #	-options_file ${CMAKE_CURRENT_SOURCE_DIR}/input/2dcyl1_ilu0_mkl.perc
-  #)
-  
 endif()
 
 add_subdirectory(poisson3d-fd)

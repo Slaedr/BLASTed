@@ -39,12 +39,16 @@ PrecInfo block_ilu0_factorize(const CRawBSRMatrix<scalar,index> *const mat,
                               const bool compute_remainder,
                               scalar *const __restrict iluvals);
 
-/// Computes the ILU remainder A - LU restricted to the sparsity pattern of A
+/// Computes the vector max norm of the ILU remainder A - LU restricted to the sparsity pattern of A
 /** \param[in] mat The matrix A
  * \param[in] iluvals The non-zero entries of the LU factorization
  * \param[in] thread_chunk_size
  * \param[in,out] remvals Pre-allocated storage for the entries of the remainder matrix
  */
+template <typename scalar, typename index, int bs, StorageOptions stor>
+scalar block_ilu0_remainder(const CRawBSRMatrix<scalar,index> *const mat,
+                            const ILUPositions<index>& plist, const scalar *const iluvals,
+                            const int thread_chunk_size);
 // template <typename scalar, typename index, int bs, StorageOptions stor>
 // void compute_ILU_remainder(const CRawBSRMatrix<scalar,index> *const mat,
 //                            const ILUPositions<index>& plist, const scalar *const iluvals,

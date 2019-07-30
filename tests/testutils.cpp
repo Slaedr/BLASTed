@@ -274,7 +274,7 @@ int runComparisonVsPetsc_cpp(const DiscreteLinearProblem lp)
 		printf("  ILU rem, initial ILU rem, upper avg ddom, upper min ddom, lower avg ddom, lower min ddom\n");
 		for(int i = 0; i < nruns+1; i++) {
 			for(int j = 0; j < 6; j++)
-				printf("  %f ", pilist->infolist[i].f_info[j]);
+				printf("  %9.4g ", pilist->infolist[i].f_info[j]);
 			printf("\n");
 			fflush(stdout);
 
@@ -284,7 +284,7 @@ int runComparisonVsPetsc_cpp(const DiscreteLinearProblem lp)
 			assert(pilist->infolist[i].prec_rem_initial_norm() > 0);
 			assert(pilist->infolist[i].prec_remainder_norm() < 100.0);
 			if(nthreads == 1)
-				assert(pilist->infolist[i].prec_remainder_norm() < 1e-14);
+				assert(pilist->infolist[i].prec_remainder_norm() < 1e-13);
 			assert(pilist->infolist[i].upper_avg_diag_dom() < 1);
 			assert(pilist->infolist[i].upper_min_diag_dom() <= 1);
 			assert(pilist->infolist[i].lower_avg_diag_dom() < 1);
