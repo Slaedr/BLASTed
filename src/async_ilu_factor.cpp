@@ -115,6 +115,10 @@ PrecInfo scalar_ilu0_factorize(const CRawBSRMatrix<scalar,index> *const mat,
 	PrecInfo pinfo;
 	if(compute_info)
 	{
+		pinfo.prec_remainder_norm()
+			= scalar_ilu0_remainder<scalar,index,true,true>(mat, plist, thread_chunk_size, scale, scale,
+			                                                iluvals);
+
 		std::array<scalar,2> arr = diagonal_dominance_lower<scalar,index,1,ColMajor>
 			(SRMatrixStorage<const scalar,const index>(mat->browptr, mat->bcolind, iluvals,
 			                                           mat->diagind, mat->browendptr, mat->nbrows,
@@ -131,6 +135,62 @@ scalar_ilu0_factorize<double,int>(const CRawBSRMatrix<double,int> *const mat,
                                   const int nbuildsweeps, const int thread_chunk_size,
                                   const bool usethreads, const FactInit finit, const bool compute_info,
                                   double *const __restrict iluvals, double *const __restrict scale);
+
+template <typename scalar, typename index, bool needscalerow, bool needscalecol>
+scalar scalar_ilu0_remainder(const CRawBSRMatrix<scalar,index> *const mat,
+                             const ILUPositions<index>& plist,
+                             const int thread_chunk_size,
+                             const scalar *const rowscale, const scalar *const colscale,
+                             const scalar *const iluvals)
+{
+	scalar maxrem = 0;
+
+#pragma omp parallel for schedule(dynamic, thread_chunk_size) reduction(max:maxrem)
+	for(index irow = 0; irow < mat->nbrows; irow++)
+	{
+		for(index j = mat->browptr[irow]; j < mat->browptr[irow+1]; j++)
+		{
+			scalar absum;
+
+			if(irow > mat->bcolind[j])
+			{
+				scalar sum = mat->vals[j];
+				if(needscalerow)
+					sum *= rowscale[irow];
+				if(needscalecol)
+					sum *= colscale[mat->bcolind[j]];
+
+				for(index k = plist.posptr[j]; k < plist.posptr[j+1]; k++)
+					sum -= iluvals[plist.lowerp[k]]*iluvals[plist.upperp[k]];
+
+				sum -= iluvals[j]*iluvals[mat->diagind[mat->bcolind[j]]];
+
+				absum = std::abs(sum);
+			}
+			else
+			{
+				// compute u_ij
+				scalar sum = mat->vals[j];
+				if(needscalerow)
+					sum *= rowscale[irow];
+				if(needscalecol)
+					sum *= colscale[mat->bcolind[j]];
+
+				for(index k = plist.posptr[j]; k < plist.posptr[j+1]; k++)
+					sum -= iluvals[plist.lowerp[k]]*iluvals[plist.upperp[k]];
+
+				sum -= iluvals[j];
+
+				absum = std::abs(sum);
+			}
+
+			if(maxrem < absum)
+				maxrem = absum;
+		}
+	}
+
+	return maxrem;
+}
 
 /////////////////////---//////////////////////
 

@@ -33,6 +33,17 @@ PrecInfo scalar_ilu0_factorize(const CRawBSRMatrix<scalar,index> *const mat,
                                const FactInit factinittype, const bool compute_info,
                                scalar *const __restrict iluvals, scalar *const __restrict scale);
 
+/// Computes the max (vector) norm of the ILU0 remainder A - LU
+/** Note that A is assumed to be RVC, where V are the actual matrix values stored and R and C are the
+ * row and column scaling factor (diagonal) matrices resp.
+ */
+template <typename scalar, typename index, bool needscalerow, bool needscalecol>
+scalar scalar_ilu0_remainder(const CRawBSRMatrix<scalar,index> *const mat,
+                             const ILUPositions<index>& plist,
+                             const int thread_chunk_size,
+                             const scalar *const rowscale, const scalar *const colscale,
+                             const scalar *const iluvals);
+
 /// Computes the scalar ILU0 factorization using asynch iterations \cite ilu:chowpatel
 ///  Does not scale the matrix
 /** Scales the matrix first, and then applies the reordering.
