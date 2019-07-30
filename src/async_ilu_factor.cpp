@@ -109,15 +109,25 @@ PrecInfo scalar_ilu0_factorize(const CRawBSRMatrix<scalar,index> *const mat,
 		;
 	}
 
+	PrecInfo pinfo;
+
+	if(compute_info)
+	{
+		pinfo.prec_rem_initial_norm()
+			= scalar_ilu0_remainder<scalar,index,true,true>(mat, plist, thread_chunk_size, scale, scale,
+			                                                iluvals);
+	}
+
 	executeILU0Factorization<scalar,index,true,true>(mat, plist, nbuildsweeps, thread_chunk_size,
 	                                                 usethreads, scale, scale, iluvals);
 
-	PrecInfo pinfo;
 	if(compute_info)
 	{
 		pinfo.prec_remainder_norm()
 			= scalar_ilu0_remainder<scalar,index,true,true>(mat, plist, thread_chunk_size, scale, scale,
 			                                                iluvals);
+
+		printf("  VALUE %f\n", pinfo.prec_remainder_norm()); fflush(stdout);
 
 		std::array<scalar,2> arr = diagonal_dominance_lower<scalar,index,1,ColMajor>
 			(SRMatrixStorage<const scalar,const index>(mat->browptr, mat->bcolind, iluvals,
@@ -125,6 +135,13 @@ PrecInfo scalar_ilu0_factorize(const CRawBSRMatrix<scalar,index> *const mat,
 			                                           mat->nnzb, mat->nbstored));
 		pinfo.lower_avg_diag_dom() = arr[0];
 		pinfo.lower_min_diag_dom() = arr[1];
+
+		std::array<scalar,2> arru = diagonal_dominance_upper<scalar,index,1,ColMajor>
+			(SRMatrixStorage<const scalar,const index>(mat->browptr, mat->bcolind, iluvals,
+			                                           mat->diagind, mat->browendptr, mat->nbrows,
+			                                           mat->nnzb, mat->nbstored));
+		pinfo.upper_avg_diag_dom() = arru[0];
+		pinfo.upper_min_diag_dom() = arru[1];
 	}
 	return pinfo;
 }

@@ -113,6 +113,7 @@ public:
 	                           const int nbuildsweeps, const int napplysweeps,
 	                           const int thread_chunk_size,
 	                           const FactInit fact_inittype, const ApplyInit apply_inittype,
+	                           const bool compute_preconditioner_info,
 	                           const bool threadedfactor=true, const bool threadedapply=true);
 
 	virtual ~AsyncILU0_SRPreconditioner();
@@ -121,7 +122,7 @@ public:
 	index dim() const { return mat.nbrows; }
 
 	bool relaxationAvailable() const { return false; }
-	
+
 	/// Compute the preconditioner
 	PrecInfo compute();
 

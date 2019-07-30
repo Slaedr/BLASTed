@@ -199,6 +199,15 @@ if(WITH_PETSC)
 	-options_file ${CMAKE_CURRENT_SOURCE_DIR}/input/2dcyl1_ilu0.perc -mat_type aij -test_type issame
 	-error_tolerance 1e-13
 	)
+  
+add_test(NAME SerialPetscDiagnostics-ILURemainder-CSR-ILU0 
+	COMMAND env OMP_NUM_THREADS=1 ${MPIEXEC} ${MPIOPTS} -n 1 ${CMAKE_CURRENT_BINARY_DIR}/testpetscsolver
+	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.pmat
+	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.pmat 
+	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.pmat c++
+	-options_file ${CMAKE_CURRENT_SOURCE_DIR}/input/2dcyl1_ilu0.perc -mat_type aij -test_type issame
+	-error_tolerance 1e-13 -blasted_compute_preconditioner_info
+	)
 
   add_test(NAME MPIPetsc-BSR4-Jacobi-Relaxation 
 	COMMAND env OMP_NUM_THREADS=1 ${MPIEXEC} ${MPIOPTS} -n 3 ${CMAKE_CURRENT_BINARY_DIR}/testpetscsolver

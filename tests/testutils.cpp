@@ -9,6 +9,10 @@
 #include <cmath>
 #include <float.h>
 
+#ifdef _OPENMP
+#include <omp.h>
+#endif
+
 #include <petscksp.h>
 #include <../src/mat/impls/aij/mpi/mpiaij.h>
 #include <../src/mat/impls/baij/mpi/mpibaij.h>
@@ -137,6 +141,10 @@ int runComparisonVsPetsc_cpp(const DiscreteLinearProblem lp)
 	PetscInt cmdnumruns;
 	ierr = PetscOptionsGetInt(NULL,NULL,"-num_runs",&cmdnumruns,&set); CHKERRQ(ierr);
 	const int nruns = set ? cmdnumruns : 1;
+
+#ifdef _OPENMP
+	const int nthreads = omp_get_max_threads();
+#endif
 
 	//----------------------------------------------------------------------------------
 
@@ -275,6 +283,8 @@ int runComparisonVsPetsc_cpp(const DiscreteLinearProblem lp)
 				assert(std::isfinite(pilist->infolist[i].f_info[j]));
 			assert(pilist->infolist[i].prec_rem_initial_norm() > 0);
 			assert(pilist->infolist[i].prec_remainder_norm() < 100.0);
+			if(nthreads == 1)
+				assert(pilist->infolist[i].prec_remainder_norm() < 1e-14);
 			assert(pilist->infolist[i].upper_avg_diag_dom() < 1);
 			assert(pilist->infolist[i].upper_min_diag_dom() <= 1);
 			assert(pilist->infolist[i].lower_avg_diag_dom() < 1);

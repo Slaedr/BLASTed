@@ -201,12 +201,12 @@ template <typename scalar, typename index>
 AsyncILU0_SRPreconditioner<scalar,index>::
 AsyncILU0_SRPreconditioner(SRMatrixStorage<const scalar, const index>&& matrix,
                            const int nbuildswp, const int napplyswp, const int tcs,
-                           const FactInit fi, const ApplyInit ai,
+                           const FactInit fi, const ApplyInit ai, const bool compute_preconditioner_info,
                            const bool tf, const bool ta)
 	: SRPreconditioner<scalar,index>(std::move(matrix)),
 	  iluvals{nullptr}, scale{nullptr}, ytemp{nullptr}, threadedfactor{tf}, threadedapply{ta},
 	  nbuildsweeps{nbuildswp}, napplysweeps{napplyswp}, thread_chunk_size{tcs},
-	  factinittype{fi}, applyinittype{ai}, compute_precinfo{false}
+	  factinittype{fi}, applyinittype{ai}, compute_precinfo{compute_preconditioner_info}
 { }
 
 template <typename scalar, typename index>

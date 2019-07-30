@@ -143,13 +143,13 @@ SRFactory<scalar,index>::create_preconditioner(SRMatrixStorage<const scalar, con
 			p = new AsyncILU0_SRPreconditioner<scalar,index>
 				(std::move(mat), opts.nbuildsweeps, opts.napplysweeps,
 				 opts.thread_chunk_size,
-				 opts.fact_inittype, opts.apply_inittype, true,true);
+				 opts.fact_inittype, opts.apply_inittype, opts.compute_precinfo, true,true);
 		}
 		else if(opts.prectype == BLASTED_SAPILU0) {
 			p = new AsyncILU0_SRPreconditioner<scalar,index>
 				(std::move(mat), opts.nbuildsweeps, opts.napplysweeps,
 				 opts.thread_chunk_size,
-				 opts.fact_inittype, opts.apply_inittype, true,false);
+				 opts.fact_inittype, opts.apply_inittype, opts.compute_precinfo, true,false);
 		}
 		else if(opts.prectype == BLASTED_ASYNC_LEVEL_ILU0) {
 			p = new Async_Level_ILU0<scalar,index>(std::move(mat), opts.nbuildsweeps,
