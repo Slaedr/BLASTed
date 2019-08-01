@@ -22,10 +22,14 @@ std::array<scalar,2> diagonal_dominance_upper(const SRMatrixStorage<const scalar
 			rowdd[i] = 0;
 
 		const index diagp = mat.diagind[irow];
-		for(int i = 0; i < bs; i++)
-			for(int j = i+1; j < bs; j++)
-				rowdd[i] += std::abs(data[diagp](i,j));
 
+		// add the off-diagonal entries of the diagonal block
+		for(int i = 0; i < bs; i++)
+			for(int j = 0; j < bs; j++)
+				if(i != j)
+					rowdd[i] += std::abs(data[diagp](i,j));
+
+		// other off-diagonal entries
 		for(index jj = mat.diagind[irow]+1; jj < mat.browendptr[irow]; jj++)
 		{
 			for(int i = 0; i < bs; i++)
