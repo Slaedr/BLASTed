@@ -38,11 +38,11 @@ PrecInfo scalar_ilu0_factorize(const CRawBSRMatrix<scalar,index> *const mat,
  * row and column scaling factor (diagonal) matrices resp.
  */
 template <typename scalar, typename index, bool needscalerow, bool needscalecol>
-scalar scalar_ilu0_remainder(const CRawBSRMatrix<scalar,index> *const mat,
-                             const ILUPositions<index>& plist,
-                             const int thread_chunk_size,
-                             const scalar *const rowscale, const scalar *const colscale,
-                             const scalar *const iluvals);
+scalar scalar_ilu0_nonlinear_res(const CRawBSRMatrix<scalar,index> *const mat,
+                                 const ILUPositions<index>& plist,
+                                 const int thread_chunk_size,
+                                 const scalar *const rowscale, const scalar *const colscale,
+                                 const scalar *const iluvals);
 
 /// Computes the scalar ILU0 factorization using asynch iterations \cite ilu:chowpatel
 ///  Does not scale the matrix

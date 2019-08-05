@@ -46,14 +46,9 @@ PrecInfo block_ilu0_factorize(const CRawBSRMatrix<scalar,index> *const mat,
  * \param[in,out] remvals Pre-allocated storage for the entries of the remainder matrix
  */
 template <typename scalar, typename index, int bs, StorageOptions stor>
-scalar block_ilu0_remainder(const CRawBSRMatrix<scalar,index> *const mat,
-                            const ILUPositions<index>& plist, const scalar *const iluvals,
-                            const int thread_chunk_size);
-// template <typename scalar, typename index, int bs, StorageOptions stor>
-// void compute_ILU_remainder(const CRawBSRMatrix<scalar,index> *const mat,
-//                            const ILUPositions<index>& plist, const scalar *const iluvals,
-//                            const int thread_chunk_size,
-//                            scalar *const __restrict remvals);
+scalar block_ilu0_nonlinear_res(const CRawBSRMatrix<scalar,index> *const mat,
+                                const ILUPositions<index>& plist, const scalar *const iluvals,
+                                const int thread_chunk_size);
 
 }
 

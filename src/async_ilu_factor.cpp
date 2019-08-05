@@ -114,8 +114,8 @@ PrecInfo scalar_ilu0_factorize(const CRawBSRMatrix<scalar,index> *const mat,
 	if(compute_info)
 	{
 		pinfo.prec_rem_initial_norm()
-			= scalar_ilu0_remainder<scalar,index,true,true>(mat, plist, thread_chunk_size, scale, scale,
-			                                                iluvals);
+			= scalar_ilu0_nonlinear_res<scalar,index,true,true>(mat, plist, thread_chunk_size,
+			                                                    scale, scale, iluvals);
 	}
 
 	executeILU0Factorization<scalar,index,true,true>(mat, plist, nbuildsweeps, thread_chunk_size,
@@ -124,8 +124,8 @@ PrecInfo scalar_ilu0_factorize(const CRawBSRMatrix<scalar,index> *const mat,
 	if(compute_info)
 	{
 		pinfo.prec_remainder_norm()
-			= scalar_ilu0_remainder<scalar,index,true,true>(mat, plist, thread_chunk_size, scale, scale,
-			                                                iluvals);
+			= scalar_ilu0_nonlinear_res<scalar,index,true,true>(mat, plist, thread_chunk_size,
+			                                                    scale, scale, iluvals);
 
 		std::array<scalar,2> arr = diagonal_dominance_lower<scalar,index,1,ColMajor>
 			(SRMatrixStorage<const scalar,const index>(mat->browptr, mat->bcolind, iluvals,
@@ -152,20 +152,22 @@ scalar_ilu0_factorize<double,int>(const CRawBSRMatrix<double,int> *const mat,
                                   double *const __restrict iluvals, double *const __restrict scale);
 
 template <typename scalar, typename index, bool needscalerow, bool needscalecol>
-scalar scalar_ilu0_remainder(const CRawBSRMatrix<scalar,index> *const mat,
-                             const ILUPositions<index>& plist,
-                             const int thread_chunk_size,
-                             const scalar *const rowscale, const scalar *const colscale,
-                             const scalar *const iluvals)
+scalar scalar_ilu0_nonlinear_res(const CRawBSRMatrix<scalar,index> *const mat,
+                                 const ILUPositions<index>& plist,
+                                 const int thread_chunk_size,
+                                 const scalar *const rowscale, const scalar *const colscale,
+                                 const scalar *const iluvals)
 {
-	scalar maxrem = 0;
+	scalar resnorm = 0;
+	scalar anorm = 0;
 
-#pragma omp parallel for schedule(dynamic, thread_chunk_size) reduction(max:maxrem)
+#pragma omp parallel for schedule(dynamic, thread_chunk_size) reduction(+:resnorm,anorm)
 	for(index irow = 0; irow < mat->nbrows; irow++)
 	{
 		for(index j = mat->browptr[irow]; j < mat->browptr[irow+1]; j++)
 		{
 			scalar sum = mat->vals[j];
+			anorm += std::abs(sum);
 
 			if(needscalerow)
 				sum *= rowscale[irow];
@@ -180,14 +182,11 @@ scalar scalar_ilu0_remainder(const CRawBSRMatrix<scalar,index> *const mat,
 			else
 				sum -= iluvals[j];
 
-			const scalar absum = std::abs(sum);
-
-			if(maxrem < absum)
-				maxrem = absum;
+			resnorm += std::abs(sum);
 		}
 	}
 
-	return maxrem;
+	return resnorm;
 }
 
 /////////////////////---//////////////////////

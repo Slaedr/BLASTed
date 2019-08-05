@@ -28,12 +28,6 @@
 
 namespace blasted {
 
-template <typename scalar, typename index, int bs, StorageOptions stor>
-void compute_ILU_remainder(const CRawBSRMatrix<scalar,index> *const mat,
-                           const ILUPositions<index>& plist, const scalar *const iluvals,
-                           const int thread_chunk_size,
-                           device_vector<scalar>& __restrict resvals);
-
 /// Initialize the factorization such that async. ILU(0) factorization gives async. SGS at worst
 /**
  * We set L' to (I+LD^(-1)) and U' to (D+U) so that L'U' = (D+L)D^(-1)(D+U).
@@ -110,7 +104,7 @@ PrecInfo block_ilu0_factorize(const CRawBSRMatrix<scalar,index> *const mat,
 	if(compute_info)
 	{
 		pinfo.prec_rem_initial_norm()
-			= block_ilu0_remainder<scalar,index,bs,stor>(mat, plist, iluvals, thread_chunk_size);
+			= block_ilu0_nonlinear_res<scalar,index,bs,stor>(mat, plist, iluvals, thread_chunk_size);
 	}
 
 	// compute L and U
@@ -150,7 +144,7 @@ PrecInfo block_ilu0_factorize(const CRawBSRMatrix<scalar,index> *const mat,
 	if(compute_info)
 	{
 		pinfo.prec_remainder_norm()
-			= block_ilu0_remainder<scalar,index,bs,stor>(mat, plist, iluvals, thread_chunk_size);
+			= block_ilu0_nonlinear_res<scalar,index,bs,stor>(mat, plist, iluvals, thread_chunk_size);
 
 		std::array<scalar,2> arr = diagonal_dominance_lower<scalar,index,bs,stor>
 			(SRMatrixStorage<const scalar,const index>(mat->browptr, mat->bcolind, iluvals,
@@ -208,19 +202,19 @@ template PrecInfo block_ilu0_factorize<double,int,BUILD_BLOCK_SIZE,ColMajor>
 #endif
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
-scalar block_ilu0_remainder(const CRawBSRMatrix<scalar,index> *const mat,
-                            const ILUPositions<index>& plist, const scalar *const iluvals,
-                            const int thread_chunk_size)
+scalar block_ilu0_nonlinear_res(const CRawBSRMatrix<scalar,index> *const mat,
+                                const ILUPositions<index>& plist, const scalar *const iluvals,
+                                const int thread_chunk_size)
 {
-	//using Blk = Block_t<scalar,bs,stor>;
 	using Blk = Block_t<scalar,bs,static_cast<StorageOptions>(stor|Eigen::DontAlign)>;
 
 	const Blk *const mvals = reinterpret_cast<const Blk*>(mat->vals);
 	const Blk *const ilu = reinterpret_cast<const Blk*>(iluvals);
 
-	scalar maxrem = 0;
+	scalar resnorm = 0;
+	scalar anorm = 0;      // original matrix
 
-#pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size) reduction(max:maxrem)
+#pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size) reduction(+:resnorm,anorm)
 	for(index irow = 0; irow < mat->nbrows; irow++)
 	{
 		for(index jj = mat->browptr[irow]; jj < mat->browptr[irow+1]; jj++)
@@ -235,22 +229,22 @@ scalar block_ilu0_remainder(const CRawBSRMatrix<scalar,index> *const mat,
 			else
 				sum -= ilu[jj];
 
-			// Take max vector norm of all non-zero entries
-			scalar blockmax = abs(sum(0,0));
+			// Take the vector 1-norm of all non-zero entries
+			scalar blockresnorm = 0;
+			scalar blockanorm = 0;
 			for(int i = 0; i < bs; i++)
 				for(int j = 0; j < bs; j++)
 				{
-					const scalar aval = abs(sum(i,j));
-					if(blockmax < aval)
-						blockmax = aval;
+					blockresnorm += std::abs(sum(i,j));
+					blockanorm += std::abs(mvals[jj](i,j));
 				}
 
-			if(maxrem < blockmax)
-				maxrem = blockmax;
+			resnorm += blockresnorm;
+			anorm += blockanorm;
 		}
 	}
 
-	return maxrem;
+	return resnorm;
 }
 
 }
