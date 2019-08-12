@@ -20,7 +20,7 @@
 #include <Eigen/LU>
 #include "async_blockilu_factor.hpp"
 #include "helper_algorithms.hpp"
-#include "blas1.hpp"
+#include "blas/blas1.hpp"
 #include "matrix_properties.hpp"
 
 #include <boost/align.hpp>

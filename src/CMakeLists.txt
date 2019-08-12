@@ -1,7 +1,9 @@
 # For some reason, CMake can't figure out PIC flag for Cray
 if(CXX_COMPILER_CRAY)
-	add_compile_options(-fPIC)
+  add_compile_options(-fPIC)
 endif()
+
+add_subdirectory(blas)
 
 add_library(helper helper_algorithms.cpp)
 set_property(TARGET helper PROPERTY POSITION_INDEPENDENT_CODE ON)
@@ -15,9 +17,9 @@ if(WITH_MC64)
   target_link_libraries(orderingscaling ${MC64_LIB} ${FORTLDFLAGS})
 endif(WITH_MC64)
 
-add_library(blockmatrices csrmatrix.cpp bsrmatrix.cpp matvecs.cpp)
+add_library(blockmatrices csrmatrix.cpp bsrmatrix.cpp)
 set_property(TARGET blockmatrices PROPERTY POSITION_INDEPENDENT_CODE ON)
-target_link_libraries(blockmatrices rawmatrixutils)
+target_link_libraries(blockmatrices myblas rawmatrixutils)
 
 add_library(coomatrix coomatrix.cpp)
 target_link_libraries(coomatrix blockmatrices)
@@ -31,13 +33,13 @@ add_library(solverops
   relaxation_chaotic.cpp
   solverops_jacobi.cpp solverops_sgs.cpp solverops_ilu0.cpp solverops_base.cpp
   async_blockilu_factor.cpp async_ilu_factor.cpp
-  ilu_pattern.cpp levelschedule.cpp blas1.cpp matrix_properties.cpp
+  ilu_pattern.cpp levelschedule.cpp matrix_properties.cpp
   )
 set_property(TARGET solverops PROPERTY POSITION_INDEPENDENT_CODE ON)
 if(CXX_COMPILER_CLANG)
   target_compile_options(solverops PRIVATE "-Wno-error=pass-failed")
 endif()
-target_link_libraries(solverops orderingscaling helper)
+target_link_libraries(solverops myblas orderingscaling helper)
 
 if(WITH_PETSC)
 
