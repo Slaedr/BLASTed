@@ -58,9 +58,12 @@ struct SRMatrixStorage
 	SRMatrixStorage();
 
 	/// Wrap data pointers
+	/** \param[in] block_size Only used to set the size of the values array.
+	 */
 	SRMatrixStorage(mindex *const brptrs, mindex *const bcinds,
 	                mscalar *const values, mindex *const diag_inds, mindex *const brendptrs,
-	                const index n_brows, const index n_nzb, const index n_bstored);
+	                const index n_brows, const index n_nzb, const index n_bstored,
+	                const int block_size);
 
 	/// Move arrays into this object
 	SRMatrixStorage(ArrayView<mindex>&& brptrs, ArrayView<mindex>&& bcinds, ArrayView<mscalar>&& vals,
@@ -81,7 +84,7 @@ struct SRMatrixStorage
  */
 template <typename scalar, typename index>
 SRMatrixStorage<typename std::add_const<scalar>::type, typename std::add_const<index>::type>
-share_with_const(const SRMatrixStorage<scalar,index>& smat);
+share_with_const(const SRMatrixStorage<scalar,index>& smat, const int block_size);
 
 /// An (almost-)immutable sparse block-row square matrix
 /** The pointers and the number of (block-)rows are non-const to allow re-wrapping of another matrix.
@@ -194,6 +197,9 @@ getUpperTriangularView(const SRMatrixStorage<const scalar,const index>&& mat);
  */
 template <typename scalar, typename index>
 void alignedDestroyRawBSRMatrixTriangularView(RawBSRMatrix<scalar,index>& mat);
+
+template <typename scalar, typename index>
+CRawBSRMatrix<scalar,index> createRawView(const SRMatrixStorage<const scalar, const index>&& smat);
 
 }
 #endif

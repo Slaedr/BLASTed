@@ -36,10 +36,12 @@ public:
 	 * \param[in] bcinds Array of block-column indices
 	 * \param[in] values Non-zero values
 	 * \param[in] dinds Array of pointers to diagonal blocks
+	 * \param[in] block_size The size of small dense blocks treated as a unit in the sparsity pattern
 	 * \param[in] storagetype The type of sparse representation of the matrix data
 	 */
 	SRMatrixView(const index n_brows, const index *const brptrs, const index *const bcinds,
-	             const scalar *const values, const index *const diaginds, const StorageType storagetype);
+	             const scalar *const values, const index *const diaginds, const int block_size,
+	             const StorageType storagetype);
 
 	/// Construct from a SRMatrixStorage
 	SRMatrixView(SRMatrixStorage<const scalar,const index>&& srmat, const StorageType storagetype);

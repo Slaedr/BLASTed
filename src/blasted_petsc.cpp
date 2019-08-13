@@ -210,20 +210,15 @@ PetscErrorCode createNewPreconditioner(PC pc)
 		precop = factory->create_preconditioner(SRMatrixStorage<const PetscReal,const PetscInt>
 		                                        (Adiag->i, Adiag->j, Adiag->a, Adiag->diag,
 		                                         Adiag->i+1, localrows,
-		                                         Adiag->i[localrows], Adiag->i[localrows]),
+		                                         Adiag->i[localrows], Adiag->i[localrows], 1),
 		                                        settings);
 	}
 	else {
-		// SRMatrixStorage<const PetscReal,const PetscInt> smat
-		// 	(Abdiag->i, Abdiag->j, Abdiag->a, Abdiag->diag, Abdiag->i+1,
-		// 	 localrows/ctx->bs, Abdiag->i[localrows/ctx->bs], Abdiag->i[localrows/ctx->bs]);
-
-		// precop = factory->create_preconditioner(std::move(smat), settings);
-
 		precop = factory->create_preconditioner(SRMatrixStorage<const PetscReal,const PetscInt>
 		                                        (Abdiag->i, Abdiag->j, Abdiag->a, Abdiag->diag,
 		                                         Abdiag->i+1, localrows/ctx->bs,
-		                                         Abdiag->i[localrows/ctx->bs], Abdiag->i[localrows/ctx->bs]),
+		                                         Abdiag->i[localrows/ctx->bs],
+		                                         Abdiag->i[localrows/ctx->bs], ctx->bs),
 		                                        settings);
 	}
 

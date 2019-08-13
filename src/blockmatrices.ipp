@@ -83,11 +83,12 @@ static std::array<bool,5> areEqual(const CRawBSRMatrix<scalar,index> *const mat1
 
 template<typename scalar, typename index>
 SRMatrixView<scalar,index>::SRMatrixView(const index n_brows,
-		const index *const brptrs, const index *const bcinds, const scalar *const values,
-		const index *const diaginds,const StorageType storagetype)
+                                         const index *const brptrs, const index *const bcinds,
+                                         const scalar *const values, const index *const diaginds,
+                                         const int blocksize, const StorageType storagetype)
 	: MatrixView<scalar,index>(storagetype),
-	  mat{brptrs, bcinds, values, diaginds, n_brows>0 ? &brptrs[1]:nullptr, n_brows, brptrs[n_brows],
-	      brptrs[n_brows]}
+	  mat(brptrs, bcinds, values, diaginds, n_brows>0 ? &brptrs[1]:nullptr, n_brows, brptrs[n_brows],
+	      brptrs[n_brows], blocksize)
 { }
 
 template<typename scalar, typename index>
@@ -101,7 +102,7 @@ BSRMatrixView<scalar,index,bs,stor>::BSRMatrixView(const index n_brows, const in
                                                    const index *const bcinds,
                                                    const scalar *const values,
                                                    const index *const diaginds)
-	: SRMatrixView<scalar,index>(n_brows, brptrs, bcinds, values, diaginds, VIEWBSR)
+	: SRMatrixView<scalar,index>(n_brows, brptrs, bcinds, values, diaginds, bs, VIEWBSR)
 { }
 
 template <typename scalar, typename index, int bs, StorageOptions stopt>
@@ -116,7 +117,7 @@ BSRMatrixView<scalar, index, bs,stor>::~BSRMatrixView()
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
 void BSRMatrixView<scalar,index,bs,stor>::apply(const scalar *const xx,
-                                       scalar *const __restrict yy) const
+                                                scalar *const __restrict yy) const
 {
 	BLAS_BSR<const scalar,const index,bs,stor>::matrix_apply(std::move(mat), xx, yy);
 }
@@ -133,7 +134,7 @@ template <typename scalar, typename index>
 CSRMatrixView<scalar,index>::CSRMatrixView(const index nrows, const index *const brptrs,
                                            const index *const bcinds, const scalar *const values,
                                            const index *const diaginds)
-	: SRMatrixView<scalar,index>(nrows, brptrs, bcinds, values, diaginds, VIEWCSR)
+	: SRMatrixView<scalar,index>(nrows, brptrs, bcinds, values, diaginds, 1, VIEWCSR)
 { }
 
 template<typename scalar, typename index>
@@ -203,8 +204,8 @@ template <typename scalar, typename index, int bs>
 BSRMatrix<scalar,index,bs>::BSRMatrix(const index n_brows, index *const brptrs, index *const bcinds,
                                       scalar *const values, index *const diaginds)
 	: AbstractMatrix<scalar,index>(BSR),
-	  mat{brptrs, bcinds, values, diaginds, n_brows>0 ? &brptrs[1]:nullptr, n_brows,
-	      brptrs[n_brows], brptrs[n_brows]}
+	  mat(brptrs, bcinds, values, diaginds, n_brows>0 ? &brptrs[1]:nullptr, n_brows,
+	      brptrs[n_brows], brptrs[n_brows], bs)
 { }
 
 template <typename scalar, typename index, int bs>
@@ -505,8 +506,8 @@ BSRMatrix<scalar,index,1>::BSRMatrix(const index nrows, index *const brptrs,
 template <typename scalar, typename index>
 BSRMatrix<scalar,index,1>::BSRMatrix(RawBSRMatrix<scalar,index>& rmat)
 	: AbstractMatrix<scalar,index>(CSR),
-	  mat{rmat.browptr, rmat.bcolind, rmat.vals, rmat.diagind,
-	      rmat.nbrows>0 ? &rmat.browptr[1]:nullptr, rmat.nbrows, rmat.nnzb, rmat.nbstored}
+	  mat(rmat.browptr, rmat.bcolind, rmat.vals, rmat.diagind,
+	      rmat.nbrows>0 ? &rmat.browptr[1]:nullptr, rmat.nbrows, rmat.nnzb, rmat.nbstored, 1)
 {
 	assert(rmat.nnzb == rmat.nbstored);
 	mat.nbrows = rmat.nbrows;

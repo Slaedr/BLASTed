@@ -1,6 +1,20 @@
 /** \file
  * \brief Implementations of some convenience functions for raw sparse-row matrix storage
  * \author Aditya Kashi
+ * 
+ * This file is part of BLASTed.
+ *   BLASTed is free software: you can redistribute it and/or modify
+ *   it under the terms of the GNU General Public License as published by
+ *   the Free Software Foundation, either version 3 of the License, or
+ *   (at your option) any later version.
+ *
+ *   BLASTed is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with BLASTed.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include <stdexcept>
@@ -21,8 +35,8 @@ SRMatrixStorage<mscalar,mindex>::SRMatrixStorage(mindex *const brptrs, mindex *c
                                                  mscalar *const values, mindex *const diag_inds,
                                                  mindex *const brendptrs,
                                                  const index n_brows, const index n_nzb,
-                                                 const index n_bstored)
-	: browptr(brptrs, n_brows+1), bcolind(bcinds, n_bstored), vals(values, n_bstored),
+                                                 const index n_bstored, const int b_s)
+	: browptr(brptrs, n_brows+1), bcolind(bcinds, n_bstored), vals(values, n_bstored*b_s*b_s),
 	  diagind(diag_inds, n_brows), browendptr(brendptrs, n_brows),
 	  nbrows{n_brows}, nnzb{n_nzb}, nbstored{n_bstored}
 { }
@@ -64,23 +78,23 @@ move_to_const(SRMatrixStorage<scalar,index>&& smat)
 	return cm;
 }
 
-template <typename scalar, typename index>
-SRMatrixStorage<typename std::add_const<scalar>::type, typename std::add_const<index>::type>
-share_with_const(const SRMatrixStorage<scalar,index>& smat)
-{
-	return
-		SRMatrixStorage<typename std::add_const<scalar>::type, typename std::add_const<index>::type>
-		(&smat.browptr[0], &smat.bcolind[0], &smat.vals[0], &smat.diagind[0], &smat.browendptr[0],
-		 smat.nbrows, smat.nnzb, smat.nbstored);
-}
-
 template struct SRMatrixStorage<double,int>;
 template struct SRMatrixStorage<const double,const int>;
 template SRMatrixStorage<typename std::add_const<double>::type, typename std::add_const<int>::type>
 move_to_const(SRMatrixStorage<double,int>&& smat);
 
+template <typename scalar, typename index>
+SRMatrixStorage<typename std::add_const<scalar>::type, typename std::add_const<index>::type>
+share_with_const(const SRMatrixStorage<scalar,index>& smat, const int bs)
+{
+	return
+		SRMatrixStorage<typename std::add_const<scalar>::type, typename std::add_const<index>::type>
+		(&smat.browptr[0], &smat.bcolind[0], &smat.vals[0], &smat.diagind[0], &smat.browendptr[0],
+		 smat.nbrows, smat.nnzb, smat.nbstored, bs);
+}
+
 template SRMatrixStorage<typename std::add_const<double>::type, typename std::add_const<int>::type>
-share_with_const(const SRMatrixStorage<double,int>& smat);
+share_with_const(const SRMatrixStorage<double,int>& smat, const int bs);
 
 // Makes a shallow copy of a matrix
 /* Copies over pointers to the underlying storage to create new ArrayViews and uses them to create
@@ -312,5 +326,18 @@ void alignedDestroyRawBSRMatrixTriangularView(RawBSRMatrix<scalar,index>& mat)
 }
 
 template void alignedDestroyRawBSRMatrixTriangularView(RawBSRMatrix<double,int>& mat);
+
+template <typename scalar, typename index>
+CRawBSRMatrix<scalar,index> createRawView(const SRMatrixStorage<const scalar, const index>&& smat)
+{
+	CRawBSRMatrix<scalar,index> cmat;
+	cmat.nbrows = smat.nbrows; cmat.nnzb = smat.nnzb; cmat.nbstored = smat.nbstored;
+	cmat.browptr = &smat.browptr[0]; cmat.browendptr = &smat.browendptr[0];
+	cmat.bcolind = &smat.bcolind[0]; cmat.diagind = &smat.diagind[0]; cmat.vals = &smat.vals[0];
+
+	return cmat;
+}
+
+template CRawBSRMatrix<double,int> createRawView(const SRMatrixStorage<const double, const int>&& smat);
 
 }

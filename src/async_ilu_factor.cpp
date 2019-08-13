@@ -130,14 +130,14 @@ PrecInfo scalar_ilu0_factorize(const CRawBSRMatrix<scalar,index> *const mat,
 		std::array<scalar,2> arr = diagonal_dominance_lower<scalar,index,1,ColMajor>
 			(SRMatrixStorage<const scalar,const index>(mat->browptr, mat->bcolind, iluvals,
 			                                           mat->diagind, mat->browendptr, mat->nbrows,
-			                                           mat->nnzb, mat->nbstored));
+			                                           mat->nnzb, mat->nbstored, 1));
 		pinfo.lower_avg_diag_dom() = arr[0];
 		pinfo.lower_min_diag_dom() = arr[1];
 
 		std::array<scalar,2> arru = diagonal_dominance_upper<scalar,index,1,ColMajor>
 			(SRMatrixStorage<const scalar,const index>(mat->browptr, mat->bcolind, iluvals,
 			                                           mat->diagind, mat->browendptr, mat->nbrows,
-			                                           mat->nnzb, mat->nbstored));
+			                                           mat->nnzb, mat->nbstored, 1));
 		pinfo.upper_avg_diag_dom() = arru[0];
 		pinfo.upper_min_diag_dom() = arru[1];
 	}
