@@ -6,6 +6,7 @@
 #ifndef BLASTED_KERNELS_ILU0_FACTORIZE_H
 #define BLASTED_KERNELS_ILU0_FACTORIZE_H
 
+#include <Eigen/LU>
 #include "ilu_pattern.hpp"
 
 namespace blasted {
@@ -57,6 +58,36 @@ void async_ilu0_factorize_kernel(const CRawBSRMatrix<scalar,index> *const mat,
 		}
 	}
 }
+
+template <typename scalar, typename index, int bs, StorageOptions stor>
+inline void async_block_ilu0_factorize(const CRawBSRMatrix<scalar,index> *const mat,
+                                       const Block_t<scalar,bs,stor> *const mvals,
+                                       const ILUPositions<index>& plist, const index irow,
+                                       Block_t<scalar,bs,stor> *const __restrict ilu)
+{
+	for(index j = mat->browptr[irow]; j < mat->browptr[irow+1]; j++)
+	{
+		if(irow > mat->bcolind[j])
+		{
+			Matrix<scalar,bs,bs> sum = mvals[j];
+
+			for(index k = plist.posptr[j]; k < plist.posptr[j+1]; k++)
+				sum.noalias() -= ilu[plist.lowerp[k]]*ilu[plist.upperp[k]];
+
+			ilu[j].noalias() = sum * ilu[mat->diagind[mat->bcolind[j]]].inverse();
+		}
+		else
+		{
+			// compute u_ij
+			ilu[j] = mvals[j];
+
+			for(index k = plist.posptr[j]; k < plist.posptr[j+1]; k++)
+				ilu[j].noalias() -= ilu[plist.lowerp[k]]*ilu[plist.upperp[k]];
+		}
+	}
+}
+
+// const Block_t<scalar,bs,static_cast<StorageOptions>(stor|Eigen::DontAlign)> *const mvals
 
 }
 

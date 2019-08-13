@@ -20,6 +20,7 @@
 #include <Eigen/LU>
 #include "async_blockilu_factor.hpp"
 #include "helper_algorithms.hpp"
+#include "kernels/kernels_ilu0_factorize.hpp"
 #include "blas/blas1.hpp"
 #include "matrix_properties.hpp"
 
@@ -74,10 +75,11 @@ PrecInfo block_ilu0_factorize(const CRawBSRMatrix<scalar,index> *const mat,
                               const bool compute_info,
                               scalar *const __restrict iluvals)
 {
-	using NABlk = Block_t<scalar,bs,static_cast<StorageOptions>(stor|Eigen::DontAlign)>;
-	using Blk = Block_t<scalar,bs,stor>;
+	//using NABlk = Block_t<scalar,bs,static_cast<StorageOptions>(stor|Eigen::DontAlign)>;
+	//const NABlk *mvals = reinterpret_cast<const NABlk*>(mat->vals);
 
-	const NABlk *mvals = reinterpret_cast<const NABlk*>(mat->vals);
+	using Blk = Block_t<scalar,bs,stor>;
+	const Blk *mvals = reinterpret_cast<const Blk*>(mat->vals);
 	Blk *ilu = reinterpret_cast<Blk*>(iluvals);
 
 	switch(init_type)
@@ -118,26 +120,7 @@ PrecInfo block_ilu0_factorize(const CRawBSRMatrix<scalar,index> *const mat,
 #pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size) if(usethreads)
 		for(index irow = 0; irow < mat->nbrows; irow++)
 		{
-			for(index j = mat->browptr[irow]; j < mat->browptr[irow+1]; j++)
-			{
-				if(irow > mat->bcolind[j])
-				{
-					Matrix<scalar,bs,bs> sum = mvals[j];
-
-					for(index k = plist.posptr[j]; k < plist.posptr[j+1]; k++)
-						sum.noalias() -= ilu[plist.lowerp[k]]*ilu[plist.upperp[k]];
-
-					ilu[j].noalias() = sum * ilu[mat->diagind[mat->bcolind[j]]].inverse();
-				}
-				else
-				{
-					// compute u_ij
-					ilu[j] = mvals[j];
-
-					for(index k = plist.posptr[j]; k < plist.posptr[j+1]; k++)
-						ilu[j].noalias() -= ilu[plist.lowerp[k]]*ilu[plist.upperp[k]];
-				}
-			}
+			async_block_ilu0_factorize<scalar,index,bs,stor>(mat, mvals, plist, irow, ilu);
 		}
 	}
 
@@ -149,14 +132,14 @@ PrecInfo block_ilu0_factorize(const CRawBSRMatrix<scalar,index> *const mat,
 		std::array<scalar,2> arr = diagonal_dominance_lower<scalar,index,bs,stor>
 			(SRMatrixStorage<const scalar,const index>(mat->browptr, mat->bcolind, iluvals,
 			                                           mat->diagind, mat->browendptr, mat->nbrows,
-			                                           mat->nnzb, mat->nbstored));
+			                                           mat->nnzb, mat->nbstored, bs));
 		pinfo.lower_avg_diag_dom() = arr[0];
 		pinfo.lower_min_diag_dom() = arr[1];
 
 		std::array<scalar,2> uarr = diagonal_dominance_upper<scalar,index,bs,stor>
 			(SRMatrixStorage<const scalar,const index>(mat->browptr, mat->bcolind, iluvals,
 			                                           mat->diagind, mat->browendptr, mat->nbrows,
-			                                           mat->nnzb, mat->nbstored));
+			                                           mat->nnzb, mat->nbstored, bs));
 
 		pinfo.upper_avg_diag_dom() = uarr[0];
 		pinfo.upper_min_diag_dom() = uarr[1];
