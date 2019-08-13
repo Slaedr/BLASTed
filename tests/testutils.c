@@ -53,6 +53,15 @@ int readLinearSystemFromFiles(const char *const matfile, const char *const bfile
 	ierr = PetscViewerDestroy(&bvecreader); CHKERRQ(ierr);
 	ierr = PetscViewerDestroy(&xvecreader); CHKERRQ(ierr);
 
+	// ensure diagonal entry locations have been computed; this is necessary for BAIJ matrices
+	// as a bonus, check for singular diagonals
+	PetscBool diagmissing = PETSC_FALSE;
+	PetscInt badrow = -1;
+	ierr = MatMissingDiagonal(lp->lhs, &diagmissing, &badrow); CHKERRQ(ierr);
+	if(diagmissing == PETSC_TRUE) {
+		SETERRQ1(PETSC_COMM_SELF, PETSC_ERR_LIB, "! Zero diagonal in (block-)row %d!", badrow);
+	}
+
 	// Matrix multiply check
 
 	const PetscReal error_tol_matmult = 5e2;

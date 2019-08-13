@@ -137,6 +137,13 @@ DiscreteLinearProblem setup_poisson_problem(const char *const confile)
 	ierr = MatAssemblyBegin(lp.lhs, MAT_FINAL_ASSEMBLY); petsc_throw(ierr);
 	ierr = MatAssemblyEnd(lp.lhs, MAT_FINAL_ASSEMBLY); petsc_throw(ierr);
 
+	// PetscBool diagmissing = PETSC_FALSE;
+	// PetscInt badrow = -1;
+	// ierr = MatMissingDiagonal(lp.lhs, &diagmissing, &badrow); CHKERRQ(ierr);
+	// if(diagmissing == PETSC_TRUE) {
+	// 	throw std::runtime_error("! Zero diagonal in (block-)row " + std::to_string(badrow));
+	// }
+
 	if(rank == 0) {
 		printf(" Poisson problem assembled.\n");
 		printf("  Mesh size h : %f\n", m.gh());

@@ -45,16 +45,18 @@ SRMatrixStorage<const PetscScalar,const PetscInt> wrapLocalPetscMat(Mat A, const
 		return SRMatrixStorage<const PetscScalar, const PetscInt>(Adiag->i, Adiag->j, Adiag->a,
 		                                                          Adiag->diag, Adiag->i + 1,
 		                                                          localrows, Adiag->i[localrows],
-		                                                          Adiag->i[localrows]);
+		                                                          Adiag->i[localrows], 1);
 	}
 	else {
 		const Mat_SeqBAIJ *const Adiag = (const Mat_SeqBAIJ*)A->data;
 		assert(Adiag != NULL);
+		assert(localrows % bs == 0);
+		printf(" wrapLocalPetscMat: wrapping block matrix of size %d.\n", bs);
 
 		return SRMatrixStorage<const PetscScalar, const PetscInt>(Adiag->i, Adiag->j, Adiag->a,
 		                                                          Adiag->diag, Adiag->i + 1,
-		                                                          localrows, Adiag->i[localrows],
-		                                                          Adiag->i[localrows]);
+		                                                          localrows/bs, Adiag->i[localrows/bs],
+		                                                          Adiag->i[localrows/bs], bs);
 	}
 }
 

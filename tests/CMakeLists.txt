@@ -325,3 +325,4 @@ add_test(NAME SerialPetscDiagnostics-ILURemainder-CSR-ILU0
 endif()
 
 add_subdirectory(poisson3d-fd)
+add_subdirectory(solverops)

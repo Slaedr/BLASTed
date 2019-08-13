@@ -176,7 +176,7 @@ void test_sai(const bool fullsai)
 
 	if(fullsai)
 	{
-		const LeftSAIPattern<int> sp = left_SAI_pattern(share_with_const<double,int>(tmat));
+		const LeftSAIPattern<int> sp = left_SAI_pattern(share_with_const<double,int>(tmat,1));
 
 		const int testcell = 3;
 
@@ -244,7 +244,7 @@ void test_sai(const bool fullsai)
 		printf(" >> Test for SAI at interior point passed.\n"); fflush(stdout);
 	}
 	else {
-		const LeftSAIPattern<int> sp = left_incomplete_SAI_pattern(share_with_const(tmat));
+		const LeftSAIPattern<int> sp = left_incomplete_SAI_pattern(share_with_const(tmat,1));
 
 		const int testcell = 3;
 
@@ -338,7 +338,7 @@ void test_sai_boundary(const bool fullsai)
 
 	if(fullsai)
 	{
-		const LeftSAIPattern<int> sp = left_SAI_pattern(share_with_const(tmat));
+		const LeftSAIPattern<int> sp = left_SAI_pattern(share_with_const(tmat,1));
 
 		const int testcell = 6;
 
@@ -399,7 +399,7 @@ void test_sai_boundary(const bool fullsai)
 	}
 	else
 	{
-		const LeftSAIPattern<int> sp = left_incomplete_SAI_pattern(share_with_const(tmat));
+		const LeftSAIPattern<int> sp = left_incomplete_SAI_pattern(share_with_const(tmat,1));
 
 		const int testcell = 6;
 
