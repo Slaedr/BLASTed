@@ -230,4 +230,10 @@ scalar block_ilu0_nonlinear_res(const CRawBSRMatrix<scalar,index> *const mat,
 	return resnorm;
 }
 
+template
+double block_ilu0_nonlinear_res<double,int,4,ColMajor>(const CRawBSRMatrix<double,int> *const mat,
+                                                       const ILUPositions<int>& plist,
+                                                       const double *const iluvals,
+                                                       const int thread_chunk_size);
+
 }

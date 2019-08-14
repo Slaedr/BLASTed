@@ -27,7 +27,6 @@ void async_ilu0_factorize_kernel(const CRawBSRMatrix<scalar,index> *const mat,
 	{
 		if(irow > mat->bcolind[j])
 		{
-			//scalar sum = scale[irow] * mat->vals[j] * scale[mat->bcolind[j]];
 			scalar sum = mat->vals[j];
 			if(needscalerow)
 				sum *= rowscale[irow];
@@ -39,22 +38,28 @@ void async_ilu0_factorize_kernel(const CRawBSRMatrix<scalar,index> *const mat,
 				sum -= iluvals[plist.lowerp[k]]*iluvals[plist.upperp[k]];
 			}
 
-			iluvals[j] = sum / iluvals[mat->diagind[mat->bcolind[j]]];
+			sum = sum / iluvals[mat->diagind[mat->bcolind[j]]];
+			iluvals[j] = sum;
 		}
 		else
 		{
-			// compute u_ij
-			//iluvals[j] = scale[irow]*mat->vals[j]*scale[mat->bcolind[j]];
-			iluvals[j] = mat->vals[j];
+			scalar sum = mat->vals[j];
 			if(needscalerow)
-				iluvals[j] *= rowscale[irow];
+				sum *= rowscale[irow];
 			if(needscalecol)
-				iluvals[j] *= colscale[mat->bcolind[j]];
+				sum *= colscale[mat->bcolind[j]];
 
+			/* Caution! Do not directly modify the shared variable iluvals[j] inside the loop below.
+			 * It appears that we should write to it as few times as possible.
+			 * Even using atomic updates, directly updating iluvals[j] every time leads to the exact
+			 * solution not being a fixed point.
+			 */
 			for(index k = plist.posptr[j]; k < plist.posptr[j+1]; k++)
 			{
-				iluvals[j] -= iluvals[plist.lowerp[k]]*iluvals[plist.upperp[k]];
+				sum -= iluvals[plist.lowerp[k]]*iluvals[plist.upperp[k]];
 			}
+
+			iluvals[j] = sum;
 		}
 	}
 }
@@ -67,10 +72,11 @@ inline void async_block_ilu0_factorize(const CRawBSRMatrix<scalar,index> *const 
 {
 	for(index j = mat->browptr[irow]; j < mat->browptr[irow+1]; j++)
 	{
+		Matrix<scalar,bs,bs> sum = mvals[j];
+
 		if(irow > mat->bcolind[j])
 		{
-			Matrix<scalar,bs,bs> sum = mvals[j];
-
+			// compute L_ij
 			for(index k = plist.posptr[j]; k < plist.posptr[j+1]; k++)
 				sum.noalias() -= ilu[plist.lowerp[k]]*ilu[plist.upperp[k]];
 
@@ -78,11 +84,11 @@ inline void async_block_ilu0_factorize(const CRawBSRMatrix<scalar,index> *const 
 		}
 		else
 		{
-			// compute u_ij
-			ilu[j] = mvals[j];
-
+			// compute U_ij
 			for(index k = plist.posptr[j]; k < plist.posptr[j+1]; k++)
-				ilu[j].noalias() -= ilu[plist.lowerp[k]]*ilu[plist.upperp[k]];
+				sum -= ilu[plist.lowerp[k]]*ilu[plist.upperp[k]];
+
+			ilu[j].noalias() = sum;
 		}
 	}
 }

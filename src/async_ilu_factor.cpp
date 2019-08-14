@@ -189,6 +189,14 @@ scalar scalar_ilu0_nonlinear_res(const CRawBSRMatrix<scalar,index> *const mat,
 	return resnorm;
 }
 
+template
+double scalar_ilu0_nonlinear_res<double,int,true,true>(const CRawBSRMatrix<double,int> *const mat,
+                                                       const ILUPositions<int>& plist,
+                                                       const int thread_chunk_size,
+                                                       const double *const rowscale,
+                                                       const double *const colscale,
+                                                       const double *const iluvals);
+
 /////////////////////---//////////////////////
 
 /// \todo TODO
