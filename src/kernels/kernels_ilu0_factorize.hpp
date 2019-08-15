@@ -32,9 +32,11 @@ void async_ilu0_factorize_kernel(const CRawBSRMatrix<scalar,index> *const mat,
 			sum *= colscale[mat->bcolind[j]];
 
 		/* Caution! Do not directly modify the shared variable iluvals[j] inside the loop below.
-		 * It appears that we should write to it as few times as possible.
-		 * Even using atomic updates, directly updating iluvals[j] every time leads to the exact
-		 * solution not being a fixed point.
+		 * Even using atomic updates, directly updating iluvals[j] every time leads to an inconsistent
+		 * fixed point iteration.
+		 * It looks like iluvals[j] should never hold a temporary value, like a partial dot product.
+		 * If another core reads iluvals[j] while it contains a temporary value, it would violate the
+		 * Chazan-Miranker and Frommer-Szyld concepts of chaotic/asynchronous iteration.
 		 */
 		for(index k = plist.posptr[j]; k < plist.posptr[j+1]; k++)
 		{
