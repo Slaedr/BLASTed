@@ -152,6 +152,32 @@ DiscreteLinearProblem setup_poisson_problem(const char *const confile)
 	return lp;
 }
 
+DiscreteLinearProblem generateDiscreteProblem(const int argc, char *argv[], const int argstart)
+{
+	DiscreteLinearProblem dlp;
+	if(!strcmp(argv[argstart],"poisson"))
+	{
+		if(argc < 3) {
+			printf(" ! Please provide a Poisson control file!\n");
+			exit(-1);
+		}
+
+		dlp = setup_poisson_problem(argv[argstart+1]);
+	}
+	else {
+		if(argc < 5) {
+			printf(" ! Please provide filenames for LHS, RHS vector and exact solution (in order).\n");
+			exit(-1);
+		}
+
+		int ierr = readLinearSystemFromFiles(argv[argstart+1], argv[argstart+2], argv[argstart+3], &dlp);
+		if(ierr)
+			throw std::runtime_error("Could not read linear system from files!");
+	}
+
+	return dlp;
+}
+
 #ifdef __cplusplus
 }
 #endif

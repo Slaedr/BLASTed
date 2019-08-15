@@ -313,6 +313,32 @@ int runComparisonVsPetsc_cpp(const DiscreteLinearProblem lp)
 	return ierr;
 }
 
+int getBlockSize(const Mat A)
+{
+	int bs = 0;
+	int ierr = MatGetBlockSize(A, &bs);
+	if(ierr != 0)
+		throw Petsc_exception(ierr);
+
+	// Check matrix type and adjust block size
+	const char *mattype;
+	ierr = MatGetType(A, &mattype);
+	if(ierr != 0)
+		throw Petsc_exception(ierr);
+	if(!strcmp(mattype, MATSEQAIJ) || !strcmp(mattype, MATSEQAIJMKL) ||
+	   !strcmp(mattype, MATMPIAIJ) || !strcmp(mattype, MATMPIAIJMKL) )
+	{
+		printf(" Matrix is a scalar SR type.\n");
+		bs = 1;
+	}
+	else if(!strcmp(mattype, MATSEQBAIJ) || !strcmp(mattype, MATSEQBAIJMKL) ||
+	        !strcmp(mattype, MATMPIBAIJ) || !strcmp(mattype, MATMPIBAIJMKL) )
+		printf(" Matrix is a block SR type.\n");
+	else
+		throw std::runtime_error("Unsupported matrix type " + std::string(mattype));
+	return bs;
+}
+
 }
 }
 

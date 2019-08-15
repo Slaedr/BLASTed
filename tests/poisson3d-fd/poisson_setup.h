@@ -18,6 +18,12 @@ extern "C" {
  */
 DiscreteLinearProblem setup_poisson_problem(const char *const confile);
 
+/// Depending on the first argument, either sets up linear problem from binary files or from Poisson config
+/** The first argument must be either "poisson" or "file".
+ * \param[in] argstart The index into the argv array from which to start reading arguments.
+ */
+DiscreteLinearProblem generateDiscreteProblem(const int argc, char *argv[], const int argstart);
+
 #ifdef __cplusplus
 }
 #endif
