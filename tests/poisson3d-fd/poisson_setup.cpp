@@ -152,7 +152,8 @@ DiscreteLinearProblem setup_poisson_problem(const char *const confile)
 	return lp;
 }
 
-DiscreteLinearProblem generateDiscreteProblem(const int argc, char *argv[], const int argstart)
+DiscreteLinearProblem generateDiscreteProblem(const int argc, char *argv[], const int argstart,
+                                              const bool testmatmult)
 {
 	DiscreteLinearProblem dlp;
 	if(!strcmp(argv[argstart],"poisson"))
@@ -170,7 +171,8 @@ DiscreteLinearProblem generateDiscreteProblem(const int argc, char *argv[], cons
 			exit(-1);
 		}
 
-		int ierr = readLinearSystemFromFiles(argv[argstart+1], argv[argstart+2], argv[argstart+3], &dlp);
+		int ierr = readLinearSystemFromFiles(argv[argstart+1], argv[argstart+2], argv[argstart+3], &dlp,
+		                                     testmatmult);
 		if(ierr)
 			throw std::runtime_error("Could not read linear system from files!");
 	}

@@ -22,8 +22,11 @@ typedef struct {
 int destroyDiscreteLinearProblem(DiscreteLinearProblem *const dlp);
 
 /// Reads a matrix, RHS vector and exact solution from PETSc binary files
+/**
+ * \param[in] testmatmult In case of reading from files, optionally test whether A*x == b.
+ */
 int readLinearSystemFromFiles(const char *const matfile, const char *const bfile, const char *const xfile,
-                              DiscreteLinearProblem *const lp);
+                              DiscreteLinearProblem *const lp, const bool testmatmult);
 
 /// Computes the vector 2-norm of the difference u1 - u2, scaled by the square-root of their size
 int compute_difference_norm(const Vec u1, const Vec u2, PetscReal *const errnorm);

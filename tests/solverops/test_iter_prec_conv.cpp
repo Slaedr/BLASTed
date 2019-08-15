@@ -44,7 +44,7 @@ int main(int argc, char *argv[])
 #endif
 
 	const std::string testtype = argv[1];
-	DiscreteLinearProblem dlp = generateDiscreteProblem(argc, argv, 2);
+	DiscreteLinearProblem dlp = generateDiscreteProblem(argc, argv, 2, false);
 
 	int ierr = 0;
 	const int bs = getBlockSize(dlp.lhs);

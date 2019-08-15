@@ -77,7 +77,7 @@ int main(int argc, char* argv[])
 #endif
 
 	DiscreteLinearProblem lp;
-	ierr = readLinearSystemFromFiles(matfile, bfile, xfile, &lp); CHKERRQ(ierr);
+	ierr = readLinearSystemFromFiles(matfile, bfile, xfile, &lp, true); CHKERRQ(ierr);
 
 	if(!strcmp(language,"c++")) {
 		ierr = runComparisonVsPetsc_cpp(lp); CHKERRQ(ierr);

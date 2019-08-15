@@ -26,7 +26,7 @@ int destroyDiscreteLinearProblem(DiscreteLinearProblem *const dlp)
 }
 
 int readLinearSystemFromFiles(const char *const matfile, const char *const bfile, const char *const xfile,
-                              DiscreteLinearProblem *const lp)
+                              DiscreteLinearProblem *const lp, const bool testmatmult)
 {
 	PetscErrorCode ierr = 0;
 	PetscMPIInt rank;
@@ -64,22 +64,24 @@ int readLinearSystemFromFiles(const char *const matfile, const char *const bfile
 
 	// Matrix multiply check
 
-	const PetscReal error_tol_matmult = 5e2;
+	if(testmatmult) {
+		const PetscReal error_tol_matmult = 5e2;
 
-	Vec test;
-	ierr = MatCreateVecs(lp->lhs, NULL, &test); CHKERRQ(ierr);
-	PetscInt vs;
-	ierr = VecGetLocalSize(test, &vs); CHKERRQ(ierr);
-	printf(" Rank %d: Local test size = %d.\n", rank, vs);
-	ierr = VecGetLocalSize(lp->uexact, &vs); CHKERRQ(ierr);
-	printf(" Rank %d: Local u_exact size = %d.\n", rank, vs);
-	ierr = MatMult(lp->lhs, lp->uexact, test); CHKERRQ(ierr);
-	ierr = VecAXPY(test, -1.0, lp->b); CHKERRQ(ierr);
-	PetscReal multerrnorm = 0;
-	ierr = VecNorm(test, NORM_2, &multerrnorm); CHKERRQ(ierr);
-	printf(" Mult error = %16.16e\n", multerrnorm);
-	TASSERT(multerrnorm < error_tol_matmult*DBL_EPSILON);
-	ierr = VecDestroy(&test); CHKERRQ(ierr);
+		Vec test;
+		ierr = MatCreateVecs(lp->lhs, NULL, &test); CHKERRQ(ierr);
+		PetscInt vs;
+		ierr = VecGetLocalSize(test, &vs); CHKERRQ(ierr);
+		printf(" Rank %d: Local test size = %d.\n", rank, vs);
+		ierr = VecGetLocalSize(lp->uexact, &vs); CHKERRQ(ierr);
+		printf(" Rank %d: Local u_exact size = %d.\n", rank, vs);
+		ierr = MatMult(lp->lhs, lp->uexact, test); CHKERRQ(ierr);
+		ierr = VecAXPY(test, -1.0, lp->b); CHKERRQ(ierr);
+		PetscReal multerrnorm = 0;
+		ierr = VecNorm(test, NORM_2, &multerrnorm); CHKERRQ(ierr);
+		printf(" Mult error = %16.16e\n", multerrnorm);
+		TASSERT(multerrnorm < error_tol_matmult*DBL_EPSILON);
+		ierr = VecDestroy(&test); CHKERRQ(ierr);
+	}
 
 	return ierr;
 }
