@@ -43,6 +43,7 @@ int test_async_triangular_solve(const CRawBSRMatrix<double,int>& mat,
 	int ierr = 0;
 
 	const device_vector<double> scale = getScalingVector(&mat);
+	// const device_vector<double> scale(mat.nbrows*bs,1.0);
 	const device_vector<double> iluvals = getExactILU<bs>(&mat, plist, scale);
 	const device_vector<double> rhs(mat.nbrows*bs, 1.1);
 

@@ -25,42 +25,27 @@ void async_ilu0_factorize_kernel(const CRawBSRMatrix<scalar,index> *const mat,
 {
 	for(index j = mat->browptr[irow]; j < mat->browptr[irow+1]; j++)
 	{
+		scalar sum = mat->vals[j];
+		if(needscalerow)
+			sum *= rowscale[irow];
+		if(needscalecol)
+			sum *= colscale[mat->bcolind[j]];
+
+		/* Caution! Do not directly modify the shared variable iluvals[j] inside the loop below.
+		 * It appears that we should write to it as few times as possible.
+		 * Even using atomic updates, directly updating iluvals[j] every time leads to the exact
+		 * solution not being a fixed point.
+		 */
+		for(index k = plist.posptr[j]; k < plist.posptr[j+1]; k++)
+		{
+			sum -= iluvals[plist.lowerp[k]]*iluvals[plist.upperp[k]];
+		}
+
+		// For lower triangular part, divide by u_jj
 		if(irow > mat->bcolind[j])
-		{
-			scalar sum = mat->vals[j];
-			if(needscalerow)
-				sum *= rowscale[irow];
-			if(needscalecol)
-				sum *= colscale[mat->bcolind[j]];
-
-			for(index k = plist.posptr[j]; k < plist.posptr[j+1]; k++)
-			{
-				sum -= iluvals[plist.lowerp[k]]*iluvals[plist.upperp[k]];
-			}
-
 			sum = sum / iluvals[mat->diagind[mat->bcolind[j]]];
-			iluvals[j] = sum;
-		}
-		else
-		{
-			scalar sum = mat->vals[j];
-			if(needscalerow)
-				sum *= rowscale[irow];
-			if(needscalecol)
-				sum *= colscale[mat->bcolind[j]];
 
-			/* Caution! Do not directly modify the shared variable iluvals[j] inside the loop below.
-			 * It appears that we should write to it as few times as possible.
-			 * Even using atomic updates, directly updating iluvals[j] every time leads to the exact
-			 * solution not being a fixed point.
-			 */
-			for(index k = plist.posptr[j]; k < plist.posptr[j+1]; k++)
-			{
-				sum -= iluvals[plist.lowerp[k]]*iluvals[plist.upperp[k]];
-			}
-
-			iluvals[j] = sum;
-		}
+		iluvals[j] = sum;
 	}
 }
 
@@ -74,26 +59,19 @@ inline void async_block_ilu0_factorize(const CRawBSRMatrix<scalar,index> *const 
 	{
 		Matrix<scalar,bs,bs> sum = mvals[j];
 
+		for(index k = plist.posptr[j]; k < plist.posptr[j+1]; k++)
+			sum.noalias() -= ilu[plist.lowerp[k]]*ilu[plist.upperp[k]];
+
 		if(irow > mat->bcolind[j])
 		{
-			// compute L_ij
-			for(index k = plist.posptr[j]; k < plist.posptr[j+1]; k++)
-				sum.noalias() -= ilu[plist.lowerp[k]]*ilu[plist.upperp[k]];
-
 			ilu[j].noalias() = sum * ilu[mat->diagind[mat->bcolind[j]]].inverse();
 		}
 		else
 		{
-			// compute U_ij
-			for(index k = plist.posptr[j]; k < plist.posptr[j+1]; k++)
-				sum -= ilu[plist.lowerp[k]]*ilu[plist.upperp[k]];
-
 			ilu[j].noalias() = sum;
 		}
 	}
 }
-
-// const Block_t<scalar,bs,static_cast<StorageOptions>(stor|Eigen::DontAlign)> *const mvals
 
 }
 

@@ -297,6 +297,6 @@ void check_initial(const CRawBSRMatrix<double,int>& mat, const ILUPositions<int>
 	       checkilures/initilures);
 	fflush(stdout);
 	if(initialization != "exact")
-		assert(checkilures/initilures < 2.2e-16);
+		assert(checkilures/initilures < 5e-16);
 }
 
