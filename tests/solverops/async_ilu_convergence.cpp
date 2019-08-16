@@ -49,8 +49,7 @@ template <int bs>
 static void check_initial(const CRawBSRMatrix<double,int>& mat, const ILUPositions<int>& plist,
                           const device_vector<double>& scale, const int thread_chunk_size,
                           const std::string initialization,
-                          const device_vector<double>& exactilu, const device_vector<double>& iluvals,
-                          const double initLerr, const double initUerr);
+                          const device_vector<double>& exactilu, const device_vector<double>& iluvals);
 
 template <int bs>
 int test_ilu_convergence(const CRawBSRMatrix<double,int>& mat, const ILUPositions<int>& plist,
@@ -77,9 +76,9 @@ int test_ilu_convergence(const CRawBSRMatrix<double,int>& mat, const ILUPosition
 
 	const double initLerr = maxnorm_lower<bs>(&mat, iluvals, exactilu);
 	const double initUerr = maxnorm_upper<bs>(&mat, iluvals, exactilu);
+	printf(" Initial lower and upper errors = %f, %f\n", initLerr, initUerr);
 
-	check_initial<bs>(mat, plist, scale, thread_chunk_size, initialization, exactilu, iluvals,
-	                  initLerr, initUerr);
+	check_initial<bs>(mat, plist, scale, thread_chunk_size, initialization, exactilu, iluvals);
 
 	Blk<bs> *const ilu = reinterpret_cast<Blk<bs>*>(&iluvals[0]);
 	const Blk<bs> *const mvals = reinterpret_cast<const Blk<bs>*>(mat.vals);
@@ -267,8 +266,7 @@ template <int bs>
 void check_initial(const CRawBSRMatrix<double,int>& mat, const ILUPositions<int>& plist,
                    const device_vector<double>& scale, const int thread_chunk_size,
                    const std::string initialization,
-                   const device_vector<double>& exactilu, const device_vector<double>& iluvals,
-                   const double initLerr, const double initUerr)
+                   const device_vector<double>& exactilu, const device_vector<double>& iluvals)
 {
 	// check maxnorm functions
 	const double checkLerr = maxnorm_lower<bs>(&mat, exactilu, exactilu);
@@ -284,7 +282,6 @@ void check_initial(const CRawBSRMatrix<double,int>& mat, const ILUPositions<int>
 		:
 		block_ilu0_nonlinear_res<double,int,bs,ColMajor>(&mat, plist, &iluvals[0], thread_chunk_size);
 
-	printf(" Initial lower and upper errors = %f, %f\n", initLerr, initUerr);
 	printf(" Initial nonlinear ILU residual = %f.\n", initilures);
 
 	// check ilu remainder
