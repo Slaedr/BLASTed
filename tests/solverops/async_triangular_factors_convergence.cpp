@@ -35,15 +35,22 @@ static void runTest(const CRawBSRMatrix<double,int>& mat, const device_vector<do
                     const double tol, const int maxsweeps);
 
 template <int bs>
-int test_async_triangular_solve(const CRawBSRMatrix<double,int>& mat,
-                                const ILUPositions<int>& plist,
-                                const double tol, const int maxiter, const int thread_chunk_size,
-                                const std::string initialization)
+int test_async_triangular_solve(const CRawBSRMatrix<double,int>& mat, const ILUPositions<int>& plist,
+                                const double tol, const int maxiter, const bool usescale,
+                                const int thread_chunk_size, const std::string initialization)
 {
 	int ierr = 0;
 
-	const device_vector<double> scale = getScalingVector(&mat);
+	//const device_vector<double> scale = getScalingVector<bs>(&mat);
+	const device_vector<double> scale = usescale ? getScalingVector<bs>(&mat) : device_vector<double>(0);
 	// const device_vector<double> scale(mat.nbrows*bs,1.0);
+	if(usescale) {
+		printf(" Computing factors of symmetrically scaled matrix.\n");
+		assert(scale.size() > 0);
+	} else {
+		printf(" Computing factors of original (unscaled) matrix.\n");
+		assert(scale.size() == 0);
+	}
 	const device_vector<double> iluvals = getExactILU<bs>(&mat, plist, scale);
 	const device_vector<double> rhs(mat.nbrows*bs, 1.1);
 
@@ -65,12 +72,12 @@ int test_async_triangular_solve(const CRawBSRMatrix<double,int>& mat,
 
 template
 int test_async_triangular_solve<1>(const CRawBSRMatrix<double,int>& mat, const ILUPositions<int>& plist,
-                                   const double tol, const int maxiter, const int thread_chunk_size,
-                                   const std::string initialization);
+                                   const double tol, const int maxiter, const bool usescale,
+                                   const int thread_chunk_size, const std::string initialization);
 template
-int test_async_triangular_solve<4>(const CRawBSRMatrix<double,int>& mat, const ILUPositions<int>& iluvals,
-                                   const double tol, const int maxiter, const int thread_chunk_size,
-                                   const std::string initialization);
+int test_async_triangular_solve<4>(const CRawBSRMatrix<double,int>& mat, const ILUPositions<int>& plist,
+                                   const double tol, const int maxiter, const bool usescale,
+                                   const int thread_chunk_size, const std::string initialization);
 
 template <int bs>
 static void lowerSolve(const CRawBSRMatrix<double,int>& mat,

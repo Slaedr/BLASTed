@@ -340,4 +340,20 @@ CRawBSRMatrix<scalar,index> createRawView(const SRMatrixStorage<const scalar, co
 
 template CRawBSRMatrix<double,int> createRawView(const SRMatrixStorage<const double, const int>&& smat);
 
+template <typename scalar, typename index, int bs>
+void getScalingVector(const CRawBSRMatrix<scalar,index> *const mat, scalar *const __restrict scale)
+{
+#pragma omp parallel for simd default(shared)
+	for(int i = 0; i < mat->nbrows; i++)
+		for(int j = 0; j < bs; j++)
+			scale[i*bs + j] = 1.0/std::sqrt(mat->vals[mat->diagind[i]*bs*bs + j*bs + j]);
+}
+
+template void getScalingVector<double,int,1>(const CRawBSRMatrix<double,int> *const mat,
+                                             double *const __restrict scale);
+template void getScalingVector<double,int,4>(const CRawBSRMatrix<double,int> *const mat,
+                                             double *const __restrict scale);
+template void getScalingVector<double,int,5>(const CRawBSRMatrix<double,int> *const mat,
+                                             double *const __restrict scale);
+
 }

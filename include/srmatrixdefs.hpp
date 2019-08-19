@@ -201,5 +201,11 @@ void alignedDestroyRawBSRMatrixTriangularView(RawBSRMatrix<scalar,index>& mat);
 template <typename scalar, typename index>
 CRawBSRMatrix<scalar,index> createRawView(const SRMatrixStorage<const scalar, const index>&& smat);
 
+/// Computes the symmetric scaling vector
+/** There's no difference between the scaling computed for a BSR matrix and that for a CSR matrix.
+ */
+template <typename scalar, typename index, int bs>
+void getScalingVector(const CRawBSRMatrix<scalar,index> *const mat, scalar *const __restrict scale);
+
 }
 #endif

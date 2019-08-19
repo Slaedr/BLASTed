@@ -63,6 +63,7 @@ int testSolve(const std::string solvertype, const std::string precontype,
 	SRPreconditioner<double,int>* prec = nullptr;
 	// For async preconditioners
 	AsyncSolverSettings params;
+	params.scale = false;
 	params.nbuildsweeps = nbuildswps;
 	params.napplysweeps = napplyswps;
 	params.thread_chunk_size = threadchunksize;

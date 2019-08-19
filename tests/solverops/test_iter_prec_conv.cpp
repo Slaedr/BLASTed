@@ -19,13 +19,13 @@ using namespace blasted;
 
 template <int bs>
 int test_ilu_convergence(const CRawBSRMatrix<double,int>& mat, const ILUPositions<int>& plist,
-                         const double tol, const int maxsweeps,
+                         const double tol, const int maxsweeps, const bool usescale,
                          const int thread_chunk_size, const std::string initialization);
 
 template <int bs>
 int test_async_triangular_solve(const CRawBSRMatrix<double,int>& mat, const ILUPositions<int>& plist,
-                                const double tol, const int maxiter, const int thread_chunk_size,
-                                const std::string initialization);
+                                const double tol, const int maxiter, const bool usescale,
+                                const int thread_chunk_size, const std::string initialization);
 
 int main(int argc, char *argv[])
 {
@@ -54,6 +54,7 @@ int main(int argc, char *argv[])
 	const double tol = parseOptionalPetscCmd_real("-tolerance", 1e-25);
 	const int thread_chunk_size = parsePetscCmd_int("-blasted_thread_chunk_size");
 	const std::string initialization = parsePetscCmd_string("-initialization", 20);
+	const bool usescale = parsePetscCmd_bool("-blasted_use_symmetric_scaling");
 
 	const SRMatrixStorage<const double,const int> smat = wrapLocalPetscMat(dlp.lhs, bs);
 	printf(" Input problem: Dimension = %d, nnz = %d\n", smat.nbrows*bs, smat.nnzb*bs*bs);
@@ -67,10 +68,12 @@ int main(int argc, char *argv[])
 	if(testtype == "ailu")
 		switch(bs) {
 		case 1:
-			ierr = test_ilu_convergence<1>(mat, plist, tol, maxsweeps, thread_chunk_size, initialization);
+			ierr = test_ilu_convergence<1>(mat, plist, tol, maxsweeps, usescale,
+			                               thread_chunk_size, initialization);
 			break;
 		case 4:
-			ierr = test_ilu_convergence<4>(mat, plist, tol, maxsweeps, thread_chunk_size, initialization);
+			ierr = test_ilu_convergence<4>(mat, plist, tol, maxsweeps, usescale,
+			                               thread_chunk_size, initialization);
 			break;
 		default:
 			throw std::out_of_range("Block size " + std::to_string(bs) + " not supported!");
@@ -78,12 +81,12 @@ int main(int argc, char *argv[])
 	else if(testtype == "triangular")
 		switch(bs) {
 		case 1:
-			ierr = test_async_triangular_solve<1>(mat, plist, tol, maxsweeps, thread_chunk_size,
-			                                      initialization);
+			ierr = test_async_triangular_solve<1>(mat, plist, tol, maxsweeps, usescale,
+			                                      thread_chunk_size, initialization);
 			break;
 		case 4:
-			ierr = test_async_triangular_solve<4>(mat, plist, tol, maxsweeps, thread_chunk_size,
-			                                      initialization);
+			ierr = test_async_triangular_solve<4>(mat, plist, tol, maxsweeps, usescale,
+			                                      thread_chunk_size, initialization);
 			break;
 		default:
 			throw std::out_of_range("Block size " + std::to_string(bs) + " not supported!");

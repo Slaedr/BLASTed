@@ -20,6 +20,9 @@
 extern "C" {
 #endif
 
+/// Length of strings read as option values
+#define BLASTED_OPT_STRLEN 20
+
 /// The context provided to PETSc's PCSHELL to create a local preconditioner
 /** The preconditioning object has two operators - one for preconditioning and the other for relaxation.
  * The relaxation operator is only used when the local KSP is richardson. For all other local KSPs
@@ -31,15 +34,16 @@ struct Blasted_node
 	void *bfactory;             ///< BLASTed factory object
 
 	int bs;                     ///< Block size of dense blocks
-	char *prectypestr;          ///< String identifier of the preconditioner type to use
+	char prectypestr[BLASTED_OPT_STRLEN];     ///< String identifier of the preconditioner type to use
 	BlastedSolverType prectype; ///< The preconditioner/iteration to use
 
+	bool scale;                 ///< Symmetrically scale the matrix before preconditioning
 	int threadchunksize;        ///< Number of work-items assigned to a thread at a time
 
 	int nbuildsweeps;           ///< Number of async build sweeps
 	int napplysweeps;           ///< Number of async apply sweeps
-	char *factinittype;         ///< Type of initialization for asynchronous factorization
-	char *applyinittype;        ///< Type of initialization for asynchronous application
+	char factinittype[BLASTED_OPT_STRLEN];    ///< Type of initialization for asynchronous factorization
+	char applyinittype[BLASTED_OPT_STRLEN];   ///< Type of initialization for asynchronous application
 
 	bool compute_precinfo;      ///< Set true to request computation of extra info to aid analysis
 	void *infolist;             ///< Optional preconditioner information

@@ -27,8 +27,9 @@ namespace blasted {
  * \param[in] init_type Type of initialization, \sa FactInit
  * \param[in] compute_remainder Pass 'true' for computing the ILU remainder before and after the
  *   factorization loop
- * \param[out] iluvals The ILU factorization non-zeros, accessed using the block-row pointers, 
+ * \param[out] iluvals The ILU factorization non-zeros, accessed using the block-row pointers,
  *   block-column indices and diagonal pointers of the original BSR matrix
+ * \param[out] scale Entries that are used to symmetrically scale the original matrix before factorization
  * \return ILU remainder
  */
 template <typename scalar, typename index, int bs, StorageOptions stor>
@@ -37,17 +38,20 @@ PrecInfo block_ilu0_factorize(const CRawBSRMatrix<scalar,index> *const mat,
                               const int nbuildsweeps, const int thread_chunk_size, const bool usethreads,
                               const FactInit init_type,
                               const bool compute_remainder,
-                              scalar *const __restrict iluvals);
+                              scalar *const __restrict iluvals, scalar *const __restrict scale);
 
 /// Computes the vector max norm of the ILU remainder A - LU restricted to the sparsity pattern of A
 /** \param[in] mat The matrix A
+ * \param[in] scale The vector of value used for symmetric scaling of the matrix.
+ *   Can be nullptr if the template parameter usescaling is false.
  * \param[in] iluvals The non-zero entries of the LU factorization
  * \param[in] thread_chunk_size
  * \param[in,out] remvals Pre-allocated storage for the entries of the remainder matrix
  */
-template <typename scalar, typename index, int bs, StorageOptions stor>
+template <typename scalar, typename index, int bs, StorageOptions stor, bool usescaling>
 scalar block_ilu0_nonlinear_res(const CRawBSRMatrix<scalar,index> *const mat,
-                                const ILUPositions<index>& plist, const scalar *const iluvals,
+                                const ILUPositions<index>& plist, const scalar *const scale,
+                                const scalar *const iluvals,
                                 const int thread_chunk_size);
 
 }

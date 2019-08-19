@@ -12,6 +12,8 @@ There are three main PETSc options controlling the use of BLASTed. These options
 
 * `-blasted_async_sweeps` An integer array specifying the number of asynchronous iterations ("sweeps") to use each time the preconditioner is built and applied. Eg.: `-blasted_async_sweeps 4,3` means the preconditioner is built using 4 asynchronous iterations (sweeps) while it is applied using 3 asynchronous sweeps. If not specified, the default of 1 sweep is used.
 
+* `blasted_use_symmetric_scaling` Boolean, requesting that input matrices be scaled before being used to compute preconditioners. The application then scales it back. Only used for async. ILU type preconditioners.
+
 * `-blasted_async_fact_init_type` A string specifying what type of initialization to use for asynchronous factorizations. Options: 
   - `init_zero`
   - `init_original`

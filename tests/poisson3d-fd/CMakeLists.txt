@@ -64,11 +64,13 @@ if(WITH_PETSC)
 
   add_test(NAME SerialPoissonCSRPetscILU0 COMMAND env OMP_NUM_THREADS=1 ${SEQEXEC} ./testcsr_poisson 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/poisson.control
-	-options_file  ${CMAKE_CURRENT_SOURCE_DIR}/input/mpi_poisson_csr_ilu0.perc -test_type issame)
+	-options_file  ${CMAKE_CURRENT_SOURCE_DIR}/input/mpi_poisson_csr_ilu0.perc
+	-blasted_use_symmetric_scaling false -test_type issame)
 
   add_test(NAME MPIPoissonCSRPetscILU0 COMMAND env OMP_NUM_THREADS=1 ${MPIEXEC} -n 4 ./testcsr_poisson 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/poisson.control
-	-options_file  ${CMAKE_CURRENT_SOURCE_DIR}/input/mpi_poisson_csr_ilu0.perc -test_type issame)
+	-options_file  ${CMAKE_CURRENT_SOURCE_DIR}/input/mpi_poisson_csr_ilu0.perc
+	-blasted_use_symmetric_scaling false -test_type issame)
 
   add_test(NAME MPIPoissonCSRPetscSGS COMMAND env OMP_NUM_THREADS=1 ${MPIEXEC} -n 4 ./testcsr_poisson 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/poisson.control
@@ -82,12 +84,14 @@ if(WITH_PETSC)
   add_test(NAME ThreadedPoissonCSRPetscILU0 COMMAND ${MPIEXEC} -n 1 ./testcsr_poisson
 	${CMAKE_CURRENT_SOURCE_DIR}/input/poisson.control
 	-options_file  ${CMAKE_CURRENT_SOURCE_DIR}/input/thread_poisson_csr.perc -blasted_async_sweeps 4,6
-	-ref_sub_pc_type ilu -blasted_pc_type ilu0 -test_type issame -error_tolerance 1e-6)
+	-ref_sub_pc_type ilu -blasted_pc_type ilu0
+	-blasted_use_symmetric_scaling false -test_type issame -error_tolerance 1e-6)
 
   add_test(NAME ThreadedPoissonCSRPetscSAPILU0 COMMAND ${MPIEXEC} -n 1 ./testcsr_poisson
 	${CMAKE_CURRENT_SOURCE_DIR}/input/poisson.control 
 	-options_file  ${CMAKE_CURRENT_SOURCE_DIR}/input/thread_poisson_csr.perc
 	-ref_sub_pc_type ilu -blasted_pc_type sapilu0 -blasted_async_sweeps 10,1
+	-blasted_use_symmetric_scaling 0
 	-test_type issame -error_tolerance 1e-6 -num_runs 3)
 
   add_test(NAME ThreadedPoissonCSRPetsc-LevelSGS
@@ -102,7 +106,8 @@ if(WITH_PETSC)
 	${CMAKE_CURRENT_SOURCE_DIR}/input/poisson.control 
 	-options_file  ${CMAKE_CURRENT_SOURCE_DIR}/input/thread_poisson_csr.perc 
 	-ref_sub_pc_type ilu -blasted_pc_type async_level_ilu0 -blasted_async_sweeps 100,1
-	-blasted_async_fact_init_type init_original -test_type issame -error_tolerance 1e-6)
+	-blasted_async_fact_init_type init_original -blasted_use_symmetric_scaling false
+	-test_type issame -error_tolerance 1e-6)
 
   add_test(NAME ThreadedRelaxationPoissonPetsc-Async-GS-ItersLowerBound
 	COMMAND ${MPIEXEC} ${THREADOPTS} -n 1 ./testcsr_poisson

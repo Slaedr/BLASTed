@@ -55,6 +55,7 @@ struct SolverSettings {
 
 /// Settings needed for most asynchronous iterations
 struct AsyncSolverSettings : public SolverSettings {
+	bool scale;                           ///< Use the symmetrically scaled matrix instead of the original
 	int nbuildsweeps;                     ///< Number of build sweeps
 	int napplysweeps;                     ///< Number of apply sweeps
 	FactInit fact_inittype;               ///< Initialization type for asynchronous factorization

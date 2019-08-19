@@ -67,11 +67,11 @@ int testSolve(const std::string solvertype,
 
 	std::vector<double> x(mat.dim(),0.0);
 
-	// reference solve
+	// reference solve - no scaling
 	SRPreconditioner<double,int>* prec = nullptr;
 	prec = new AsyncILU0_SRPreconditioner<double,int>(move_to_const<double,int>
 	                                                  (getSRMatrixFromCOO<double,int,1>(coom, storageorder)),
-	                                                  nbuildswps, napplyswps,
+	                                                  nbuildswps, napplyswps, false,
 	                                                  threadchunksize,
 	                                                  getFactInitFromString(factinittype),
 	                                                  getApplyInitFromString(applyinittype),

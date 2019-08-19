@@ -188,6 +188,17 @@ if(WITH_PETSC)
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.pmat 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.pmat
 	-options_file ${CMAKE_CURRENT_SOURCE_DIR}/input/2dcyl1_ilu0.perc -mat_type baij
+	-blasted_use_symmetric_scaling 0
+	-error_tolerance 1e-13 -test_type issame
+	)
+
+  add_test(NAME MPIPetsc-BSR4-ILU0-Scaled
+	COMMAND env OMP_NUM_THREADS=1 ${MPIEXEC} ${MPIOPTS} -n 3 ${CMAKE_CURRENT_BINARY_DIR}/testpetscsolver
+	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.pmat 
+	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.pmat 
+	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.pmat
+	-options_file ${CMAKE_CURRENT_SOURCE_DIR}/input/2dcyl1_ilu0.perc -mat_type baij
+	-blasted_use_symmetric_scaling 1
 	-error_tolerance 1e-13 -test_type issame
 	)
 
@@ -196,17 +207,39 @@ if(WITH_PETSC)
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.pmat
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.pmat 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.pmat
-	-options_file ${CMAKE_CURRENT_SOURCE_DIR}/input/2dcyl1_ilu0.perc -mat_type aij -test_type issame
-	-error_tolerance 1e-13
+	-options_file ${CMAKE_CURRENT_SOURCE_DIR}/input/2dcyl1_ilu0.perc -mat_type aij
+	-blasted_use_symmetric_scaling 0
+	-test_type issame -error_tolerance 1e-13
+	)
+
+  add_test(NAME SerialPetsc-CSR-ILU0-Scaled
+	COMMAND env OMP_NUM_THREADS=1 ${MPIEXEC} ${MPIOPTS} -n 1 ${CMAKE_CURRENT_BINARY_DIR}/testpetscsolver
+	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.pmat
+	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.pmat 
+	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.pmat
+	-options_file ${CMAKE_CURRENT_SOURCE_DIR}/input/2dcyl1_ilu0.perc -mat_type aij
+	-blasted_use_symmetric_scaling 1
+	-test_type issame -error_tolerance 1e-13
 	)
   
-add_test(NAME SerialPetscDiagnostics-ILURemainder-CSR-ILU0 
+  add_test(NAME SerialPetscDiagnostics-ILURemainder-CSR-ILU0 
 	COMMAND env OMP_NUM_THREADS=1 ${MPIEXEC} ${MPIOPTS} -n 1 ${CMAKE_CURRENT_BINARY_DIR}/testpetscsolver
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.pmat
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.pmat 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.pmat c++
-	-options_file ${CMAKE_CURRENT_SOURCE_DIR}/input/2dcyl1_ilu0.perc -mat_type aij -test_type issame
-	-error_tolerance 1e-14 -blasted_compute_preconditioner_info
+	-options_file ${CMAKE_CURRENT_SOURCE_DIR}/input/2dcyl1_ilu0.perc -mat_type aij
+	-blasted_use_symmetric_scaling 0
+	-test_type issame -error_tolerance 1e-14 -blasted_compute_preconditioner_info
+	)
+  
+  add_test(NAME SerialPetscDiagnostics-ILURemainder-CSR-ILU0-Scaled
+	COMMAND env OMP_NUM_THREADS=1 ${MPIEXEC} ${MPIOPTS} -n 1 ${CMAKE_CURRENT_BINARY_DIR}/testpetscsolver
+	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.pmat
+	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.pmat 
+	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.pmat c++
+	-options_file ${CMAKE_CURRENT_SOURCE_DIR}/input/2dcyl1_ilu0.perc -mat_type aij
+	-blasted_use_symmetric_scaling 1
+	-test_type issame -error_tolerance 1e-14 -blasted_compute_preconditioner_info
 	)
 
   add_test(NAME MPIPetsc-BSR4-Jacobi-Relaxation 
@@ -215,8 +248,8 @@ add_test(NAME SerialPetscDiagnostics-ILURemainder-CSR-ILU0
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.pmat 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.pmat
 	-options_file ${CMAKE_CURRENT_SOURCE_DIR}/input/block4_relaxation_compare.perc -mat_type baij
-	-ref_sub_pc_type pbjacobi -blasted_pc_type jacobi -test_type issame
-	-error_tolerance 1e-13
+	-ref_sub_pc_type pbjacobi -blasted_pc_type jacobi
+	-test_type issame -error_tolerance 1e-13
 	)
   add_test(NAME MPIPetsc-BSR4-GS-Relaxation 
 	COMMAND env OMP_NUM_THREADS=1 ${MPIEXEC} ${MPIOPTS} -n 3 ${CMAKE_CURRENT_BINARY_DIR}/testpetscsolver
@@ -252,8 +285,8 @@ add_test(NAME SerialPetscDiagnostics-ILURemainder-CSR-ILU0
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.pmat 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.pmat
 	-options_file ${CMAKE_CURRENT_SOURCE_DIR}/input/2dcyl1_ilu0.perc -mat_type baij
-	-blasted_pc_type async_level_ilu0 -blasted_async_sweeps 5,1 -test_type issame
-	-error_tolerance 1e-7
+	-blasted_pc_type async_level_ilu0 -blasted_async_sweeps 5,1 -blasted_use_symmetric_scaling 0
+	-test_type issame -error_tolerance 1e-7
 	)
 
   ## Our scalar SGS preconditioner is not the same as PETSc's, because the latter does block
@@ -308,7 +341,17 @@ add_test(NAME SerialPetscDiagnostics-ILURemainder-CSR-ILU0
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.pmat 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.pmat
 	-options_file ${CMAKE_CURRENT_SOURCE_DIR}/input/asyncpreconditioning.perc -mat_type baij
-	-ref_sub_pc_type ilu -blasted_pc_type ilu0 -blasted_async_sweeps 2,3
+	-ref_sub_pc_type ilu -blasted_pc_type ilu0 -blasted_async_sweeps 2,3 -blasted_use_symmetric_scaling 0
+	-test_type compare_its -error_tolerance 0.01
+	)
+
+  add_test(NAME ThreadedPreconditioning-Petsc-BSR4-Async-ILU0-Scaled
+	COMMAND ${SEQEXEC} ${THREADOPTS} ${SEQTASKS} ${CMAKE_CURRENT_BINARY_DIR}/testpetscsolver
+	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.pmat
+	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.pmat 
+	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.pmat
+	-options_file ${CMAKE_CURRENT_SOURCE_DIR}/input/asyncpreconditioning.perc -mat_type baij
+	-ref_sub_pc_type ilu -blasted_pc_type ilu0 -blasted_async_sweeps 2,3 -blasted_use_symmetric_scaling 1
 	-test_type compare_its -error_tolerance 0.01
 	)
 
@@ -318,7 +361,19 @@ add_test(NAME SerialPetscDiagnostics-ILURemainder-CSR-ILU0
   	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.pmat 
   	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.pmat c++
   	-options_file ${CMAKE_CURRENT_SOURCE_DIR}/input/asyncpreconditioning.perc -mat_type baij
-  	-ref_sub_pc_type ilu -blasted_pc_type ilu0 -blasted_async_sweeps 3,8 -blasted_compute_preconditioner_info
+  	-ref_sub_pc_type ilu -blasted_pc_type ilu0 -blasted_async_sweeps 3,8 -blasted_use_symmetric_scaling 0
+	-blasted_compute_preconditioner_info
+  	-test_type compare_its -error_tolerance 1e-4 -num_runs 3
+  	)
+
+  add_test(NAME ThreadedPreconditioningDiagnostics-Petsc-BSR4-Async-ILU0-Scaled
+  	COMMAND ${SEQEXEC} ${THREADOPTS} ${SEQTASKS} ${CMAKE_CURRENT_BINARY_DIR}/testpetscsolver
+  	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.pmat
+  	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.pmat 
+  	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.pmat c++
+  	-options_file ${CMAKE_CURRENT_SOURCE_DIR}/input/asyncpreconditioning.perc -mat_type baij
+  	-ref_sub_pc_type ilu -blasted_pc_type ilu0 -blasted_async_sweeps 3,8 -blasted_use_symmetric_scaling 1
+	-blasted_compute_preconditioner_info
   	-test_type compare_its -error_tolerance 1e-4 -num_runs 3
   	)
   

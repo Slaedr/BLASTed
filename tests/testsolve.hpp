@@ -8,7 +8,8 @@
 #define TESTSOLVE_H
 
 /// Tests preconditioning operations using a linear solve
-/** \param solvertype The iterative solver to use: "richardson", "bcgs"
+/** NOTE: For ILU-type preconditioners, only tests un-scaled variants.
+ * \param solvertype The iterative solver to use: "richardson", "bcgs"
  * \param precontype The preconditioner to test: "jacobi", "sgs", "ilu0" or "none"
  * \param factinittype Initial guess method for asynchronous factorizations
  * \param applyinittype Initial guess method for asynchronous preconditioner applications

@@ -38,7 +38,7 @@ public:
 	 */
 	AsyncBlockILU0_SRPreconditioner(SRMatrixStorage<const scalar, const index>&& matrix,
 	                                const int nbuildsweeps, const int napplysweeps,
-	                                const int thread_chunk_size,
+	                                const bool use_scaling, const int thread_chunk_size,
 	                                const FactInit fact_inittype, const ApplyInit apply_inittype,
 	                                const bool threadedfactor=true, const bool threadedapply=true,
 	                                const bool compute_remainder = false);
@@ -49,7 +49,7 @@ public:
 	index dim() const { return mat.nbrows*bs; }
 
 	bool relaxationAvailable() const { return false; }
-	
+
 	/// Compute the preconditioner \sa block_ilu0_setup
 	/** We assume that sucessive calls to this function maintain the same sparsity pattern of the
 	 * original matrix. ILU location precomputations are not repeated.
@@ -70,7 +70,7 @@ protected:
 
 	/// Precomputed positions in \ref iluvals to help with factorization
 	ILUPositions<index> plist;
-	
+
 	/// Storage for L and U factors
 	/** Use \ref bcolind and \ref browptr to access the storage,
 	 * as the non-zero structure of this matrix is same as the original matrix.
@@ -83,9 +83,9 @@ protected:
 	/// Temporary storage for result of application of L
 	scalar *ytemp;
 
+	const bool usescaling;                       ///< Whether to scale the matrix before ILU
 	const bool threadedfactor;         ///< True for thread-parallel ILU0 factorization
 	const bool threadedapply;          ///< True for thread-parallel LU application
-	const bool rowscale;               ///< Whether to pre-scale the block-rows before factorization
 	const int nbuildsweeps;
 	const int napplysweeps;
 	const int thread_chunk_size;
@@ -104,6 +104,7 @@ public:
 	/** \param nbuildsweeps Number of asynchronous sweeps used to compute the LU factors
 	 * \param napplysweeps Number of asynchronous sweeps used to apply the preconditioner
 	 * \param thread_chunk_size Size of thread chunks in dynamically parallel loops
+	 * \param use_scaling Whether to scale the matrix symmetrically before factorization
 	 * \param fact_inittype Type of initialization to use for factorization
 	 * \param apply_inittype Type of initialization to use for application
 	 * \param threadedfactor If false, the preconditioner is computed sequentially
@@ -111,7 +112,7 @@ public:
 	 */
 	AsyncILU0_SRPreconditioner(SRMatrixStorage<const scalar, const index>&& matrix,
 	                           const int nbuildsweeps, const int napplysweeps,
-	                           const int thread_chunk_size,
+	                           const bool use_scaling, const int thread_chunk_size,
 	                           const FactInit fact_inittype, const ApplyInit apply_inittype,
 	                           const bool compute_preconditioner_info,
 	                           const bool threadedfactor=true, const bool threadedapply=true);
@@ -134,10 +135,10 @@ public:
 
 protected:
 	using SRPreconditioner<scalar,index>::mat;
-	
+
 	/// Precomputed positions in \ref iluvals to help with factorization
 	ILUPositions<index> plist;
-	
+
 	/// Storage for L and U factors
 	scalar *iluvals;
 
@@ -147,6 +148,7 @@ protected:
 	/// Temporary storage for result of application of L
 	scalar *ytemp;
 
+	const bool usescaling;                       ///< Whether to scale the matrix before ILU
 	const bool threadedfactor;                   ///< True for thread-parallel ILU0 factorization
 	const bool threadedapply;                    ///< True for thread-parallel LU application
 	const int nbuildsweeps;                      ///< Number of async sweeps for building ILU factors
@@ -163,13 +165,14 @@ protected:
 	/** \param scaling Set to true to allocate storage for the scaling vector that's applied to
 	 * the matrix A before computing the ILU factors.
 	 */
-	void setup_storage(const bool scaling);
+	void setup_storage();
 };
 
-/// EXPERIMENTAL - 
+/// EXPERIMENTAL -
 /// Asynchronous scalar ILU(0) that uses an external (re-)ordering (and scaling) before factorization
 /** The reordering and scaling are updated every time the preconditioner is computed.
  * The scaling is as in AsyncILU0_SRPreconditioner - symmetric scaling to make diagonal entries 1.
+ * Note that this does not accept a 'use_scaling' boolean parameter in the constructor.
  */
 template <typename scalar, typename index>
 class ReorderedAsyncILU0_SRPreconditioner : public AsyncILU0_SRPreconditioner<scalar,index>

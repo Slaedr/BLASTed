@@ -51,26 +51,47 @@ void async_ilu0_factorize_kernel(const CRawBSRMatrix<scalar,index> *const mat,
 	}
 }
 
+/// Scales a block using a symmetric scaling vector
+/** \param[in] scale The scaling entries
+ * \param[in] blockrow The block-row index of the given block
+ * \param[in] blockcol The block-column index of the given block
+ * \param[in,out] val The non-zero block to be scaled
+ */
 template <typename scalar, typename index, int bs, StorageOptions stor>
+inline void scaleBlock(const scalar *const scale, const index blockrow, const index blockcol,
+                       Block_t<scalar,bs,stor>& val)
+{
+	// scale the block
+	for(int j = 0; j < bs; j++)
+		for(int i = 0; i < bs; i++)
+			val(i,j) *= scale[blockrow*bs + i] * scale[blockcol*bs + j];
+}
+
+template <typename scalar, typename index, int bs, StorageOptions stor, bool usescaling>
 inline void async_block_ilu0_factorize(const CRawBSRMatrix<scalar,index> *const mat,
                                        const Block_t<scalar,bs,stor> *const mvals,
-                                       const ILUPositions<index>& plist, const index irow,
+                                       const ILUPositions<index>& plist, const scalar *const scale,
+                                       const index irow,
                                        Block_t<scalar,bs,stor> *const __restrict ilu)
 {
-	for(index j = mat->browptr[irow]; j < mat->browptr[irow+1]; j++)
+	for(index jpos = mat->browptr[irow]; jpos < mat->browptr[irow+1]; jpos++)
 	{
-		Matrix<scalar,bs,bs> sum = mvals[j];
+		const index column = mat->bcolind[jpos];
 
-		for(index k = plist.posptr[j]; k < plist.posptr[j+1]; k++)
+		Block_t<scalar,bs,stor> sum = mvals[jpos];
+		if(usescaling)
+			scaleBlock<scalar,index,bs,stor>(scale, irow, column, sum);
+
+		for(index k = plist.posptr[jpos]; k < plist.posptr[jpos+1]; k++)
 			sum.noalias() -= ilu[plist.lowerp[k]]*ilu[plist.upperp[k]];
 
-		if(irow > mat->bcolind[j])
+		if(irow > column)
 		{
-			ilu[j].noalias() = sum * ilu[mat->diagind[mat->bcolind[j]]].inverse();
+			ilu[jpos].noalias() = sum * ilu[mat->diagind[column]].inverse();
 		}
 		else
 		{
-			ilu[j].noalias() = sum;
+			ilu[jpos].noalias() = sum;
 		}
 	}
 }

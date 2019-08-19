@@ -31,11 +31,11 @@ using boost::alignment::aligned_free;
 template <typename scalar, typename index, int bs, StorageOptions stor>
 Async_Level_BlockILU0<scalar,index,bs,stor>
 ::Async_Level_BlockILU0(SRMatrixStorage<const scalar, const index>&& matrix,
-                        const int nbuildsweeps, const int thread_chunk_size,
+                        const int nbuildsweeps, const bool use_scaling, const int thread_chunk_size,
                         const FactInit fact_inittype, const bool threadedfactor,
                         const bool compute_remainder)
 	: AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>(std::move(matrix),
-	                                                        nbuildsweeps,1,thread_chunk_size,
+	                                                        nbuildsweeps,1,use_scaling, thread_chunk_size,
 	                                                        fact_inittype, INIT_A_NONE, threadedfactor,
 	                                                        true, compute_remainder)
 { }
@@ -59,11 +59,23 @@ void Async_Level_BlockILU0<scalar,index,bs,stor>::apply(const scalar *const rr,
                                                         scalar *const __restrict zz) const
 {
 	const Blk *ilu = reinterpret_cast<const Blk*>(iluvals);
-	const Seg *r = reinterpret_cast<const Seg*>(rr);
+	//const Seg *r = reinterpret_cast<const Seg*>(rr);
 	Seg *z = reinterpret_cast<Seg*>(zz);
 	Seg *y = reinterpret_cast<Seg*>(ytemp);
 
 	const index nlevels = static_cast<index>(levels.size())-1;
+
+	if(usescaling)
+		// initially, z := Sr
+#pragma omp parallel for simd default(shared)
+		for(index i = 0; i < mat.nbrows*bs; i++) {
+			zz[i] = scale[i]*rr[i];
+		}
+	else
+#pragma omp parallel for simd default(shared)
+		for(index i = 0; i < mat.nbrows*bs; i++) {
+			zz[i] = rr[i];
+		}
 
 	for(int ilvl = 0; ilvl < nlevels; ilvl++)
 	{
@@ -71,7 +83,7 @@ void Async_Level_BlockILU0<scalar,index,bs,stor>::apply(const scalar *const rr,
 		for(index i = levels[ilvl]; i < levels[ilvl+1]; i++)
 		{
 			block_unit_lower_triangular<scalar,index,bs,stor>
-				(ilu, mat.bcolind, mat.browptr[i], mat.diagind[i], r[i], i, y);
+				(ilu, mat.bcolind, mat.browptr[i], mat.diagind[i], z[i], i, y);
 		}
 	}
 
@@ -84,6 +96,12 @@ void Async_Level_BlockILU0<scalar,index,bs,stor>::apply(const scalar *const rr,
 				(ilu, mat.bcolind, mat.diagind[i], mat.browptr[i+1], y[i], i, z);
 		}
 	}
+
+	if(usescaling)
+		// correct z
+#pragma omp parallel for simd default(shared)
+		for(int i = 0; i < mat.nbrows*bs; i++)
+			zz[i] = zz[i]*scale[i];
 }
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
@@ -105,10 +123,10 @@ template class Async_Level_BlockILU0<double,int,BUILD_BLOCK_SIZE,RowMajor>;
 template <typename scalar, typename index>
 Async_Level_ILU0<scalar,index>
 ::Async_Level_ILU0(SRMatrixStorage<const scalar, const index>&& matrix,
-                   const int nbuildsweeps, const int thread_chunk_size,
+                   const int nbuildsweeps, const bool use_scaling, const int thread_chunk_size,
                    const FactInit fact_inittype, const bool threadedfactor,
                    const bool compute_remainder)
-	: AsyncILU0_SRPreconditioner<scalar,index>(std::move(matrix), nbuildsweeps,1,thread_chunk_size,
+	: AsyncILU0_SRPreconditioner<scalar,index>(std::move(matrix), nbuildsweeps,1,use_scaling,thread_chunk_size,
 	                                           fact_inittype, INIT_A_NONE, threadedfactor, true)
 { }
 
@@ -132,11 +150,17 @@ void Async_Level_ILU0<scalar,index>::apply(const scalar *const rr,
 {
 	const index nlevels = static_cast<index>(levels.size())-1;
 
-	// initially, z := Sr
+	if(usescaling)
+		// initially, z := Sr
 #pragma omp parallel for simd default(shared)
-	for(index i = 0; i < mat.nbrows; i++) {
-		zz[i] = scale[i]*rr[i];
-	}
+		for(index i = 0; i < mat.nbrows; i++) {
+			zz[i] = scale[i]*rr[i];
+		}
+	else
+#pragma omp parallel for simd default(shared)
+		for(index i = 0; i < mat.nbrows; i++) {
+			zz[i] = rr[i];
+		}
 
 
 	for(int ilvl = 0; ilvl < nlevels; ilvl++)
@@ -160,10 +184,11 @@ void Async_Level_ILU0<scalar,index>::apply(const scalar *const rr,
 		}
 	}
 
-	// correct z
+	if(usescaling)
+		// correct z
 #pragma omp parallel for simd default(shared)
-	for(int i = 0; i < mat.nbrows; i++)
-		zz[i] = zz[i]*scale[i];
+		for(int i = 0; i < mat.nbrows; i++)
+			zz[i] = zz[i]*scale[i];
 }
 
 template <typename scalar, typename index>

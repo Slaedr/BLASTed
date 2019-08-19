@@ -24,7 +24,6 @@ using namespace blasted;
 
 typedef SRPreconditioner<PetscReal,PetscInt> BlastedPreconditioner;
 
-#define PETSCOPTION_STR_LEN 20
 
 /// Reads an int option from the PETSc options database
 static int get_int_petscoptions(const char *const option_tag)
@@ -54,23 +53,33 @@ static int get_optional_bool_petscoptions(const char *const option_tag, const bo
 	return (val == PETSC_TRUE ? true : false);
 }
 
+/// Reads a compulsory bool option from the PETSc options database
+static int get_bool_petscoptions(const char *const option_tag)
+{
+	PetscBool set = PETSC_FALSE;
+	PetscBool val;
+	int ierr = PetscOptionsGetBool(NULL, NULL, option_tag, &val, &set);
+	if(ierr) {
+		throw std::runtime_error("Petsc could not get optional bool option!");
+	}
+	if(!set) {
+		throw std::runtime_error("Bool option " + std::string(option_tag) + " not set!");
+	}
+	return (val == PETSC_TRUE ? true : false);
+}
+
 /// Read a string option from the PETSc options database
 /** \note Aborts the program if the option was not found
  */
-static void get_string_petscoptions(const char *const option_tag, char **const outstr)
+static void get_string_petscoptions(const char *const option_tag, char outstr[BLASTED_OPT_STRLEN])
 {
 	// Prec type
-	char precstr[PETSCOPTION_STR_LEN];
 	PetscBool flag = PETSC_FALSE;
-	PetscOptionsGetString(NULL, NULL, option_tag, precstr, PETSCOPTION_STR_LEN, &flag);
+	PetscOptionsGetString(NULL, NULL, option_tag, outstr, BLASTED_OPT_STRLEN, &flag);
 	if(flag == PETSC_FALSE) {
-		printf("BLASTed: %s not set!\n", option_tag);
+		printf("BLASTed: %s not set!\n", option_tag); fflush(stdout);
 		abort();
 	}
-
-	const size_t len = std::strlen(precstr);
-	*outstr = new char[len+1];
-	std::strcpy(*outstr, precstr);
 }
 
 /// Sets options from PETSc options
@@ -84,7 +93,7 @@ static PetscErrorCode setupDataFromOptions(PC pc)
 		= (const FactoryBase<PetscReal,PetscInt>*)ctx->bfactory;
 
 	// Prec type
-	get_string_petscoptions("-blasted_pc_type", &ctx->prectypestr);
+	get_string_petscoptions("-blasted_pc_type", ctx->prectypestr);
 	const BlastedSolverType ptype = factory->solverTypeFromString(ctx->prectypestr);
 
 	PetscInt sweeps[2];
@@ -103,8 +112,16 @@ static PetscErrorCode setupDataFromOptions(PC pc)
 			abort();
 		}
 
-		get_string_petscoptions("-blasted_async_fact_init_type", &ctx->factinittype);
-		get_string_petscoptions("-blasted_async_apply_init_type", &ctx->applyinittype);
+		if(ptype == BLASTED_ILU0 || ptype == BLASTED_SAPILU0 || ptype == BLASTED_ASYNC_LEVEL_ILU0)
+		{
+			ctx->scale = get_bool_petscoptions("-blasted_use_symmetric_scaling");
+			get_string_petscoptions("-blasted_async_fact_init_type", ctx->factinittype);
+		}
+		else {
+			ctx->scale = false;
+			strcpy(ctx->factinittype, "NA");
+		}
+		get_string_petscoptions("-blasted_async_apply_init_type", ctx->applyinittype);
 		ctx->threadchunksize = get_int_petscoptions("-blasted_thread_chunk_size");
 #ifdef DEBUG
 		printf("BLASTed: setupDataFromOptions:\n");
@@ -187,13 +204,19 @@ PetscErrorCode createNewPreconditioner(PC pc)
 	settings.prectype = factory->solverTypeFromString(ctx->prectypestr);
 	settings.bs = ctx->bs;  // set in setup_localpreconditioner_blasted below
 	settings.blockstorage = ColMajor;   // required for PETSc
+	settings.scale = ctx->scale;
 	settings.nbuildsweeps = ctx->nbuildsweeps;
 	settings.napplysweeps = ctx->napplysweeps;
 	settings.thread_chunk_size = ctx->threadchunksize;
 	settings.compute_precinfo = ctx->compute_precinfo;
 	if(settings.prectype != BLASTED_JACOBI && settings.prectype != BLASTED_LEVEL_SGS
-	   && settings.prectype != BLASTED_NO_PREC) {
-		settings.fact_inittype = getFactInitFromString(ctx->factinittype);
+	   && settings.prectype != BLASTED_NO_PREC)
+	{
+		if(settings.prectype == BLASTED_ILU0 || settings.prectype == BLASTED_SAPILU0 ||
+		   settings.prectype == BLASTED_ASYNC_LEVEL_ILU0)
+			settings.fact_inittype = getFactInitFromString(ctx->factinittype);
+		else
+			settings.fact_inittype = INIT_F_NONE;
 		settings.apply_inittype = getApplyInitFromString(ctx->applyinittype);
 	}
 
@@ -294,9 +317,6 @@ Blasted_data newBlastedDataContext()
 {
 	Blasted_data ctx;
 	ctx.bprec = NULL;
-	ctx.prectypestr = NULL;
-	ctx.factinittype = NULL;
-	ctx.applyinittype = NULL;
 	ctx.infolist = NULL;
 	ctx.first_setup_done = false;
 	ctx.cputime = ctx.walltime = ctx.factorcputime = ctx.factorwalltime
@@ -324,16 +344,6 @@ PetscErrorCode cleanup_blasted(PC pc)
 	ierr = PCShellGetContext(pc, (void**)&ctx); CHKERRQ(ierr);
 	BlastedPreconditioner* prec = reinterpret_cast<BlastedPreconditioner*>(ctx->bprec);
 	delete prec;
-
-	delete [] ctx->prectypestr;
-	delete [] ctx->factinittype;
-	delete [] ctx->applyinittype;
-
-	// if(ctx->compute_precinfo) {
-	// 	PrecInfoList *list = static_cast<PrecInfoList*>(ctx->infolist);
-	// 	delete list;
-	// 	list = nullptr;
-	// }
 
 	return ierr;
 }
@@ -455,8 +465,9 @@ PetscErrorCode apply_local_blasted(PC pc, Vec r, Vec z)
 }
 
 PetscErrorCode relax_local_blasted(PC pc, Vec rhs, Vec x, Vec w,
-		const PetscReal rtol, const PetscReal abstol, const PetscReal dtol, const PetscInt it,
-		const PetscBool guesszero, PetscInt *const outits, PCRichardsonConvergedReason *const reason)
+                                   const PetscReal rtol, const PetscReal abstol, const PetscReal dtol,
+                                   const PetscInt it, const PetscBool guesszero,
+                                   PetscInt *const outits, PCRichardsonConvergedReason *const reason)
 {
 	PetscErrorCode ierr = 0;
 	Blasted_data* ctx;
@@ -472,7 +483,6 @@ PetscErrorCode relax_local_blasted(PC pc, Vec rhs, Vec x, Vec w,
 		ierr = VecSet(x, 0.0); CHKERRQ(ierr);
 	}
 
-	//ierr = apply_local_base(ctx, relaxation, rhs, x); CHKERRQ(ierr);
 	{
 		const PetscReal *ra;
 		PetscReal *za;

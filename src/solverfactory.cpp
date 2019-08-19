@@ -83,12 +83,12 @@ SRFactory<scalar,index>
 	}
 	else if(opts.prectype == BLASTED_ILU0) {
 		return new AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>
-			(std::move(mat), opts.nbuildsweeps, opts.napplysweeps, opts.thread_chunk_size,
+			(std::move(mat), opts.nbuildsweeps, opts.napplysweeps, opts.scale, opts.thread_chunk_size,
 			 opts.fact_inittype, opts.apply_inittype, true, true, opts.compute_precinfo);
 	}
 	else if(opts.prectype == BLASTED_SAPILU0) {
 		return new AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>
-			(std::move(mat), opts.nbuildsweeps, opts.napplysweeps, opts.thread_chunk_size,
+			(std::move(mat), opts.nbuildsweeps, opts.napplysweeps, opts.scale, opts.thread_chunk_size,
 			 opts.fact_inittype, opts.apply_inittype, true, false, opts.compute_precinfo);
 	}
 	else if(opts.prectype == BLASTED_LEVEL_SGS) {
@@ -96,6 +96,7 @@ SRFactory<scalar,index>
 	}
 	else if(opts.prectype == BLASTED_ASYNC_LEVEL_ILU0) {
 		return new Async_Level_BlockILU0<scalar,index,bs,stor>(std::move(mat),opts.nbuildsweeps,
+		                                                       opts.scale,
 		                                                       opts.thread_chunk_size,
 		                                                       opts.fact_inittype, true,
 		                                                       opts.compute_precinfo);
@@ -142,17 +143,17 @@ SRFactory<scalar,index>::create_preconditioner(SRMatrixStorage<const scalar, con
 		else if(opts.prectype == BLASTED_ILU0) {
 			p = new AsyncILU0_SRPreconditioner<scalar,index>
 				(std::move(mat), opts.nbuildsweeps, opts.napplysweeps,
-				 opts.thread_chunk_size,
+				 opts.scale, opts.thread_chunk_size,
 				 opts.fact_inittype, opts.apply_inittype, opts.compute_precinfo, true,true);
 		}
 		else if(opts.prectype == BLASTED_SAPILU0) {
 			p = new AsyncILU0_SRPreconditioner<scalar,index>
 				(std::move(mat), opts.nbuildsweeps, opts.napplysweeps,
-				 opts.thread_chunk_size,
+				 opts.scale, opts.thread_chunk_size,
 				 opts.fact_inittype, opts.apply_inittype, opts.compute_precinfo, true,false);
 		}
 		else if(opts.prectype == BLASTED_ASYNC_LEVEL_ILU0) {
-			p = new Async_Level_ILU0<scalar,index>(std::move(mat), opts.nbuildsweeps,
+			p = new Async_Level_ILU0<scalar,index>(std::move(mat), opts.nbuildsweeps, opts.scale,
 			                                       opts.thread_chunk_size, opts.fact_inittype, true,
 			                                       opts.compute_precinfo);
 		}

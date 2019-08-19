@@ -273,7 +273,7 @@ int runComparisonVsPetsc_cpp(const DiscreteLinearProblem lp)
 		assert(static_cast<int>(pilist->infolist.size()) == nruns+1);
 
 		printf("  Preconditioner build info:\n");
-		printf("  ILU rem, initial ILU rem, upper avg ddom, upper min ddom, lower avg ddom, lower min ddom\n");
+		printf("  ILU rem, initial ILU rem, upper min ddom, upper avg ddom, lower min ddom, lower avg ddom\n");
 		for(int i = 0; i < nruns+1; i++) {
 			for(int j = 0; j < 6; j++)
 				printf("  %9.4g ", pilist->infolist[i].f_info[j]);

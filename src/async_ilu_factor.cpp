@@ -13,51 +13,17 @@ namespace blasted {
 
 /// Initialize the factorization such that async. ILU(0) factorization gives async. SGS at worst
 /** We set L' to (I+LD^(-1)) and U' to (D+U) so that L'U' = (D+L)D^(-1)(D+U).
+ * Depending on whether scale is null, we use the original matrix or the scaled one as input.
  */
-template <typename scalar ,typename index> static
-void fact_init_sgs_noscale(const CRawBSRMatrix<scalar,index> *const mat,
-                           scalar *const __restrict iluvals)
-{
-#pragma omp parallel for default (shared)
-	for(index i = 0; i < mat->nbrows; i++)
-	{
-		for(index j = mat->browptr[i]; j < mat->browptr[i+1]; j++)
-			iluvals[j] = mat->vals[j];
-		for(index j = mat->browptr[i]; j < mat->diagind[i]; j++)
-			iluvals[j] *= 1.0/mat->vals[mat->diagind[mat->bcolind[j]]];
-	}
-}
-
-/// Initialize the factorization such that async. ILU(0) factorization gives async. SGS at worst
-/** We set L' to (I+LD^(-1)) and U' to (D+U) so that L'U' = (D+L)D^(-1)(D+U).
- */
-template <typename scalar ,typename index> static
-void fact_init_sgs(const CRawBSRMatrix<scalar,index> *const mat, const scalar *const scale,
-                   scalar *const __restrict iluvals)
-{
-#pragma omp parallel for default (shared)
-	for(index i = 0; i < mat->nbrows; i++)
-	{
-		for(index j = mat->browptr[i]; j < mat->browptr[i+1]; j++)
-			iluvals[j] = scale[i]*mat->vals[j]*scale[mat->bcolind[j]];
-		for(index j = mat->browptr[i]; j < mat->diagind[i]; j++)
-			iluvals[j] *= 1.0/mat->vals[mat->diagind[mat->bcolind[j]]];
-	}
-}
+template <typename scalar ,typename index>
+static void fact_init_sgs(const CRawBSRMatrix<scalar,index> *const mat, const scalar *const scale,
+                          scalar *const __restrict iluvals);
 
 /// Initialize the ILU factorization with the row-scaled original matrix
-template <typename scalar ,typename index> static
-void fact_init_scaled_original(const CRawBSRMatrix<scalar,index> *const mat,
+template <typename scalar ,typename index>
+static void fact_init_original(const CRawBSRMatrix<scalar,index> *const mat,
                                const scalar *const scale,
-                               scalar *const __restrict iluvals)
-{
-#pragma omp parallel for default (shared)
-	for(index i = 0; i < mat->nbrows; i++)
-	{
-		for(index j = mat->browptr[i]; j < mat->browptr[i+1]; j++)
-			iluvals[j] = scale[i]*mat->vals[j]*scale[mat->bcolind[j]];
-	}
-}
+                               scalar *const __restrict iluvals);
 
 template <typename scalar, typename index, bool scalerow, bool scalecol>
 static void executeILU0Factorization(const CRawBSRMatrix<scalar,index> *const mat,
@@ -65,22 +31,7 @@ static void executeILU0Factorization(const CRawBSRMatrix<scalar,index> *const ma
                                      const int nbuildsweeps, const int thread_chunk_size,
                                      const bool usethreads,
                                      const scalar *const rowscale, const scalar *const colscale,
-                                     scalar *const __restrict iluvals)
-{
-#pragma omp parallel default(shared) if(usethreads)
-	{
-		for(int isweep = 0; isweep < nbuildsweeps; isweep++)
-		{
-#pragma omp for schedule(dynamic, thread_chunk_size)
-			for(index irow = 0; irow < mat->nbrows; irow++)
-			{
-				async_ilu0_factorize_kernel<scalar,index,scalerow,scalecol>(mat, plist, irow,
-				                                                            rowscale, colscale,
-				                                                            iluvals);
-			}
-		}
-	}
-}
+                                     scalar *const __restrict iluvals);
 
 template <typename scalar, typename index>
 PrecInfo scalar_ilu0_factorize(const CRawBSRMatrix<scalar,index> *const mat,
@@ -89,10 +40,9 @@ PrecInfo scalar_ilu0_factorize(const CRawBSRMatrix<scalar,index> *const mat,
                                const FactInit factinittype, const bool compute_info,
                                scalar *const __restrict iluvals, scalar *const __restrict scale)
 {
-	// get the diagonal scaling matrix
-#pragma omp parallel for simd default(shared)
-	for(index i = 0; i < mat->nbrows; i++)
-		scale[i] = 1.0/std::sqrt(mat->vals[mat->diagind[i]]);
+	if(scale)
+		// get the diagonal scaling matrix
+		getScalingVector<scalar,index,1>(mat, scale);
 
 	switch(factinittype) {
 	case INIT_F_ZERO:
@@ -100,7 +50,7 @@ PrecInfo scalar_ilu0_factorize(const CRawBSRMatrix<scalar,index> *const mat,
 		for(index i = 0; i < mat->browptr[mat->nbrows]; i++)
 			iluvals[i] = 0;
 	case INIT_F_ORIGINAL:
-		fact_init_scaled_original(mat, scale, iluvals);
+		fact_init_original(mat, scale, iluvals);
 		break;
 	case INIT_F_SGS:
 		fact_init_sgs(mat, scale, iluvals);
@@ -113,18 +63,26 @@ PrecInfo scalar_ilu0_factorize(const CRawBSRMatrix<scalar,index> *const mat,
 
 	if(compute_info)
 	{
-		pinfo.prec_rem_initial_norm()
-			= scalar_ilu0_nonlinear_res<scalar,index,true,true>(mat, plist, thread_chunk_size,
+		pinfo.prec_rem_initial_norm() = scale ?
+			scalar_ilu0_nonlinear_res<scalar,index,true,true>(mat, plist, thread_chunk_size,
+			                                                  scale, scale, iluvals) :
+			scalar_ilu0_nonlinear_res<scalar,index,false,false>(mat, plist, thread_chunk_size,
 			                                                    scale, scale, iluvals);
 	}
 
-	executeILU0Factorization<scalar,index,true,true>(mat, plist, nbuildsweeps, thread_chunk_size,
-	                                                 usethreads, scale, scale, iluvals);
+	if(scale)
+		executeILU0Factorization<scalar,index,true,true>(mat, plist, nbuildsweeps, thread_chunk_size,
+		                                                 usethreads, scale, scale, iluvals);
+	else
+		executeILU0Factorization<scalar,index,false,false>(mat, plist, nbuildsweeps, thread_chunk_size,
+		                                                   usethreads, scale, scale, iluvals);
 
 	if(compute_info)
 	{
-		pinfo.prec_remainder_norm()
-			= scalar_ilu0_nonlinear_res<scalar,index,true,true>(mat, plist, thread_chunk_size,
+		pinfo.prec_remainder_norm() = scale ?
+			scalar_ilu0_nonlinear_res<scalar,index,true,true>(mat, plist, thread_chunk_size,
+			                                                  scale, scale, iluvals) :
+			scalar_ilu0_nonlinear_res<scalar,index,false,false>(mat, plist, thread_chunk_size,
 			                                                    scale, scale, iluvals);
 
 		std::array<scalar,2> arr = diagonal_dominance_lower<scalar,index,1,ColMajor>
@@ -151,6 +109,78 @@ scalar_ilu0_factorize<double,int>(const CRawBSRMatrix<double,int> *const mat,
                                   const bool usethreads, const FactInit finit, const bool compute_info,
                                   double *const __restrict iluvals, double *const __restrict scale);
 
+/* We set L' to (I+LD^(-1)) and U' to (D+U) so that L'U' = (D+L)D^(-1)(D+U).
+ */
+template <typename scalar ,typename index>
+static void fact_init_sgs(const CRawBSRMatrix<scalar,index> *const mat, const scalar *const scale,
+                          scalar *const __restrict iluvals)
+{
+	if(scale)
+#pragma omp parallel for default (shared)
+		for(index i = 0; i < mat->nbrows; i++)
+		{
+			for(index j = mat->browptr[i]; j < mat->browptr[i+1]; j++)
+				iluvals[j] = scale[i]*mat->vals[j]*scale[mat->bcolind[j]];
+			for(index j = mat->browptr[i]; j < mat->diagind[i]; j++)
+				iluvals[j] *= 1.0/(mat->vals[mat->diagind[mat->bcolind[j]]]
+				                   * scale[mat->diagind[mat->bcolind[j]]]
+				                   * scale[mat->diagind[mat->bcolind[j]]]);
+		}
+	else
+#pragma omp parallel for default (shared)
+		for(index i = 0; i < mat->nbrows; i++)
+		{
+			for(index j = mat->browptr[i]; j < mat->browptr[i+1]; j++)
+				iluvals[j] = mat->vals[j];
+			for(index j = mat->browptr[i]; j < mat->diagind[i]; j++)
+				iluvals[j] *= 1.0/mat->vals[mat->diagind[mat->bcolind[j]]];
+		}
+}
+
+template <typename scalar ,typename index> static
+void fact_init_original(const CRawBSRMatrix<scalar,index> *const mat,
+                               const scalar *const scale,
+                               scalar *const __restrict iluvals)
+{
+	if(scale)
+#pragma omp parallel for default (shared)
+		for(index i = 0; i < mat->nbrows; i++)
+		{
+			for(index j = mat->browptr[i]; j < mat->browptr[i+1]; j++)
+				iluvals[j] = scale[i]*mat->vals[j]*scale[mat->bcolind[j]];
+		}
+	else
+#pragma omp parallel for simd default(shared)
+		for(index i = 0; i < mat->browptr[mat->nbrows]; i++)
+			iluvals[i] = mat->vals[i];
+}
+
+template <typename scalar, typename index, bool scalerow, bool scalecol>
+void executeILU0Factorization(const CRawBSRMatrix<scalar,index> *const mat,
+                                     const ILUPositions<index>& plist,
+                                     const int nbuildsweeps, const int thread_chunk_size,
+                                     const bool usethreads,
+                                     const scalar *const rowscale, const scalar *const colscale,
+                                     scalar *const __restrict iluvals)
+{
+	if(scalerow)
+		assert(rowscale);
+
+#pragma omp parallel default(shared) if(usethreads)
+	{
+		for(int isweep = 0; isweep < nbuildsweeps; isweep++)
+		{
+#pragma omp for schedule(dynamic, thread_chunk_size)
+			for(index irow = 0; irow < mat->nbrows; irow++)
+			{
+				async_ilu0_factorize_kernel<scalar,index,scalerow,scalecol>(mat, plist, irow,
+				                                                            rowscale, colscale,
+				                                                            iluvals);
+			}
+		}
+	}
+}
+
 template <typename scalar, typename index, bool needscalerow, bool needscalecol>
 scalar scalar_ilu0_nonlinear_res(const CRawBSRMatrix<scalar,index> *const mat,
                                  const ILUPositions<index>& plist,
@@ -160,6 +190,10 @@ scalar scalar_ilu0_nonlinear_res(const CRawBSRMatrix<scalar,index> *const mat,
 {
 	scalar resnorm = 0;
 	scalar anorm = 0;
+	if(needscalerow) {
+		assert(rowscale);
+		assert(colscale);
+	}
 
 #pragma omp parallel for schedule(dynamic, thread_chunk_size) reduction(+:resnorm,anorm)
 	for(index irow = 0; irow < mat->nbrows; irow++)
@@ -196,6 +230,13 @@ double scalar_ilu0_nonlinear_res<double,int,true,true>(const CRawBSRMatrix<doubl
                                                        const double *const rowscale,
                                                        const double *const colscale,
                                                        const double *const iluvals);
+template
+double scalar_ilu0_nonlinear_res<double,int,false,false>(const CRawBSRMatrix<double,int> *const mat,
+                                                         const ILUPositions<int>& plist,
+                                                         const int thread_chunk_size,
+                                                         const double *const rowscale,
+                                                         const double *const colscale,
+                                                         const double *const iluvals);
 
 /////////////////////---//////////////////////
 
@@ -222,7 +263,7 @@ void scalar_ilu0_factorize_noscale(const CRawBSRMatrix<scalar,index> *const mat,
 			iluvals[i] = mat->vals[i];
 		break;
 	case INIT_F_SGS:
-		fact_init_sgs_noscale(mat, iluvals);
+		fact_init_sgs<scalar,index>(mat, nullptr, iluvals);
 		break;
 	default:
 		;

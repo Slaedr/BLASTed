@@ -53,12 +53,19 @@ static void check_initial(const CRawBSRMatrix<double,int>& mat, const ILUPositio
 
 template <int bs>
 int test_ilu_convergence(const CRawBSRMatrix<double,int>& mat, const ILUPositions<int>& plist,
-                         const double tol, const int maxsweeps,
+                         const double tol, const int maxsweeps, const bool usescale,
                          const int thread_chunk_size, const std::string initialization)
 {
 	int ierr = 0;
 
-	const device_vector<double> scale = (bs==1) ? getScalingVector(&mat) : device_vector<double>(0);
+	printf("Testing ILU(0) convergence for block size %d ", bs);
+	if(usescale)
+		printf("with symmetric scaling.\n");
+	else
+		printf("without scaling.\n");
+
+	//const device_vector<double> scale = (bs==1) ? getScalingVector<bs>(&mat) : device_vector<double>(0);
+	const device_vector<double> scale = usescale ? getScalingVector<bs>(&mat) : device_vector<double>(0);
 
 	const device_vector<double> exactilu = getExactILU<bs>(&mat,plist,scale);
 
@@ -92,21 +99,44 @@ int test_ilu_convergence(const CRawBSRMatrix<double,int>& mat, const ILUPosition
 
 	while(isweep < curmaxsweeps)
 	{
-		if(bs == 1)
-		{
-#pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size)
-			for(int irow = 0; irow < mat.nbrows; irow++)
+		if(usescale) {
+			if(bs == 1)
 			{
-				async_ilu0_factorize_kernel<double,int,true,true>(&mat, plist, irow,
-				                                                  &scale[0], &scale[0], &iluvals[0]);
+#pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size)
+				for(int irow = 0; irow < mat.nbrows; irow++)
+				{
+					async_ilu0_factorize_kernel<double,int,true,true>(&mat, plist, irow,
+					                                                  &scale[0], &scale[0], &iluvals[0]);
+				}
+			}
+			else
+			{
+#pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size)
+				for(int irow = 0; irow < mat.nbrows; irow++)
+				{
+					async_block_ilu0_factorize<double,int,bs,ColMajor,true>(&mat, mvals, plist,
+					                                                        &scale[0], irow, ilu);
+				}
 			}
 		}
-		else
-		{
-#pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size)
-			for(int irow = 0; irow < mat.nbrows; irow++)
+		else {
+			if(bs == 1)
 			{
-				async_block_ilu0_factorize<double,int,bs,ColMajor>(&mat, mvals, plist, irow, ilu);
+#pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size)
+				for(int irow = 0; irow < mat.nbrows; irow++)
+				{
+					async_ilu0_factorize_kernel<double,int,false,false>(&mat, plist, irow,
+					                                                    &scale[0], &scale[0], &iluvals[0]);
+				}
+			}
+			else
+			{
+#pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size)
+				for(int irow = 0; irow < mat.nbrows; irow++)
+				{
+					async_block_ilu0_factorize<double,int,bs,ColMajor,false>(&mat, mvals, plist,
+					                                                         &scale[0], irow, ilu);
+				}
 			}
 		}
 
@@ -120,11 +150,20 @@ int test_ilu_convergence(const CRawBSRMatrix<double,int>& mat, const ILUPosition
 			Uerr = maxnorm_upper<bs>(&mat, iluvals, exactilu)/initUerr;
 		}
 
-		ilures = (bs == 1) ?
-			scalar_ilu0_nonlinear_res<double,int,true,true>(&mat, plist, thread_chunk_size, &scale[0],
-			                                                &scale[0], &iluvals[0])
-			:
-			block_ilu0_nonlinear_res<double,int,bs,ColMajor>(&mat, plist, &iluvals[0], thread_chunk_size);
+		if(usescale)
+			ilures = (bs == 1) ?
+				scalar_ilu0_nonlinear_res<double,int,true,true>(&mat, plist, thread_chunk_size, &scale[0],
+				                                                &scale[0], &iluvals[0])
+				:
+				block_ilu0_nonlinear_res<double,int,bs,ColMajor,true>(&mat, plist, &scale[0], &iluvals[0],
+				                                                      thread_chunk_size);
+		else
+			ilures = (bs == 1) ?
+				scalar_ilu0_nonlinear_res<double,int,false,false>(&mat, plist, thread_chunk_size, &scale[0],
+				                                                  &scale[0], &iluvals[0])
+				:
+				block_ilu0_nonlinear_res<double,int,bs,ColMajor,false>(&mat, plist, &scale[0], &iluvals[0],
+				                                                       thread_chunk_size);
 
 		printf(" %5d %10.3g %10.3g %10.3g\n", isweep, Lerr, Uerr, ilures); fflush(stdout);
 
@@ -155,11 +194,11 @@ int test_ilu_convergence(const CRawBSRMatrix<double,int>& mat, const ILUPosition
 
 template
 int test_ilu_convergence<1>(const CRawBSRMatrix<double,int>& mat, const ILUPositions<int>& plist,
-                            const double tol, const int maxsweeps,
+                            const double tol, const int maxsweeps, const bool usescale,
                             const int thread_chunk_size, const std::string initialization);
 template
 int test_ilu_convergence<4>(const CRawBSRMatrix<double,int>& mat, const ILUPositions<int>& plist,
-                            const double tol, const int maxsweeps,
+                            const double tol, const int maxsweeps, const bool usescale,
                             const int thread_chunk_size, const std::string initialization);
 
 template <int bs>
@@ -233,10 +272,19 @@ device_vector<double> getExactILU(const CRawBSRMatrix<double,int> *const mat,
 	for(int irow = 0; irow < mat->nbrows; irow++)
 	{
 		if(bs == 1)
-			async_ilu0_factorize_kernel<double,int,true,true>(mat, plist, irow,
-			                                                  &scale[0], &scale[0], &iluvals[0]);
+			if(scale.size() > 0)
+				async_ilu0_factorize_kernel<double,int,true,true>(mat, plist, irow,
+				                                                  &scale[0], &scale[0], &iluvals[0]);
+			else
+				async_ilu0_factorize_kernel<double,int,false,false>(mat, plist, irow,
+				                                                    nullptr, nullptr, &iluvals[0]);
 		else
-			async_block_ilu0_factorize<double,int,bs,ColMajor>(mat, mvals, plist, irow, ilu);
+			if(scale.size() > 0)
+				async_block_ilu0_factorize<double,int,bs,ColMajor,true>(mat, mvals, plist, &scale[0],
+				                                                        irow, ilu);
+			else
+				async_block_ilu0_factorize<double,int,bs,ColMajor,false>(mat, mvals, plist, &scale[0],
+				                                                         irow, ilu);
 	}
 
 	return iluvals;
@@ -249,16 +297,18 @@ template
 device_vector<double> getExactILU<4>(const CRawBSRMatrix<double,int> *const mat,
                                      const ILUPositions<int>& plist, const device_vector<double>& scale);
 
+template <int bs>
 device_vector<double> getScalingVector(const CRawBSRMatrix<double,int> *const mat)
 {
-	device_vector<double> scale(mat->nbrows);
+	device_vector<double> scale(mat->nbrows*bs);
 
-#pragma omp parallel for simd default(shared)
-	for(int i = 0; i < mat->nbrows; i++)
-		scale[i] = 1.0/std::sqrt(mat->vals[mat->diagind[i]]);
+	getScalingVector<double,int,bs>(mat, &scale[0]);
 
 	return scale;
 }
+
+template device_vector<double> getScalingVector<1>(const CRawBSRMatrix<double,int> *const mat);
+template device_vector<double> getScalingVector<4>(const CRawBSRMatrix<double,int> *const mat);
 
 }
 
@@ -276,20 +326,49 @@ void check_initial(const CRawBSRMatrix<double,int>& mat, const ILUPositions<int>
 	printf(" Error of exact U factor = %5.5g.\n", checkUerr);
 	assert(checkUerr < 1e-15);
 
-	const double initilures = (bs == 1) ?
-		scalar_ilu0_nonlinear_res<double,int,true,true>(&mat, plist, thread_chunk_size, &scale[0],
+	const double initilures = (scale.size() > 0) ?
+		(
+		 (bs == 1) ?
+		 scalar_ilu0_nonlinear_res<double,int,true,true>(&mat, plist, thread_chunk_size, &scale[0],
 		                                                &scale[0], &iluvals[0])
+		 :
+		 block_ilu0_nonlinear_res<double,int,bs,ColMajor,true>(&mat, plist, &scale[0], &iluvals[0],
+		                                                      thread_chunk_size)
+		 )
 		:
-		block_ilu0_nonlinear_res<double,int,bs,ColMajor>(&mat, plist, &iluvals[0], thread_chunk_size);
+		(
+		 (bs == 1) ?
+		 scalar_ilu0_nonlinear_res<double,int,false,false>(&mat, plist, thread_chunk_size, nullptr,
+		                                                   &scale[0], &iluvals[0])
+		 :
+		 block_ilu0_nonlinear_res<double,int,bs,ColMajor,false>(&mat, plist, nullptr, &iluvals[0],
+		                                                        thread_chunk_size)
+		 )
+		;
 
 	printf(" Initial nonlinear ILU residual = %f.\n", initilures);
 
 	// check ilu remainder
-	const double checkilures = (bs == 1) ?
-		scalar_ilu0_nonlinear_res<double,int,true,true>(&mat, plist, thread_chunk_size, &scale[0],
-		                                                &scale[0], &exactilu[0])
+	const double checkilures = (scale.size() > 0) ?
+		(
+		 (bs == 1) ?
+		 scalar_ilu0_nonlinear_res<double,int,true,true>(&mat, plist, thread_chunk_size, &scale[0],
+		                                                 &scale[0], &exactilu[0])
+		 :
+		 block_ilu0_nonlinear_res<double,int,bs,ColMajor,true>(&mat, plist, &scale[0], &exactilu[0],
+		                                                       thread_chunk_size)
+		 )
 		:
-		block_ilu0_nonlinear_res<double,int,bs,ColMajor>(&mat, plist, &exactilu[0], thread_chunk_size);
+		(
+		 (bs == 1) ?
+		 scalar_ilu0_nonlinear_res<double,int,false,false>(&mat, plist, thread_chunk_size, nullptr,
+		                                                   &scale[0], &exactilu[0])
+		 :
+		 block_ilu0_nonlinear_res<double,int,bs,ColMajor,false>(&mat, plist, nullptr, &exactilu[0],
+		                                                        thread_chunk_size)
+		 )
+		;
+
 	printf(" ILU remainder of serial factorization = %g, rel. residual = %g.\n", checkilures,
 	       checkilures/initilures);
 	fflush(stdout);

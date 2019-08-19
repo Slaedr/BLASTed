@@ -19,12 +19,12 @@ using boost::alignment::aligned_free;
 template <typename scalar, typename index, int bs, StorageOptions stor>
 AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>
 ::AsyncBlockILU0_SRPreconditioner(SRMatrixStorage<const scalar, const index>&& matrix,
-                                  const int nbuildswp, const int napplyswp, const int tcs,
-                                  const FactInit finit, const ApplyInit ainit,
+                                  const int nbuildswp, const int napplyswp, const bool uscl,
+                                  const int tcs, const FactInit finit, const ApplyInit ainit,
                                   const bool tf, const bool ta, const bool comp_rem)
-	: SRPreconditioner<scalar,index>(std::move(matrix)),
-	  iluvals{nullptr}, scale{nullptr}, ytemp{nullptr}, threadedfactor{tf}, threadedapply{ta},
-	  rowscale{false}, nbuildsweeps{nbuildswp}, napplysweeps{napplyswp}, thread_chunk_size{tcs},
+	: SRPreconditioner<scalar,index>(std::move(matrix)), iluvals{nullptr}, scale{nullptr}, ytemp{nullptr},
+	  usescaling{uscl}, threadedfactor{tf}, threadedapply{ta},
+	  nbuildsweeps{nbuildswp}, napplysweeps{napplyswp}, thread_chunk_size{tcs},
 	  factinittype{finit}, applyinittype{ainit}, compute_remainder{comp_rem}
 {
 }
@@ -55,7 +55,7 @@ AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>::~AsyncBlockILU0_SRPrecond
 template <typename scalar, typename index, int bs, StorageOptions stor>
 inline
 void block_ilu0_apply(const CRawBSRMatrix<scalar,index> *const mat,
-                      const scalar *const iluvals,
+                      const scalar *const iluvals, const scalar *const scale,
                       scalar *const __restrict y_temp,
                       const int napplysweeps, const int thread_chunk_size, const bool usethreads,
                       const ApplyInit init_type,
@@ -65,11 +65,21 @@ void block_ilu0_apply(const CRawBSRMatrix<scalar,index> *const mat,
 	using Seg = Segment_t<scalar,bs>;
 
 	const Blk *ilu = reinterpret_cast<const Blk*>(iluvals);
-	const Seg *r = reinterpret_cast<const Seg*>(rr);
+	//const Seg *r = reinterpret_cast<const Seg*>(rr);
 	Seg *z = reinterpret_cast<Seg*>(zz);
 	Seg *y = reinterpret_cast<Seg*>(y_temp);
 
-	// No scaling like z := Sr done here
+	if(scale)
+		// initially, z := Sr
+#pragma omp parallel for simd default(shared)
+		for(index i = 0; i < mat->nbrows*bs; i++) {
+			zz[i] = scale[i]*rr[i];
+		}
+	else
+#pragma omp parallel for simd default(shared)
+		for(index i = 0; i < mat->nbrows*bs; i++) {
+			zz[i] = rr[i];
+		}
 
 	switch(init_type) {
 	case INIT_A_JACOBI:
@@ -93,7 +103,7 @@ void block_ilu0_apply(const CRawBSRMatrix<scalar,index> *const mat,
 		for(index i = 0; i < mat->nbrows; i++)
 		{
 			block_unit_lower_triangular<scalar,index,bs,stor>
-				(ilu, mat->bcolind, mat->browptr[i], mat->diagind[i], r[i], i, y);
+				(ilu, mat->bcolind, mat->browptr[i], mat->diagind[i], z[i], i, y);
 		}
 	}
 
@@ -111,8 +121,9 @@ void block_ilu0_apply(const CRawBSRMatrix<scalar,index> *const mat,
 		{
 			zz[i] = 0;
 		}
+		break;
 	default:
-		;
+		throw std::runtime_error(" scalar_ilu0_apply: Invalid init type!");
 	}
 
 	/* Solves Uz = y by asynchronous Jacobi iteration.
@@ -127,6 +138,12 @@ void block_ilu0_apply(const CRawBSRMatrix<scalar,index> *const mat,
 				(ilu, mat->bcolind, mat->diagind[i], mat->browptr[i+1], y[i], i, z);
 		}
 	}
+
+	// scale z
+	if(scale)
+#pragma omp parallel for simd default(shared)
+		for(int i = 0; i < mat->nbrows*bs; i++)
+			zz[i] = zz[i]*scale[i];
 }
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
@@ -156,9 +173,9 @@ void AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>::setup_storage()
 	else
 		std::cout << "! AsyncBlockILU0_SRPreconditioner: Temp vector is already allocated!\n";
 
-	if(rowscale) {
+	if(usescaling) {
 		if(!scale)
-			scale = (scalar*)aligned_alloc(CACHE_LINE_LEN, mat.nbrows*bs*bs*sizeof(scalar));
+			scale = (scalar*)aligned_alloc(CACHE_LINE_LEN, mat.nbrows*bs*sizeof(scalar));
 		else
 			std::cout << "! AsyncBlockILU0_SRPreconditioner: scale was already allocated!\n";
 	}
@@ -179,7 +196,7 @@ PrecInfo AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>::compute()
 
 	return block_ilu0_factorize<scalar,index,bs,stor>
 		(&mat, plist, nbuildsweeps, thread_chunk_size, threadedfactor, factinittype,
-		 compute_remainder, iluvals);
+		 compute_remainder, iluvals, scale);
 }
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
@@ -187,7 +204,7 @@ void AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>::apply(const scalar *
                                                                   scalar *const __restrict z) const
 {
 	block_ilu0_apply<scalar,index,bs,stor>
-		(&mat, iluvals, ytemp, napplysweeps, thread_chunk_size, threadedapply, applyinittype, r, z);
+		(&mat, iluvals, scale, ytemp, napplysweeps, thread_chunk_size, threadedapply, applyinittype, r, z);
 }
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
@@ -200,11 +217,12 @@ void AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>::apply_relax(const sc
 template <typename scalar, typename index>
 AsyncILU0_SRPreconditioner<scalar,index>::
 AsyncILU0_SRPreconditioner(SRMatrixStorage<const scalar, const index>&& matrix,
-                           const int nbuildswp, const int napplyswp, const int tcs,
+                           const int nbuildswp, const int napplyswp, const bool uscal, const int tcs,
                            const FactInit fi, const ApplyInit ai, const bool compute_preconditioner_info,
                            const bool tf, const bool ta)
 	: SRPreconditioner<scalar,index>(std::move(matrix)),
-	  iluvals{nullptr}, scale{nullptr}, ytemp{nullptr}, threadedfactor{tf}, threadedapply{ta},
+	  iluvals{nullptr}, scale{nullptr}, ytemp{nullptr}, usescaling{uscal},
+	  threadedfactor{tf}, threadedapply{ta},
 	  nbuildsweeps{nbuildswp}, napplysweeps{napplyswp}, thread_chunk_size{tcs},
 	  factinittype{fi}, applyinittype{ai}, compute_precinfo{compute_preconditioner_info}
 { }
@@ -227,10 +245,16 @@ void scalar_ilu0_apply(const CRawBSRMatrix<scalar,index> *const mat,
                        const scalar *const ra, scalar *const __restrict za) 
 {
 	// initially, z := Sr
+	if(scale)
 #pragma omp parallel for simd default(shared)
-	for(index i = 0; i < mat->nbrows; i++) {
-		za[i] = scale[i]*ra[i];
-	}
+		for(index i = 0; i < mat->nbrows; i++) {
+			za[i] = scale[i]*ra[i];
+		}
+	else
+#pragma omp parallel for simd default(shared)
+		for(index i = 0; i < mat->nbrows; i++) {
+			za[i] = ra[i];
+		}
 
 	switch(init_type) {
 	case INIT_A_JACOBI:
@@ -243,7 +267,7 @@ void scalar_ilu0_apply(const CRawBSRMatrix<scalar,index> *const mat,
 	default:
 		;
 	}
-	
+
 	/** solves Ly = Sr by asynchronous Jacobi iterations.
 	 * Note that if done serially, this is a forward-substitution.
 	 */
@@ -271,9 +295,9 @@ void scalar_ilu0_apply(const CRawBSRMatrix<scalar,index> *const mat,
 		}
 		break;
 	default:
-		;
+		throw std::runtime_error(" scalar_ilu0_apply: Invalid init type!");
 	}
-	
+
 	/* Solves Uz = y by asynchronous Jacobi iteration.
 	 * If done serially, this is a back-substitution.
 	 */
@@ -282,19 +306,20 @@ void scalar_ilu0_apply(const CRawBSRMatrix<scalar,index> *const mat,
 #pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size) if(usethreads)
 		for(index i = mat->nbrows-1; i >= 0; i--)
 		{
-			za[i] = scalar_upper_triangular<scalar,index>(iluvals, mat->bcolind, mat->diagind[i], 
+			za[i] = scalar_upper_triangular<scalar,index>(iluvals, mat->bcolind, mat->diagind[i],
 					mat->browptr[i+1], 1.0/iluvals[mat->diagind[i]], ytemp[i], za);
 		}
 	}
 
-	// correct z
+	if(scale)
+		// scale z
 #pragma omp parallel for simd default(shared)
-	for(int i = 0; i < mat->nbrows; i++)
-		za[i] = za[i]*scale[i];
+		for(int i = 0; i < mat->nbrows; i++)
+			za[i] = za[i]*scale[i];
 }
 
 template <typename scalar, typename index>
-void AsyncILU0_SRPreconditioner<scalar,index>::setup_storage(const bool scaling)
+void AsyncILU0_SRPreconditioner<scalar,index>::setup_storage()
 {
 #ifdef DEBUG
 	std::printf(" AsyncILU0 (scalar): First-time setup\n");
@@ -319,7 +344,7 @@ void AsyncILU0_SRPreconditioner<scalar,index>::setup_storage(const bool scaling)
 	else
 		std::cout << "! AsyncILU0: setup_storage(): Temp vector is already allocated!\n";
 
-	if(scaling) {
+	if(usescaling) {
 		if(!scale)
 			scale = (scalar*)aligned_alloc(CACHE_LINE_LEN, mat.nbrows*sizeof(scalar));
 		else
@@ -331,7 +356,7 @@ template <typename scalar, typename index>
 PrecInfo AsyncILU0_SRPreconditioner<scalar,index>::compute()
 {
 	if(!iluvals) {
-		setup_storage(true);
+		setup_storage();
 		plist = compute_ILU_positions_CSR_CSR(&mat);
 	}
 
@@ -375,7 +400,7 @@ ReorderedAsyncILU0_SRPreconditioner<scalar,index>
                                       const int nbuildsweeps, const int napplysweeps, const int tcs,
                                       const FactInit finit, const ApplyInit ainit,
                                       const bool threadedfactor, const bool threadedapply)
-	: AsyncILU0_SRPreconditioner<scalar,index>(std::move(matrix),nbuildsweeps,napplysweeps, tcs,
+	: AsyncILU0_SRPreconditioner<scalar,index>(std::move(matrix),nbuildsweeps,napplysweeps,true, tcs,
 	                                           finit, ainit, threadedfactor,threadedapply),
 	  reord{reorderscale}
 { }
@@ -390,7 +415,7 @@ template <typename scalar, typename index>
 PrecInfo ReorderedAsyncILU0_SRPreconditioner<scalar,index>::compute()
 {
 	if(!iluvals) {
-		setup_storage(true);
+		setup_storage();
 	}
 
 	alignedDestroyRawBSRMatrix<scalar,index>(rsmat);

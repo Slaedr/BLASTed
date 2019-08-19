@@ -17,6 +17,7 @@ device_vector<double> getExactILU(const CRawBSRMatrix<double,int> *const mat,
                                   const device_vector<double>& scale);
 
 /// Computes symmetric scaling vector for scalar async ILU
+template <int bs>
 device_vector<double> getScalingVector(const CRawBSRMatrix<double,int> *const mat);
 
 }
