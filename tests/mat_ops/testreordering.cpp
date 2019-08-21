@@ -10,6 +10,7 @@
 #include <vector>
 #include <string>
 #include <iostream>
+#include <algorithm>
 #include "coomatrix.hpp"
 #include "reorderingscaling.hpp"
 
@@ -38,7 +39,7 @@ std::vector<int> generateOrdering(const int N)
 template <int bs>
 int testVectorReordering(const std::string vecfile, const std::string rsdir)
 {
-	const std::vector<double> ovec = readDenseMatrixMarket<double>(vecfile);
+	const device_vector<double> ovec = readDenseMatrixMarket<double>(vecfile);
 	const int nbrows = static_cast<int>(ovec.size())/bs;
 
 	std::vector<int> ord1 = generateOrdering(nbrows);
@@ -46,7 +47,8 @@ int testVectorReordering(const std::string vecfile, const std::string rsdir)
 	for(int i = 0; i < nbrows; i++)
 		ord2[i] = i;
 
-	std::vector<double> vec1(ovec);
+	std::vector<double> vec1(ovec.size());
+	std::copy(ovec.begin(), ovec.end(), vec1.begin());
 
 	TrivialRS<bs> rs;
 	if(rsdir == "row")

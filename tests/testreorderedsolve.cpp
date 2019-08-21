@@ -59,13 +59,13 @@ int testSolve(const std::string solvertype,
 	COOMatrix<double,int> coom;
 	coom.readMatrixMarket(matfile);
 
-	const std::vector<double> ans = readDenseMatrixMarket<double>(xfile);
-	const std::vector<double> b = readDenseMatrixMarket<double>(bfile);
+	const device_vector<double> ans = readDenseMatrixMarket<double>(xfile);
+	const device_vector<double> b = readDenseMatrixMarket<double>(bfile);
 
 	const CSRMatrixView<double,int> mat(move_to_const<double,int>
 	                                    (getSRMatrixFromCOO<double,int,1>(coom, storageorder)));
 
-	std::vector<double> x(mat.dim(),0.0);
+	device_vector<double> x(mat.dim(),0.0);
 
 	// reference solve - no scaling
 	SRPreconditioner<double,int>* prec = nullptr;

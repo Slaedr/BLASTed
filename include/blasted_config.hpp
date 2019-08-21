@@ -23,16 +23,21 @@ using Vector = Matrix<scalar,Dynamic,1>;
 /** \warning Eigen assumes whatever alignment is necessary for efficient vectorization.
  *    This will be a problem when the data passed in by an external library is not aligned.
  *    If that is the case, we need to change the last template param to layout|Eigen::DontAlign.
+ *    Otherwise, we can add DontAlign in specific places, eg.,
+ *    `using Blk = Block_t<scalar,bs,static_cast<StorageOptions>(stor|Eigen::DontAlign)>;`
  *    In that case, the code may be somewhat slower.
  */
 template <typename scalar, int bs, Eigen::StorageOptions layout>
 using Block_t = Eigen::Matrix<scalar,bs,bs,layout>;
 
 /// Type to represent a small segment of a vector
-/** Note that Eigen is asked to assume no alignment.
+/** Note that it assumes aligned allocation.
  */
 template <typename scalar, int bs>
-using Segment_t = Eigen::Matrix<scalar,bs,1,Eigen::ColMajor|Eigen::DontAlign>;
+using Segment_t = Eigen::Matrix<scalar,bs,1,Eigen::ColMajor>;
+
+// Non-aligned type, in case it's ever needed
+//using Segment_t = Eigen::Matrix<scalar,bs,1,Eigen::ColMajor|Eigen::DontAlign>;
 
 }
 

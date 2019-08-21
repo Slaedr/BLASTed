@@ -258,16 +258,14 @@ scalar block_ilu0_nonlinear_res(const CRawBSRMatrix<scalar,index> *const mat,
                                 const scalar *const iluvals,
                                 const int thread_chunk_size)
 {
-	//using Blk = Block_t<scalar,bs,static_cast<StorageOptions>(stor|Eigen::DontAlign)>;
 	using Blk = Block_t<scalar,bs,stor>;
 
 	const Blk *const mvals = reinterpret_cast<const Blk*>(mat->vals);
 	const Blk *const ilu = reinterpret_cast<const Blk*>(iluvals);
 
 	scalar resnorm = 0;
-	scalar anorm = 0;      // original matrix
 
-#pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size) reduction(+:resnorm,anorm)
+#pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size) reduction(+:resnorm)
 	for(index irow = 0; irow < mat->nbrows; irow++)
 	{
 		for(index jj = mat->browptr[irow]; jj < mat->browptr[irow+1]; jj++)
@@ -286,16 +284,11 @@ scalar block_ilu0_nonlinear_res(const CRawBSRMatrix<scalar,index> *const mat,
 
 			// Take the vector 1-norm of all non-zero entries
 			scalar blockresnorm = 0;
-			scalar blockanorm = 0;
 			for(int i = 0; i < bs; i++)
 				for(int j = 0; j < bs; j++)
-				{
 					blockresnorm += std::abs(sum(i,j));
-					blockanorm += std::abs(mvals[jj](i,j));
-				}
 
 			resnorm += blockresnorm;
-			anorm += blockanorm;
 		}
 	}
 

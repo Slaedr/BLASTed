@@ -184,19 +184,17 @@ scalar scalar_ilu0_nonlinear_res(const CRawBSRMatrix<scalar,index> *const mat,
                                  const scalar *const iluvals)
 {
 	scalar resnorm = 0;
-	scalar anorm = 0;
 	if(needscalerow) {
 		assert(rowscale);
 		assert(colscale);
 	}
 
-#pragma omp parallel for schedule(dynamic, thread_chunk_size) reduction(+:resnorm,anorm)
+#pragma omp parallel for schedule(dynamic, thread_chunk_size) reduction(+:resnorm)
 	for(index irow = 0; irow < mat->nbrows; irow++)
 	{
 		for(index j = mat->browptr[irow]; j < mat->browptr[irow+1]; j++)
 		{
 			scalar sum = mat->vals[j];
-			anorm += std::abs(sum);
 
 			if(needscalerow)
 				sum *= rowscale[irow];

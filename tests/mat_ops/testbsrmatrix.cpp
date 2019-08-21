@@ -23,8 +23,8 @@ int testBSRMatMult(const std::string type, const std::string storageorder,
 	COOMatrix<double,int> coom;
 	coom.readMatrixMarket(matfile);
 
-	const std::vector<double> x = readDenseMatrixMarket<double>(xvec);
-	const std::vector<double> ans = readDenseMatrixMarket<double>(prodvec);
+	const device_vector<double> x = readDenseMatrixMarket<double>(xvec);
+	const device_vector<double> ans = readDenseMatrixMarket<double>(prodvec);
 
 	std::unique_ptr<AbstractLinearOperator<double,int>> testmat;
 	if(type == "view") {
@@ -39,7 +39,7 @@ int testBSRMatMult(const std::string type, const std::string storageorder,
 		testmat = std::make_unique<BSRMatrix<double,int,bs>>
 			(getSRMatrixFromCOO<double,int,bs>(coom, "rowmajor"));
 	
-	std::vector<double> y(testmat->dim());
+	device_vector<double> y(testmat->dim());
 
 	testmat->apply(x.data(), y.data());
 
@@ -51,6 +51,8 @@ int testBSRMatMult(const std::string type, const std::string storageorder,
 }
 
 template int testBSRMatMult<3>(const std::string type, const std::string storageorder,
-		const std::string matfile, const std::string xvec, const std::string prodvec);
+                               const std::string matfile, const std::string xvec,
+                               const std::string prodvec);
 template int testBSRMatMult<7>(const std::string type, const std::string storageorder,
-		const std::string matfile, const std::string xvec, const std::string prodvec);
+                               const std::string matfile, const std::string xvec,
+                               const std::string prodvec);

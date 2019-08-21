@@ -37,8 +37,8 @@ int testSolve(const std::string solvertype, const std::string precontype,
 	COOMatrix<double,int> coom;
 	coom.readMatrixMarket(matfile);
 
-	const std::vector<double> ans = readDenseMatrixMarket<double>(xfile);
-	const std::vector<double> b = readDenseMatrixMarket<double>(bfile);
+	const device_vector<double> ans = readDenseMatrixMarket<double>(xfile);
+	const device_vector<double> b = readDenseMatrixMarket<double>(bfile);
 
 	SRMatrixView<double,int>* mat = nullptr;
 	if (bs==1)
@@ -55,7 +55,7 @@ int testSolve(const std::string solvertype, const std::string precontype,
 	SRMatrixStorage<const double, const int> cmat = move_to_const<double,int>
 		(getSRMatrixFromCOO<double,int,bs>(coom, storageorder));
 
-	std::vector<double> x(mat->dim(),0.0);
+	device_vector<double> x(mat->dim(),0.0);
 
 	// construct preconditioner context
 

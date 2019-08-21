@@ -8,6 +8,7 @@
 #include <iostream>
 #include <vector>
 #include <sys/time.h>
+#include "device_container.hpp"
 #include "solvers.hpp"
 
 namespace blasted {
@@ -87,8 +88,8 @@ int RichardsonSolver::solve(const a_real *const res, a_real *const __restrict du
 	a_real resnorm=0;
 	int step = 0;
 	const a_int N = A.dim();
-	std::vector<a_real> s(A.dim());
-	std::vector<a_real> ddu(A.dim());
+	device_vector<a_real> s(A.dim());
+	device_vector<a_real> ddu(A.dim());
 
 	// norm of RHS
 	const a_real bnorm = std::sqrt(dot(N, res, res));
@@ -128,14 +129,14 @@ int BiCGSTAB::solve(const a_real *const res, a_real *const __restrict du) const
 	const a_int N = A.dim();
 
 	a_real omega = 1.0, rho, rhoold = 1.0, alpha = 1.0, beta;
-	std::vector<a_real> rhat(N);
-	std::vector<a_real> r(N);
-	std::vector<a_real> p(N);
-	std::vector<a_real> v(N);
-	std::vector<a_real> y(N);
-	std::vector<a_real> z(N);
-	std::vector<a_real> t(N);
-	std::vector<a_real> g(N);
+	device_vector<a_real> rhat(N);
+	device_vector<a_real> r(N);
+	device_vector<a_real> p(N);
+	device_vector<a_real> v(N);
+	device_vector<a_real> y(N);
+	device_vector<a_real> z(N);
+	device_vector<a_real> t(N);
+	device_vector<a_real> g(N);
 
 #pragma omp parallel for simd default(shared)
 	for(a_int i = 0; i < N; i++) {

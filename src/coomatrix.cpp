@@ -139,7 +139,7 @@ std::vector<index> getSizeFromMatrixMarket(std::ifstream& fin, const MMDescripti
 }
 
 template <typename scalar>
-std::vector<scalar> readDenseMatrixMarket(const std::string file)
+device_vector<scalar> readDenseMatrixMarket(const std::string file)
 {
 	std::ifstream fin(file);
 	if(!fin) {
@@ -163,7 +163,7 @@ std::vector<scalar> readDenseMatrixMarket(const std::string file)
 		throw "Size vector has less than 2 entries!";
 	}
 
-	std::vector<scalar> vals(sizes[0]*sizes[1]);
+	device_vector<scalar> vals(sizes[0]*sizes[1]);
 	for(int i = 0; i < sizes[0]*sizes[1]; i++)
 		fin >> vals[i];
 
@@ -171,8 +171,8 @@ std::vector<scalar> readDenseMatrixMarket(const std::string file)
 	return vals;
 }
 
-template std::vector<double> readDenseMatrixMarket<double>(const std::string file);
-template std::vector<float> readDenseMatrixMarket<float>(const std::string file);
+template device_vector<double> readDenseMatrixMarket<double>(const std::string file);
+template device_vector<float> readDenseMatrixMarket<float>(const std::string file);
 
 template <typename scalar, typename index>
 COOMatrix<scalar,index>::COOMatrix()
@@ -392,8 +392,8 @@ SRMatrixStorage<scalar,index> COOMatrix<scalar,index>::convertToBSR() const
 			                               curbcol);
 
 			if(bcptr == &bmat.bcolind[0] + bmat.browptr[curbrow+1]) {
-				std::cout << "! convertToBSR: Error: Memory not found for " << irow << ", "
-					<< curcol << std::endl;
+				std::cout << "! convertToBSR: Error: Location not found for " << irow << ", "
+				          << curcol << std::endl;
 				std::abort();
 			}
 

@@ -17,8 +17,8 @@ int testCSRMatMult(const std::string type,
 	COOMatrix<double,int> coom;
 	coom.readMatrixMarket(matfile);
 
-	const std::vector<double> x = readDenseMatrixMarket<double>(xvec);
-	const std::vector<double> ans = readDenseMatrixMarket<double>(prodvec);
+	const device_vector<double> x = readDenseMatrixMarket<double>(xvec);
+	const device_vector<double> ans = readDenseMatrixMarket<double>(prodvec);
 	
 	AbstractLinearOperator<double,int>* testmat = nullptr;
 	if(type == "view") {
@@ -28,7 +28,7 @@ int testCSRMatMult(const std::string type,
 	else
 		testmat = new BSRMatrix<double,int,1>(getSRMatrixFromCOO<double,int,1>(coom, ""));
 
-	std::vector<double> y(testmat->dim());
+	device_vector<double> y(testmat->dim());
 	testmat->apply(x.data(), y.data());
 
 	for(int i = 0; i < testmat->dim(); i++) {
