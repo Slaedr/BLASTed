@@ -41,6 +41,7 @@ std::array<scalar,4> diagonal_dominance(const SRMatrixStorage<const scalar,const
  * \return The first entry is the average diagonal dominance while the second is the minimum.
  */
 template <typename scalar, typename index, int bs, StorageOptions stor>
+[[deprecated]]
 std::array<scalar,2> diagonal_dominance_upper(const SRMatrixStorage<const scalar,const index>&& mat);
 
 /// Computes the average and minimum diaginal dominance of the (block-)lower triangular factor matrix
@@ -49,6 +50,7 @@ std::array<scalar,2> diagonal_dominance_upper(const SRMatrixStorage<const scalar
  * \return The first entry is the average diagonal dominance while the second is the minimum.
  */
 template <typename scalar, typename index, int bs, StorageOptions stor>
+[[deprecated]]
 std::array<scalar,2> diagonal_dominance_lower(const SRMatrixStorage<const scalar,const index>&& mat);
 
 }
