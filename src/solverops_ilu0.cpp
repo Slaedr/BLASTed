@@ -53,7 +53,6 @@ AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>::~AsyncBlockILU0_SRPrecond
  * \param[in,out] z The solution vector of the preconditioning problem Mz = r
  */
 template <typename scalar, typename index, int bs, StorageOptions stor>
-inline
 void block_ilu0_apply(const CRawBSRMatrix<scalar,index> *const mat,
                       const scalar *const iluvals, const scalar *const scale,
                       scalar *const __restrict y_temp,
@@ -97,9 +96,10 @@ void block_ilu0_apply(const CRawBSRMatrix<scalar,index> *const mat,
 	/** solves Ly = Sr by asynchronous Jacobi iterations.
 	 * Note that if done serially, this is a forward-substitution.
 	 */
+#pragma omp parallel default(shared) if(usethreads)
 	for(int isweep = 0; isweep < napplysweeps; isweep++)
 	{
-#pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size) if(usethreads)
+#pragma omp for schedule(dynamic, thread_chunk_size) nowait
 		for(index i = 0; i < mat->nbrows; i++)
 		{
 			block_unit_lower_triangular<scalar,index,bs,stor>
@@ -129,9 +129,10 @@ void block_ilu0_apply(const CRawBSRMatrix<scalar,index> *const mat,
 	/* Solves Uz = y by asynchronous Jacobi iteration.
 	 * If done serially, this is a back-substitution.
 	 */
+#pragma omp parallel default(shared) if(usethreads)
 	for(int isweep = 0; isweep < napplysweeps; isweep++)
 	{
-#pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size) if(usethreads)
+#pragma omp for schedule(dynamic, thread_chunk_size) nowait
 		for(index i = mat->nbrows-1; i >= 0; i--)
 		{
 			block_upper_triangular<scalar,index,bs,stor>
@@ -236,7 +237,6 @@ AsyncILU0_SRPreconditioner<scalar,index>::~AsyncILU0_SRPreconditioner()
 }
 
 template <typename scalar, typename index>
-inline
 void scalar_ilu0_apply(const CRawBSRMatrix<scalar,index> *const mat,
                        const scalar *const iluvals, const scalar *const scale,
                        scalar *const __restrict ytemp,
@@ -271,9 +271,10 @@ void scalar_ilu0_apply(const CRawBSRMatrix<scalar,index> *const mat,
 	/** solves Ly = Sr by asynchronous Jacobi iterations.
 	 * Note that if done serially, this is a forward-substitution.
 	 */
+#pragma omp parallel default(shared) if(usethreads)
 	for(int isweep = 0; isweep < napplysweeps; isweep++)
 	{
-#pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size) if(usethreads)
+#pragma omp for schedule(dynamic, thread_chunk_size) nowait
 		for(index i = 0; i < mat->nbrows; i++)
 		{
 			ytemp[i] = scalar_unit_lower_triangular(iluvals, mat->bcolind, mat->browptr[i],
@@ -301,9 +302,10 @@ void scalar_ilu0_apply(const CRawBSRMatrix<scalar,index> *const mat,
 	/* Solves Uz = y by asynchronous Jacobi iteration.
 	 * If done serially, this is a back-substitution.
 	 */
+#pragma omp parallel default(shared) if(usethreads)
 	for(int isweep = 0; isweep < napplysweeps; isweep++)
 	{
-#pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size) if(usethreads)
+#pragma omp for schedule(dynamic, thread_chunk_size) nowait
 		for(index i = mat->nbrows-1; i >= 0; i--)
 		{
 			za[i] = scalar_upper_triangular<scalar,index>(iluvals, mat->bcolind, mat->diagind[i],

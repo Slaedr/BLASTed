@@ -21,6 +21,7 @@ scalar scalar_fgs(const scalar *const __restrict vals, const index *const __rest
                   const scalar *const __restrict x)
 {
 	scalar inter = 0;
+#pragma omp simd reduction(+:inter)
 	for(index jj = rowstart; jj < diagind; jj++)
 		inter += vals[jj]*x[colind[jj]];
 
@@ -35,6 +36,7 @@ scalar scalar_bgs(const scalar *const __restrict vals, const index *const __rest
                   const scalar *const __restrict x)
 {
 	scalar inter = 0;
+#pragma omp simd reduction(+:inter)
 	for(index jj = diagind+1; jj < nextrowstart; jj++)
 		inter += vals[jj]*x[colind[jj]];
 
@@ -75,14 +77,14 @@ void block_bgs(const Block_t<scalar,bs,stor> *const vals, const index *const bco
 
 } // end kernels
 
-/// Forward Gauss-Seidel solve
+/// Forward Gauss-Seidel solve - to be called from within a parallel region
 template <typename scalar, typename index>
 void perform_scalar_fgs(const CRawBSRMatrix<scalar,index>& mat, const scalar *const diaginv,
                         const int thread_chunk_size,
                         const scalar *const rr, scalar *const __restrict ytemp)
 {
 	// forward sweep ytemp := D^(-1) (r - L ytemp)
-#pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size)
+#pragma omp for schedule(dynamic, thread_chunk_size) nowait
 	for(index irow = 0; irow < mat.nbrows; irow++)
 	{
 		ytemp[irow] = kernels::scalar_fgs(mat.vals, mat.bcolind, mat.browptr[irow], mat.diagind[irow],
@@ -90,14 +92,14 @@ void perform_scalar_fgs(const CRawBSRMatrix<scalar,index>& mat, const scalar *co
 	}
 }
 
-/// Forward Gauss-Seidel solve
+/// Forward Gauss-Seidel solve - to be called from within a parallel region
 template <typename scalar, typename index>
 void perform_scalar_bgs(const CRawBSRMatrix<scalar,index>& mat, const scalar *const diaginv,
                         const int thread_chunk_size,
                         const scalar *const ytemp, scalar *const __restrict zz)
 {
 	// backward sweep z := D^(-1) (D y - U z)
-#pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size)
+#pragma omp for schedule(dynamic, thread_chunk_size) nowait
 	for(index irow = mat.nbrows-1; irow >= 0; irow--)
 	{
 		zz[irow] = kernels::scalar_bgs(mat.vals, mat.bcolind, mat.diagind[irow], mat.browptr[irow+1],
@@ -105,7 +107,7 @@ void perform_scalar_bgs(const CRawBSRMatrix<scalar,index>& mat, const scalar *co
 	}
 }
 
-/// Forward Gauss-Seidel solve
+/// Forward Gauss-Seidel solve (to be called from within a parallel region)
 /** \param mat The original matrix
  * \param diagblks Inverses of all diagonal blocks of the original matrix
  * \param thread_chunk_size Number of work-items in each 'chunk' of work-items
@@ -122,7 +124,7 @@ void perform_block_fgs(const CRawBSRMatrix<scalar,index>& mat,
 		= reinterpret_cast<const Block_t<scalar,bs,stor>*>(mat.vals);
 
 	// forward sweep ytemp := D^(-1) (r - L ytemp)
-#pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size)
+#pragma omp for schedule(dynamic, thread_chunk_size) nowait
 	for(index irow = 0; irow < mat.nbrows; irow++)
 	{
 		kernels::block_fgs<scalar,index,bs,stor>(mvals, mat.bcolind, irow, mat.browptr[irow], 
@@ -130,7 +132,7 @@ void perform_block_fgs(const CRawBSRMatrix<scalar,index>& mat,
 	}
 }
 
-/// Backward Gauss-Seidel solve
+/// Backward Gauss-Seidel solve (to be called from within a parallel region)
 /** \param mat The original matrix
  * \param diagblks Inverses of all diagonal blocks of the original matrix
  * \param thread_chunk_size Number of work-items in each 'chunk' of work-items
@@ -147,7 +149,7 @@ void perform_block_bgs(const CRawBSRMatrix<scalar,index>& mat,
 		= reinterpret_cast<const Block_t<scalar,bs,stor>*>(mat.vals);
 
 	// backward sweep z := D^(-1) (D y - U z)
-#pragma omp parallel for default(shared) schedule(dynamic, thread_chunk_size)
+#pragma omp for schedule(dynamic, thread_chunk_size) nowait
 	for(index irow = mat.nbrows-1; irow >= 0; irow--)
 	{
 		kernels::block_bgs<scalar, index, bs, stor>(mvals, mat.bcolind, irow, mat.diagind[irow],

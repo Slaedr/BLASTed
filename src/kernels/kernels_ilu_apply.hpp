@@ -18,6 +18,7 @@ scalar scalar_unit_lower_triangular(const scalar *const __restrict vals,
 		const scalar rhs, const scalar *const __restrict x)
 {
 	scalar inter = 0;
+#pragma omp simd reduction(+:inter)
 	for(index jj = rowstart; jj < diagind; jj++)
 		inter += vals[jj]*x[colind[jj]];
 
@@ -32,6 +33,7 @@ scalar scalar_upper_triangular(const scalar *const __restrict vals,
 		const scalar *const __restrict x)
 {
 	scalar inter = 0;
+#pragma omp simd reduction(+:inter)
 	for(index jj = diagind+1; jj < nextrowstart; jj++)
 		inter += vals[jj]*x[colind[jj]];
 

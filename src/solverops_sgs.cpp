@@ -74,6 +74,7 @@ void AsyncBlockSGS_SRPreconditioner<scalar,index,bs,stor>::apply(const scalar *c
 		for(index i = 0; i < mat.nbrows*bs; i++)
 			zz[i] = 0;
 
+#pragma omp parallel default(shared)
 	for(int isweep = 0; isweep < napplysweeps; isweep++)
 	{
 		// backward sweep z := D^(-1) (D y - U z)
@@ -167,6 +168,7 @@ void AsyncSGS_SRPreconditioner<scalar,index>::apply(const scalar *const rr,
 		for(index i = 0; i < mat.nbrows; i++)
 			zz[i] = 0;
 
+#pragma omp parallel default(shared)
 	for(int isweep = 0; isweep < napplysweeps; isweep++)
 	{
 		// backward sweep z := D^(-1) (D y - U z)
