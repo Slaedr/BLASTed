@@ -287,7 +287,7 @@ int runComparisonVsPetsc_cpp(const DiscreteLinearProblem lp)
 			//assert(pilist->infolist[i].prec_remainder_norm() < 100.0);
 			assert(pilist->infolist[i].prec_remainder_norm() < pilist->infolist[i].prec_rem_initial_norm());
 			if(nthreads == 1)
-				assert(pilist->infolist[i].prec_remainder_norm() < 1e-12);
+				assert(pilist->infolist[i].prec_remainder_norm() < 1e-11);
 			assert(pilist->infolist[i].upper_avg_diag_dom() < 1);
 			assert(pilist->infolist[i].upper_min_diag_dom() <= 1);
 			assert(pilist->infolist[i].lower_avg_diag_dom() < 1);

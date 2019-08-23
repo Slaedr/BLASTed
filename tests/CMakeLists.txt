@@ -341,7 +341,7 @@ if(WITH_PETSC)
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.pmat 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.pmat
 	-options_file ${CMAKE_CURRENT_SOURCE_DIR}/input/asyncpreconditioning.perc -mat_type baij
-	-ref_sub_pc_type ilu -blasted_pc_type ilu0 -blasted_async_sweeps 2,3 -blasted_use_symmetric_scaling 0
+	-ref_sub_pc_type ilu -blasted_pc_type ilu0 -blasted_async_sweeps 2,4 -blasted_use_symmetric_scaling 0
 	-test_type compare_its -error_tolerance 0.01
 	)
 
@@ -351,7 +351,7 @@ if(WITH_PETSC)
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.pmat 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.pmat
 	-options_file ${CMAKE_CURRENT_SOURCE_DIR}/input/asyncpreconditioning.perc -mat_type baij
-	-ref_sub_pc_type ilu -blasted_pc_type ilu0 -blasted_async_sweeps 2,3 -blasted_use_symmetric_scaling 1
+	-ref_sub_pc_type ilu -blasted_pc_type ilu0 -blasted_async_sweeps 2,4 -blasted_use_symmetric_scaling 1
 	-test_type compare_its -error_tolerance 0.01
 	)
 
@@ -363,7 +363,7 @@ if(WITH_PETSC)
   	-options_file ${CMAKE_CURRENT_SOURCE_DIR}/input/asyncpreconditioning.perc -mat_type baij
   	-ref_sub_pc_type ilu -blasted_pc_type ilu0 -blasted_async_sweeps 3,8 -blasted_use_symmetric_scaling 0
 	-blasted_compute_preconditioner_info
-  	-test_type compare_its -error_tolerance 1e-4 -num_runs 3
+  	-test_type compare_its -error_tolerance 0.05 -num_runs 3
   	)
 
   add_test(NAME ThreadedPreconditioningDiagnostics-Petsc-BSR4-Async-ILU0-Scaled
@@ -374,7 +374,7 @@ if(WITH_PETSC)
   	-options_file ${CMAKE_CURRENT_SOURCE_DIR}/input/asyncpreconditioning.perc -mat_type baij
   	-ref_sub_pc_type ilu -blasted_pc_type ilu0 -blasted_async_sweeps 3,8 -blasted_use_symmetric_scaling 1
 	-blasted_compute_preconditioner_info
-  	-test_type compare_its -error_tolerance 1e-4 -num_runs 3
+  	-test_type compare_its -error_tolerance 0.05 -num_runs 3
   	)
   
 endif()
