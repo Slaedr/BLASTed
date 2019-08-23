@@ -38,6 +38,7 @@ void async_ilu0_factorize_kernel(const CRawBSRMatrix<scalar,index> *const mat,
 		 * If another core reads iluvals[j] while it contains a temporary value, it would violate the
 		 * Chazan-Miranker and Frommer-Szyld concepts of chaotic/asynchronous iteration.
 		 */
+#pragma omp simd reduction(-:sum)
 		for(index k = plist.posptr[j]; k < plist.posptr[j+1]; k++)
 		{
 			sum -= iluvals[plist.lowerp[k]]*iluvals[plist.upperp[k]];
