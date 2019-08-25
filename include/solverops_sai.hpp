@@ -23,7 +23,8 @@ class LeftSAIPreconditioner : public SRPreconditioner<scalar,index>
 	static_assert(bs > 0, "Block size must be positive!");
 	static_assert(stor == RowMajor || stor == ColMajor, "Invalid storage option!");
 public:
-	LeftSAIPreconditioner(SRMatrixStorage<const scalar, const index>&& matrix);
+	LeftSAIPreconditioner(SRMatrixStorage<const scalar, const index>&& matrix,
+	                      const int thread_chunk_size);
 
 	bool relaxationAvailable() const { return false; }
 
@@ -37,6 +38,11 @@ public:
 	void apply_relax(const scalar *const x, scalar *const __restrict y) const;
 
 protected:
+	using SRPreconditioner<scalar,index>::pmat;
+
+	/// Size of each chunk of work-items
+	const int thread_chunk_size;
+
 	/// SAI preprocessing data
 	LeftSAIImpl<scalar,index> impl;
 };

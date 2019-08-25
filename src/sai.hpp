@@ -61,8 +61,8 @@ LeftSAIPattern<index> left_incomplete_SAI_pattern(const SRMatrixStorage<const sc
  * \param[out] sai The approximate inverse matrix preallocated to the same size as the original matrix
  */
 template <typename scalar, typename index, int bs, StorageOptions stor>
-void compute_SAI(const CRawBSRMatrix<scalar,index>& mat, const LeftSAIPattern<index>& sp,
-                 const int thread_chunk_size, const bool fullsai, RawBSRMatrix<scalar,index>& sai);
+void compute_SAI(const SRMatrixStorage<const scalar,const index>& mat, const LeftSAIPattern<index>& sp,
+                 const int thread_chunk_size, const bool fullsai, SRMatrixStorage<scalar,index>& sai);
 
 }
 
