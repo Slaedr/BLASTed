@@ -68,36 +68,41 @@ template <int bs, StorageOptions stor>
 SRPreconditioner<scalar,index>*
 SRFactory<scalar,index>
 ::create_srpreconditioner_of_type(SRMatrixStorage<const scalar,const index>&& mat,
-                                  const AsyncSolverSettings& opts) const
+                                  const SolverSettings& opts) const
 {
 	if(opts.prectype == BLASTED_JACOBI) {
 		return new BJacobiSRPreconditioner<scalar,index,bs,stor>(std::move(mat));
 	}
 	else if(opts.prectype == BLASTED_GS) {
-		return new ChaoticBlockRelaxation<scalar,index,bs,stor>(std::move(mat), opts.napplysweeps,
+		const AsyncSolverSettings& aopts = dynamic_cast<const AsyncSolverSettings&>(opts);
+		return new ChaoticBlockRelaxation<scalar,index,bs,stor>(std::move(mat), aopts.napplysweeps,
 		                                                        opts.thread_chunk_size);
 	}
 	else if(opts.prectype == BLASTED_SGS) {
+		const AsyncSolverSettings& aopts = dynamic_cast<const AsyncSolverSettings&>(opts);
 		return new AsyncBlockSGS_SRPreconditioner<scalar,index,bs,stor>
-			(std::move(mat), opts.napplysweeps, opts.apply_inittype, opts.thread_chunk_size);
+			(std::move(mat), aopts.napplysweeps, aopts.apply_inittype, opts.thread_chunk_size);
 	}
 	else if(opts.prectype == BLASTED_ILU0) {
+		const AsyncSolverSettings& aopts = dynamic_cast<const AsyncSolverSettings&>(opts);
 		return new AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>
-			(std::move(mat), opts.nbuildsweeps, opts.napplysweeps, opts.thread_chunk_size,
-			 opts.fact_inittype, opts.apply_inittype, true, true, opts.compute_precinfo);
+			(std::move(mat), aopts.nbuildsweeps, aopts.napplysweeps, opts.thread_chunk_size,
+			 aopts.fact_inittype, aopts.apply_inittype, true, true, opts.compute_precinfo);
 	}
 	else if(opts.prectype == BLASTED_SAPILU0) {
+		const AsyncSolverSettings& aopts = dynamic_cast<const AsyncSolverSettings&>(opts);
 		return new AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>
-			(std::move(mat), opts.nbuildsweeps, opts.napplysweeps, opts.thread_chunk_size,
-			 opts.fact_inittype, opts.apply_inittype, true, false, opts.compute_precinfo);
+			(std::move(mat), aopts.nbuildsweeps, aopts.napplysweeps, opts.thread_chunk_size,
+			 aopts.fact_inittype, aopts.apply_inittype, true, false, opts.compute_precinfo);
 	}
 	else if(opts.prectype == BLASTED_LEVEL_SGS) {
 		return new Level_BSGS<scalar,index,bs,stor>(std::move(mat));
 	}
 	else if(opts.prectype == BLASTED_ASYNC_LEVEL_ILU0) {
-		return new Async_Level_BlockILU0<scalar,index,bs,stor>(std::move(mat),opts.nbuildsweeps,
+		const AsyncSolverSettings& aopts = dynamic_cast<const AsyncSolverSettings&>(opts);
+		return new Async_Level_BlockILU0<scalar,index,bs,stor>(std::move(mat),aopts.nbuildsweeps,
 		                                                       opts.thread_chunk_size,
-		                                                       opts.fact_inittype, true,
+		                                                       aopts.fact_inittype, true,
 		                                                       opts.compute_precinfo);
 	}
 	else if(opts.prectype == BLASTED_NO_PREC) {

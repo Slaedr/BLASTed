@@ -36,6 +36,8 @@ const std::string cscbgsstr = "cscbgs";
 const std::string levelsgsstr = "level_sgs";
 /// Asynchronous factorized ILU0 with level-scheduled application
 const std::string asynclevelilustr = "async_level_ilu0";
+/// SAI
+const std::string saistr = "sai";
 /** @} */
 
 /// Basic settings needed for most iterations
@@ -48,6 +50,7 @@ struct SolverSettings {
 	 */
 	bool relax;
 	int thread_chunk_size;                ///< Number of work-items (iterations) in each thread chunk
+	bool compute_precinfo;                ///< Set to true if extra information is needed
 
 	/// Default destructor
 	virtual ~SolverSettings() = default;
@@ -59,7 +62,6 @@ struct AsyncSolverSettings : public SolverSettings {
 	int napplysweeps;                     ///< Number of apply sweeps
 	FactInit fact_inittype;               ///< Initialization type for asynchronous factorization
 	ApplyInit apply_inittype;             ///< Initialization type for asynchronous triangular solves
-	bool compute_precinfo;                ///< Set to true if extra information is needed
 };
 
 template <typename scalar, typename index>
@@ -103,7 +105,7 @@ private:
 	template <int bs, StorageOptions stor>
 	SRPreconditioner<scalar,index> *
 	create_srpreconditioner_of_type(SRMatrixStorage<const scalar, const index>&& prec_matrix,
-	                                const AsyncSolverSettings& opts) const;
+	                                const SolverSettings& opts) const;
 };
 
 }
