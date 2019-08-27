@@ -18,9 +18,9 @@
 using namespace blasted;
 
 template <int bs>
-int test_ilu_convergence(const CRawBSRMatrix<double,int>& mat, const ILUPositions<int>& plist,
-                         const double tol, const int maxsweeps, const bool usescale,
-                         const int thread_chunk_size, const std::string initialization);
+int test_fullyasync_ilu_convergence(const CRawBSRMatrix<double,int>& mat, const ILUPositions<int>& plist,
+                                    const double tol, const int maxsweeps, const bool usescale,
+                                    const int thread_chunk_size, const std::string initialization);
 
 template <int bs>
 int test_async_triangular_solve(const CRawBSRMatrix<double,int>& mat, const ILUPositions<int>& plist,
@@ -68,12 +68,12 @@ int main(int argc, char *argv[])
 	if(testtype == "ailu")
 		switch(bs) {
 		case 1:
-			ierr = test_ilu_convergence<1>(mat, plist, tol, maxsweeps, usescale,
-			                               thread_chunk_size, initialization);
+			ierr = test_fullyasync_ilu_convergence<1>(mat, plist, tol, maxsweeps, usescale,
+			                                          thread_chunk_size, initialization);
 			break;
 		case 4:
-			ierr = test_ilu_convergence<4>(mat, plist, tol, maxsweeps, usescale,
-			                               thread_chunk_size, initialization);
+			ierr = test_fullyasync_ilu_convergence<4>(mat, plist, tol, maxsweeps, usescale,
+			                                          thread_chunk_size, initialization);
 			break;
 		default:
 			throw std::out_of_range("Block size " + std::to_string(bs) + " not supported!");

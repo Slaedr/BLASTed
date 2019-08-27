@@ -51,10 +51,20 @@ static void check_initial(const CRawBSRMatrix<double,int>& mat, const ILUPositio
                           const std::string initialization,
                           const device_vector<double>& exactilu, const device_vector<double>& iluvals);
 
+template <int bs> static
+void check_convergence(const CRawBSRMatrix<double,int>& mat, const ILUPositions<int>& plist,
+                       const device_vector<double>& scale, const bool usescale,
+                       const device_vector<double>& iluvals, const device_vector<double>& exactilu,
+                       const double initLerr, const double initUerr, const int thread_chunk_size,
+                       const std::string initialization, const double tolerance,
+                       int& isweep, int& current_max_sweeps, bool& converged);
+
+/// Carry out convergence test of partially async ILU to the exact incomplete L and U factors
 template <int bs>
-int test_ilu_convergence(const CRawBSRMatrix<double,int>& mat, const ILUPositions<int>& plist,
-                         const double tol, const int maxsweeps, const bool usescale,
-                         const int thread_chunk_size, const std::string initialization)
+int test_partiallyasync_ilu_convergence(const CRawBSRMatrix<double,int>& mat,
+                                        const ILUPositions<int>& plist,
+                                        const double tol, const int maxsweeps, const bool usescale,
+                                        const int thread_chunk_size, const std::string initialization)
 {
 	int ierr = 0;
 
@@ -87,15 +97,15 @@ int test_ilu_convergence(const CRawBSRMatrix<double,int>& mat, const ILUPosition
 
 	check_initial<bs>(mat, plist, scale, thread_chunk_size, initialization, exactilu, iluvals);
 
-	Blk<bs> *const ilu = reinterpret_cast<Blk<bs>*>(&iluvals[0]);
-	const Blk<bs> *const mvals = reinterpret_cast<const Blk<bs>*>(mat.vals);
-
 	int isweep = 0;
-	double Lerr = 1.0, Uerr = 1.0, ilures = 1.0;
+	//double Lerr = 1.0, Uerr = 1.0, ilures = 1.0;
 	bool converged = (initialization == "exact") ? true : false;
 	int curmaxsweeps = maxsweeps;
 
 	printf(" %5s %10s %10s %10s\n", "Sweep", "L-norm","U-norm","NL-Res");
+
+	Blk<bs> *const ilu = reinterpret_cast<Blk<bs>*>(&iluvals[0]);
+	const Blk<bs> *const mvals = reinterpret_cast<const Blk<bs>*>(mat.vals);
 
 	while(isweep < curmaxsweeps)
 	{
@@ -140,51 +150,118 @@ int test_ilu_convergence(const CRawBSRMatrix<double,int>& mat, const ILUPosition
 			}
 		}
 
-		if(initialization == "exact") {
-			// If initial L and U are exact, the initial error is zero. So don't normalize.
-			Lerr = maxnorm_lower<bs>(&mat, iluvals, exactilu);
-			Uerr = maxnorm_upper<bs>(&mat, iluvals, exactilu);
-		}
-		else {
-			Lerr = maxnorm_lower<bs>(&mat, iluvals, exactilu)/initLerr;
-			Uerr = maxnorm_upper<bs>(&mat, iluvals, exactilu)/initUerr;
-		}
+		check_convergence<bs>(mat, plist, scale, usescale, iluvals, exactilu, initLerr, initUerr,
+		                      thread_chunk_size, initialization, tol, isweep, curmaxsweeps, converged);
 
-		if(usescale)
-			ilures = (bs == 1) ?
-				scalar_ilu0_nonlinear_res<double,int,true,true>(&mat, plist, thread_chunk_size, &scale[0],
-				                                                &scale[0], &iluvals[0])
-				:
-				block_ilu0_nonlinear_res<double,int,bs,ColMajor,true>(&mat, plist, &scale[0], &iluvals[0],
-				                                                      thread_chunk_size);
+	}
+
+	assert(converged);
+
+	return ierr;
+}
+
+/** We carry out a fully asynchronous ILU factorization for every sweep value from 1 to maxsweeps.
+ */
+template <int bs>
+int test_fullyasync_ilu_convergence(const CRawBSRMatrix<double,int>& mat, const ILUPositions<int>& plist,
+                                    const double tol, const int maxsweeps, const bool usescale,
+                                    const int thread_chunk_size, const std::string initialization)
+{
+	int ierr = 0;
+
+	printf("Testing fully async. ILU(0) convergence for block size %d ", bs);
+	if(usescale)
+		printf("with symmetric scaling.\n");
+	else
+		printf("without scaling.\n");
+
+	//const device_vector<double> scale = (bs==1) ? getScalingVector<bs>(&mat) : device_vector<double>(0);
+	const device_vector<double> scale = usescale ? getScalingVector<bs>(&mat) : device_vector<double>(0);
+
+	const device_vector<double> exactilu = getExactILU<bs>(&mat,plist,scale);
+
+	device_vector<double> iluvals(mat.nnzb*bs*bs);
+
+	const double initLerr = maxnorm_lower<bs>(&mat, iluvals, exactilu);
+	const double initUerr = maxnorm_upper<bs>(&mat, iluvals, exactilu);
+	printf(" Initial lower and upper errors = %f, %f\n", initLerr, initUerr);
+
+	check_initial<bs>(mat, plist, scale, thread_chunk_size, initialization, exactilu, iluvals);
+
+	int isweep = 0;
+	//double Lerr = 1.0, Uerr = 1.0, ilures = 1.0;
+	bool converged = (initialization == "exact") ? true : false;
+	int curmaxsweeps = maxsweeps;
+
+	printf(" %5s %10s %10s %10s\n", "Sweep", "L-norm","U-norm","NL-Res");
+
+	Blk<bs> *const ilu = reinterpret_cast<Blk<bs>*>(&iluvals[0]);
+	const Blk<bs> *const mvals = reinterpret_cast<const Blk<bs>*>(mat.vals);
+
+	while(isweep < curmaxsweeps)
+	{
+		if(initialization == "orig")
+			// Initialize with original matrix
+			for(int i = 0; i < mat.nnzb*bs*bs; i++)
+				iluvals[i] = mat.vals[i];
+		else if(initialization == "exact")
+			for(int i = 0; i < mat.nnzb*bs*bs; i++)
+				iluvals[i] = exactilu[i];
 		else
-			ilures = (bs == 1) ?
-				scalar_ilu0_nonlinear_res<double,int,false,false>(&mat, plist, thread_chunk_size, &scale[0],
-				                                                  &scale[0], &iluvals[0])
-				:
-				block_ilu0_nonlinear_res<double,int,bs,ColMajor,false>(&mat, plist, &scale[0], &iluvals[0],
-				                                                       thread_chunk_size);
+			throw std::runtime_error("Unsupported initialization requested!");
 
-		printf(" %5d %10.3g %10.3g %10.3g\n", isweep, Lerr, Uerr, ilures); fflush(stdout);
-
-		assert(std::isfinite(Lerr));
-		assert(std::isfinite(Uerr));
-		assert(std::isfinite(ilures));
-
-		isweep++;
-
-		if(converged) {
-			// The solution should not change
-			assert(Lerr < tol);
-			assert(Uerr < tol);
-		}
-		else {
-			// If tolerance is reached, see if the solution remains the same for 2 more iterations
-			if(Lerr < tol && Uerr < tol) {
-				converged = true;
-				curmaxsweeps = isweep+2;
+		if(usescale) {
+			if(bs == 1)
+			{
+#pragma omp parallel default(shared)
+				for(int subsweep = 0; subsweep <= isweep; subsweep++)
+#pragma omp for schedule(dynamic, thread_chunk_size) nowait
+					for(int irow = 0; irow < mat.nbrows; irow++)
+					{
+						async_ilu0_factorize_kernel<double,int,true,true>
+							(&mat, plist, irow, &scale[0], &scale[0], &iluvals[0]);
+					}
+			}
+			else
+			{
+#pragma omp parallel default(shared)
+				for(int subsweep = 0; subsweep <= isweep; subsweep++)
+#pragma omp for schedule(dynamic, thread_chunk_size) nowait
+					for(int irow = 0; irow < mat.nbrows; irow++)
+					{
+						async_block_ilu0_factorize<double,int,bs,ColMajor,true>
+							(&mat, mvals, plist, &scale[0], irow, ilu);
+					}
 			}
 		}
+		else {
+			if(bs == 1)
+			{
+#pragma omp parallel default(shared)
+				for(int subsweep = 0; subsweep <= isweep; subsweep++)
+#pragma omp for schedule(dynamic, thread_chunk_size) nowait
+					for(int irow = 0; irow < mat.nbrows; irow++)
+					{
+						async_ilu0_factorize_kernel<double,int,false,false>
+							(&mat, plist, irow, &scale[0], &scale[0], &iluvals[0]);
+					}
+			}
+			else
+			{
+#pragma omp parallel default(shared)
+				for(int subsweep = 0; subsweep <= isweep; subsweep++)
+#pragma omp for schedule(dynamic, thread_chunk_size) nowait
+					for(int irow = 0; irow < mat.nbrows; irow++)
+					{
+						async_block_ilu0_factorize<double,int,bs,ColMajor,false>
+							(&mat, mvals, plist, &scale[0], irow, ilu);
+					}
+			}
+		}
+
+		check_convergence<bs>(mat, plist, scale, usescale, iluvals, exactilu, initLerr, initUerr,
+		                      thread_chunk_size, initialization, tol, isweep, curmaxsweeps, converged);
+
 	}
 
 	assert(converged);
@@ -193,13 +270,81 @@ int test_ilu_convergence(const CRawBSRMatrix<double,int>& mat, const ILUPosition
 }
 
 template
-int test_ilu_convergence<1>(const CRawBSRMatrix<double,int>& mat, const ILUPositions<int>& plist,
-                            const double tol, const int maxsweeps, const bool usescale,
-                            const int thread_chunk_size, const std::string initialization);
+int test_fullyasync_ilu_convergence<1>(const CRawBSRMatrix<double,int>& mat, const ILUPositions<int>& plist,
+                                       const double tol, const int maxsweeps, const bool usescale,
+                                       const int thread_chunk_size, const std::string initialization);
 template
-int test_ilu_convergence<4>(const CRawBSRMatrix<double,int>& mat, const ILUPositions<int>& plist,
-                            const double tol, const int maxsweeps, const bool usescale,
-                            const int thread_chunk_size, const std::string initialization);
+int test_fullyasync_ilu_convergence<4>(const CRawBSRMatrix<double,int>& mat, const ILUPositions<int>& plist,
+                                       const double tol, const int maxsweeps, const bool usescale,
+                                       const int thread_chunk_size, const std::string initialization);
+
+template
+int test_partiallyasync_ilu_convergence<1>(const CRawBSRMatrix<double,int>& mat,
+                                           const ILUPositions<int>& plist,
+                                           const double tol, const int maxsweeps, const bool usescale,
+                                           const int thread_chunk_size, const std::string initialization);
+template
+int test_partiallyasync_ilu_convergence<4>(const CRawBSRMatrix<double,int>& mat,
+                                           const ILUPositions<int>& plist,
+                                           const double tol, const int maxsweeps, const bool usescale,
+                                           const int thread_chunk_size, const std::string initialization);
+
+template <int bs>
+void check_convergence(const CRawBSRMatrix<double,int>& mat, const ILUPositions<int>& plist,
+                       const device_vector<double>& scale, const bool usescale,
+                       const device_vector<double>& iluvals, const device_vector<double>& exactilu,
+                       const double initLerr, const double initUerr, const int thread_chunk_size,
+                       const std::string initialization, const double tol,
+                       int& isweep, int& curmaxsweeps, bool& converged)
+{
+	double Lerr, Uerr;
+	if(initialization == "exact") {
+		// If initial L and U are exact, the initial error is zero. So don't normalize.
+		Lerr = maxnorm_lower<bs>(&mat, iluvals, exactilu);
+		Uerr = maxnorm_upper<bs>(&mat, iluvals, exactilu);
+	}
+	else {
+		Lerr = maxnorm_lower<bs>(&mat, iluvals, exactilu)/initLerr;
+		Uerr = maxnorm_upper<bs>(&mat, iluvals, exactilu)/initUerr;
+	}
+
+	double ilures = 0;
+	if(usescale)
+		ilures = (bs == 1) ?
+			scalar_ilu0_nonlinear_res<double,int,true,true>(&mat, plist, thread_chunk_size, &scale[0],
+			                                                &scale[0], &iluvals[0])
+			:
+			block_ilu0_nonlinear_res<double,int,bs,ColMajor,true>(&mat, plist, &scale[0], &iluvals[0],
+			                                                      thread_chunk_size);
+	else
+		ilures = (bs == 1) ?
+			scalar_ilu0_nonlinear_res<double,int,false,false>(&mat, plist, thread_chunk_size, &scale[0],
+			                                                  &scale[0], &iluvals[0])
+			:
+			block_ilu0_nonlinear_res<double,int,bs,ColMajor,false>(&mat, plist, &scale[0], &iluvals[0],
+			                                                       thread_chunk_size);
+
+	printf(" %5d %10.3g %10.3g %10.3g\n", isweep, Lerr, Uerr, ilures); fflush(stdout);
+
+	assert(std::isfinite(Lerr));
+	assert(std::isfinite(Uerr));
+	assert(std::isfinite(ilures));
+
+	isweep++;
+
+	if(converged) {
+		// The solution should not change
+		assert(Lerr < tol);
+		assert(Uerr < tol);
+	}
+	else {
+		// If tolerance is reached, see if the solution remains the same for 2 more iterations
+		if(Lerr < tol && Uerr < tol) {
+			converged = true;
+			curmaxsweeps = isweep+2;
+		}
+	}
+}
 
 template <int bs>
 double maxnorm_lower(const CRawBSRMatrix<double,int> *const mat,

@@ -27,12 +27,19 @@ static device_vector<double> getExactUpperSolve(const CRawBSRMatrix<double,int>&
                                                 const device_vector<double>& rhs,
                                                 const int thread_chunk_size);
 
+// template <int bs>
+// static void runPartiallyAsyncTest(const CRawBSRMatrix<double,int>& mat, const device_vector<double>& iluvals,
+//                                   const device_vector<double>& rhs,
+//                                   const device_vector<double>& exactsoln, const TriangleType triangle,
+//                                   const std::string initialization, const int thread_chunk_size,
+//                                   const double tol, const int maxsweeps);
+
 template <int bs>
-static void runTest(const CRawBSRMatrix<double,int>& mat, const device_vector<double>& iluvals,
-                    const device_vector<double>& rhs,
-                    const device_vector<double>& exactsoln, const TriangleType triangle,
-                    const std::string initialization, const int thread_chunk_size,
-                    const double tol, const int maxsweeps);
+static void runFullyAsyncTest(const CRawBSRMatrix<double,int>& mat, const device_vector<double>& iluvals,
+                              const device_vector<double>& rhs,
+                              const device_vector<double>& exactsoln, const TriangleType triangle,
+                              const std::string initialization, const int thread_chunk_size,
+                              const double tol, const int maxsweeps);
 
 template <int bs>
 int test_async_triangular_solve(const CRawBSRMatrix<double,int>& mat, const ILUPositions<int>& plist,
@@ -63,9 +70,11 @@ int test_async_triangular_solve(const CRawBSRMatrix<double,int>& mat, const ILUP
 	printf(" Norm of exact solutions: L = %g, U = %g.\n", exactlownorm, exactupnorm);
 
 	printf(" Testing lower triangular solve..\n");
-	runTest<bs>(mat, iluvals, rhs, exact_low, LOWER, initialization, thread_chunk_size, tol, maxiter);
+	runFullyAsyncTest<bs>(mat, iluvals, rhs, exact_low, LOWER, initialization, thread_chunk_size,
+	                      tol, maxiter);
 	printf("\n Testing upper triangular solve..\n");
-	runTest<bs>(mat, iluvals, rhs, exact_up, UPPER, initialization, thread_chunk_size, tol, maxiter);
+	runFullyAsyncTest<bs>(mat, iluvals, rhs, exact_up, UPPER, initialization, thread_chunk_size,
+	                      tol, maxiter);
 
 	return ierr;
 }
@@ -95,11 +104,17 @@ static void upperSolve(const CRawBSRMatrix<double,int>& mat,
 static double maxnorm_diff(const device_vector<double>& x, const device_vector<double>& y);
 
 template <int bs>
-void runTest(const CRawBSRMatrix<double,int>& mat, const device_vector<double>& iluvals,
-             const device_vector<double>& rhs,
-             const device_vector<double>& exactsoln, const TriangleType triangle,
-             const std::string initialization, const int thread_chunk_size,
-             const double tol, const int maxsweeps)
+static void check_convergence(const CRawBSRMatrix<double,int>& mat, const device_vector<double>& tsol,
+                              const device_vector<double>& exactsoln, const double exactsolnorm,
+                              const double tol, const std::string initialization,
+                              int& isweep, int& curmaxsweeps, bool& converged);
+
+template <int bs>
+void runFullyAsyncTest(const CRawBSRMatrix<double,int>& mat, const device_vector<double>& iluvals,
+                       const device_vector<double>& rhs,
+                       const device_vector<double>& exactsoln, const TriangleType triangle,
+                       const std::string initialization, const int thread_chunk_size,
+                       const double tol, const int maxsweeps)
 {
 	device_vector<double> tsol(mat.nbrows*bs);
 
@@ -113,7 +128,107 @@ void runTest(const CRawBSRMatrix<double,int>& mat, const device_vector<double>& 
 	printf(" Initial error = %g.\n", maxnorm_diff(exactsoln, tsol));
 
 	int isweep = 0;
-	double errnorm = 1.0;
+	bool converged = (initialization == "exact") ? true : false;
+	int curmaxsweeps = maxsweeps;
+
+	const double exactsolnorm = maxnorm(exactsoln);
+
+	printf(" %5s %10s\n", "Sweep", "Diff-norm");
+
+	while(isweep < curmaxsweeps)
+	{
+		if(initialization == "exact")
+			tsol = exactsoln;
+		else if(initialization == "zero")
+			std::fill(tsol.begin(), tsol.end(), 0.0);
+		else
+			throw std::runtime_error("Invalid initialization!");
+
+		if(triangle == LOWER)
+		{
+			if(bs == 1)
+			{
+#pragma omp parallel default(shared)
+				for(int subsweep = 0; subsweep <= isweep; subsweep++)
+#pragma omp for schedule(dynamic, thread_chunk_size) nowait
+					for(int i = 0; i < mat.nbrows; i++)
+					{
+						tsol[i] = scalar_unit_lower_triangular(&iluvals[0], mat.bcolind, mat.browptr[i],
+						                                       mat.diagind[i], rhs[i], &tsol[0]);
+					}
+			}
+			else
+			{
+				const Blk<bs> *ilu = reinterpret_cast<const Blk<bs>*>(&iluvals[0]);
+				const Seg<bs> *r = reinterpret_cast<const Seg<bs>*>(&rhs[0]);
+				Seg<bs> *y = reinterpret_cast<Seg<bs>*>(&tsol[0]);
+
+#pragma omp parallel default(shared)
+				for(int subsweep = 0; subsweep <= isweep; subsweep++)
+#pragma omp for schedule(dynamic, thread_chunk_size) nowait
+					for(int i = 0; i < mat.nbrows; i++)
+					{
+						block_unit_lower_triangular<double,int,bs,ColMajor>
+							(ilu, mat.bcolind, mat.browptr[i], mat.diagind[i], r[i], i, y);
+					}
+			}
+		}
+		else
+		{
+			if(bs == 1) {
+#pragma omp parallel default(shared)
+				for(int subsweep = 0; subsweep <= isweep; subsweep++)
+#pragma omp for schedule(dynamic, thread_chunk_size) nowait
+					for(int i = mat.nbrows-1; i >= 0; i--)
+					{
+						tsol[i] = scalar_upper_triangular(&iluvals[0], mat.bcolind, mat.diagind[i], 
+						                                  mat.browptr[i+1], 1.0/iluvals[mat.diagind[i]],
+						                                  rhs[i], &tsol[0]);
+					}
+			}
+			else
+			{
+				const Blk<bs> *ilu = reinterpret_cast<const Blk<bs>*>(&iluvals[0]);
+				const Seg<bs> *y = reinterpret_cast<const Seg<bs>*>(&rhs[0]);
+				Seg<bs> *z = reinterpret_cast<Seg<bs>*>(&tsol[0]);
+
+#pragma omp parallel default(shared)
+				for(int subsweep = 0; subsweep <= isweep; subsweep++)
+#pragma omp for schedule(dynamic, thread_chunk_size) nowait
+					for(int i = mat.nbrows-1; i >= 0; i--)
+					{
+						block_upper_triangular<double,int,bs,ColMajor>
+							(ilu, mat.bcolind, mat.diagind[i], mat.browptr[i+1], y[i], i, z);
+					}
+			}
+		}
+
+		check_convergence<bs>(mat, tsol, exactsoln, exactsolnorm, tol, initialization,
+		                      isweep, curmaxsweeps, converged);
+	}
+
+	assert(converged);
+}
+
+template <int bs>
+void runPartiallyAsyncTest(const CRawBSRMatrix<double,int>& mat, const device_vector<double>& iluvals,
+                           const device_vector<double>& rhs,
+                           const device_vector<double>& exactsoln, const TriangleType triangle,
+                           const std::string initialization, const int thread_chunk_size,
+                           const double tol, const int maxsweeps)
+{
+	device_vector<double> tsol(mat.nbrows*bs);
+
+	if(initialization == "exact")
+		tsol = exactsoln;
+	else if(initialization == "zero")
+		std::fill(tsol.begin(), tsol.end(), 0.0);
+	else
+		throw std::runtime_error("Invalid initialization!");
+
+	printf(" Initial error = %g.\n", maxnorm_diff(exactsoln, tsol));
+
+	int isweep = 0;
 	bool converged = (initialization == "exact") ? true : false;
 	int curmaxsweeps = maxsweeps;
 
@@ -128,34 +243,46 @@ void runTest(const CRawBSRMatrix<double,int>& mat, const device_vector<double>& 
 		else
 			upperSolve<bs>(mat, iluvals, rhs, true, thread_chunk_size, tsol);
 
-		if(initialization == "exact") {
-			// If initial L and U are exact, the initial error is zero. So don't normalize.
-			errnorm = maxnorm_diff(tsol, exactsoln);
-		}
-		else {
-			errnorm = maxnorm_diff(tsol, exactsoln)/exactsolnorm;
-		}
-
-		printf(" %5d %10.3g\n", isweep, errnorm); fflush(stdout);
-
-		assert(std::isfinite(errnorm));
-
-		isweep++;
-
-		if(converged) {
-			// The solution should not change
-			assert(errnorm < tol);
-		}
-		else {
-			// If tolerance is reached, see if the solution remains the same for 2 more iterations
-			if(errnorm < tol) {
-				converged = true;
-				curmaxsweeps = isweep+2;
-			}
-		}
+		check_convergence<bs>(mat, tsol, exactsoln, exactsolnorm, tol, initialization,
+		                      isweep, curmaxsweeps, converged);
 	}
 
 	assert(converged);
+}
+
+template <int bs>
+void check_convergence(const CRawBSRMatrix<double,int>& mat, const device_vector<double>& tsol,
+                       const device_vector<double>& exactsoln, const double exactsolnorm,
+                       const double tol, const std::string initialization,
+                       int& isweep, int& curmaxsweeps, bool& converged)
+{
+	double errnorm;
+
+	if(initialization == "exact") {
+		// If initial L and U are exact, the initial error is zero. So don't normalize.
+		errnorm = maxnorm_diff(tsol, exactsoln);
+	}
+	else {
+		errnorm = maxnorm_diff(tsol, exactsoln)/exactsolnorm;
+	}
+
+	printf(" %5d %10.3g\n", isweep, errnorm); fflush(stdout);
+
+	assert(std::isfinite(errnorm));
+
+	isweep++;
+
+	if(converged) {
+		// The solution should not change
+		assert(errnorm < tol);
+	}
+	else {
+		// If tolerance is reached, see if the solution remains the same for 2 more iterations
+		if(errnorm < tol) {
+			converged = true;
+			curmaxsweeps = isweep+2;
+		}
+	}
 }
 
 template <int bs>
