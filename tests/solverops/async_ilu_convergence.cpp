@@ -215,7 +215,7 @@ int test_fullyasync_ilu_convergence(const CRawBSRMatrix<double,int>& mat, const 
 			{
 #pragma omp parallel default(shared)
 				for(int subsweep = 0; subsweep <= isweep; subsweep++)
-#pragma omp for schedule(dynamic, thread_chunk_size) nowait
+#pragma omp for schedule(dynamic, thread_chunk_size)
 					for(int irow = 0; irow < mat.nbrows; irow++)
 					{
 						async_ilu0_factorize_kernel<double,int,true,true>
@@ -226,7 +226,7 @@ int test_fullyasync_ilu_convergence(const CRawBSRMatrix<double,int>& mat, const 
 			{
 #pragma omp parallel default(shared)
 				for(int subsweep = 0; subsweep <= isweep; subsweep++)
-#pragma omp for schedule(dynamic, thread_chunk_size) nowait
+#pragma omp for schedule(dynamic, thread_chunk_size)
 					for(int irow = 0; irow < mat.nbrows; irow++)
 					{
 						async_block_ilu0_factorize<double,int,bs,ColMajor,true>
@@ -239,7 +239,7 @@ int test_fullyasync_ilu_convergence(const CRawBSRMatrix<double,int>& mat, const 
 			{
 #pragma omp parallel default(shared)
 				for(int subsweep = 0; subsweep <= isweep; subsweep++)
-#pragma omp for schedule(dynamic, thread_chunk_size) nowait
+#pragma omp for schedule(dynamic, thread_chunk_size)
 					for(int irow = 0; irow < mat.nbrows; irow++)
 					{
 						async_ilu0_factorize_kernel<double,int,false,false>
@@ -250,7 +250,7 @@ int test_fullyasync_ilu_convergence(const CRawBSRMatrix<double,int>& mat, const 
 			{
 #pragma omp parallel default(shared)
 				for(int subsweep = 0; subsweep <= isweep; subsweep++)
-#pragma omp for schedule(dynamic, thread_chunk_size) nowait
+#pragma omp for schedule(dynamic, thread_chunk_size)
 					for(int irow = 0; irow < mat.nbrows; irow++)
 					{
 						async_block_ilu0_factorize<double,int,bs,ColMajor,false>

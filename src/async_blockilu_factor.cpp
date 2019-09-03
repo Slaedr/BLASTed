@@ -196,7 +196,7 @@ void async_bilu0_sweeps(const CRawBSRMatrix<scalar,index> *const mat, const ILUP
 #pragma omp parallel default(shared) if(usethreads)
 	for(int isweep = 0; isweep < nbuildsweeps; isweep++)
 	{
-#pragma omp for schedule(dynamic, thread_chunk_size) nowait
+#pragma omp for schedule(dynamic, thread_chunk_size)
 		for(index irow = 0; irow < mat->nbrows; irow++)
 			async_block_ilu0_factorize<scalar,index,bs,stor,usescaling>(mat, mvals, plist, scale,
 			                                                            irow, ilu);
