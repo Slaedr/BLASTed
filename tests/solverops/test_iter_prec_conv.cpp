@@ -20,7 +20,8 @@ using namespace blasted;
 template <int bs>
 int test_fullyasync_ilu_convergence(const CRawBSRMatrix<double,int>& mat, const ILUPositions<int>& plist,
                                     const double tol, const int maxsweeps, const bool usescale,
-                                    const int thread_chunk_size, const std::string initialization);
+                                    const int thread_chunk_size, const std::string initialization,
+									const int nrepeats);
 
 template <int bs>
 int test_async_triangular_solve(const CRawBSRMatrix<double,int>& mat, const ILUPositions<int>& plist,
@@ -53,6 +54,7 @@ int main(int argc, char *argv[])
 	const int maxsweeps = parsePetscCmd_int("-max_sweeps");
 	const double tol = parseOptionalPetscCmd_real("-tolerance", 1e-25);
 	const int thread_chunk_size = parsePetscCmd_int("-blasted_thread_chunk_size");
+	const int nrepeats = parsePetscCmd_int("-num_repeats");
 	const std::string initialization = parsePetscCmd_string("-initialization", 20);
 	const bool usescale = parsePetscCmd_bool("-blasted_use_symmetric_scaling");
 
@@ -69,11 +71,11 @@ int main(int argc, char *argv[])
 		switch(bs) {
 		case 1:
 			ierr = test_fullyasync_ilu_convergence<1>(mat, plist, tol, maxsweeps, usescale,
-			                                          thread_chunk_size, initialization);
+			                                          thread_chunk_size, initialization, nrepeats);
 			break;
 		case 4:
 			ierr = test_fullyasync_ilu_convergence<4>(mat, plist, tol, maxsweeps, usescale,
-			                                          thread_chunk_size, initialization);
+			                                          thread_chunk_size, initialization, nrepeats);
 			break;
 		default:
 			throw std::out_of_range("Block size " + std::to_string(bs) + " not supported!");

@@ -331,7 +331,7 @@ if(WITH_PETSC)
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.pmat 
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.pmat
 	-options_file ${CMAKE_CURRENT_SOURCE_DIR}/input/asyncpreconditioning.perc -mat_type baij
-	-ref_sub_pc_type sor -blasted_pc_type sgs -blasted_async_sweeps 1,6
+	-ref_sub_pc_type sor -blasted_pc_type sgs -blasted_async_sweeps 1,8
 	-test_type compare_its -error_tolerance 0.01
 	)
 

@@ -9,7 +9,7 @@ add_test(NAME AsyncILU-SweepsConvergence-CSR-2dcyl
   ${CMAKE_CURRENT_SOURCE_DIR}/../input/fvens-2dcyl1/2dcyl1_b.pmat
   ${CMAKE_CURRENT_SOURCE_DIR}/../input/fvens-2dcyl1/2dcyl1_x.pmat
   -mat_type aij -blasted_thread_chunk_size 128 -max_sweeps 150 -tolerance 1e-15
-  -initialization orig -blasted_use_symmetric_scaling false
+  -initialization orig -blasted_use_symmetric_scaling false -num_repeats 2
   )
 
 add_test(NAME AsyncILU-Scaled-SweepsConvergence-CSR-2dcyl
@@ -18,7 +18,7 @@ add_test(NAME AsyncILU-Scaled-SweepsConvergence-CSR-2dcyl
   ${CMAKE_CURRENT_SOURCE_DIR}/../input/fvens-2dcyl1/2dcyl1_b.pmat
   ${CMAKE_CURRENT_SOURCE_DIR}/../input/fvens-2dcyl1/2dcyl1_x.pmat
   -mat_type aij -blasted_thread_chunk_size 128 -max_sweeps 150 -tolerance 1e-15
-  -initialization orig -blasted_use_symmetric_scaling true
+  -initialization orig -blasted_use_symmetric_scaling true -num_repeats 2
   )
 
 add_test(NAME AsyncILU-SweepsConvergence-BSR4-2dcyl
@@ -27,7 +27,7 @@ add_test(NAME AsyncILU-SweepsConvergence-BSR4-2dcyl
   ${CMAKE_CURRENT_SOURCE_DIR}/../input/fvens-2dcyl1/2dcyl1_b.pmat
   ${CMAKE_CURRENT_SOURCE_DIR}/../input/fvens-2dcyl1/2dcyl1_x.pmat
   -mat_type baij -blasted_thread_chunk_size 32 -max_sweeps 150 -tolerance 1e-15
-  -initialization orig -blasted_use_symmetric_scaling false
+  -initialization orig -blasted_use_symmetric_scaling false -num_repeats 2
   )
 
 add_test(NAME AsyncILU-Scaled-SweepsConvergence-BSR4-2dcyl
@@ -36,7 +36,7 @@ add_test(NAME AsyncILU-Scaled-SweepsConvergence-BSR4-2dcyl
   ${CMAKE_CURRENT_SOURCE_DIR}/../input/fvens-2dcyl1/2dcyl1_b.pmat
   ${CMAKE_CURRENT_SOURCE_DIR}/../input/fvens-2dcyl1/2dcyl1_x.pmat
   -mat_type baij -blasted_thread_chunk_size 32 -max_sweeps 150 -tolerance 1e-15
-  -initialization orig -blasted_use_symmetric_scaling true
+  -initialization orig -blasted_use_symmetric_scaling true -num_repeats 2
   )
 
 add_test(NAME AsyncILU-ExactFixedPoint-CSR-2dcyl
@@ -45,7 +45,7 @@ add_test(NAME AsyncILU-ExactFixedPoint-CSR-2dcyl
   ${CMAKE_CURRENT_SOURCE_DIR}/../input/fvens-2dcyl1/2dcyl1_b.pmat
   ${CMAKE_CURRENT_SOURCE_DIR}/../input/fvens-2dcyl1/2dcyl1_x.pmat
   -mat_type aij -blasted_thread_chunk_size 64 -max_sweeps 5 -tolerance 1e-16
-  -initialization exact -blasted_use_symmetric_scaling false
+  -initialization exact -blasted_use_symmetric_scaling false -num_repeats 2
   )
 
 add_test(NAME AsyncILU-ExactFixedPoint-BSR4-2dcyl
@@ -54,7 +54,7 @@ add_test(NAME AsyncILU-ExactFixedPoint-BSR4-2dcyl
   ${CMAKE_CURRENT_SOURCE_DIR}/../input/fvens-2dcyl1/2dcyl1_b.pmat
   ${CMAKE_CURRENT_SOURCE_DIR}/../input/fvens-2dcyl1/2dcyl1_x.pmat
   -mat_type baij -blasted_thread_chunk_size 16 -max_sweeps 5 -tolerance 1e-16
-  -initialization exact -blasted_use_symmetric_scaling false
+  -initialization exact -blasted_use_symmetric_scaling false -num_repeats 2
   )
 
 add_test(NAME AsyncILU-Scaled-ExactFixedPoint-BSR4-2dcyl
@@ -63,7 +63,7 @@ add_test(NAME AsyncILU-Scaled-ExactFixedPoint-BSR4-2dcyl
   ${CMAKE_CURRENT_SOURCE_DIR}/../input/fvens-2dcyl1/2dcyl1_b.pmat
   ${CMAKE_CURRENT_SOURCE_DIR}/../input/fvens-2dcyl1/2dcyl1_x.pmat
   -mat_type baij -blasted_thread_chunk_size 16 -max_sweeps 5 -tolerance 1e-16
-  -initialization exact -blasted_use_symmetric_scaling true
+  -initialization exact -blasted_use_symmetric_scaling true -num_repeats 2
   )
 
 add_test(NAME AsyncILUTriangular-ExactFixedPoint-CSR-2dcyl
@@ -72,7 +72,7 @@ add_test(NAME AsyncILUTriangular-ExactFixedPoint-CSR-2dcyl
   ${CMAKE_CURRENT_SOURCE_DIR}/../input/fvens-2dcyl1/2dcyl1_b.pmat
   ${CMAKE_CURRENT_SOURCE_DIR}/../input/fvens-2dcyl1/2dcyl1_x.pmat
   -mat_type aij -blasted_thread_chunk_size 64 -max_sweeps 5 -tolerance 1e-16
-  -initialization exact -blasted_use_symmetric_scaling false
+  -initialization exact -blasted_use_symmetric_scaling false -num_repeats 1
   )
 
 add_test(NAME AsyncILUTriangular-ExactFixedPoint-BSR4-2dcyl
@@ -81,7 +81,7 @@ add_test(NAME AsyncILUTriangular-ExactFixedPoint-BSR4-2dcyl
   ${CMAKE_CURRENT_SOURCE_DIR}/../input/fvens-2dcyl1/2dcyl1_b.pmat
   ${CMAKE_CURRENT_SOURCE_DIR}/../input/fvens-2dcyl1/2dcyl1_x.pmat
   -mat_type baij -blasted_thread_chunk_size 16 -max_sweeps 5 -tolerance 1e-16
-  -initialization exact -blasted_use_symmetric_scaling false
+  -initialization exact -blasted_use_symmetric_scaling false -num_repeats 1
   )
 
 add_test(NAME AsyncILUTriangular-SweepsConvergence-CSR-2dcyl
@@ -90,7 +90,7 @@ add_test(NAME AsyncILUTriangular-SweepsConvergence-CSR-2dcyl
   ${CMAKE_CURRENT_SOURCE_DIR}/../input/fvens-2dcyl1/2dcyl1_b.pmat
   ${CMAKE_CURRENT_SOURCE_DIR}/../input/fvens-2dcyl1/2dcyl1_x.pmat
   -mat_type aij -blasted_thread_chunk_size 128 -max_sweeps 150 -tolerance 1e-15
-  -initialization zero -blasted_use_symmetric_scaling false
+  -initialization zero -blasted_use_symmetric_scaling false -num_repeats 1
   )
 
 add_test(NAME AsyncILUTriangular-SweepsConvergence-BSR4-2dcyl
@@ -99,7 +99,7 @@ add_test(NAME AsyncILUTriangular-SweepsConvergence-BSR4-2dcyl
   ${CMAKE_CURRENT_SOURCE_DIR}/../input/fvens-2dcyl1/2dcyl1_b.pmat
   ${CMAKE_CURRENT_SOURCE_DIR}/../input/fvens-2dcyl1/2dcyl1_x.pmat
   -mat_type baij -blasted_thread_chunk_size 32 -max_sweeps 150 -tolerance 1e-15
-  -initialization zero -blasted_use_symmetric_scaling false
+  -initialization zero -blasted_use_symmetric_scaling false -num_repeats 1
   )
 add_test(NAME AsyncILUTriangular-Scaled-SweepsConvergence-BSR4-2dcyl
   COMMAND ${SEQEXEC} ${THREADOPTS} ${SEQTASKS} ${CMAKE_CURRENT_BINARY_DIR}/test_iterprec_conv triangular file
@@ -107,5 +107,5 @@ add_test(NAME AsyncILUTriangular-Scaled-SweepsConvergence-BSR4-2dcyl
   ${CMAKE_CURRENT_SOURCE_DIR}/../input/fvens-2dcyl1/2dcyl1_b.pmat
   ${CMAKE_CURRENT_SOURCE_DIR}/../input/fvens-2dcyl1/2dcyl1_x.pmat
   -mat_type baij -blasted_thread_chunk_size 32 -max_sweeps 150 -tolerance 1e-15
-  -initialization zero -blasted_use_symmetric_scaling true
+  -initialization zero -blasted_use_symmetric_scaling true -num_repeats 1
   )
