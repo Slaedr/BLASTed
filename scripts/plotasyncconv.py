@@ -39,7 +39,7 @@ def plotquantity(filelist, quantname, numits, labellist, opts, imageformatstring
                     mew=opts['markedgewidth'], \
                     markevery=list(range(0,pltdatalen,opts['markinterval'])), \
                     label=labellist[i])
-            plt.ylabel("Log L2 norm of ILU residual vector norm", fontsize="medium")
+            plt.ylabel("Log vector 1-norm of ILU fixed-point residual", fontsize="medium")
         elif quantname == "lowerdiff":
             plt.plot(data[numits:,0], np.log10(data[numits:,1]), \
                     lw=opts['linewidth'], ls=opts['linetype'][i], color=opts['colorlist'][i], \
@@ -47,7 +47,7 @@ def plotquantity(filelist, quantname, numits, labellist, opts, imageformatstring
                     mew=opts['markedgewidth'], \
                     markevery=list(range(0,pltdatalen,opts['markinterval'])), \
                     label=labellist[i])
-            plt.ylabel("Log error in L matrix", fontsize="medium")
+            plt.ylabel("Log vector max-norm of error in L matrix", fontsize="medium")
         elif quantname == "upperdiff":
             plt.plot(data[numits:,0], np.log10(data[numits:,2]), \
                     lw=opts['linewidth'], ls=opts['linetype'][i], color=opts['colorlist'][i], \
@@ -55,7 +55,7 @@ def plotquantity(filelist, quantname, numits, labellist, opts, imageformatstring
                     mew=opts['markedgewidth'], \
                     markevery=list(range(0,pltdatalen,opts['markinterval'])), \
                     label=labellist[i])
-            plt.ylabel("Log error in U matrix", fontsize="medium")
+            plt.ylabel("Log vector max-norm of error in U matrix", fontsize="medium")
 
         ax = plt.axes()
         setAxisParams(ax,opts['linewidth'])

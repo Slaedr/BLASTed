@@ -44,12 +44,12 @@ template <int bs>
 static double maxnorm_upper(const CRawBSRMatrix<double,int> *const mat,
                             const device_vector<double>& x, const device_vector<double>& y);
 
-/// Carry out some checks
+/// Carry out some checks, return the initial ILU fixed-point remainder
 template <int bs>
-static void check_initial(const CRawBSRMatrix<double,int>& mat, const ILUPositions<int>& plist,
-                          const device_vector<double>& scale, const int thread_chunk_size,
-                          const std::string initialization,
-                          const device_vector<double>& exactilu, const device_vector<double>& iluvals);
+static double check_initial(const CRawBSRMatrix<double,int>& mat, const ILUPositions<int>& plist,
+                            const device_vector<double>& scale, const int thread_chunk_size,
+                            const std::string initialization,
+                            const device_vector<double>& exactilu, const device_vector<double>& iluvals);
 
 template <int bs> static
 void check_convergence(const CRawBSRMatrix<double,int>& mat, const ILUPositions<int>& plist,
@@ -182,9 +182,7 @@ int test_fullyasync_ilu_convergence(const CRawBSRMatrix<double,int>& mat, const 
 	else
 		printf("without scaling.\n");
 
-	//const device_vector<double> scale = (bs==1) ? getScalingVector<bs>(&mat) : device_vector<double>(0);
 	const device_vector<double> scale = usescale ? getScalingVector<bs>(&mat) : device_vector<double>(0);
-
 	const device_vector<double> exactilu = getExactILU<bs>(&mat,plist,scale);
 
 	device_vector<double> init_iluvals(mat.nnzb*bs*bs);
@@ -193,7 +191,8 @@ int test_fullyasync_ilu_convergence(const CRawBSRMatrix<double,int>& mat, const 
 	const double initUerr = maxnorm_upper<bs>(&mat, init_iluvals, exactilu);
 	printf("# Initial lower and upper errors = %f, %f\n", initLerr, initUerr);
 
-	check_initial<bs>(mat, plist, scale, thread_chunk_size, initialization, exactilu, init_iluvals);
+	const double initres = check_initial<bs>(mat, plist, scale, thread_chunk_size,
+	                                         initialization, exactilu, init_iluvals);
 	init_iluvals.resize(0); init_iluvals.shrink_to_fit();
 
 	int isweep = 0;
@@ -202,6 +201,11 @@ int test_fullyasync_ilu_convergence(const CRawBSRMatrix<double,int>& mat, const 
 	int curmaxsweeps = maxsweeps;
 
 	printf("# %5s %10s %10s %10s\n", "Sweep", "L-norm","U-norm","NL-Res");
+	if(initialization == "exact")
+		printf(" %5d %10.3g %10.3g %10.3g\n", 1, initLerr, initUerr, initres);
+	else
+		printf(" %5d %10.3g %10.3g %10.3g\n", 1, 1.0, 1.0, initres);
+	fflush(stdout);
 	
 	const Blk<bs> *const mvals = reinterpret_cast<const Blk<bs>*>(mat.vals);
 	
@@ -344,7 +348,7 @@ void check_convergence(const CRawBSRMatrix<double,int>& mat, const ILUPositions<
 			block_ilu0_nonlinear_res<double,int,bs,ColMajor,false>(&mat, plist, &scale[0], &iluvals[0],
 			                                                       thread_chunk_size);
 
-	printf(" %5d %10.3g %10.3g %10.3g\n", isweep+1, Lerr, Uerr, ilures); fflush(stdout);
+	printf(" %5d %10.3g %10.3g %10.3g\n", isweep+2, Lerr, Uerr, ilures); fflush(stdout);
 
 	assert(std::isfinite(Lerr));
 	assert(std::isfinite(Uerr));
@@ -503,10 +507,10 @@ template device_vector<double> getScalingVector<4>(const CRawBSRMatrix<double,in
 }
 
 template <int bs>
-void check_initial(const CRawBSRMatrix<double,int>& mat, const ILUPositions<int>& plist,
-                   const device_vector<double>& scale, const int thread_chunk_size,
-                   const std::string initialization,
-                   const device_vector<double>& exactilu, const device_vector<double>& iluvals)
+double check_initial(const CRawBSRMatrix<double,int>& mat, const ILUPositions<int>& plist,
+                     const device_vector<double>& scale, const int thread_chunk_size,
+                     const std::string initialization,
+                     const device_vector<double>& exactilu, const device_vector<double>& iluvals)
 {
 	// check maxnorm functions
 	const double checkLerr = maxnorm_lower<bs>(&mat, exactilu, exactilu);
@@ -536,7 +540,7 @@ void check_initial(const CRawBSRMatrix<double,int>& mat, const ILUPositions<int>
 		 )
 		;
 
-	printf(" Initial nonlinear ILU residual = %f.\n", initilures);
+	//printf(" Initial nonlinear ILU residual = %f.\n", initilures);
 
 	// check ilu remainder
 	const double checkilures = (scale.size() > 0) ?
@@ -564,5 +568,7 @@ void check_initial(const CRawBSRMatrix<double,int>& mat, const ILUPositions<int>
 	fflush(stdout);
 	if(initialization != "exact")
 		assert(checkilures/initilures < 5e-16);
+
+	return initilures;
 }
 
