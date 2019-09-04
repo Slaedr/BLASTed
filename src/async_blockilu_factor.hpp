@@ -40,7 +40,7 @@ PrecInfo block_ilu0_factorize(const CRawBSRMatrix<scalar,index> *const mat,
                               const bool compute_remainder,
                               scalar *const __restrict iluvals, scalar *const __restrict scale);
 
-/// Computes the vector max norm of the ILU remainder A - LU restricted to the sparsity pattern of A
+/// Computes the vector 1-norm of the ILU remainder A - LU restricted to the sparsity pattern of A
 /** \param[in] mat The matrix A
  * \param[in] scale The vector of value used for symmetric scaling of the matrix.
  *   Can be nullptr if the template parameter usescaling is false.

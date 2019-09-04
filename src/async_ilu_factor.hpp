@@ -33,7 +33,7 @@ PrecInfo scalar_ilu0_factorize(const CRawBSRMatrix<scalar,index> *const mat,
                                const FactInit factinittype, const bool compute_info,
                                scalar *const __restrict iluvals, scalar *const __restrict scale);
 
-/// Computes the max (vector) norm of the ILU0 remainder A - LU
+/// Computes the vector 1-norm of the ILU0 remainder A - LU
 /** Note that A is assumed to be RVC, where V are the actual matrix values stored and R and C are the
  * row and column scaling factor (diagonal) matrices resp.
  */
