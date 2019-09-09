@@ -56,7 +56,7 @@ void check_convergence(const CRawBSRMatrix<double,int>& mat, const ILUPositions<
                        const device_vector<double>& scale, const bool usescale,
                        const device_vector<double>& iluvals, const device_vector<double>& exactilu,
                        const double initLerr, const double initUerr, const int thread_chunk_size,
-                       const std::string initialization, const double tolerance,
+                       const std::string initialization, const double tolerance, const int maxsweeps,
                        int& isweep, int& current_max_sweeps, bool& converged);
 
 template <int bs>
@@ -156,7 +156,7 @@ int test_partiallyasync_ilu_convergence(const CRawBSRMatrix<double,int>& mat,
 		}
 
 		check_convergence<bs>(mat, plist, scale, usescale, iluvals, exactilu, initLerr, initUerr,
-		                      thread_chunk_size, initialization, tol, isweep, curmaxsweeps, converged);
+		                      thread_chunk_size, initialization, tol, maxsweeps, isweep, curmaxsweeps, converged);
 
 	}
 
@@ -282,7 +282,7 @@ int test_fullyasync_ilu_convergence(const CRawBSRMatrix<double,int>& mat, const 
 			avg_iluvals[i] /= nrepeats;
 
 		check_convergence<bs>(mat, plist, scale, usescale, avg_iluvals, exactilu, initLerr, initUerr,
-		                      thread_chunk_size, initialization, tol, isweep, curmaxsweeps, converged);
+		                      thread_chunk_size, initialization, tol, maxsweeps, isweep, curmaxsweeps, converged);
 
 	}
 
@@ -318,7 +318,7 @@ void check_convergence(const CRawBSRMatrix<double,int>& mat, const ILUPositions<
                        const device_vector<double>& scale, const bool usescale,
                        const device_vector<double>& iluvals, const device_vector<double>& exactilu,
                        const double initLerr, const double initUerr, const int thread_chunk_size,
-                       const std::string initialization, const double tol,
+                       const std::string initialization, const double tol, const int maxsweeps,
                        int& isweep, int& curmaxsweeps, bool& converged)
 {
 	double Lerr, Uerr;
@@ -358,8 +358,13 @@ void check_convergence(const CRawBSRMatrix<double,int>& mat, const ILUPositions<
 
 	if(converged) {
 		// The solution should not change
-		assert(Lerr < tol);
-		assert(Uerr < tol);
+		// But if it does, mark it as un-converged again
+		//assert(Lerr < tol);
+		//assert(Uerr < tol);
+		if(Lerr > tol || Uerr > tol) {
+			converged = false;
+			curmaxsweeps = maxsweeps;
+		}
 	}
 	else {
 		// If tolerance is reached, see if the solution remains the same for 2 more iterations
