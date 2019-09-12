@@ -14,8 +14,9 @@ namespace blasted {
 /// Unit lower triangular solve
 template <typename scalar, typename index> inline 
 scalar scalar_unit_lower_triangular(const scalar *const __restrict vals, 
-		const index *const __restrict colind, const index rowstart, const index diagind,
-		const scalar rhs, const scalar *const __restrict x)
+                                    const index *const __restrict colind, const index rowstart,
+                                    const index diagind, const scalar rhs,
+                                    const scalar *const __restrict x)
 {
 	scalar inter = 0;
 #pragma omp simd reduction(+:inter)
@@ -27,10 +28,10 @@ scalar scalar_unit_lower_triangular(const scalar *const __restrict vals,
 
 /// Upper triangular solve kernel
 template <typename scalar, typename index> inline 
-scalar scalar_upper_triangular(const scalar *const __restrict vals, 
-		const index *const __restrict colind, const index diagind, const index nextrowstart,
-		const scalar diag_entry_inv, const scalar rhs, 
-		const scalar *const __restrict x)
+scalar scalar_upper_triangular(const scalar *const __restrict vals, const index *const __restrict colind,
+                               const index diagind, const index nextrowstart,
+                               const scalar diag_entry_inv, const scalar rhs, 
+                               const scalar *const __restrict x)
 {
 	scalar inter = 0;
 #pragma omp simd reduction(+:inter)
