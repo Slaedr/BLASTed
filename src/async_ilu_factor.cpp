@@ -165,7 +165,7 @@ void executeILU0Factorization(const CRawBSRMatrix<scalar,index> *const mat,
 	{
 		for(int isweep = 0; isweep < nbuildsweeps; isweep++)
 		{
-#pragma omp for schedule(dynamic, thread_chunk_size)
+#pragma omp for schedule(dynamic, thread_chunk_size) nowait
 			for(index irow = 0; irow < mat->nbrows; irow++)
 			{
 				async_ilu0_factorize_kernel<scalar,index,scalerow,scalecol>(mat, plist, irow,
