@@ -1,7 +1,7 @@
 BLASTed
 =======
 
-Basic Linear Algebra Subprograms Threaded: A collection of sparse matrix containers and manipulators, along with certain linear algebra operations. Note that this is not a complete sparse BLAS library. The main focus is on providing thread-parallel low-level kernels required to implement preconditioners for large sparse linear systems of algebraic equations, in an object-oriented framework. In case of a distributed-memory parallel solver, the operations implemented here are meant to be used in the subdomains' local preconditioners.
+A collection of sparse matrix containers and manipulators, along with certain linear algebra operations. Note that this is not a complete sparse BLAS library. The main focus is on providing thread-parallel low-level kernels required to implement preconditioners for large sparse linear systems of algebraic equations, in an object-oriented framework. In case of a distributed-memory parallel solver, the operations implemented here are meant to be used in the subdomains' local preconditioners.
 
 Building
 --------
