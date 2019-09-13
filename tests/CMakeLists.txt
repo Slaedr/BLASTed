@@ -155,6 +155,9 @@ if(WITH_PETSC)
   add_executable(testpetscsolver runpetsctest.c)
   target_link_libraries(testpetscsolver coomatrix blasted_petsc petsctestutils)
 
+  add_executable(petscsolve runpetscsolver.c)
+  target_link_libraries(petscsolve blasted_petsc petsctestutils)
+
   add_test(NAME SerialPetsc-BSR4-Jacobi 
 	COMMAND env OMP_NUM_THREADS=1 ${SEQEXEC} ${CMAKE_CURRENT_BINARY_DIR}/testpetscsolver
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.pmat

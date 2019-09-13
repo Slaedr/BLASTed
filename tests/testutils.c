@@ -240,3 +240,108 @@ int runComparisonVsPetsc(const DiscreteLinearProblem lp)
 	return ierr;
 }
 
+int runPetsc(const DiscreteLinearProblem lp)
+{
+	int rank = 0;
+	MPI_Comm_rank(PETSC_COMM_WORLD,&rank);
+
+	PetscBool set = PETSC_FALSE;
+	/* char testtype[PETSCOPTION_STR_LEN]; */
+	/* int ierr = PetscOptionsGetString(NULL,NULL,"-test_type",testtype, PETSCOPTION_STR_LEN, &set); */
+	/* CHKERRQ(ierr); */
+	/* if(!set) { */
+	/* 	printf("Test type not set; testing issame.\n"); */
+	/* 	strcpy(testtype,"issame"); */
+	/* } */
+
+	//set = PETSC_FALSE;
+	PetscInt cmdnumruns;
+	int ierr = PetscOptionsGetInt(NULL,NULL,"-num_runs",&cmdnumruns,&set); CHKERRQ(ierr);
+	const int nruns = set ? cmdnumruns : 1;
+	printf(" Using default number of runs: 1\n");
+
+	//----------------------------------------------------------------------------------
+
+	// run the solve to be tested as many times as requested
+
+	int avgkspiters = 0;
+
+	Vec u;
+	ierr = VecDuplicate(lp.uexact, &u); CHKERRQ(ierr);
+	ierr = VecSet(u, 0); CHKERRQ(ierr);
+
+	for(int irun = 0; irun < nruns; irun++)
+	{
+		if(rank == 0)
+			printf("Run %d:\n", irun);
+
+		Vec urun;
+		ierr = VecDuplicate(lp.uexact, &urun); CHKERRQ(ierr);
+
+		KSP ksp;
+
+		ierr = KSPCreate(PETSC_COMM_WORLD, &ksp); CHKERRQ(ierr);
+		ierr = KSPSetType(ksp, KSPRICHARDSON); CHKERRQ(ierr);
+		ierr = KSPRichardsonSetScale(ksp, 1.0); CHKERRQ(ierr);
+
+		// Options MUST be set before setting shell routines!
+		ierr = KSPSetFromOptions(ksp); CHKERRQ(ierr);
+
+		// Operators MUST be set before extracting sub KSPs!
+		ierr = KSPSetOperators(ksp, lp.lhs, lp.lhs); CHKERRQ(ierr);
+
+		// Create BLASTed data structure and setup the PC
+		Blasted_data_list bctx = newBlastedDataList();
+		ierr = setup_blasted_stack(ksp, &bctx); CHKERRQ(ierr);
+
+		ierr = KSPSolve(ksp, lp.b, urun); CHKERRQ(ierr);
+
+		// post-process
+		int kspiters; PetscReal rnorm;
+		ierr = KSPGetIterationNumber(ksp, &kspiters); CHKERRQ(ierr);
+		avgkspiters += kspiters;
+
+		KSPConvergedReason ksp_reason;
+		ierr = KSPGetConvergedReason(ksp, &ksp_reason); CHKERRQ(ierr);
+		printf("  KSP converged reason = %d.\n", ksp_reason);
+		assert(ksp_reason > 0);
+
+		if(rank == 0) {
+			ierr = KSPGetResidualNorm(ksp, &rnorm); CHKERRQ(ierr);
+			printf(" KSP residual norm = %f\n", rnorm);
+		}
+
+		//errnorm += compute_error(comm,m,da,u,lp.uexact);
+		PetscReal errnormrun = 0;
+		ierr = compute_difference_norm(u, lp.uexact, &errnormrun); CHKERRQ(ierr);
+
+		ierr = VecAXPY(u, 1.0, urun); CHKERRQ(ierr);
+
+		if(rank == 0) {
+			printf("Test run:\n");
+			printf(" error: %.16f\n", errnormrun);
+			printf(" log error: %f\n", log10(errnormrun));
+		}
+
+		ierr = KSPDestroy(&ksp); CHKERRQ(ierr);
+		ierr = VecDestroy(&urun); CHKERRQ(ierr);
+
+		// rudimentary test for time-totaller
+		computeTotalTimes(&bctx);
+		assert(bctx.factorwalltime > DBL_EPSILON);
+		assert(bctx.applywalltime > DBL_EPSILON);
+		// looks like the problem is too small for the unix clock() to record it
+		assert(bctx.factorcputime >= 0);
+		assert(bctx.applycputime >= 0);
+
+		destroyBlastedDataList(&bctx);
+	}
+
+	avgkspiters = avgkspiters/(double)nruns;
+	ierr = VecScale(u, 1.0/nruns); CHKERRQ(ierr);
+
+	printf("Average iteration count = %d\n", avgkspiters);
+	ierr = VecDestroy(&u); CHKERRQ(ierr);
+
+	return ierr;
+}

@@ -50,6 +50,9 @@ int runComparisonVsPetsc(const DiscreteLinearProblem lp);
  */
 int runComparisonVsPetsc_cpp(const DiscreteLinearProblem lp);
 
+/// Run a PETSc solver with BLASTed preconditioner some number of times and report iteration count
+int runPetsc(const DiscreteLinearProblem lp);
+
 /// Returns the block size of the matrix if it uses a block format, else returns 1
 int getBlockSize(const Mat A);
 
