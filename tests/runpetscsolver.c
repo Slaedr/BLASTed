@@ -110,7 +110,7 @@ int main(int argc, char* argv[])
 	double devtable[MAX_SWEEPS][MAX_SWEEPS];
 
 	DiscreteLinearProblem lp;
-	ierr = readLinearSystemFromFiles(matfile, bfile, xfile, &lp, true); CHKERRQ(ierr);
+	ierr = readLinearSystemFromFiles(matfile, bfile, xfile, &lp, false); CHKERRQ(ierr);
 
 	for(int ibuild = 0; ibuild < nbuilds; ibuild++)
 		for(int iapply = 0; iapply < napplys; iapply++)
