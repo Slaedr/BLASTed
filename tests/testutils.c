@@ -240,37 +240,25 @@ int runComparisonVsPetsc(const DiscreteLinearProblem lp)
 	return ierr;
 }
 
-int runPetsc(const DiscreteLinearProblem lp)
+int runPetsc(const DiscreteLinearProblem lp, const int buildsweeps, const int applysweeps,
+             const int nruns, int *const iters, double *const rel_dev)
 {
 	int rank = 0;
 	MPI_Comm_rank(PETSC_COMM_WORLD,&rank);
 
-	PetscBool set = PETSC_FALSE;
-	/* char testtype[PETSCOPTION_STR_LEN]; */
-	/* int ierr = PetscOptionsGetString(NULL,NULL,"-test_type",testtype, PETSCOPTION_STR_LEN, &set); */
-	/* CHKERRQ(ierr); */
-	/* if(!set) { */
-	/* 	printf("Test type not set; testing issame.\n"); */
-	/* 	strcpy(testtype,"issame"); */
-	/* } */
+	double avgkspiters = 0;
 
-	//set = PETSC_FALSE;
-	PetscInt cmdnumruns;
-	int ierr = PetscOptionsGetInt(NULL,NULL,"-num_runs",&cmdnumruns,&set); CHKERRQ(ierr);
-	const int nruns = set ? cmdnumruns : 1;
-	printf(" Using default number of runs: 1\n");
-
-	//----------------------------------------------------------------------------------
-
-	// run the solve to be tested as many times as requested
-
-	int avgkspiters = 0;
+	set_blasted_sweeps(buildsweeps, applysweeps);
 
 	Vec u;
-	ierr = VecDuplicate(lp.uexact, &u); CHKERRQ(ierr);
+	int ierr = VecDuplicate(lp.uexact, &u); CHKERRQ(ierr);
 	ierr = VecSet(u, 0); CHKERRQ(ierr);
 
-	for(int irun = 0; irun < nruns; irun++)
+	//std::vector<int> runiters(nruns);
+	int runiters[nruns];
+
+	int irun = 0;
+	for( ; irun < nruns; irun++)
 	{
 		if(rank == 0)
 			printf("Run %d:\n", irun);
@@ -300,11 +288,18 @@ int runPetsc(const DiscreteLinearProblem lp)
 		int kspiters; PetscReal rnorm;
 		ierr = KSPGetIterationNumber(ksp, &kspiters); CHKERRQ(ierr);
 		avgkspiters += kspiters;
+		runiters[irun] = kspiters;
 
 		KSPConvergedReason ksp_reason;
 		ierr = KSPGetConvergedReason(ksp, &ksp_reason); CHKERRQ(ierr);
 		printf("  KSP converged reason = %d.\n", ksp_reason);
-		assert(ksp_reason > 0);
+		//assert(ksp_reason > 0);
+		if(ksp_reason <= 0) {
+			printf("KSP did not converge!\n");
+			avgkspiters = -100;
+			irun++;
+			break;
+		}
 
 		if(rank == 0) {
 			ierr = KSPGetResidualNorm(ksp, &rnorm); CHKERRQ(ierr);
@@ -338,10 +333,24 @@ int runPetsc(const DiscreteLinearProblem lp)
 	}
 
 	avgkspiters = avgkspiters/(double)nruns;
-	ierr = VecScale(u, 1.0/nruns); CHKERRQ(ierr);
+	//ierr = VecScale(u, 1.0/nruns); CHKERRQ(ierr);
+	printf("Average iteration count = %g\n", avgkspiters);
+	if(avgkspiters < 0)
+		printf("IMPORTANT: One of the runs diverged for the setting (%d,%d)\n",
+		       buildsweeps, applysweeps);
+	else
+		assert(irun == nruns);
 
-	printf("Average iteration count = %d\n", avgkspiters);
+	*iters = round(avgkspiters);
+
+	double reldev = 0;
+	for(int i = 0; i < irun; i++)
+		reldev += (runiters[i]-avgkspiters)*(runiters[i]-avgkspiters);
+	reldev = sqrt(reldev/irun)/avgkspiters;
+	*rel_dev = reldev;
+
 	ierr = VecDestroy(&u); CHKERRQ(ierr);
 
 	return ierr;
 }
+

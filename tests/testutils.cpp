@@ -59,19 +59,20 @@ SRMatrixStorage<const PetscScalar,const PetscInt> wrapLocalPetscMat(Mat A, const
 		                                                          Adiag->i[localrows/bs], bs);
 	}
 }
+}
 
 extern "C" {
 
 int compareSolverWithRef(const int refkspiters, const int avgkspiters,
                          Vec uref, Vec u)
 {
-	const int rank = get_mpi_rank(MPI_COMM_WORLD);
+	const int rank = blasted::get_mpi_rank(MPI_COMM_WORLD);
 	if(rank == 0)
 		printf("KSP Iters: Reference %d vs BLASTed %d.\n", refkspiters, avgkspiters);
 	fflush(stdout);
 
-	const std::string testtype = parsePetscCmd_string("-test_type", PETSCOPTION_STR_LEN);
-	const double error_tol = parseOptionalPetscCmd_real("-error_tolerance", 2*DBL_EPSILON);
+	const std::string testtype = blasted::parsePetscCmd_string("-test_type", PETSCOPTION_STR_LEN);
+	const double error_tol = blasted::parseOptionalPetscCmd_real("-error_tolerance", 2*DBL_EPSILON);
 	//const double iters_tol = parseOptionalPetscCmd_real("-iters_tolerance", 1e-2);
 
 	if(rank == 0)
@@ -256,12 +257,13 @@ int runComparisonVsPetsc_cpp(const DiscreteLinearProblem lp)
 		assert(bctx.applycputime >= 0);
 	}
 
+	using blasted::PrecInfoList;
 	const PrecInfoList *const pilist = static_cast<const PrecInfoList*>(bctx.ctxlist->infolist);
 
 	bool testprecinfo;
 	try {
-		testprecinfo = parsePetscCmd_bool("-blasted_compute_preconditioner_info");
-	} catch (InputNotGivenError& e) {
+		testprecinfo = blasted::parsePetscCmd_bool("-blasted_compute_preconditioner_info");
+	} catch (blasted::InputNotGivenError& e) {
 		testprecinfo = false;
 	}
 
@@ -318,13 +320,13 @@ int getBlockSize(const Mat A)
 	int bs = 0;
 	int ierr = MatGetBlockSize(A, &bs);
 	if(ierr != 0)
-		throw Petsc_exception(ierr);
+		throw blasted::Petsc_exception(ierr);
 
 	// Check matrix type and adjust block size
 	const char *mattype;
 	ierr = MatGetType(A, &mattype);
 	if(ierr != 0)
-		throw Petsc_exception(ierr);
+		throw blasted::Petsc_exception(ierr);
 	if(!strcmp(mattype, MATSEQAIJ) || !strcmp(mattype, MATSEQAIJMKL) ||
 	   !strcmp(mattype, MATMPIAIJ) || !strcmp(mattype, MATMPIAIJMKL) )
 	{
@@ -339,7 +341,23 @@ int getBlockSize(const Mat A)
 	return bs;
 }
 
+void set_blasted_sweeps(const int nbswp, const int naswp)
+{
+	// add option
+	std::string value = std::to_string(nbswp) + "," + std::to_string(naswp);
+	int ierr = PetscOptionsSetValue(NULL, "-blasted_async_sweeps", value.c_str());
+	blasted::petsc_throw(ierr);
+
+	// Check
+	int checksweeps[2];
+	int nmax = 2;
+	PetscBool set = PETSC_FALSE;
+	ierr = PetscOptionsGetIntArray(NULL,NULL,"-blasted_async_sweeps",checksweeps,&nmax,&set);
+	blasted::petsc_throw(ierr);
+	if(checksweeps[0] != nbswp || checksweeps[1] != naswp)
+		throw std::runtime_error("Async sweeps not set properly!");
 }
+
 }
 
 // some unused snippets that might be useful at some point

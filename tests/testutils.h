@@ -51,10 +51,17 @@ int runComparisonVsPetsc(const DiscreteLinearProblem lp);
 int runComparisonVsPetsc_cpp(const DiscreteLinearProblem lp);
 
 /// Run a PETSc solver with BLASTed preconditioner some number of times and report iteration count
-int runPetsc(const DiscreteLinearProblem lp);
+/** \param[out] iters The average number of solver iterations required for convergence
+ * \param[out] relative_deviation Standard deviation in the number of iterations divided by the average
+ */
+int runPetsc(const DiscreteLinearProblem lp, const int nbuildsweeps, const int napplysweeps,
+             const int num_runs, int *const iters, double *const relative_deviation);
 
 /// Returns the block size of the matrix if it uses a block format, else returns 1
 int getBlockSize(const Mat A);
+
+/// Set the number of BLASTed sweeps in PETSc's options database
+void set_blasted_sweeps(const int nbuildsweeps, const int napplysweeps);
 
 #ifdef __cplusplus
 }
