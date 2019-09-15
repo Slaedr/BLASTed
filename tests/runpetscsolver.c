@@ -131,13 +131,13 @@ int main(int argc, char* argv[])
 		fprintf(outf, "Linear system with matrix from %s\n\n", matfile);
 		fprintf(outf, "Number of linear system iterations:\n");
 		fprintf(outf, "Apply sweeps ->");
-		for(int iapply = 1; iapply < napplys+1; iapply++)
-			fprintf(outf, "%8d", iapply);
+		for(int iapply = 0; iapply < napplys; iapply++)
+			fprintf(outf, "%8d", applysweeps[iapply]);
 		fprintf(outf, "\nBuild sweeps   \n----------------------\n");
 
 		for(int ibuild = 0; ibuild < nbuilds; ibuild++)
 		{
-			fprintf(outf, "%12d | ", ibuild+1);
+			fprintf(outf, "%12d | ", buildsweeps[ibuild]);
 			for(int iapply = 0; iapply < napplys; iapply++)
 				fprintf(outf, "%8d", itertable[ibuild][iapply]);
 			fprintf(outf, "\n");
@@ -145,17 +145,17 @@ int main(int argc, char* argv[])
 
 		fprintf(outf, "\nRelative deviations:\n");
 		fprintf(outf, "Apply sweeps ->");
-		for(int iapply = 1; iapply < napplys+1; iapply++)
-			fprintf(outf, "%10d", iapply);
+		for(int iapply = 0; iapply < napplys; iapply++)
+			fprintf(outf, "%10d", applysweeps[iapply]);
 		fprintf(outf, "\nBuild sweeps   \n----------------------\n");
 
 		for(int ibuild = 0; ibuild < nbuilds; ibuild++)
-			{
-				fprintf(outf, "%14d | ", ibuild+1);
-				for(int iapply = 0; iapply < napplys; iapply++)
-					fprintf(outf, "%10.3e", devtable[ibuild][iapply]);
-				fprintf(outf, "\n");
-			}
+		{
+			fprintf(outf, "%14d | ", buildsweeps[ibuild]);
+			for(int iapply = 0; iapply < napplys; iapply++)
+				fprintf(outf, "%10.3e", devtable[ibuild][iapply]);
+			fprintf(outf, "\n");
+		}
 
 		fclose(outf);
 	}
