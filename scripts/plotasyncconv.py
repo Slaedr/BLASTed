@@ -33,7 +33,7 @@ def plotquantity(filelist, quantname, numits, labellist, opts, imageformatstring
 
         plt.xlabel("Asynchronous sweeps", fontsize="medium")
         if quantname == "residual":
-            plt.plot(data[numits:,0], np.log10(data[numits:,3]), \
+            plt.plot(data[numits:,0], np.log10(data[numits:,3]/data[0,3]), \
                     lw=opts['linewidth'], ls=opts['linetype'][i], color=opts['colorlist'][i], \
                     marker=opts['marklist'][i], ms=opts['marksize'], \
                     mew=opts['markedgewidth'], \
