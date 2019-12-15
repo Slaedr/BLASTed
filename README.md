@@ -1,7 +1,9 @@
 BLASTed
 =======
 
-A collection of sparse matrix containers and manipulators, along with certain linear algebra operations. Note that this is not a complete sparse BLAS library. The main focus is on providing thread-parallel low-level kernels required to implement preconditioners for large sparse linear systems of algebraic equations, in an object-oriented framework. In case of a distributed-memory parallel solver, the operations implemented here are meant to be used in the subdomains' local preconditioners.
+A collection of sparse matrix containers and manipulators, along with certain linear algebra operations. Note that this is not a complete sparse BLAS library; instead. the focus is on providing thread-parallel low-level kernels required to implement preconditioners for large sparse linear systems of algebraic equations, in an object-oriented framework. In case of a distributed-memory parallel solver, the operations implemented here are meant to be used in the subdomains' local preconditioners. 
+
+The main contribution of this library is a practical implementation of asynchronous iterations as preconditioners. These include scalar and point-block versions of ['asynchronous symmetric Gauss-Seidel' iterations](https://www.sciencedirect.com/science/article/pii/S0045793018308429) developed as part of this work, an independent implementation of an [asynchronous incomplete LU factorization preconditioner](https://epubs.siam.org/doi/10.1137/140968896), as well as an asynchronous point-block ILU factorization preconditioner with asynchronous block-triangular solves. The advantages of point-block asynchronous ILU preconditioners, especially for compressible fluid flow problems, are documented in [this preprint submitted to SIAM](https://arxiv.org/abs/1912.00539).
 
 Building
 --------
