@@ -195,11 +195,12 @@ int runComparisonVsPetsc(const DiscreteLinearProblem lp)
 
 		KSPConvergedReason ksp_reason;
 		ierr = KSPGetConvergedReason(ksp, &ksp_reason); CHKERRQ(ierr);
-		printf("  KSP converged reason = %d.\n", ksp_reason);
+		if(rank == 0)
+			printf("  KSP converged reason = %d.\n", ksp_reason);
 		assert(ksp_reason > 0);
 
+		ierr = KSPGetResidualNorm(ksp, &rnorm); CHKERRQ(ierr);
 		if(rank == 0) {
-			ierr = KSPGetResidualNorm(ksp, &rnorm); CHKERRQ(ierr);
 			printf(" KSP residual norm = %f\n", rnorm);
 		}
 
@@ -292,10 +293,12 @@ int runPetsc(const DiscreteLinearProblem lp, const int buildsweeps, const int ap
 
 		KSPConvergedReason ksp_reason;
 		ierr = KSPGetConvergedReason(ksp, &ksp_reason); CHKERRQ(ierr);
-		printf("  KSP converged reason = %d.\n", ksp_reason);
+		if(rank == 0)
+			printf("  KSP converged reason = %d.\n", ksp_reason);
 		//assert(ksp_reason > 0);
 		if(ksp_reason <= 0) {
-			printf("KSP did not converge!\n");
+			if(rank == 0)
+				printf("KSP did not converge!\n");
 			avgkspiters = -100;
 			irun++;
 			break;
@@ -334,10 +337,12 @@ int runPetsc(const DiscreteLinearProblem lp, const int buildsweeps, const int ap
 
 	avgkspiters = avgkspiters/(double)nruns;
 	//ierr = VecScale(u, 1.0/nruns); CHKERRQ(ierr);
-	printf("Average iteration count = %g\n", avgkspiters);
+	if(rank == 0)
+		printf("Average iteration count = %g\n", avgkspiters);
 	if(avgkspiters < 0)
-		printf("IMPORTANT: One of the runs diverged for the setting (%d,%d)\n",
-		       buildsweeps, applysweeps);
+		if(rank == 0)
+			printf("IMPORTANT: One of the runs diverged for the setting (%d,%d)\n",
+				   buildsweeps, applysweeps);
 	else
 		assert(irun == nruns);
 

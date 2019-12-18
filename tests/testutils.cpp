@@ -94,8 +94,10 @@ int compareSolverWithRef(const int refkspiters, const int avgkspiters,
 	ierr = VecNorm(diff, NORM_2, &diffnorm); CHKERRQ(ierr);
 	ierr = VecDestroy(&diff); CHKERRQ(ierr);
 
-	printf("Difference in solutions = %g.\n", diffnorm);
-	printf("Relative difference = %g.\n", diffnorm/refnorm);
+	if(rank == 0) {
+		printf("Difference in solutions = %g.\n", diffnorm);
+		printf("Relative difference = %g.\n", diffnorm/refnorm);
+	}
 	fflush(stdout);
 	if(testtype == "compare_error" || testtype == "issame")
 		assert(diffnorm/refnorm <= error_tol);
@@ -227,7 +229,10 @@ int runComparisonVsPetsc_cpp(const DiscreteLinearProblem lp)
 
 		KSPConvergedReason ksp_reason;
 		ierr = KSPGetConvergedReason(ksp, &ksp_reason); CHKERRQ(ierr);
-		printf("  KSP converged reason = %d.\n", ksp_reason); fflush(stdout);
+		if(rank == 0) {
+			printf("  KSP converged reason = %d.\n", ksp_reason);
+			fflush(stdout);
+		}
 		assert(ksp_reason > 0);
 
 		if(rank == 0) {
@@ -269,18 +274,25 @@ int runComparisonVsPetsc_cpp(const DiscreteLinearProblem lp)
 
 	if(testprecinfo) {
 		assert(pilist);
-		printf(" Size if infolist is %ld, num runs is %d.\n", pilist->infolist.size(), nruns);
-		fflush(stdout);
+		if(rank == 0) {
+			printf(" Size if infolist is %ld, num runs is %d.\n", pilist->infolist.size(), nruns);
+			fflush(stdout);
+		}
 		// It turns out one extra call to the PC's compute function is made during precprocessing
 		assert(static_cast<int>(pilist->infolist.size()) == nruns+1);
 
-		printf("  Preconditioner build info:\n");
-		printf("  ILU rem, initial ILU rem, upper min ddom, upper avg ddom, lower min ddom, lower avg ddom\n");
-		for(int i = 0; i < nruns+1; i++) {
-			for(int j = 0; j < 6; j++)
-				printf("  %9.4g ", pilist->infolist[i].f_info[j]);
-			printf("\n");
-			fflush(stdout);
+		if(rank == 0) {
+			printf("  Preconditioner build info:\n");
+			printf("  ILU rem, initial ILU rem, upper min ddom, upper avg ddom, lower min ddom, lower avg ddom\n");
+		}
+		for(int i = 0; i < nruns+1; i++)
+		{
+			if(rank == 0) {
+				for(int j = 0; j < 6; j++)
+					printf("  %9.4g ", pilist->infolist[i].f_info[j]);
+				printf("\n");
+				fflush(stdout);
+			}
 
 			// Sanity checks
 			for(int j = 0; j < 6; j++)
