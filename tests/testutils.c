@@ -339,10 +339,11 @@ int runPetsc(const DiscreteLinearProblem lp, const int buildsweeps, const int ap
 	//ierr = VecScale(u, 1.0/nruns); CHKERRQ(ierr);
 	if(rank == 0)
 		printf("Average iteration count = %g\n", avgkspiters);
-	if(avgkspiters < 0)
+	if(avgkspiters < 0) {
 		if(rank == 0)
 			printf("IMPORTANT: One of the runs diverged for the setting (%d,%d)\n",
 				   buildsweeps, applysweeps);
+	}
 	else
 		assert(irun == nruns);
 
