@@ -152,6 +152,9 @@ if(WITH_PETSC)
   target_link_libraries(petsctestutils blasted_petsc utils)
   set_property(TARGET petsctestutils PROPERTY POSITION_INDEPENDENT_CODE ON)
 
+  add_executable(petscsingle runpetscsingle.c)
+  target_link_libraries(petscsingle coomatrix blasted_petsc petsctestutils)
+
   add_executable(testpetscsolver runpetsctest.c)
   target_link_libraries(testpetscsolver coomatrix blasted_petsc petsctestutils)
 
