@@ -20,18 +20,8 @@
 #include <cassert>
 #include <algorithm>
 #include <fstream>
-
-/*  Due to a minor bug in Boost string library versions earlier than 1.69 and GCC version 9,
- * the following pragams are used.
- */
-#ifdef __GNUC__
-#pragma GCC diagnostic push
-#pragma GCC diagnostic warning "-Wmaybe-uninitialized"
-#include <boost/algorithm/string.hpp>
-#pragma GCC diagnostic pop
-#else
-#include <boost/algorithm/string.hpp>
-#endif
+#include <sstream>
+#include <iterator>
 
 #include <coomatrix.hpp>
 
@@ -43,8 +33,9 @@ MMDescription getMMDescription(std::ifstream& fin)
 {
 	std::string line;
 	std::getline(fin, line);
-	std::vector<std::string> typeofmatrix;
-	boost::split(typeofmatrix, line, boost::is_any_of(" "));
+	std::istringstream iss(line);
+	const std::vector<std::string> typeofmatrix{std::istream_iterator<std::string>(iss),
+	                                            std::istream_iterator<std::string>()};
 
 	MMDescription descr;
 
@@ -103,8 +94,9 @@ std::vector<index> getSizeFromMatrixMarket(std::ifstream& fin, const MMDescripti
 		std::getline(fin, line);
 
 	// parse matrix size line
-	std::vector<std::string> sizestr;
-	boost::split(sizestr, line, boost::is_any_of(" "));
+	std::istringstream iss(line);
+	const std::vector<std::string> sizestr{std::istream_iterator<std::string>(iss),
+	                                       std::istream_iterator<std::string>()};
 
 	if(descr.storagetype == COORDINATE) {
 		if(sizestr.size() < 3) {
@@ -196,6 +188,7 @@ index COOMatrix<scalar,index>::numnonzeros() const {return nnz; }
 template <typename scalar, typename index>
 void COOMatrix<scalar,index>::readMatrixMarket(const std::string file)
 {
+	std::cout << " Attempting to read file " << file << std::endl;
 	std::ifstream fin(file);
 	if(!fin) {
 		std::cout << " COOMatrix: File could not be opened to read!\n";

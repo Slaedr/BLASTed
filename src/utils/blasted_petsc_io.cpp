@@ -5,6 +5,7 @@
 
 #include <cstring>
 #include <vector>
+#include <memory>
 
 #include <utils/blasted_petsc_io.h>
 #include <coomatrix.hpp>
@@ -16,7 +17,7 @@ PetscErrorCode readVecFromFile(const char *const file, MPI_Comm comm, Mat a, Vec
 {
 	PetscErrorCode ierr = 0;
 
-	std::vector<PetscReal> array = blasted::readDenseMatrixMarket<PetscReal>(file);
+	blasted::device_vector<PetscReal> array = blasted::readDenseMatrixMarket<PetscReal>(file);
 	const PetscInt size = static_cast<PetscInt>(array.size());
 
 	if(a) {
@@ -66,36 +67,42 @@ PetscErrorCode readMatFromCOOFile(const char *const file, MPI_Comm comm, Mat *co
 	// for default pre-allocation
 	ierr = MatSetUp(*A); CHKERRQ(ierr);
 
-	blasted::RawBSRMatrix<PetscReal,PetscInt> rmat;
+	std::unique_ptr<blasted::SRMatrixStorage<PetscReal,PetscInt>> rmat;
 	switch(bs) {
 		case 3:
-			cmat.convertToBSR<3,Eigen::ColMajor>(&rmat);
+			//cmat.convertToBSR<3,Eigen::ColMajor>(&rmat);
+			rmat = std::make_unique<blasted::SRMatrixStorage<PetscReal,PetscInt>>
+				(std::move(blasted::getSRMatrixFromCOO<PetscReal,PetscInt,3>(cmat,"colmajor")));
 			break;
 		case 4:
-			cmat.convertToBSR<4,Eigen::ColMajor>(&rmat);
-			break;
-		case 5:
-			cmat.convertToBSR<5,Eigen::ColMajor>(&rmat);
+			//cmat.convertToBSR<4,Eigen::ColMajor>(&rmat);
+			rmat = std::make_unique<blasted::SRMatrixStorage<PetscReal,PetscInt>>
+				(std::move(blasted::getSRMatrixFromCOO<PetscReal,PetscInt,4>(cmat,"colmajor")));
 			break;
 		case 7:
-			cmat.convertToBSR<7,Eigen::ColMajor>(&rmat);
+			//cmat.convertToBSR<7,Eigen::ColMajor>(&rmat);
+			rmat = std::make_unique<blasted::SRMatrixStorage<PetscReal,PetscInt>>
+				(std::move(blasted::getSRMatrixFromCOO<PetscReal,PetscInt,7>(cmat,"colmajor")));
 			break;
 		default:
 			printf("readMatFromCOOFile: Block size %d is not supported; falling back to CSR\n", bs);
-			cmat.convertToCSR(&rmat);
+			//cmat.convertToCSR(&rmat);
+			rmat = std::make_unique<blasted::SRMatrixStorage<PetscReal,PetscInt>>
+				(std::move(blasted::getSRMatrixFromCOO<PetscReal,PetscInt,1>(cmat,"colmajor")));
 			bs = 1;
 			ierr = MatSetBlockSize(*A, bs); CHKERRQ(ierr);
 	}
 
 	ierr = MatSetOption(*A, MAT_ROW_ORIENTED, PETSC_FALSE); CHKERRQ(ierr);
-	for(PetscInt i = 0; i < rmat.nbrows; i++) {
-		const PetscInt *const colinds = &rmat.bcolind[rmat.browptr[i]];
-		const PetscReal *const values = &rmat.vals[rmat.browptr[i]*bs*bs];
-		const PetscInt ncols = rmat.browptr[i+1]-rmat.browptr[i];
+	for(PetscInt i = 0; i < rmat->nbrows; i++) {
+		const PetscInt *const colinds = &rmat->bcolind[rmat->browptr[i]];
+		const PetscReal *const values = &rmat->vals[rmat->browptr[i]*bs*bs];
+		const PetscInt ncols = rmat->browptr[i+1]-rmat->browptr[i];
 		ierr = MatSetValuesBlocked(*A, 1, &i, ncols, colinds, values, INSERT_VALUES);
 		CHKERRQ(ierr);
 	}
-	blasted::destroyRawBSRMatrix(rmat);
+
+	//blasted::destroyRawBSRMatrix(rmat);
 
 	ierr = MatAssemblyBegin(*A, MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
 	ierr = MatAssemblyEnd(*A, MAT_FINAL_ASSEMBLY); CHKERRQ(ierr);
