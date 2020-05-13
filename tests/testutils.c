@@ -38,20 +38,28 @@ int readLinearSystemFromFiles(const char *const matfile, const char *const bfile
 	PetscViewer bvecreader;
 	ierr = PetscViewerBinaryOpen(comm, bfile, FILE_MODE_READ, &bvecreader); CHKERRQ(ierr);
 	PetscViewer xvecreader;
-	ierr = PetscViewerBinaryOpen(comm, xfile, FILE_MODE_READ, &xvecreader); CHKERRQ(ierr);
+	if(xfile) {
+		ierr = PetscViewerBinaryOpen(comm, xfile, FILE_MODE_READ, &xvecreader); CHKERRQ(ierr);
+	}
 
 	ierr = MatCreate(comm,&(lp->lhs)); CHKERRQ(ierr);
 	ierr = MatSetFromOptions(lp->lhs); CHKERRQ(ierr);
 	ierr = MatLoad(lp->lhs, matreader); CHKERRQ(ierr);
 
 	ierr = VecCreate(comm,&(lp->b)); CHKERRQ(ierr);
-	ierr = VecCreate(comm,&(lp->uexact)); CHKERRQ(ierr);
 	ierr = VecLoad(lp->b, bvecreader); CHKERRQ(ierr);
-	ierr = VecLoad(lp->uexact, xvecreader); CHKERRQ(ierr);
+	if(xfile) {
+		ierr = VecCreate(comm,&(lp->uexact)); CHKERRQ(ierr);
+		ierr = VecLoad(lp->uexact, xvecreader); CHKERRQ(ierr);
+	}
+	else
+		lp->uexact = NULL;
 
 	ierr = PetscViewerDestroy(&matreader); CHKERRQ(ierr);
 	ierr = PetscViewerDestroy(&bvecreader); CHKERRQ(ierr);
-	ierr = PetscViewerDestroy(&xvecreader); CHKERRQ(ierr);
+	if(xfile) {
+		ierr = PetscViewerDestroy(&xvecreader); CHKERRQ(ierr);
+	}
 
 	// ensure diagonal entry locations have been computed; this is necessary for BAIJ matrices
 	// as a bonus, check for singular diagonals
@@ -64,7 +72,7 @@ int readLinearSystemFromFiles(const char *const matfile, const char *const bfile
 
 	// Matrix multiply check
 
-	if(testmatmult) {
+	if(testmatmult && xfile) {
 		const PetscReal error_tol_matmult = 5e2;
 
 		Vec test;

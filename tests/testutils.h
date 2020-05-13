@@ -23,7 +23,9 @@ int destroyDiscreteLinearProblem(DiscreteLinearProblem *const dlp);
 
 /// Reads a matrix, RHS vector and exact solution from PETSc binary files
 /**
+ * xfile Name of file containing exact solution. If NULL, this is ignored.
  * \param[in] testmatmult In case of reading from files, optionally test whether A*x == b.
+ *    xfile must not be NULL for this test to happen.
  */
 int readLinearSystemFromFiles(const char *const matfile, const char *const bfile, const char *const xfile,
                               DiscreteLinearProblem *const lp, const bool testmatmult);
