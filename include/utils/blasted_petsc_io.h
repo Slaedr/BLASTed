@@ -24,6 +24,8 @@ PetscErrorCode readVecFromFile(const char *const file, MPI_Comm comm, Mat a, Vec
  */
 PetscErrorCode readMatFromCOOFile(const char *const file, MPI_Comm comm, Mat *const A);
 
+PetscErrorCode readMatFromCOOFile_viaSR(const char *const file, MPI_Comm comm, Mat *const A);
+
 #ifdef __cplusplus
 }
 #endif

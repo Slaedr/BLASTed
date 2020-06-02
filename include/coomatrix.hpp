@@ -101,6 +101,12 @@ public:
 	template<int bs, StorageOptions stor>
 	SRMatrixStorage<scalar,index> convertToBSR() const;
 
+	/// Get immutable access to entries of the matrix
+	const std::vector<Entry<scalar,index>>& getEntries() const;
+
+	/// Get immutable access to row pointers' array
+	const std::vector<index>& getRowPtrs() const;
+
 protected:
 
 	std::vector<Entry<scalar,index>> entries;     ///< Stored entries of the matrix

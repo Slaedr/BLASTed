@@ -402,6 +402,18 @@ SRMatrixStorage<scalar,index> COOMatrix<scalar,index>::convertToBSR() const
 	return bmat;
 }
 
+template <typename scalar, typename index>
+const std::vector<Entry<scalar,index>>& COOMatrix<scalar,index>::getEntries() const
+{
+	return entries;
+}
+
+template <typename scalar, typename index>
+const std::vector<index>& COOMatrix<scalar,index>::getRowPtrs() const
+{
+	return rowptr;
+}
+
 template <typename scalar, typename index, int bs>
 BSRMatrix<scalar,index,bs> constructBSRMatrixFromMatrixMarketFile(const std::string file)
 {
