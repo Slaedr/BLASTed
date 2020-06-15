@@ -87,6 +87,13 @@ if(WITH_PETSC)
 	-ref_sub_pc_type ilu -blasted_pc_type ilu0
 	-blasted_use_symmetric_scaling false -test_type issame -error_tolerance 1e-6)
 
+  add_test(NAME ThreadedPoissonCSRPetscSFILU0 COMMAND ${MPIEXEC} -n 1 ./testcsr_poisson
+	${CMAKE_CURRENT_SOURCE_DIR}/input/poisson.control 
+	-options_file  ${CMAKE_CURRENT_SOURCE_DIR}/input/thread_poisson_csr.perc
+	-ref_sub_pc_type ilu -blasted_pc_type sfilu0 -blasted_async_sweeps 1,20
+	-blasted_use_symmetric_scaling 0
+	-test_type issame -error_tolerance 1e-6 -num_runs 3)
+
   add_test(NAME ThreadedPoissonCSRPetscSAPILU0 COMMAND ${MPIEXEC} -n 1 ./testcsr_poisson
 	${CMAKE_CURRENT_SOURCE_DIR}/input/poisson.control 
 	-options_file  ${CMAKE_CURRENT_SOURCE_DIR}/input/thread_poisson_csr.perc

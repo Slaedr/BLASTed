@@ -15,6 +15,7 @@ extern "C" {
 	              BLASTED_GS,
 	              BLASTED_SGS,
 	              BLASTED_ILU0,
+	              BLASTED_SFILU0,
 	              BLASTED_SAPILU0,
 	              BLASTED_CSC_BGS,
 	              BLASTED_LEVEL_SGS,

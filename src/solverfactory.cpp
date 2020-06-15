@@ -43,6 +43,8 @@ BlastedSolverType SRFactory<scalar,index>::solverTypeFromString(const std::strin
 		ptype = BLASTED_SGS;
 	else if(precstr2 == ilu0str)
 		ptype = BLASTED_ILU0;
+	else if(precstr2 == sfilu0str)
+		ptype = BLASTED_SFILU0;
 	else if(precstr2 == sapilu0str)
 		ptype = BLASTED_SAPILU0;
 	else if(precstr2 == cscbgsstr)
@@ -85,6 +87,11 @@ SRFactory<scalar,index>
 		return new AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>
 			(std::move(mat), opts.nbuildsweeps, opts.napplysweeps, opts.scale, opts.thread_chunk_size,
 			 opts.fact_inittype, opts.apply_inittype, true, true, opts.compute_precinfo);
+	}
+	else if(opts.prectype == BLASTED_SFILU0) {
+		return new AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>
+			(std::move(mat), opts.nbuildsweeps, opts.napplysweeps, opts.scale, opts.thread_chunk_size,
+			 opts.fact_inittype, opts.apply_inittype, false, true, opts.compute_precinfo);
 	}
 	else if(opts.prectype == BLASTED_SAPILU0) {
 		return new AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>
@@ -145,6 +152,12 @@ SRFactory<scalar,index>::create_preconditioner(SRMatrixStorage<const scalar, con
 				(std::move(mat), opts.nbuildsweeps, opts.napplysweeps,
 				 opts.scale, opts.thread_chunk_size,
 				 opts.fact_inittype, opts.apply_inittype, opts.compute_precinfo, true,true);
+		}
+		else if(opts.prectype == BLASTED_SFILU0) {
+			p = new AsyncILU0_SRPreconditioner<scalar,index>
+				(std::move(mat), opts.nbuildsweeps, opts.napplysweeps,
+				 opts.scale, opts.thread_chunk_size,
+				 opts.fact_inittype, opts.apply_inittype, opts.compute_precinfo, false,true);
 		}
 		else if(opts.prectype == BLASTED_SAPILU0) {
 			p = new AsyncILU0_SRPreconditioner<scalar,index>
