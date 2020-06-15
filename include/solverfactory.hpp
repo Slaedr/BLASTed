@@ -28,6 +28,8 @@ const std::string gsstr = "gs";
 const std::string sgsstr = "sgs";
 /// ILU(0)
 const std::string ilu0str = "ilu0";
+/// Sequential ILU(0)
+const std::string seqilu0str = "seqilu0";
 /// Sequentially factored ILU(0)
 const std::string sfilu0str = "sfilu0";
 /// Sequentially applied ILU(0)

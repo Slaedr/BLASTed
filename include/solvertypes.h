@@ -15,6 +15,7 @@ extern "C" {
 	              BLASTED_GS,
 	              BLASTED_SGS,
 	              BLASTED_ILU0,
+	              BLASTED_SEQILU0,
 	              BLASTED_SFILU0,
 	              BLASTED_SAPILU0,
 	              BLASTED_CSC_BGS,
@@ -23,6 +24,9 @@ extern "C" {
 	              BLASTED_NO_PREC,
 	              BLASTED_EXTERNAL
 	} BlastedSolverType;
+
+/// Integer that can be used for sweep counts to request a sequential operation
+#define BLASTED_SEQUENTIAL_SYMBOL -1
 
 #ifdef __cplusplus
 }

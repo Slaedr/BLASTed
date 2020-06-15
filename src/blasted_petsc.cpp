@@ -7,7 +7,9 @@
 #include <cstdio>
 #include <cstring>
 #include <ctime>
+#include <iostream>
 #include <sys/time.h>
+#include <omp.h>
 
 #include <../src/mat/impls/aij/mpi/mpiaij.h>
 #include <../src/mat/impls/baij/mpi/mpibaij.h>
@@ -79,6 +81,54 @@ static void get_string_petscoptions(const char *const option_tag, char outstr[BL
 	if(flag == PETSC_FALSE) {
 		printf("BLASTed: %s not set!\n", option_tag); fflush(stdout);
 		abort();
+	}
+}
+
+/// Check if sequential factorization or application was requested and set build/apply sweeps
+static void setSweeps_checkSeq(const Blasted_data *const ctx, AsyncSolverSettings& settings)
+{
+	static_assert(BLASTED_SEQUENTIAL_SYMBOL < 0, "Symbol of sequential build/apply must be -ve!");
+
+	settings.nbuildsweeps = ctx->nbuildsweeps;
+	settings.napplysweeps = ctx->napplysweeps;
+
+	if(settings.prectype == BLASTED_SEQILU0)
+		return;
+
+	// Cases where both build and apply are sequential
+	if((ctx->napplysweeps == BLASTED_SEQUENTIAL_SYMBOL && ctx->nbuildsweeps == BLASTED_SEQUENTIAL_SYMBOL)
+	   || (ctx->napplysweeps == BLASTED_SEQUENTIAL_SYMBOL && settings.prectype == BLASTED_SFILU0)
+	   || (ctx->nbuildsweeps == BLASTED_SEQUENTIAL_SYMBOL && settings.prectype == BLASTED_SAPILU0))
+	{
+		const int nthreads = omp_get_max_threads();
+		if(nthreads != 1) {
+			std::cout << "WARNING: Both sequential build and apply are requested, but " << nthreads
+			          << " threads are being used!" << std::endl;
+			std::cout << " Sequential preconditioner will be used for this run\n";
+		}
+		settings.prectype = BLASTED_SEQILU0;
+		settings.nbuildsweeps = 1;
+		settings.napplysweeps = 1;
+		return;
+	}
+
+	if(ctx->napplysweeps == BLASTED_SEQUENTIAL_SYMBOL)
+	{
+		if(settings.prectype != BLASTED_ILU0 && settings.prectype != BLASTED_SAPILU0)
+		   //&& settings.prectype != BLASTED_SFILU0)
+			throw std::runtime_error(" Seq. appl. only supported with async ILU factorization!");
+		settings.napplysweeps = 1;
+		settings.prectype = BLASTED_SAPILU0;
+		printf("  Sequential application requested.\n");
+	}
+	if(ctx->nbuildsweeps == BLASTED_SEQUENTIAL_SYMBOL)
+	{
+		if(settings.prectype != BLASTED_ILU0 && settings.prectype != BLASTED_SFILU0)
+			//&& settings.prectype != BLASTED_SAPILU0)
+			throw std::runtime_error(" Seq. fact. only supported with async triangular application!");
+		settings.nbuildsweeps = 1;
+		settings.prectype = BLASTED_SFILU0;
+		printf("  Sequential factorization requested.\n");
 	}
 }
 
@@ -202,11 +252,13 @@ PetscErrorCode createNewPreconditioner(PC pc)
 	// create appropriate preconditioner and relaxation objects
 	AsyncSolverSettings settings;
 	settings.prectype = factory->solverTypeFromString(ctx->prectypestr);
-	settings.bs = ctx->bs;  // set in setup_localpreconditioner_blasted below
-	settings.blockstorage = ColMajor;   // required for PETSc
+	settings.bs = ctx->bs;                         // set in setup_localpreconditioner_blasted below
+	settings.blockstorage = ColMajor;              // required for PETSc
 	settings.scale = ctx->scale;
-	settings.nbuildsweeps = ctx->nbuildsweeps;
-	settings.napplysweeps = ctx->napplysweeps;
+
+	// Check if sequential factorization or application was requested and set build/apply sweeps
+	setSweeps_checkSeq(ctx, settings);
+
 	settings.thread_chunk_size = ctx->threadchunksize;
 	settings.compute_precinfo = ctx->compute_precinfo;
 	if(settings.prectype != BLASTED_JACOBI && settings.prectype != BLASTED_LEVEL_SGS
