@@ -5,8 +5,8 @@
 
 -ref_ksp_rtol 1e-6
 -ref_ksp_max_it 100
--ref_ksp_final_residual
--ref_ksp_view
+#-ref_ksp_view_final_residual
+#-ref_ksp_view
 
 -ref_pc_type asm
 -ref_sub_pc_type ilu
@@ -20,7 +20,7 @@
 
 -ksp_rtol 1e-6
 -ksp_max_it 100
--ksp_final_residual
+#-ksp_view_final_residual
 
 -ksp_richardson_scale 1.0
 
