@@ -115,6 +115,7 @@ int main(int argc, char* argv[])
 	for(int ibuild = 0; ibuild < nbuilds; ibuild++)
 		for(int iapply = 0; iapply < napplys; iapply++)
 		{
+			printf(" Setting: build %d sweeps, apply %d sweeps.\n", buildsweeps[ibuild], applysweeps[iapply]);
 			int iters;
 			ierr = runPetsc(lp, buildsweeps[ibuild], applysweeps[iapply], nruns, &iters,
 			                &devtable[ibuild][iapply]);

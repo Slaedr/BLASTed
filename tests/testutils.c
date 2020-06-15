@@ -5,6 +5,7 @@
 #undef NDEBUG
 #include <assert.h>
 #include <float.h>
+#include <math.h>
 
 #include <petscksp.h>
 #include <../src/mat/impls/aij/mpi/mpiaij.h>
@@ -266,11 +267,12 @@ int runPetsc(const DiscreteLinearProblem lp, const int buildsweeps, const int ap
 	//std::vector<int> runiters(nruns);
 	int runiters[nruns];
 
+	bool someRunNotConverged = false;
 	int irun = 0;
 	for( ; irun < nruns; irun++)
 	{
 		if(rank == 0)
-			printf("Run %d:\n", irun);
+			printf(" Run %d:\n", irun);
 
 		Vec urun;
 		ierr = VecDuplicate(lp.uexact, &urun); CHKERRQ(ierr);
@@ -303,18 +305,25 @@ int runPetsc(const DiscreteLinearProblem lp, const int buildsweeps, const int ap
 		ierr = KSPGetConvergedReason(ksp, &ksp_reason); CHKERRQ(ierr);
 		if(rank == 0)
 			printf("  KSP converged reason = %d.\n", ksp_reason);
-		//assert(ksp_reason > 0);
-		if(ksp_reason <= 0) {
+		if(ksp_reason == KSP_DIVERGED_ITS) {
 			if(rank == 0)
-				printf("KSP did not converge!\n");
-			avgkspiters = -100;
+				printf(" KSP did not converge!\n");
 			irun++;
+			someRunNotConverged = true;
+			break;
+		}
+		else if(ksp_reason <= 0) {
+			if(rank == 0)
+				printf(" KSP did not converge!\n");
+			avgkspiters = -1e9;
+			irun++;
+			someRunNotConverged = true;
 			break;
 		}
 
 		if(rank == 0) {
 			ierr = KSPGetResidualNorm(ksp, &rnorm); CHKERRQ(ierr);
-			printf(" KSP residual norm = %f\n", rnorm);
+			printf("  KSP residual norm = %f\n", rnorm);
 		}
 
 		//errnorm += compute_error(comm,m,da,u,lp.uexact);
@@ -324,9 +333,9 @@ int runPetsc(const DiscreteLinearProblem lp, const int buildsweeps, const int ap
 		ierr = VecAXPY(u, 1.0, urun); CHKERRQ(ierr);
 
 		if(rank == 0) {
-			printf("Test run:\n");
-			printf(" error: %.16f\n", errnormrun);
-			printf(" log error: %f\n", log10(errnormrun));
+			printf(" Test run:\n");
+			printf("  error: %.16f\n", errnormrun);
+			printf("  log error: %f\n", log10(errnormrun));
 		}
 
 		ierr = KSPDestroy(&ksp); CHKERRQ(ierr);
@@ -343,24 +352,25 @@ int runPetsc(const DiscreteLinearProblem lp, const int buildsweeps, const int ap
 		destroyBlastedDataList(&bctx);
 	}
 
-	avgkspiters = avgkspiters/(double)nruns;
-	//ierr = VecScale(u, 1.0/nruns); CHKERRQ(ierr);
+	avgkspiters = avgkspiters/(double)irun;
+
 	if(rank == 0)
-		printf("Average iteration count = %g\n", avgkspiters);
-	if(avgkspiters < 0) {
+		printf(" Average iteration count = %g\n", avgkspiters);
+	if(someRunNotConverged) {
 		if(rank == 0)
-			printf("IMPORTANT: One of the runs diverged for the setting (%d,%d)\n",
+			printf("IMPORTANT: One of the runs did not converge for the setting (%d,%d)\n",
 				   buildsweeps, applysweeps);
 	}
-	else
+	else {
 		assert(irun == nruns);
+	}
 
 	*iters = round(avgkspiters);
 
 	double reldev = 0;
 	for(int i = 0; i < irun; i++)
 		reldev += (runiters[i]-avgkspiters)*(runiters[i]-avgkspiters);
-	reldev = sqrt(reldev/irun)/avgkspiters;
+	reldev = sqrt(reldev/(double)irun)/avgkspiters;
 	*rel_dev = reldev;
 
 	ierr = VecDestroy(&u); CHKERRQ(ierr);
