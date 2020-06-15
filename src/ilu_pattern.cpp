@@ -156,7 +156,9 @@ ILUPositions<index> compute_ILU_positions_CSR_CSR(const CRawBSRMatrix<scalar,ind
 		}
 	}
 
+#ifdef DEBUG
 	std::cout << "  ILU_positions: Computed required locations in L and U factors." << std::endl;
+#endif
 	return pos;
 }
 
