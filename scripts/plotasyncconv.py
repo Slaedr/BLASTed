@@ -33,7 +33,7 @@ def plotquantity(filelist, quantname, numits, labellist, opts, imageformatstring
 
         plt.xlabel("Asynchronous sweeps", fontsize="medium")
         if quantname == "residual":
-            plt.plot(data[numits:,0], np.log10(data[numits:,3]/data[0,3]), \
+            plt.plot(data[numits:,0]-1, np.log10(data[numits:,3]/data[0,3]), \
                     lw=opts['linewidth'], ls=opts['linetype'][i], color=opts['colorlist'][i], \
                     marker=opts['marklist'][i], ms=opts['marksize'], \
                     mew=opts['markedgewidth'], \
@@ -41,7 +41,7 @@ def plotquantity(filelist, quantname, numits, labellist, opts, imageformatstring
                     label=labellist[i])
             plt.ylabel("Log vector 1-norm of ILU fixed-point residual", fontsize="medium")
         elif quantname == "lowerdiff":
-            plt.plot(data[numits:,0], np.log10(data[numits:,1]), \
+            plt.plot(data[numits:,0]-1, np.log10(data[numits:,1]), \
                     lw=opts['linewidth'], ls=opts['linetype'][i], color=opts['colorlist'][i], \
                     marker=opts['marklist'][i], ms=opts['marksize'], \
                     mew=opts['markedgewidth'], \
@@ -49,7 +49,7 @@ def plotquantity(filelist, quantname, numits, labellist, opts, imageformatstring
                     label=labellist[i])
             plt.ylabel("Log vector max-norm of error in L matrix", fontsize="medium")
         elif quantname == "upperdiff":
-            plt.plot(data[numits:,0], np.log10(data[numits:,2]), \
+            plt.plot(data[numits:,0]-1, np.log10(data[numits:,2]), \
                     lw=opts['linewidth'], ls=opts['linetype'][i], color=opts['colorlist'][i], \
                     marker=opts['marklist'][i], ms=opts['marksize'], \
                     mew=opts['markedgewidth'], \
