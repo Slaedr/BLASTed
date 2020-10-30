@@ -169,11 +169,16 @@ PetscErrorCode readMatFromCOOFile_viaSR(const char *const file, MPI_Comm comm, M
 	else {
 		ierr = MatSetSizes(*A, PETSC_DECIDE, PETSC_DECIDE, cmat.numrows(), cmat.numcols()); CHKERRQ(ierr);
 
+        /*
+         * We need a full assembly here because MatCreateSeqBAIJWithArrays does not accept
+         * a block size greated than 1.
+         */
+
 		// for default pre-allocation
 		ierr = MatSetUp(*A); CHKERRQ(ierr);
         // Guess some preallocation
-        ierr = MatSeqBAIJSetPreallocation(*A, bs, 14, NULL); CHKERRQ(ierr);
-        ierr = MatMPIBAIJSetPreallocation(*A, bs, 14, NULL, 7, NULL); CHKERRQ(ierr);
+        ierr = MatSeqBAIJSetPreallocation(*A, bs, 33, NULL); CHKERRQ(ierr);
+        ierr = MatMPIBAIJSetPreallocation(*A, bs, 33, NULL, 10, NULL); CHKERRQ(ierr);
 
 		ierr = MatSetOption(*A, MAT_ROW_ORIENTED, PETSC_FALSE); CHKERRQ(ierr);
         ierr = MatSetOption(*A, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE); CHKERRQ(ierr);
