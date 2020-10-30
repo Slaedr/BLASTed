@@ -4,9 +4,7 @@
 
 #include <iomanip>
 #include <stdexcept>
-#include <petscksp.h>
-
-#include "iterative_preconditioner.hpp"
+#include <blasted_petsc.h>
 #include "perftesting.hpp"
 
 #define MAX_THREADS_LIST_SIZE 20
@@ -15,13 +13,21 @@
 namespace blasted {
 
 /// Set -blasted_async_sweeps in the default Petsc options database and throw if not successful
-template <typename PrecType>
-static void set_blasted_sweeps(const int nbswp, const int naswp, PrecType& prec)
+static int set_blasted_sweeps(const int nbswp, const int naswp)
 {
-	AsyncParams aparams = prec.getAsyncParams();
-	aparams.nbuildsweeps = nbswp;
-	aparams.napplysweeps = naswp;
-	prec.setAsyncParams(aparams);
+	// add option
+	std::string value = std::to_string(nbswp) + "," + std::to_string(naswp);
+	int ierr = PetscOptionsSetValue(NULL, "-blasted_async_sweeps", value.c_str()); CHKERRQ(ierr);
+
+	// Check
+	int checksweeps[2];
+	int nmax = 2;
+	PetscBool set = PETSC_FALSE;
+	ierr = PetscOptionsGetIntArray(NULL,NULL,"-blasted_async_sweeps",checksweeps,&nmax,&set);
+	CHKERRQ(ierr);
+	if(checksweeps[0] != nbswp || checksweeps[1] != naswp)
+		SETERRQ(PETSC_COMM_WORLD, PETSC_ERR_LIB, "Async sweeps not set properly!");
+	return ierr;
 }
 
 void writeHeaderToFile(std::ofstream& outf, const int width)
@@ -60,9 +66,7 @@ static double std_deviation(const double *const vals, const double avg, const in
 	return deviate;
 }
 
-template <typename scalar, typename index = int>
-int run_one_test(const RunParams rp, const TimingData refdata, const MatrixView<scalar,index>& AA,
-                 const Vector<scalar>& bb, Vector<scalar>& uu,
+int run_one_test(const RunParams rp, const TimingData refdata, const Mat A, const Vec b, Vec u,
                  TimingData& tdata, std::ofstream& outf)
 {
 	std::vector<double> prectimes(rp.nrepeats);
@@ -72,11 +76,7 @@ int run_one_test(const RunParams rp, const TimingData refdata, const MatrixView<
 	int rank = 1;
 	MPI_Comm_rank(comm,&rank);
 
-	SRPreconditioner<scalar,index> prec;
-
-	set_blasted_sweeps(rp.nbswps, rp.naswps, prec);
-
-	Vec u, b; Mat A;
+	set_blasted_sweeps(rp.nbswps, rp.naswps);
 
 	int irun;
 	for(irun = 0; irun < rp.nrepeats; irun++)
@@ -89,8 +89,8 @@ int run_one_test(const RunParams rp, const TimingData refdata, const MatrixView<
 
 		ierr = KSPSetOperators(ksp, A, A); CHKERRQ(ierr);
 
-		// Blasted_data_list bctx = newBlastedDataList();
-		// ierr = setup_blasted_stack(ksp, &bctx); CHKERRQ(ierr);
+		Blasted_data_list bctx = newBlastedDataList();
+		ierr = setup_blasted_stack(ksp, &bctx); CHKERRQ(ierr);
 
 		ierr = VecSet(u, 0.0); CHKERRQ(ierr);
 
@@ -114,14 +114,14 @@ int run_one_test(const RunParams rp, const TimingData refdata, const MatrixView<
 			tdata.converged = true;
 		}
 
-		//computeTotalTimes(&bctx);
-		//tdata.precsetup_walltime += bctx.factorwalltime;
-		//tdata.precapply_walltime += bctx.applywalltime;
-		//tdata.prec_cputime += bctx.factorcputime + bctx.applycputime;
-		//prectimes[irun] = bctx.factorwalltime + bctx.applywalltime;
+		computeTotalTimes(&bctx);
+		tdata.precsetup_walltime += bctx.factorwalltime;
+		tdata.precapply_walltime += bctx.applywalltime;
+		tdata.prec_cputime += bctx.factorcputime + bctx.applycputime;
+		prectimes[irun] = bctx.factorwalltime + bctx.applywalltime;
 
 		KSPDestroy(&ksp);
-		//destroyBlastedDataList(&bctx);
+		destroyBlastedDataList(&bctx);
 	}
 
 	tdata.precsetup_walltime /= irun;

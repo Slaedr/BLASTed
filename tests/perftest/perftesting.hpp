@@ -8,6 +8,9 @@
 #include <string>
 #include <vector>
 #include <fstream>
+#include <petscmat.h>
+
+#include "blockmatrices.hpp"
 
 namespace blasted {
 
@@ -66,7 +69,9 @@ TestParams getTestParams();
  * \param[in] refdata Timings for a reference run, used to write out speedups with respect to
  * \param[out] td Variables in this are assumed to have zero values.
  */
-int run_one_test(const RunParams rp, const TimingData refdata, const Mat A, const Vec b, Vec u,
+template <typename scalar, typename index = int>
+int run_one_test(const RunParams rp, const TimingData refdata, const MatrixView<scalar,index>& A,
+                 const Vector<scalar>& b, Vector<scalar>& u,
                  TimingData& td, std::ofstream& report);
 
 /// Writes the line of column headers to the output report file

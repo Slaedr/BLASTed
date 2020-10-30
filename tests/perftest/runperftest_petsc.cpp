@@ -11,7 +11,7 @@
 #include <omp.h>
 #endif
 
-#include "perftesting.hpp"
+#include "perftesting_petsc.hpp"
 
 #define PETSCOPTION_STR_LEN 30
 #define PATH_STR_LEN 300
@@ -118,9 +118,7 @@ int main(int argc, char* argv[])
 		rp.nrepeats = tparams.refnruns;
 		TimingData dummydata;
 
-		//run_one_test(rp, dummydata, A, b, u, refdata, report);
-		throw "NOT IMPLEMENTED!";
-		(void)rp; (void)dummydata;
+		run_one_test(rp, dummydata, A, b, u, refdata, report);
 	}
 
 	// run the solve to be tested as many times as requested
@@ -135,9 +133,7 @@ int main(int argc, char* argv[])
 		rp.nrepeats = tparams.nruns;
 		TimingData curtime;
 
-		//run_one_test(rp, refdata, A, b, u, curtime, report);
-		throw "NOT IMPLEMENTED!";
-		(void)rp; (void)curtime;
+		run_one_test(rp, refdata, A, b, u, curtime, report);
 	}
 
 	report.close();
