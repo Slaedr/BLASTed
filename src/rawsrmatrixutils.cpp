@@ -355,5 +355,7 @@ template void getScalingVector<double,int,4>(const CRawBSRMatrix<double,int> *co
                                              double *const __restrict scale);
 template void getScalingVector<double,int,5>(const CRawBSRMatrix<double,int> *const mat,
                                              double *const __restrict scale);
+template void getScalingVector<double,int,7>(const CRawBSRMatrix<double,int> *const mat,
+                                             double *const __restrict scale);
 
 }

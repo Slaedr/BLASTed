@@ -77,6 +77,14 @@ int main(int argc, char *argv[])
 			ierr = test_fullyasync_ilu_convergence<4>(mat, plist, tol, maxsweeps, usescale,
 			                                          thread_chunk_size, initialization, nrepeats);
 			break;
+		case 5:
+			ierr = test_fullyasync_ilu_convergence<5>(mat, plist, tol, maxsweeps, usescale,
+			                                          thread_chunk_size, initialization, nrepeats);
+			break;
+		case 7:
+			ierr = test_fullyasync_ilu_convergence<7>(mat, plist, tol, maxsweeps, usescale,
+			                                          thread_chunk_size, initialization, nrepeats);
+			break;
 		default:
 			throw std::out_of_range("Block size " + std::to_string(bs) + " not supported!");
 		}
@@ -88,6 +96,14 @@ int main(int argc, char *argv[])
 			break;
 		case 4:
 			ierr = test_async_triangular_solve<4>(mat, plist, tol, maxsweeps, usescale,
+			                                      thread_chunk_size, initialization);
+			break;
+		case 5:
+			ierr = test_async_triangular_solve<5>(mat, plist, tol, maxsweeps, usescale,
+			                                      thread_chunk_size, initialization);
+			break;
+		case 7:
+			ierr = test_async_triangular_solve<7>(mat, plist, tol, maxsweeps, usescale,
 			                                      thread_chunk_size, initialization);
 			break;
 		default:

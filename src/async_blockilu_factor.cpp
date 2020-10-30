@@ -308,5 +308,29 @@ double block_ilu0_nonlinear_res<double,int,4,ColMajor,false>(const CRawBSRMatrix
                                                              const double *const scale,
                                                              const double *const iluvals,
                                                              const int thread_chunk_size);
+template
+double block_ilu0_nonlinear_res<double,int,5,ColMajor,true>(const CRawBSRMatrix<double,int> *const mat,
+                                                            const ILUPositions<int>& plist,
+                                                            const double *const scale,
+                                                            const double *const iluvals,
+                                                            const int thread_chunk_size);
+template
+double block_ilu0_nonlinear_res<double,int,5,ColMajor,false>(const CRawBSRMatrix<double,int> *const mat,
+                                                             const ILUPositions<int>& plist,
+                                                             const double *const scale,
+                                                             const double *const iluvals,
+                                                             const int thread_chunk_size);
+template
+double block_ilu0_nonlinear_res<double,int,7,ColMajor,true>(const CRawBSRMatrix<double,int> *const mat,
+                                                            const ILUPositions<int>& plist,
+                                                            const double *const scale,
+                                                            const double *const iluvals,
+                                                            const int thread_chunk_size);
+template
+double block_ilu0_nonlinear_res<double,int,7,ColMajor,false>(const CRawBSRMatrix<double,int> *const mat,
+                                                             const ILUPositions<int>& plist,
+                                                             const double *const scale,
+                                                             const double *const iluvals,
+                                                             const int thread_chunk_size);
 
 }

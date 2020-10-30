@@ -301,6 +301,16 @@ int test_fullyasync_ilu_convergence<4>(const CRawBSRMatrix<double,int>& mat, con
                                        const double tol, const int maxsweeps, const bool usescale,
                                        const int thread_chunk_size, const std::string initialization,
 									   const int nrepeats);
+template
+int test_fullyasync_ilu_convergence<5>(const CRawBSRMatrix<double,int>& mat, const ILUPositions<int>& plist,
+                                       const double tol, const int maxsweeps, const bool usescale,
+                                       const int thread_chunk_size, const std::string initialization,
+									   const int nrepeats);
+template
+int test_fullyasync_ilu_convergence<7>(const CRawBSRMatrix<double,int>& mat, const ILUPositions<int>& plist,
+                                       const double tol, const int maxsweeps, const bool usescale,
+                                       const int thread_chunk_size, const std::string initialization,
+									   const int nrepeats);
 
 template
 int test_partiallyasync_ilu_convergence<1>(const CRawBSRMatrix<double,int>& mat,
@@ -495,6 +505,12 @@ device_vector<double> getExactILU<1>(const CRawBSRMatrix<double,int> *const mat,
 template
 device_vector<double> getExactILU<4>(const CRawBSRMatrix<double,int> *const mat,
                                      const ILUPositions<int>& plist, const device_vector<double>& scale);
+template
+device_vector<double> getExactILU<5>(const CRawBSRMatrix<double,int> *const mat,
+                                     const ILUPositions<int>& plist, const device_vector<double>& scale);
+template
+device_vector<double> getExactILU<7>(const CRawBSRMatrix<double,int> *const mat,
+                                     const ILUPositions<int>& plist, const device_vector<double>& scale);
 
 template <int bs>
 device_vector<double> getScalingVector(const CRawBSRMatrix<double,int> *const mat)
@@ -508,6 +524,8 @@ device_vector<double> getScalingVector(const CRawBSRMatrix<double,int> *const ma
 
 template device_vector<double> getScalingVector<1>(const CRawBSRMatrix<double,int> *const mat);
 template device_vector<double> getScalingVector<4>(const CRawBSRMatrix<double,int> *const mat);
+template device_vector<double> getScalingVector<5>(const CRawBSRMatrix<double,int> *const mat);
+template device_vector<double> getScalingVector<7>(const CRawBSRMatrix<double,int> *const mat);
 
 }
 

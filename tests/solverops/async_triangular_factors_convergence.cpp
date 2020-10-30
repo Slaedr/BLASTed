@@ -87,6 +87,14 @@ template
 int test_async_triangular_solve<4>(const CRawBSRMatrix<double,int>& mat, const ILUPositions<int>& plist,
                                    const double tol, const int maxiter, const bool usescale,
                                    const int thread_chunk_size, const std::string initialization);
+template
+int test_async_triangular_solve<5>(const CRawBSRMatrix<double,int>& mat, const ILUPositions<int>& plist,
+                                   const double tol, const int maxiter, const bool usescale,
+                                   const int thread_chunk_size, const std::string initialization);
+template
+int test_async_triangular_solve<7>(const CRawBSRMatrix<double,int>& mat, const ILUPositions<int>& plist,
+                                   const double tol, const int maxiter, const bool usescale,
+                                   const int thread_chunk_size, const std::string initialization);
 
 template <int bs>
 static void lowerSolve(const CRawBSRMatrix<double,int>& mat,
