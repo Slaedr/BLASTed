@@ -458,6 +458,9 @@ template SRMatrixStorage<double,int>
 getSRMatrixFromCOO<double,int,4>(const COOMatrix<double,int>& coom,
                                  const std::string storageorder);
 template SRMatrixStorage<double,int>
+getSRMatrixFromCOO<double,int,5>(const COOMatrix<double,int>& coom,
+                                 const std::string storageorder);
+template SRMatrixStorage<double,int>
 getSRMatrixFromCOO<double,int,7>(const COOMatrix<double,int>& coom,
                                  const std::string storageorder);
 

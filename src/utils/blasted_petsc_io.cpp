@@ -138,9 +138,12 @@ PetscErrorCode readMatFromCOOFile_viaSR(const char *const file, MPI_Comm comm, M
 				(std::move(blasted::getSRMatrixFromCOO<PetscReal,PetscInt,3>(cmat,"colmajor")));
 			break;
 		case 4:
-			//cmat.convertToBSR<4,Eigen::ColMajor>(&rmat);
 			rmat = std::make_unique<blasted::SRMatrixStorage<PetscReal,PetscInt>>
 				(std::move(blasted::getSRMatrixFromCOO<PetscReal,PetscInt,4>(cmat,"colmajor")));
+			break;
+		case 5:
+			rmat = std::make_unique<blasted::SRMatrixStorage<PetscReal,PetscInt>>
+				(std::move(blasted::getSRMatrixFromCOO<PetscReal,PetscInt,5>(cmat,"colmajor")));
 			break;
 		case 7:
 			//cmat.convertToBSR<7,Eigen::ColMajor>(&rmat);
@@ -168,7 +171,13 @@ PetscErrorCode readMatFromCOOFile_viaSR(const char *const file, MPI_Comm comm, M
 
 		// for default pre-allocation
 		ierr = MatSetUp(*A); CHKERRQ(ierr);
+        // Guess some preallocation
+        ierr = MatSeqBAIJSetPreallocation(*A, bs, 14, NULL); CHKERRQ(ierr);
+        ierr = MatMPIBAIJSetPreallocation(*A, bs, 14, NULL, 7, NULL); CHKERRQ(ierr);
+
 		ierr = MatSetOption(*A, MAT_ROW_ORIENTED, PETSC_FALSE); CHKERRQ(ierr);
+        ierr = MatSetOption(*A, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE); CHKERRQ(ierr);
+
 		for(PetscInt i = 0; i < rmat->nbrows; i++) {
 			const PetscInt *const colinds = &rmat->bcolind[rmat->browptr[i]];
 			const PetscReal *const values = &rmat->vals[rmat->browptr[i]*bs*bs];
