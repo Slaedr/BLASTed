@@ -33,7 +33,7 @@ PetscReal compute_error(const MPI_Comm comm, const Vec u, const Vec uexact) {
 int main(int argc, char* argv[])
 {
 	char help[] = "This program solves a linear system.\n\
-		Arguments: (1) Matrix file in COO format (2) RHS file (3) Exact soln file\n\
+		Arguments: (1) Matrix file in PETSc binary format (2) RHS file (3) Exact soln file\n\
 		Additionally, use -options_file to provide a PETSc options file.\n";
 
 	if(argc < 3) {
