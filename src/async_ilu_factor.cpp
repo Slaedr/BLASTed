@@ -4,6 +4,7 @@
  */
 
 #include <iostream>
+#include <boost/align.hpp>
 #include "async_ilu_factor.hpp"
 #include "kernels/kernels_ilu0_factorize.hpp"
 #include "helper_algorithms.hpp"
@@ -11,11 +12,14 @@
 
 namespace blasted {
 
+using boost::alignment::aligned_alloc;
+using boost::alignment::aligned_free;
+
 /// Initialize the factorization such that async. ILU(0) factorization gives async. SGS at worst
 /** We set L' to (I+LD^(-1)) and U' to (D+U) so that L'U' = (D+L)D^(-1)(D+U).
  * Depending on whether scale is null, we use the original matrix or the scaled one as input.
  */
-template <typename scalar ,typename index>
+template <typename scalar,typename index>
 static void fact_init_sgs(const CRawBSRMatrix<scalar,index> *const mat, const scalar *const scale,
                           scalar *const __restrict iluvals);
 
@@ -26,18 +30,26 @@ static void fact_init_original(const CRawBSRMatrix<scalar,index> *const mat,
                                scalar *const __restrict iluvals);
 
 template <typename scalar, typename index, bool scalerow, bool scalecol>
-static void executeILU0Factorization(const CRawBSRMatrix<scalar,index> *const mat,
-                                     const ILUPositions<index>& plist,
-                                     const int nbuildsweeps, const int thread_chunk_size,
-                                     const bool usethreads,
-                                     const scalar *const rowscale, const scalar *const colscale,
-                                     scalar *const __restrict iluvals);
+static void asyncILU0Factorization(const CRawBSRMatrix<scalar,index> *const mat,
+                                   const ILUPositions<index>& plist,
+                                   const int nbuildsweeps, const int thread_chunk_size,
+                                   const bool usethreads,
+                                   const scalar *const rowscale, const scalar *const colscale,
+                                   scalar *const __restrict iluvals);
+
+template <typename scalar, typename index, bool scalerow, bool scalecol>
+static void jacobiILU0Factorization(const CRawBSRMatrix<scalar,index> *const mat,
+                                    const ILUPositions<index>& plist,
+                                    const int nbuildsweeps, const int thread_chunk_size,
+                                    const bool usethreads,
+                                    const scalar *const rowscale, const scalar *const colscale,
+                                    scalar *const __restrict iluvals);
 
 template <typename scalar, typename index>
 PrecInfo scalar_ilu0_factorize(const CRawBSRMatrix<scalar,index> *const mat,
                                const ILUPositions<index>& plist,
                                const int nbuildsweeps, const int thread_chunk_size, const bool usethreads,
-                               const FactInit factinittype, const bool compute_info,
+                               const FactInit factinittype, const bool compute_info, const bool jacobi,
                                scalar *const __restrict iluvals, scalar *const __restrict scale)
 {
 	if(scale)
@@ -70,12 +82,22 @@ PrecInfo scalar_ilu0_factorize(const CRawBSRMatrix<scalar,index> *const mat,
 			                                                    scale, scale, iluvals);
 	}
 
-	if(scale)
-		executeILU0Factorization<scalar,index,true,true>(mat, plist, nbuildsweeps, thread_chunk_size,
-		                                                 usethreads, scale, scale, iluvals);
-	else
-		executeILU0Factorization<scalar,index,false,false>(mat, plist, nbuildsweeps, thread_chunk_size,
-		                                                   usethreads, scale, scale, iluvals);
+	if(jacobi) {
+		if(scale)
+			jacobiILU0Factorization<scalar,index,true,true>(mat, plist, nbuildsweeps, thread_chunk_size,
+			                                                usethreads, scale, scale, iluvals);
+		else
+			jacobiILU0Factorization<scalar,index,false,false>(mat, plist, nbuildsweeps, thread_chunk_size,
+			                                                  usethreads, scale, scale, iluvals);
+	}
+	else {
+		if(scale)
+			asyncILU0Factorization<scalar,index,true,true>(mat, plist, nbuildsweeps, thread_chunk_size,
+			                                               usethreads, scale, scale, iluvals);
+		else
+			asyncILU0Factorization<scalar,index,false,false>(mat, plist, nbuildsweeps, thread_chunk_size,
+			                                                 usethreads, scale, scale, iluvals);
+	}
 
 	if(compute_info)
 	{
@@ -102,6 +124,7 @@ scalar_ilu0_factorize<double,int>(const CRawBSRMatrix<double,int> *const mat,
                                   const ILUPositions<int>& plist,
                                   const int nbuildsweeps, const int thread_chunk_size,
                                   const bool usethreads, const FactInit finit, const bool compute_info,
+                                  const bool jacobi_iter,
                                   double *const __restrict iluvals, double *const __restrict scale);
 
 /* We set L' to (I+LD^(-1)) and U' to (D+U) so that L'U' = (D+L)D^(-1)(D+U).
@@ -151,12 +174,12 @@ void fact_init_original(const CRawBSRMatrix<scalar,index> *const mat,
 }
 
 template <typename scalar, typename index, bool scalerow, bool scalecol>
-void executeILU0Factorization(const CRawBSRMatrix<scalar,index> *const mat,
-                                     const ILUPositions<index>& plist,
-                                     const int nbuildsweeps, const int thread_chunk_size,
-                                     const bool usethreads,
-                                     const scalar *const rowscale, const scalar *const colscale,
-                                     scalar *const __restrict iluvals)
+void asyncILU0Factorization(const CRawBSRMatrix<scalar,index> *const mat,
+                            const ILUPositions<index>& plist,
+                            const int nbuildsweeps, const int thread_chunk_size,
+                            const bool usethreads,
+                            const scalar *const rowscale, const scalar *const colscale,
+                            scalar *const __restrict iluvals)
 {
 	if(scalerow)
 		assert(rowscale);
@@ -174,6 +197,40 @@ void executeILU0Factorization(const CRawBSRMatrix<scalar,index> *const mat,
 			}
 		}
 	}
+}
+
+template <typename scalar, typename index, bool scalerow, bool scalecol>
+void jacobiILU0Factorization(const CRawBSRMatrix<scalar,index> *const mat,
+                             const ILUPositions<index>& plist,
+                             const int nbuildsweeps, const int thread_chunk_size,
+                             const bool usethreads,
+                             const scalar *const rowscale, const scalar *const colscale,
+                             scalar *const __restrict iluvals)
+{
+	if(scalerow)
+		assert(rowscale);
+
+	scalar *iluprev = static_cast<scalar*>(aligned_alloc(CACHE_LINE_LEN, mat->nbstored*sizeof(scalar)));
+
+#pragma omp parallel default(shared) if(usethreads)
+	{
+		for(int isweep = 0; isweep < nbuildsweeps; isweep++)
+		{
+#pragma omp for simd
+			for(index inz = 0; inz < mat->nbstored; inz++)
+				iluprev[inz] = iluvals[inz];
+
+#pragma omp for schedule(dynamic, thread_chunk_size)
+			for(index irow = 0; irow < mat->nbrows; irow++)
+			{
+				jacobi_ilu0_factorize_kernel<scalar,index,scalerow,scalecol>(mat, plist, irow,
+				                                                             rowscale, colscale,
+				                                                             iluprev, iluvals);
+			}
+		}
+	}
+
+	aligned_free(iluprev);
 }
 
 template <typename scalar, typename index, bool needscalerow, bool needscalecol>
@@ -263,8 +320,8 @@ void scalar_ilu0_factorize_noscale(const CRawBSRMatrix<scalar,index> *const mat,
 	}
 
 	// compute L and U
-	executeILU0Factorization<scalar,index,false,false>(mat, plist, nbuildsweeps, thread_chunk_size,
-	                                                   usethreads, nullptr, nullptr, iluvals);
+	asyncILU0Factorization<scalar,index,false,false>(mat, plist, nbuildsweeps, thread_chunk_size,
+	                                                 usethreads, nullptr, nullptr, iluvals);
 }
 
 template

@@ -11,15 +11,40 @@
 
 namespace blasted {
 
-struct AsyncParams {
+enum IterType {
+               ITER_JACOBI,
+               ITER_GAUSS_SEIDEL,
+               ITER_ASYNC
+};
+
+/// Parameters controlling iterative preconditioner generation (build/factorization) and application
+struct IterPrecParams {
 	bool usescaling;             ///< Whether to scale the matrix before building the preconditioner
+	int thread_chunk_size;       ///< Number of threads in each OpenMP chunk
 	bool threadedfactor;         ///< True for thread-parallel preconditioner build
 	bool threadedapply;          ///< True for thread-parallel preconditioner application
 	int nbuildsweeps;            ///< Number of iterations to build the preconditioner
 	int napplysweeps;            ///< Number of iterations to apply the preconditioner
-	int thread_chunk_size;       ///< Number of threads in each OpenMP chunk
 	FactInit factinittype;       ///< Type of initial value for preconditioner build
 	ApplyInit applyinittype;     ///< Type of initial value for solution to preconditioner application
+};
+
+/// Parameters controlling iterative preconditioner generation
+struct BuildIterParams {
+	bool usescaling;
+	int threadchunksize;
+	bool threadedfactor;
+	bool nbuildsweeps;
+	ApplyInit factinittype;
+};
+
+/// Parameters controlling iterative preconditioner application
+struct ApplyIterParams {
+	bool usescaling;
+	int threadchunksize;
+	bool threadedapply;
+	bool napplysweeps;
+	ApplyInit applyinittype;
 };
 
 template <typename scalar, typename index = int>
@@ -30,12 +55,12 @@ public:
 		: Preconditioner<scalar,index>(storagetype)
 	{ }
 
-	void setAsyncParams(const AsyncParams params) { asyncparams = params; }
+	void setAsyncParams(const IterPrecParams params) { iterparams = params; }
 
-	AsyncParams getAsyncParams() const { return asyncparams; }
+	IterPrecParams getParams() const { return iterparams; }
 
 protected:
-	AsyncParams asyncparams;
+	IterPrecParams iterparams;
 };
 
 }

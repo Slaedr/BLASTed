@@ -33,6 +33,7 @@ add_library(solverops
   relaxation_chaotic.cpp
   solverops_jacobi.cpp solverops_sgs.cpp solverops_ilu0.cpp solverops_base.cpp
   async_blockilu_factor.cpp async_ilu_factor.cpp
+  iter_blockilu_apply.cpp iter_scalarilu_apply.cpp
   ilu_pattern.cpp levelschedule.cpp matrix_properties.cpp
   )
 set_property(TARGET solverops PROPERTY POSITION_INDEPENDENT_CODE ON)

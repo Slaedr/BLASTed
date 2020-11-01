@@ -43,11 +43,17 @@ void async_bilu0_sweeps(const CRawBSRMatrix<scalar,index> *const mat, const ILUP
                         const scalar *const scale, const int nbuildsweeps, const int thread_chunk_size,
                         const bool usethreads, scalar *const __restrict iluvals);
 
+/// Carry out the nonlinear jacobi iterations to compute the ILU factors
+template <typename scalar, typename index, int bs, StorageOptions stor, bool usescaling>
+void jacobi_bilu0_sweeps(const CRawBSRMatrix<scalar,index> *const mat, const ILUPositions<index>& plist,
+                         const scalar *const scale, const int nbuildsweeps, const int thread_chunk_size,
+                         const bool usethreads, scalar *const __restrict iluvals);
+
 template <typename scalar, typename index, int bs, StorageOptions stor>
 PrecInfo block_ilu0_factorize(const CRawBSRMatrix<scalar,index> *const mat,
                               const ILUPositions<index>& plist,
                               const int nbuildsweeps, const int thread_chunk_size, const bool usethreads,
-                              const FactInit init_type, const bool compute_info,
+                              const FactInit init_type, const bool compute_info, const bool jacobi,
                               scalar *const __restrict iluvals, scalar *const __restrict scale)
 {
 	//using NABlk = Block_t<scalar,bs,static_cast<StorageOptions>(stor|Eigen::DontAlign)>;
@@ -112,13 +118,25 @@ PrecInfo block_ilu0_factorize(const CRawBSRMatrix<scalar,index> *const mat,
 	 * it should usually be okay as we are only comparing equality later.
 	 */
 
-	if(scale)
-		async_bilu0_sweeps<scalar,index,bs,stor,true>(mat, plist, scale, nbuildsweeps,
-		                                              thread_chunk_size, usethreads, iluvals);
+	if(jacobi) {
+		if(scale)
+			jacobi_bilu0_sweeps<scalar,index,bs,stor,true>(mat, plist, scale, nbuildsweeps,
+			                                               thread_chunk_size, usethreads, iluvals);
+		else
+			jacobi_bilu0_sweeps<scalar,index,bs,stor,false>(mat, plist, scale, nbuildsweeps,
+			                                                thread_chunk_size, usethreads, iluvals);
+	}
 	else
-		async_bilu0_sweeps<scalar,index,bs,stor,false>(mat, plist, scale, nbuildsweeps,
-		                                               thread_chunk_size, usethreads, iluvals);
+	{
+		if(scale)
+			async_bilu0_sweeps<scalar,index,bs,stor,true>(mat, plist, scale, nbuildsweeps,
+			                                              thread_chunk_size, usethreads, iluvals);
+		else
+			async_bilu0_sweeps<scalar,index,bs,stor,false>(mat, plist, scale, nbuildsweeps,
+			                                               thread_chunk_size, usethreads, iluvals);
+	}
 
+	// collect diagnostics if requested
 	if(compute_info)
 	{
 		if(scale)
@@ -153,7 +171,7 @@ block_ilu0_factorize<double,int,4,ColMajor> (const CRawBSRMatrix<double,int> *co
                                              const ILUPositions<int>& plist,
                                              const int nbuildsweeps, const int thread_chunk_size,
                                              const bool usethreads, const FactInit inittype,
-                                             const bool compute_residuals,
+                                             const bool compute_residuals, const bool jacobi,
                                              double *const __restrict iluvals,
                                              double *const __restrict scale);
 template PrecInfo
@@ -161,7 +179,7 @@ block_ilu0_factorize<double,int,5,ColMajor> (const CRawBSRMatrix<double,int> *co
                                              const ILUPositions<int>& plist,
                                              const int nbuildsweeps, const int thread_chunk_size,
                                              const bool usethreads, const FactInit inittype,
-                                             const bool compute_residuals,
+                                             const bool compute_residuals, const bool jacobi,
                                              double *const __restrict iluvals,
                                              double *const __restrict scale);
 template PrecInfo
@@ -169,7 +187,7 @@ block_ilu0_factorize<double,int,4,RowMajor> (const CRawBSRMatrix<double,int> *co
                                              const ILUPositions<int>& plist,
                                              const int nbuildsweeps, const int thread_chunk_size,
                                              const bool usethreads, const FactInit inittype,
-                                             const bool compute_residuals,
+                                             const bool compute_residuals, const bool jacobi,
                                              double *const __restrict iluvals,
                                              double *const __restrict scale);
 
@@ -179,7 +197,8 @@ template PrecInfo block_ilu0_factorize<double,int,BUILD_BLOCK_SIZE,ColMajor>
 
 (const CRawBSRMatrix<double,int> *const mat, const ILUPositions<int>& plist,
  const int nbuildsweeps, const int thread_chunk_size, const bool usethreads, const FactInit inittype,
- const bool compute_residuals, double *const __restrict iluvals, double *const __restrict scale);
+ const bool compute_residuals, const bool jacobi, double *const __restrict iluvals,
+ double *const __restrict scale);
 
 #endif
 
@@ -201,6 +220,35 @@ void async_bilu0_sweeps(const CRawBSRMatrix<scalar,index> *const mat, const ILUP
 			async_block_ilu0_factorize<scalar,index,bs,stor,usescaling>(mat, mvals, plist, scale,
 			                                                            irow, ilu);
 	}
+}
+
+template <typename scalar, typename index, int bs, StorageOptions stor, bool usescaling>
+void jacobi_bilu0_sweeps(const CRawBSRMatrix<scalar,index> *const mat, const ILUPositions<index>& plist,
+                         const scalar *const scale, const int nbuildsweeps, const int thread_chunk_size,
+                         const bool usethreads,
+                         scalar *const __restrict iluvals)
+{
+	using Blk = Block_t<scalar,bs,stor>;
+	const Blk *mvals = reinterpret_cast<const Blk*>(mat->vals);
+	Blk *ilu = reinterpret_cast<Blk*>(iluvals);
+
+	Eigen::aligned_allocator<Blk> alloc;
+	Blk *iluprev = alloc.allocate(mat->nbstored);
+
+#pragma omp parallel default(shared) if(usethreads)
+	for(int isweep = 0; isweep < nbuildsweeps; isweep++)
+	{
+#pragma omp for
+		for(index inz = 0; inz < mat->nbstored; inz++)
+			iluprev[inz].noalias() = ilu[inz];
+
+#pragma omp for schedule(dynamic, thread_chunk_size)
+		for(index irow = 0; irow < mat->nbrows; irow++)
+			jacobi_block_ilu0_factorize<scalar,index,bs,stor,usescaling>(mat, mvals, plist, scale,
+			                                                             irow, iluprev, ilu);
+	}
+
+	alloc.deallocate(iluprev, mat->nbstored);
 }
 
 template <typename scalar, typename index, int bs, StorageOptions stor> static

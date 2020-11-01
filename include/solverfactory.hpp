@@ -34,6 +34,8 @@ const std::string seqilu0str = "seqilu0";
 const std::string sfilu0str = "sfilu0";
 /// Sequentially applied ILU(0)
 const std::string sapilu0str = "sapilu0";
+/// ILU(0) by Jacobi iterations rather than asynchronous
+const std::string jacilu0str = "jacilu0";
 /// Column-oriented backward GS
 const std::string cscbgsstr = "cscbgs";
 /// Level-scheduled SGS

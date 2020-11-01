@@ -35,13 +35,16 @@ public:
 	 * \param apply_inittype Type of initialization to use for application
 	 * \param threadedfactor If false, the preconditioner is computed sequentially
 	 * \param threadedapply If false, the preconditioner is applied sequentially
+	 * \param compute_remainder Whether to compute diagnostics about the solve (has non-trivial cost)
+	 * \param jacobi_iter Whether to do nonlinear Jacobi iterations instead of asynchronous iterations
+	 *             for factorization
 	 */
 	AsyncBlockILU0_SRPreconditioner(SRMatrixStorage<const scalar, const index>&& matrix,
 	                                const int nbuildsweeps, const int napplysweeps,
 	                                const bool use_scaling, const int thread_chunk_size,
 	                                const FactInit fact_inittype, const ApplyInit apply_inittype,
 	                                const bool threadedfactor=true, const bool threadedapply=true,
-	                                const bool compute_remainder = false);
+	                                const bool compute_remainder = false, const bool jacobi_iter = false);
 
 	~AsyncBlockILU0_SRPreconditioner();
 
@@ -92,6 +95,7 @@ protected:
 	const FactInit factinittype;
 	const ApplyInit applyinittype;
 	const bool compute_remainder;
+	const bool jacobiiter;                       ///< Whether to do Jacobi iters instead of asynchronous
 
 	void setup_storage();
 };
@@ -115,7 +119,8 @@ public:
 	                           const bool use_scaling, const int thread_chunk_size,
 	                           const FactInit fact_inittype, const ApplyInit apply_inittype,
 	                           const bool compute_preconditioner_info,
-	                           const bool threadedfactor=true, const bool threadedapply=true);
+	                           const bool threadedfactor=true, const bool threadedapply=true,
+	                           const bool jacobi_iter = false);
 
 	virtual ~AsyncILU0_SRPreconditioner();
 
@@ -160,6 +165,7 @@ protected:
 	const FactInit factinittype;
 	const ApplyInit applyinittype;
 	const bool compute_precinfo;                 ///< Whether to compute expensive quantities for analysis
+	const bool jacobiiter;                       ///< Whether to do Jacobi iters instead of asynchronous
 
 	/// Allocates memory for storing LU factors and initializes it, as well as temporary data
 	/** \param scaling Set to true to allocate storage for the scaling vector that's applied to
@@ -213,6 +219,7 @@ protected:
 	using AsyncILU0_SRPreconditioner<scalar,index>::thread_chunk_size;
 	using AsyncILU0_SRPreconditioner<scalar,index>::factinittype;
 	using AsyncILU0_SRPreconditioner<scalar,index>::applyinittype;
+	using AsyncILU0_SRPreconditioner<scalar,index>::jacobiiter;
 	using AsyncILU0_SRPreconditioner<scalar,index>::setup_storage;
 
 	/// Reordered and scaled form of the original preconditioning matrix

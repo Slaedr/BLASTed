@@ -27,6 +27,7 @@ namespace blasted {
  * \param[in] init_type Type of initialization, \sa FactInit
  * \param[in] compute_remainder Pass 'true' for computing the ILU remainder before and after the
  *   factorization loop
+ * \param[in] jacobi_iter Pass true for doing nonlinear Jacobi iterations instead of async iterations
  * \param[out] iluvals The ILU factorization non-zeros, accessed using the block-row pointers,
  *   block-column indices and diagonal pointers of the original BSR matrix
  * \param[out] scale Entries that are used to symmetrically scale the original matrix before factorization
@@ -37,7 +38,7 @@ PrecInfo block_ilu0_factorize(const CRawBSRMatrix<scalar,index> *const mat,
                               const ILUPositions<index>& plist,
                               const int nbuildsweeps, const int thread_chunk_size, const bool usethreads,
                               const FactInit init_type,
-                              const bool compute_remainder,
+                              const bool compute_remainder, const bool jacobi_iter,
                               scalar *const __restrict iluvals, scalar *const __restrict scale);
 
 /// Computes the vector 1-norm of the ILU remainder A - LU restricted to the sparsity pattern of A

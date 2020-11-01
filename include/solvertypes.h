@@ -18,6 +18,7 @@ extern "C" {
 	              BLASTED_SEQILU0,
 	              BLASTED_SFILU0,
 	              BLASTED_SAPILU0,
+	              BLASTED_JAC_ILU0,
 	              BLASTED_CSC_BGS,
 	              BLASTED_LEVEL_SGS,
 	              BLASTED_ASYNC_LEVEL_ILU0,

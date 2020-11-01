@@ -66,6 +66,33 @@ void block_unit_lower_triangular(const Block_t<scalar,bs,stor> *const vals,
 	x[irow] = rhs - inter;
 }
 
+/// Unit lower triangular solve kernel
+/**
+ * \param vals The LU factorization matrix to apply - the diagonal blocks are assumed pre-inverted
+ * \param bcolind Array of block-column indices
+ * \param browstart Index into bcolind corresponding to the start of the row irow (see below)
+ * \param bdiagind Index into bcolind that corresponds to the diagonal entry of row irow (see below)
+ * \param rhs The block of the RHS vector corresponding to block-row irow
+ * \param irow The block-component of the vector of unknowns x to be updated
+ * \param xold The previous iterate
+ * \param x The output vector, whose irow'th block will be updated
+ */
+template <typename scalar, typename index, int bs, StorageOptions stor> inline
+void jacobi_block_unit_lower_triangular(const Block_t<scalar,bs,stor> *const vals,
+                                        const index *const bcolind,
+                                        const index browstart, const index bdiagind,
+                                        const Segment_t<scalar,bs>& rhs,
+                                        const index irow, const Segment_t<scalar,bs> *const xold,
+                                        Segment_t<scalar,bs> *const x)
+{
+	Matrix<scalar,bs,1> inter = Matrix<scalar,bs,1>::Zero();
+
+	for(index jj = browstart; jj < bdiagind; jj++)
+		inter += vals[jj]*xold[bcolind[jj]];
+
+	x[irow] = rhs - inter;
+}
+
 /// Upper triangular solve kernel
 /**
  * \param vals The LU factorization matrix to apply - the diagonal blocks are assumed pre-inverted
@@ -88,6 +115,35 @@ void block_upper_triangular(const Block_t<scalar,bs,stor> *const vals,
 	// compute U z
 	for(index jj = bdiagind+1; jj < nextbrowstart; jj++)
 		inter += vals[jj] * x[bcolind[jj]];
+
+	// compute z = D^(-1) (y - U z) for the irow-th block-segment of z
+	x[irow] = vals[bdiagind] * ( rhs - inter );
+}
+
+/// Upper triangular solve kernel for use in Jacobi iterations
+/**
+ * \param vals The LU factorization matrix to apply - the diagonal blocks are assumed pre-inverted
+ * \param bcolind Array of block-column indices
+ * \param bdiagind Index into bcolind that corresponds to the diagonal entry of row irow (see below)
+ * \param nextbrowstart Index into bcolind corresponding to the start of the next row after irow
+ * \param rhs The block of the RHS vector corresponding to block-row irow
+ * \param irow The block-component of the vector of unknowns x to be updated
+ * \param xold The previous iterate
+ * \param x The output vector, whose irow'th block will be updated
+ */
+template <typename scalar, typename index, int bs, StorageOptions stor> inline
+void jacobi_block_upper_triangular(const Block_t<scalar,bs,stor> *const vals,
+                                   const index *const bcolind,
+                                   const index bdiagind, const int nextbrowstart,
+                                   const Segment_t<scalar,bs>& rhs,
+                                   const int irow, const Segment_t<scalar,bs> *const xold,
+                                   Segment_t<scalar,bs> *const x)
+{
+	Matrix<scalar,bs,1> inter = Matrix<scalar,bs,1>::Zero();
+	
+	// compute U z
+	for(index jj = bdiagind+1; jj < nextbrowstart; jj++)
+		inter += vals[jj] * xold[bcolind[jj]];
 
 	// compute z = D^(-1) (y - U z) for the irow-th block-segment of z
 	x[irow] = vals[bdiagind] * ( rhs - inter );

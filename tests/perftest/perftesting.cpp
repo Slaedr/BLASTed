@@ -18,7 +18,7 @@ namespace blasted {
 template <typename PrecType>
 static void set_blasted_sweeps(const int nbswp, const int naswp, PrecType& prec)
 {
-	AsyncParams aparams = prec.getAsyncParams();
+	IterPrecParams aparams = prec.getParams();
 	aparams.nbuildsweeps = nbswp;
 	aparams.napplysweeps = naswp;
 	prec.setAsyncParams(aparams);

@@ -23,6 +23,7 @@ namespace blasted {
  * \param[in] usethreads Whether to use asynchronous threaded (true) or serial (false) factorization
  * \param[in] factinittype Method to use for initializing the ILU factor matrix
  * \param[in] compute_info Whether to compute extra information such as diagonal dominance of factors
+ * \param[in] jacobi Pass true for doing nonlinear Jacobi iterations instead of async iterations
  * \param[in,out] iluvals A pre-allocated array for storage of the ILU0 factorization
  * \param[in,out] scale A pre-allocated array for storage of diagonal scaling factors
  */
@@ -30,7 +31,7 @@ template <typename scalar, typename index>
 PrecInfo scalar_ilu0_factorize(const CRawBSRMatrix<scalar,index> *const mat,
                                const ILUPositions<index>& plist,
                                const int nbuildsweeps, const int thread_chunk_size, const bool usethreads,
-                               const FactInit factinittype, const bool compute_info,
+                               const FactInit factinittype, const bool compute_info, const bool jacobi,
                                scalar *const __restrict iluvals, scalar *const __restrict scale);
 
 /// Computes the vector 1-norm of the ILU0 remainder A - LU
