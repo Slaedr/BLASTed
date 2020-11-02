@@ -49,8 +49,6 @@ BlastedSolverType SRFactory<scalar,index>::solverTypeFromString(const std::strin
 		ptype = BLASTED_SFILU0;
 	else if(precstr2 == sapilu0str)
 		ptype = BLASTED_SAPILU0;
-	else if(precstr2 == jacilu0str)
-		ptype = BLASTED_JAC_ILU0;
 	else if(precstr2 == cscbgsstr)
 		ptype = BLASTED_CSC_BGS;
 	else if(precstr2 == levelsgsstr)
@@ -74,52 +72,47 @@ template <int bs, StorageOptions stor>
 SRPreconditioner<scalar,index>*
 SRFactory<scalar,index>
 ::create_srpreconditioner_of_type(SRMatrixStorage<const scalar,const index>&& mat,
-                                  const AsyncSolverSettings& opts) const
+                                  const SolverSettings& opts) const
 {
+	IterPrecParams iopts = opts.params;
+
 	if(opts.prectype == BLASTED_JACOBI) {
 		return new BJacobiSRPreconditioner<scalar,index,bs,stor>(std::move(mat));
 	}
 	else if(opts.prectype == BLASTED_GS) {
-		return new ChaoticBlockRelaxation<scalar,index,bs,stor>(std::move(mat), opts.napplysweeps,
-		                                                        opts.thread_chunk_size);
+		return new ChaoticBlockRelaxation<scalar,index,bs,stor>(std::move(mat), iopts.napplysweeps,
+		                                                        iopts.thread_chunk_size);
 	}
 	else if(opts.prectype == BLASTED_SGS) {
 		return new AsyncBlockSGS_SRPreconditioner<scalar,index,bs,stor>
-			(std::move(mat), opts.napplysweeps, opts.apply_inittype, opts.thread_chunk_size);
+			(std::move(mat), iopts.napplysweeps, iopts.applyinittype, iopts.thread_chunk_size);
 	}
 	else if(opts.prectype == BLASTED_ILU0) {
+		iopts.threadedfactor = iopts.threadedapply = true;
 		return new AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>
-			(std::move(mat), opts.nbuildsweeps, opts.napplysweeps, opts.scale, opts.thread_chunk_size,
-			 opts.fact_inittype, opts.apply_inittype, true, true, opts.compute_precinfo, opts.buildtype);
+			(std::move(mat), iopts, opts.compute_precinfo);
 	}
 	else if(opts.prectype == BLASTED_SEQILU0) {
+		iopts.threadedfactor = iopts.threadedapply = false;
 		return new AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>
-			(std::move(mat), opts.nbuildsweeps, opts.napplysweeps, opts.scale, opts.thread_chunk_size,
-			 opts.fact_inittype, opts.apply_inittype, false, false, opts.compute_precinfo);
+			(std::move(mat), iopts, opts.compute_precinfo);
 	}
 	else if(opts.prectype == BLASTED_SFILU0) {
+		iopts.threadedfactor = false; iopts.threadedapply = true;
 		return new AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>
-			(std::move(mat), opts.nbuildsweeps, opts.napplysweeps, opts.scale, opts.thread_chunk_size,
-			 opts.fact_inittype, opts.apply_inittype, false, true, opts.compute_precinfo);
+			(std::move(mat), iopts, opts.compute_precinfo);
 	}
 	else if(opts.prectype == BLASTED_SAPILU0) {
+		iopts.threadedfactor = true; iopts.threadedapply = false;
 		return new AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>
-			(std::move(mat), opts.nbuildsweeps, opts.napplysweeps, opts.scale, opts.thread_chunk_size,
-			 opts.fact_inittype, opts.apply_inittype, true, false, opts.compute_precinfo);
+			(std::move(mat), iopts, opts.compute_precinfo);
 	}
-	// else if(opts.prectype == BLASTED_JAC_ILU0) {
-	// 	return new AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>
-	// 		(std::move(mat), opts.nbuildsweeps, opts.napplysweeps, opts.scale, opts.thread_chunk_size,
-	// 		 opts.fact_inittype, opts.apply_inittype, true, true, opts.compute_precinfo, true);
-	// }
 	else if(opts.prectype == BLASTED_LEVEL_SGS) {
 		return new Level_BSGS<scalar,index,bs,stor>(std::move(mat));
 	}
 	else if(opts.prectype == BLASTED_ASYNC_LEVEL_ILU0) {
-		return new Async_Level_BlockILU0<scalar,index,bs,stor>(std::move(mat),opts.nbuildsweeps,
-		                                                       opts.scale,
-		                                                       opts.thread_chunk_size,
-		                                                       opts.fact_inittype, true,
+		iopts.threadedfactor = true; iopts.threadedapply = true;
+		return new Async_Level_BlockILU0<scalar,index,bs,stor>(std::move(mat),iopts,
 		                                                       opts.compute_precinfo);
 	}
 	else if(opts.prectype == BLASTED_NO_PREC) {
@@ -136,66 +129,50 @@ SRFactory<scalar,index>
 template <typename scalar, typename index>
 SRPreconditioner<scalar,index>*
 SRFactory<scalar,index>::create_preconditioner(SRMatrixStorage<const scalar, const index>&& mat,
-                                               const SolverSettings& set) const
+                                               const SolverSettings& opts) const
 {
 	SRPreconditioner<scalar,index> *p = nullptr;
 
-	const AsyncSolverSettings& opts = dynamic_cast<const AsyncSolverSettings&>(set);
+	IterPrecParams iopts = opts.params;
 
 	if(opts.bs == 1) {
 		if(opts.prectype == BLASTED_JACOBI) {
 			p = new JacobiSRPreconditioner<scalar,index>(std::move(mat));
 		}
 		else if(opts.prectype == BLASTED_GS) {
-			p = new ChaoticRelaxation<scalar,index>(std::move(mat), opts.napplysweeps,
-			                                        opts.thread_chunk_size);
+			p = new ChaoticRelaxation<scalar,index>(std::move(mat), iopts.napplysweeps,
+			                                        iopts.thread_chunk_size);
 		}
 		else if(opts.prectype == BLASTED_CSC_BGS) {
-			p = new CSC_BGS_Preconditioner<scalar,index>(std::move(mat), opts.napplysweeps,
-			                                             opts.thread_chunk_size);
+			p = new CSC_BGS_Preconditioner<scalar,index>(std::move(mat), iopts.napplysweeps,
+			                                             iopts.thread_chunk_size);
 		}
 		else if(opts.prectype == BLASTED_SGS) {
 			p = new AsyncSGS_SRPreconditioner<scalar,index>
-				(std::move(mat), opts.napplysweeps, opts.apply_inittype, opts.thread_chunk_size);
+				(std::move(mat), iopts.napplysweeps, iopts.applyinittype, iopts.thread_chunk_size);
 		}
 		else if(opts.prectype == BLASTED_LEVEL_SGS) {
 			p = new Level_SGS<scalar,index>(std::move(mat));
 		}
 		else if(opts.prectype == BLASTED_ILU0) {
-			p = new AsyncILU0_SRPreconditioner<scalar,index>
-				(std::move(mat), opts.nbuildsweeps, opts.napplysweeps,
-				 opts.scale, opts.thread_chunk_size,
-				 opts.fact_inittype, opts.apply_inittype, opts.compute_precinfo, true,true,
-				 (set.buildtype == BLASTED_ITER_JACOBI));
+			iopts.threadedfactor = iopts.threadedapply = true;
+			p = new AsyncILU0_SRPreconditioner<scalar,index>(std::move(mat), iopts, opts.compute_precinfo);
 		}
 		else if(opts.prectype == BLASTED_SEQILU0) {
-			p = new AsyncILU0_SRPreconditioner<scalar,index>
-				(std::move(mat), opts.nbuildsweeps, opts.napplysweeps,
-				 opts.scale, opts.thread_chunk_size,
-				 opts.fact_inittype, opts.apply_inittype, opts.compute_precinfo, false,false);
+			iopts.threadedfactor = iopts.threadedapply = false;
+			p = new AsyncILU0_SRPreconditioner<scalar,index>(std::move(mat), iopts, opts.compute_precinfo);
 		}
 		else if(opts.prectype == BLASTED_SFILU0) {
-			p = new AsyncILU0_SRPreconditioner<scalar,index>
-				(std::move(mat), opts.nbuildsweeps, opts.napplysweeps,
-				 opts.scale, opts.thread_chunk_size,
-				 opts.fact_inittype, opts.apply_inittype, opts.compute_precinfo, false,true);
+			iopts.threadedfactor = false; iopts.threadedapply = true;
+			p = new AsyncILU0_SRPreconditioner<scalar,index>(std::move(mat), iopts, opts.compute_precinfo);
 		}
 		else if(opts.prectype == BLASTED_SAPILU0) {
-			p = new AsyncILU0_SRPreconditioner<scalar,index>
-				(std::move(mat), opts.nbuildsweeps, opts.napplysweeps,
-				 opts.scale, opts.thread_chunk_size,
-				 opts.fact_inittype, opts.apply_inittype, opts.compute_precinfo, true,false);
+			iopts.threadedfactor = true; iopts.threadedapply = false;
+			p = new AsyncILU0_SRPreconditioner<scalar,index>(std::move(mat), iopts, opts.compute_precinfo);
 		}
-		// else if(opts.prectype == BLASTED_JAC_ILU0) {
-		// 	p = new AsyncILU0_SRPreconditioner<scalar,index>
-		// 		(std::move(mat), opts.nbuildsweeps, opts.napplysweeps,
-		// 		 opts.scale, opts.thread_chunk_size,
-		// 		 opts.fact_inittype, opts.apply_inittype, opts.compute_precinfo, true,true,false);
-		// }
 		else if(opts.prectype == BLASTED_ASYNC_LEVEL_ILU0) {
-			p = new Async_Level_ILU0<scalar,index>(std::move(mat), opts.nbuildsweeps, opts.scale,
-			                                       opts.thread_chunk_size, opts.fact_inittype, true,
-			                                       opts.compute_precinfo);
+			iopts.threadedfactor = true; iopts.threadedapply = true;
+			p = new Async_Level_ILU0<scalar,index>(std::move(mat), iopts, opts.compute_precinfo);
 		}
 		else if(opts.prectype == BLASTED_NO_PREC) {
 			p = new NoPreconditioner<scalar,index>(std::move(mat), 1);
@@ -250,10 +227,12 @@ BlastedIterType getIterTypeFromString(const char iter_type[])
 	BlastedIterType bit;
 	if(!strcmp(iter_type, "jacobi"))
 		bit = BLASTED_ITER_JACOBI;
-	else if(!strcmp("gauss_seidel"))
+	else if(!strcmp(iter_type, "gauss_seidel"))
 		bit = BLASTED_ITER_GAUSS_SEIDEL;
-	else
+	else if(!strcmp(iter_type, "async"))
 		bit = BLASTED_ITER_ASYNC;
+	else
+		throw std::invalid_argument("Unsupported iter type " + std::string(iter_type));
 	return bit;
 }
 

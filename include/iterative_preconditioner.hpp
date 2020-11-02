@@ -22,24 +22,28 @@ struct IterPrecParams {
 	int napplysweeps;            ///< Number of iterations to apply the preconditioner
 	FactInit factinittype;       ///< Type of initial value for preconditioner build
 	ApplyInit applyinittype;     ///< Type of initial value for solution to preconditioner application
+	BlastedIterType buildtype;   ///< Type of iteration to build preconditioner
+	BlastedIterType applytype;   ///< Type of iteration to apply the preconditioner
 };
 
 /// Parameters controlling iterative preconditioner generation
 struct BuildIterParams {
 	bool usescaling;
-	int threadchunksize;
-	bool threadedfactor;
-	bool nbuildsweeps;
-	ApplyInit factinittype;
+	int thread_chunk_size;
+	bool threaded;
+	int nsweeps;
+	FactInit inittype;
+	BlastedIterType itertype;
 };
 
 /// Parameters controlling iterative preconditioner application
 struct ApplyIterParams {
 	bool usescaling;
-	int threadchunksize;
-	bool threadedapply;
-	bool napplysweeps;
-	ApplyInit applyinittype;
+	int thread_chunk_size;
+	bool threaded;
+	int nsweeps;
+	ApplyInit inittype;
+	BlastedIterType itertype;
 };
 
 template <typename scalar, typename index = int>
@@ -57,6 +61,10 @@ public:
 protected:
 	IterPrecParams iterparams;
 };
+
+BuildIterParams extractBuildIterParams(const IterPrecParams params);
+
+ApplyIterParams extractApplyIterParams(const IterPrecParams params);
 
 }
 

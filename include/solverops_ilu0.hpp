@@ -11,6 +11,7 @@
 #include "async_initialization_decl.hpp"
 #include "ilu_pattern.hpp"
 #include "solvertypes.h"
+#include "iterative_preconditioner.hpp"
 
 namespace blasted {
 
@@ -41,11 +42,8 @@ public:
 	 *             for factorization
 	 */
 	AsyncBlockILU0_SRPreconditioner(SRMatrixStorage<const scalar, const index>&& matrix,
-	                                const int nbuildsweeps, const int napplysweeps,
-	                                const bool use_scaling, const int thread_chunk_size,
-	                                const FactInit fact_inittype, const ApplyInit apply_inittype,
-	                                const bool threadedfactor=true, const bool threadedapply=true,
-	                                const bool compute_remainder = false, const bool jacobi_iter = false);
+	                                const IterPrecParams params,
+	                                bool compute_remainder = false);
 
 	~AsyncBlockILU0_SRPreconditioner();
 
@@ -87,16 +85,9 @@ protected:
 	/// Temporary storage for result of application of L
 	scalar *ytemp;
 
-	const bool usescaling;                       ///< Whether to scale the matrix before ILU
-	const bool threadedfactor;         ///< True for thread-parallel ILU0 factorization
-	const bool threadedapply;          ///< True for thread-parallel LU application
-	const int nbuildsweeps;
-	const int napplysweeps;
-	const int thread_chunk_size;
-	const FactInit factinittype;
-	const ApplyInit applyinittype;
+	const BuildIterParams buildparams;
+	const ApplyIterParams applyparams;
 	const bool compute_remainder;
-	const bool jacobiiter;                       ///< Whether to do Jacobi iters instead of asynchronous
 
 	void setup_storage();
 };
@@ -116,12 +107,7 @@ public:
 	 * \param threadedapply If false, the preconditioner is applied sequentially
 	 */
 	AsyncILU0_SRPreconditioner(SRMatrixStorage<const scalar, const index>&& matrix,
-	                           const int nbuildsweeps, const int napplysweeps,
-	                           const bool use_scaling, const int thread_chunk_size,
-	                           const FactInit fact_inittype, const ApplyInit apply_inittype,
-	                           const bool compute_preconditioner_info,
-	                           const bool threadedfactor=true, const bool threadedapply=true,
-	                           const bool jacobi_iter = false);
+	                           const IterPrecParams params, const bool compute_preconditioner_info);
 
 	virtual ~AsyncILU0_SRPreconditioner();
 
@@ -154,19 +140,9 @@ protected:
 	/// Temporary storage for result of application of L
 	scalar *ytemp;
 
-	const bool usescaling;                       ///< Whether to scale the matrix before ILU
-	const bool threadedfactor;                   ///< True for thread-parallel ILU0 factorization
-	const bool threadedapply;                    ///< True for thread-parallel LU application
-	const int nbuildsweeps;                      ///< Number of async sweeps for building ILU factors
-	const int napplysweeps;                      ///< Number of async sweeps for applying ILU factors
-
-	/// Number of work-items in each dynamic job assigned to a thread
-	const int thread_chunk_size;
-
-	const FactInit factinittype;
-	const ApplyInit applyinittype;
+	const BuildIterParams buildparams;
+	const ApplyIterParams applyparams;
 	const bool compute_precinfo;                 ///< Whether to compute expensive quantities for analysis
-	const bool jacobiiter;                       ///< Whether to do Jacobi iters instead of asynchronous
 
 	/// Allocates memory for storing LU factors and initializes it, as well as temporary data
 	/** \param scaling Set to true to allocate storage for the scaling vector that's applied to
@@ -190,10 +166,7 @@ public:
 	 */
 	ReorderedAsyncILU0_SRPreconditioner(SRMatrixStorage<const scalar, const index>&& matrix,
 	                                    ReorderingScaling<scalar,index,1> *const reorderscale,
-	                                    const int nbuildsweeps, const int napplysweeps,
-	                                    const int thread_chunk_size,
-	                                    const FactInit fact_init_type, const ApplyInit apply_init_type,
-	                                    const bool threadedfactor=true, const bool threadedapply=true);
+	                                    const IterPrecParams params);
 
 	~ReorderedAsyncILU0_SRPreconditioner();
 
@@ -213,14 +186,9 @@ protected:
 	using AsyncILU0_SRPreconditioner<scalar,index>::iluvals;
 	using AsyncILU0_SRPreconditioner<scalar,index>::scale;
 	using AsyncILU0_SRPreconditioner<scalar,index>::ytemp;
-	using AsyncILU0_SRPreconditioner<scalar,index>::threadedfactor;
-	using AsyncILU0_SRPreconditioner<scalar,index>::threadedapply;
-	using AsyncILU0_SRPreconditioner<scalar,index>::nbuildsweeps;
-	using AsyncILU0_SRPreconditioner<scalar,index>::napplysweeps;
-	using AsyncILU0_SRPreconditioner<scalar,index>::thread_chunk_size;
-	using AsyncILU0_SRPreconditioner<scalar,index>::factinittype;
-	using AsyncILU0_SRPreconditioner<scalar,index>::applyinittype;
-	using AsyncILU0_SRPreconditioner<scalar,index>::jacobiiter;
+	using AsyncILU0_SRPreconditioner<scalar,index>::buildparams;
+	using AsyncILU0_SRPreconditioner<scalar,index>::applyparams;
+	using AsyncILU0_SRPreconditioner<scalar,index>::compute_precinfo;
 	using AsyncILU0_SRPreconditioner<scalar,index>::setup_storage;
 
 	/// Reordered and scaled form of the original preconditioning matrix

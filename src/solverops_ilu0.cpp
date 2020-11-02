@@ -20,13 +20,10 @@ using boost::alignment::aligned_free;
 template <typename scalar, typename index, int bs, StorageOptions stor>
 AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>
 ::AsyncBlockILU0_SRPreconditioner(SRMatrixStorage<const scalar, const index>&& matrix,
-                                  const int nbuildswp, const int napplyswp, const bool uscl,
-                                  const int tcs, const FactInit finit, const ApplyInit ainit,
-                                  const bool tf, const bool ta, const bool comp_rem, const bool jaciter)
+                                  const IterPrecParams params, const bool comp_rem)
 	: SRPreconditioner<scalar,index>(std::move(matrix)), iluvals{nullptr}, scale{nullptr}, ytemp{nullptr},
-	  usescaling{uscl}, threadedfactor{tf}, threadedapply{ta},
-	  nbuildsweeps{nbuildswp}, napplysweeps{napplyswp}, thread_chunk_size{tcs},
-	  factinittype{finit}, applyinittype{ainit}, compute_remainder{comp_rem}, jacobiiter{jaciter}
+	  buildparams{extractBuildIterParams(params)}, applyparams{extractApplyIterParams(params)},
+	  compute_remainder{comp_rem}
 {
 }
 
@@ -65,7 +62,7 @@ void AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>::setup_storage()
 	else
 		std::cout << "! AsyncBlockILU0_SRPreconditioner: Temp vector is already allocated!\n";
 
-	if(usescaling) {
+	if(buildparams.usescaling) {
 		if(!scale)
 			scale = (scalar*)aligned_alloc(CACHE_LINE_LEN, mat.nbrows*bs*sizeof(scalar));
 		else
@@ -87,8 +84,9 @@ PrecInfo AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>::compute()
 	}
 
 	return block_ilu0_factorize<scalar,index,bs,stor>
-		(&mat, plist, nbuildsweeps, thread_chunk_size, threadedfactor, factinittype,
-		 compute_remainder, jacobiiter, iluvals, scale);
+		(&mat, plist, buildparams.nsweeps, buildparams.thread_chunk_size, buildparams.threaded,
+		 buildparams.inittype, compute_remainder, (buildparams.itertype == BLASTED_ITER_JACOBI),
+		 iluvals, scale);
 }
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
@@ -96,8 +94,9 @@ void AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>::apply(const scalar *
                                                                   scalar *const __restrict z) const
 {
 	block_ilu0_apply<scalar,index,bs,stor>
-		(&mat, iluvals, scale, ytemp, napplysweeps, thread_chunk_size, threadedapply, applyinittype,
-		 jacobiiter, r, z);
+		(&mat, iluvals, scale, ytemp, applyparams.nsweeps, applyparams.thread_chunk_size,
+		 applyparams.threaded, applyparams.inittype, (applyparams.itertype == BLASTED_ITER_JACOBI),
+		 r, z);
 }
 
 template <typename scalar, typename index, int bs, StorageOptions stor>
@@ -110,15 +109,10 @@ void AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>::apply_relax(const sc
 template <typename scalar, typename index>
 AsyncILU0_SRPreconditioner<scalar,index>::
 AsyncILU0_SRPreconditioner(SRMatrixStorage<const scalar, const index>&& matrix,
-                           const int nbuildswp, const int napplyswp, const bool uscal, const int tcs,
-                           const FactInit fi, const ApplyInit ai, const bool compute_preconditioner_info,
-                           const bool tf, const bool ta, const bool jaciter)
-	: SRPreconditioner<scalar,index>(std::move(matrix)),
-	  iluvals{nullptr}, scale{nullptr}, ytemp{nullptr}, usescaling{uscal},
-	  threadedfactor{tf}, threadedapply{ta},
-	  nbuildsweeps{nbuildswp}, napplysweeps{napplyswp}, thread_chunk_size{tcs},
-	  factinittype{fi}, applyinittype{ai}, compute_precinfo{compute_preconditioner_info},
-	  jacobiiter{jaciter}
+                           const IterPrecParams params, const bool compute_preconditioner_info)
+	: SRPreconditioner<scalar,index>(std::move(matrix)), iluvals{nullptr}, scale{nullptr}, ytemp{nullptr},
+	  buildparams{extractBuildIterParams(params)}, applyparams{extractApplyIterParams(params)},
+	  compute_precinfo{compute_preconditioner_info}
 { }
 
 template <typename scalar, typename index>
@@ -155,7 +149,7 @@ void AsyncILU0_SRPreconditioner<scalar,index>::setup_storage()
 	else
 		std::cout << "! AsyncILU0: setup_storage(): Temp vector is already allocated!\n";
 
-	if(usescaling) {
+	if(buildparams.usescaling) {
 		if(!scale)
 			scale = (scalar*)aligned_alloc(CACHE_LINE_LEN, mat.nbrows*sizeof(scalar));
 		else
@@ -171,8 +165,9 @@ PrecInfo AsyncILU0_SRPreconditioner<scalar,index>::compute()
 		plist = compute_ILU_positions_CSR_CSR(&mat);
 	}
 
-	return scalar_ilu0_factorize(&mat, plist, nbuildsweeps, thread_chunk_size, threadedfactor,
-	                             factinittype, compute_precinfo, jacobiiter, iluvals, scale);
+	return scalar_ilu0_factorize(&mat, plist, buildparams.nsweeps, buildparams.thread_chunk_size,
+	                             buildparams.threaded, buildparams.inittype, compute_precinfo,
+	                             (buildparams.itertype == BLASTED_ITER_JACOBI), iluvals, scale);
 
 }
 
@@ -180,8 +175,9 @@ template <typename scalar, typename index>
 void AsyncILU0_SRPreconditioner<scalar,index>::apply(const scalar *const __restrict ra, 
                                                      scalar *const __restrict za) const
 {
-	scalar_ilu0_apply(&mat, iluvals, scale, ytemp, napplysweeps, thread_chunk_size, threadedapply,
-	                  applyinittype, jacobiiter, ra, za);
+	scalar_ilu0_apply(&mat, iluvals, scale, ytemp, applyparams.nsweeps, applyparams.thread_chunk_size,
+	                  applyparams.threaded, applyparams.inittype,
+	                  (applyparams.itertype == BLASTED_ITER_JACOBI), ra, za);
 }
 
 template <typename scalar, typename index>
@@ -208,11 +204,8 @@ template <typename scalar, typename index>
 ReorderedAsyncILU0_SRPreconditioner<scalar,index>
 ::ReorderedAsyncILU0_SRPreconditioner(SRMatrixStorage<const scalar, const index>&& matrix,
                                       ReorderingScaling<scalar,index,1> *const reorderscale,
-                                      const int nbuildsweeps, const int napplysweeps, const int tcs,
-                                      const FactInit finit, const ApplyInit ainit,
-                                      const bool threadedfactor, const bool threadedapply)
-	: AsyncILU0_SRPreconditioner<scalar,index>(std::move(matrix),nbuildsweeps,napplysweeps,true, tcs,
-	                                           finit, ainit, threadedfactor,threadedapply),
+                                      const IterPrecParams params)
+	: AsyncILU0_SRPreconditioner<scalar,index>(std::move(matrix), params, false),
 	  reord{reorderscale}
 { }
 
@@ -237,9 +230,10 @@ PrecInfo ReorderedAsyncILU0_SRPreconditioner<scalar,index>::compute()
 
 	plist = compute_ILU_positions_CSR_CSR(reinterpret_cast<CRawBSRMatrix<scalar,index>*>(&rsmat));
 
-	return scalar_ilu0_factorize(reinterpret_cast<CRawBSRMatrix<scalar,index>*>(&rsmat),
-	                             plist, nbuildsweeps, thread_chunk_size, threadedfactor,
-	                             factinittype, false, jacobiiter, iluvals, scale);
+	return scalar_ilu0_factorize(reinterpret_cast<CRawBSRMatrix<scalar,index>*>(&rsmat),plist,
+	                             buildparams.nsweeps, buildparams.thread_chunk_size,
+	                             buildparams.threaded, buildparams.inittype, compute_precinfo,
+	                             (buildparams.itertype == BLASTED_ITER_JACOBI), iluvals, scale);
 }
 
 template <typename scalar, typename index>
@@ -259,16 +253,18 @@ void ReorderedAsyncILU0_SRPreconditioner<scalar,index>::apply(const scalar *cons
 
 		// solve triangular system
 		scalar_ilu0_apply(reinterpret_cast<const CRawBSRMatrix<scalar,index>*>(&rsmat),
-		                  iluvals, scale, ytemp, napplysweeps, thread_chunk_size, threadedapply,
-		                  applyinittype, jacobiiter, rb, za);
+		                  iluvals, scale, ytemp, applyparams.nsweeps, applyparams.thread_chunk_size,
+		                  applyparams.threaded, applyparams.inittype,
+		                  (applyparams.itertype == BLASTED_ITER_JACOBI), rb, za);
 
 		aligned_free(rb);
 	}
 	else {
 		// solve triangular system
 		scalar_ilu0_apply(reinterpret_cast<const CRawBSRMatrix<scalar,index>*>(&rsmat),
-		                  iluvals, scale, ytemp, napplysweeps, thread_chunk_size, threadedapply,
-		                  applyinittype, jacobiiter, ra, za);
+		                  iluvals, scale, ytemp, applyparams.nsweeps, applyparams.thread_chunk_size,
+		                  applyparams.threaded, applyparams.inittype,
+		                  (applyparams.itertype == BLASTED_ITER_JACOBI), ra, za);
 	}
 
 	// reorder solution

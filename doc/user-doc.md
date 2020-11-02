@@ -22,6 +22,8 @@ Note that -1 can be used to request the corresonding sequential operation in cas
 * `-blasted_async_apply_init_type` A string specifying what type of initialization to use for asynchronous triangular solves. Options: 
   - `init_zero`
   - `init_jacobi`
+* `-blasted_pc_build_iter_type` A string, "jacobi", "gauss\_seidel" or "async", specifying the type of iteration used for iteratively building the preconditioner (ignored for preconditioners which are not built iteratively, such as Jacobi and SGS). In fact, this is currently only used for ILU preconditioners.
+* `-blasted_pc_apply_iter_type` Similar to the last one, but affects the iteration used for appllying the preconditioner within the linear solver. This is currently only used for ILU preconditioners.
 * `-blasted_compute_preconditioner_info` Boolean value (specifying this option with no value amounts to true; not specifying it at all amounts to false) to request computation and reporting of extra information about the preconditioner to aid analysis. Note that these may be expensive and not well-optimized.
 
 * `-blasted_thread_chunk_size` An integer specifying the number of work-items assigned at a time to a thread in a dynamically-scheduled loop.

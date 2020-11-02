@@ -35,8 +35,6 @@ const std::string seqilu0str = "seqilu0";
 const std::string sfilu0str = "sfilu0";
 /// Sequentially applied ILU(0)
 const std::string sapilu0str = "sapilu0";
-/// ILU(0) by Jacobi iterations rather than asynchronous
-const std::string jacilu0str = "jacilu0";
 /// Column-oriented backward GS
 const std::string cscbgsstr = "cscbgs";
 /// Level-scheduled SGS
@@ -54,23 +52,21 @@ struct SolverSettings {
 	/** This is not possible for some methods, in which case preconditioning will be used anyway.
 	 */
 	bool relax;
-	int thread_chunk_size;                ///< Number of work-items (iterations) in each thread chunk
 	bool compute_precinfo;                ///< Set to true if extra information is needed
 
-	/// Default destructor
-	virtual ~SolverSettings() = default;
+	IterPrecParams params;
 };
 
 /// Settings needed for most asynchronous iterations
-struct AsyncSolverSettings : public SolverSettings {
-	IterType buildtype;                   ///< Type of iteration used for building the preconditioner
-	IterType applytype;                   ///< Type of iteration used for applying the preconditioner
-	bool scale;                           ///< Use the symmetrically scaled matrix instead of the original
-	int nbuildsweeps;                     ///< Number of build sweeps
-	int napplysweeps;                     ///< Number of apply sweeps
-	FactInit fact_inittype;               ///< Initialization type for asynchronous factorization
-	ApplyInit apply_inittype;             ///< Initialization type for asynchronous triangular solves
-};
+// struct AsyncSolverSettings : public SolverSettings {
+// 	IterType buildtype;                   ///< Type of iteration used for building the preconditioner
+// 	IterType applytype;                   ///< Type of iteration used for applying the preconditioner
+// 	bool scale;                           ///< Use the symmetrically scaled matrix instead of the original
+// 	int nbuildsweeps;                     ///< Number of build sweeps
+// 	int napplysweeps;                     ///< Number of apply sweeps
+// 	FactInit fact_inittype;               ///< Initialization type for asynchronous factorization
+// 	ApplyInit apply_inittype;             ///< Initialization type for asynchronous triangular solves
+// };
 
 template <typename scalar, typename index>
 class FactoryBase
@@ -113,7 +109,7 @@ private:
 	template <int bs, StorageOptions stor>
 	SRPreconditioner<scalar,index> *
 	create_srpreconditioner_of_type(SRMatrixStorage<const scalar, const index>&& prec_matrix,
-	                                const AsyncSolverSettings& opts) const;
+	                                const SolverSettings& opts) const;
 };
 
 /// Converts string to preconditioner iteration type

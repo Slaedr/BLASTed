@@ -21,6 +21,7 @@
 #include "solverfactory.hpp"
 #include "blasted_petsc_ext.hpp"
 #include "preconditioner_diagnostics.hpp"
+#include "error_handling.hpp"
 
 using namespace blasted;
 
@@ -79,18 +80,19 @@ static void get_string_petscoptions(const char *const option_tag, char outstr[BL
 	PetscBool flag = PETSC_FALSE;
 	PetscOptionsGetString(NULL, NULL, option_tag, outstr, BLASTED_OPT_STRLEN, &flag);
 	if(flag == PETSC_FALSE) {
-		printf("BLASTed: %s not set!\n", option_tag); fflush(stdout);
-		abort();
+		char errmsg[100];
+		sprintf(errmsg, "BLASTed: %s not set!\n", option_tag); printf("%s",errmsg); fflush(stdout);
+		throw PetscOptionNotFound(errmsg);
 	}
 }
 
 /// Check if sequential factorization or application was requested and set build/apply sweeps
-static void setSweeps_checkSeq(const Blasted_data *const ctx, AsyncSolverSettings& settings)
+static void setSweeps_checkSeq(const Blasted_data *const ctx, SolverSettings& settings)
 {
 	static_assert(BLASTED_SEQUENTIAL_SYMBOL < 0, "Symbol of sequential build/apply must be -ve!");
 
-	settings.nbuildsweeps = ctx->nbuildsweeps;
-	settings.napplysweeps = ctx->napplysweeps;
+	settings.params.nbuildsweeps = ctx->nbuildsweeps;
+	settings.params.napplysweeps = ctx->napplysweeps;
 
 	if(settings.prectype == BLASTED_SEQILU0)
 		return;
@@ -107,8 +109,8 @@ static void setSweeps_checkSeq(const Blasted_data *const ctx, AsyncSolverSetting
 			std::cout << " Sequential preconditioner will be used for this run\n";
 		}
 		settings.prectype = BLASTED_SEQILU0;
-		settings.nbuildsweeps = 1;
-		settings.napplysweeps = 1;
+		settings.params.nbuildsweeps = 1;
+		settings.params.napplysweeps = 1;
 		return;
 	}
 
@@ -117,7 +119,7 @@ static void setSweeps_checkSeq(const Blasted_data *const ctx, AsyncSolverSetting
 		if(settings.prectype != BLASTED_ILU0 && settings.prectype != BLASTED_SAPILU0)
 		   //&& settings.prectype != BLASTED_SFILU0)
 			throw std::runtime_error(" Seq. appl. only supported with async ILU factorization!");
-		settings.napplysweeps = 1;
+		settings.params.napplysweeps = 1;
 		settings.prectype = BLASTED_SAPILU0;
 		printf("  Sequential application requested.\n");
 	}
@@ -126,7 +128,7 @@ static void setSweeps_checkSeq(const Blasted_data *const ctx, AsyncSolverSetting
 		if(settings.prectype != BLASTED_ILU0 && settings.prectype != BLASTED_SFILU0)
 			//&& settings.prectype != BLASTED_SAPILU0)
 			throw std::runtime_error(" Seq. fact. only supported with async triangular application!");
-		settings.nbuildsweeps = 1;
+		settings.params.nbuildsweeps = 1;
 		settings.prectype = BLASTED_SFILU0;
 		printf("  Sequential factorization requested.\n");
 	}
@@ -163,7 +165,14 @@ static PetscErrorCode setupDataFromOptions(PC pc)
 		}
 
 		char applyitertype[100];
-		get_string_petscoptions("-blasted_pc_apply_iter_type", applyitertype);
+		try {
+			get_string_petscoptions("-blasted_pc_apply_iter_type", applyitertype);
+		} catch (PetscOptionNotFound& e) {
+			strcpy(applyitertype, "async");
+		}
+		if(!strcmp(applyitertype,"async") && !strcmp(applyitertype,"jacobi") &&
+		   !strcmp(applyitertype,"gauss_seidel"))
+			throw InvalidPetscOption(std::string("PC apply iter type ") + applyitertype + " is invalid!");
 		ctx->aplitertype = getIterTypeFromString(applyitertype);
 
 		if(ptype == BLASTED_ILU0 || ptype == BLASTED_SAPILU0 || ptype == BLASTED_ASYNC_LEVEL_ILU0)
@@ -172,7 +181,14 @@ static PetscErrorCode setupDataFromOptions(PC pc)
 			get_string_petscoptions("-blasted_async_fact_init_type", ctx->factinittype);
 
 			char builditertype[100];
-			get_string_petscoptions("-blasted_pc_build_iter_type", builditertype);
+			try {
+				get_string_petscoptions("-blasted_pc_build_iter_type", builditertype);
+			} catch (PetscOptionNotFound& e) {
+				strcpy(builditertype, "async");
+			}
+			if(!strcmp(builditertype,"async") && !strcmp(builditertype,"jacobi") &&
+			   !strcmp(builditertype,"gauss_seidel"))
+				throw InvalidPetscOption(std::string("PC build iter type ") + builditertype + " is invalid!");
 			ctx->blditertype = getIterTypeFromString(builditertype);
 		}
 		else {
@@ -259,28 +275,29 @@ PetscErrorCode createNewPreconditioner(PC pc)
 		= (const FactoryBase<PetscReal,PetscInt>*)ctx->bfactory;
 
 	// create appropriate preconditioner and relaxation objects
-	AsyncSolverSettings settings;
+	SolverSettings settings;
 	settings.prectype = factory->solverTypeFromString(ctx->prectypestr);
 	settings.bs = ctx->bs;                         // set in setup_localpreconditioner_blasted below
 	settings.blockstorage = ColMajor;              // required for PETSc
-	settings.scale = ctx->scale;
-	settings.buildtype = ctx->blditertype;
-	settings.applytype = ctx->aplitertype;
+	settings.params.usescaling = ctx->scale;
+	settings.params.buildtype = ctx->blditertype;
+	settings.params.applytype = ctx->aplitertype;
 
 	// Check if sequential factorization or application was requested and set build/apply sweeps
 	setSweeps_checkSeq(ctx, settings);
 
-	settings.thread_chunk_size = ctx->threadchunksize;
+	settings.params.thread_chunk_size = ctx->threadchunksize;
 	settings.compute_precinfo = ctx->compute_precinfo;
 	if(settings.prectype != BLASTED_JACOBI && settings.prectype != BLASTED_LEVEL_SGS
 	   && settings.prectype != BLASTED_NO_PREC)
 	{
 		if(settings.prectype == BLASTED_ILU0 || settings.prectype == BLASTED_SAPILU0 ||
 		   settings.prectype == BLASTED_ASYNC_LEVEL_ILU0)
-			settings.fact_inittype = getFactInitFromString(ctx->factinittype);
+			settings.params.factinittype = getFactInitFromString(ctx->factinittype);
 		else
-			settings.fact_inittype = INIT_F_NONE;
-		settings.apply_inittype = getApplyInitFromString(ctx->applyinittype);
+			settings.params.factinittype = INIT_F_NONE;
+
+		settings.params.applyinittype = getApplyInitFromString(ctx->applyinittype);
 	}
 
 	settings.relax = false;

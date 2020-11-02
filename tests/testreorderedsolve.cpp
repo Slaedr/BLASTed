@@ -67,15 +67,15 @@ int testSolve(const std::string solvertype,
 
 	device_vector<double> x(mat.dim(),0.0);
 
+	const IterPrecParams params{false, threadchunksize, false, false, nbuildswps, napplyswps,
+	                            getFactInitFromString(factinittype), getApplyInitFromString(applyinittype),
+	                            BLASTED_ITER_ASYNC};
+
 	// reference solve - no scaling
 	SRPreconditioner<double,int>* prec = nullptr;
 	prec = new AsyncILU0_SRPreconditioner<double,int>(move_to_const<double,int>
 	                                                  (getSRMatrixFromCOO<double,int,1>(coom, storageorder)),
-	                                                  nbuildswps, napplyswps, false,
-	                                                  threadchunksize,
-	                                                  getFactInitFromString(factinittype),
-	                                                  getApplyInitFromString(applyinittype),
-	                                                  false, false);
+	                                                  params, false);
 	// prec->wrap(mat.getSRStorage().nbrows, &mat.getSRStorage().browptr[0], &mat.getSRStorage().bcolind[0],
 	//            &mat.getSRStorage().vals[0], &mat.getSRStorage().diagind[0]);
 	prec->compute();
@@ -111,9 +111,7 @@ int testSolve(const std::string solvertype,
 
 	TrivialReorderingScaling rs = createTrivialColReordering(mat.dim());
 	prec = new ReorderedAsyncILU0_SRPreconditioner<double,int>
-		(move_to_const<double,int>(getSRMatrixFromCOO<double,int,1>(coom, storageorder)),
-		 &rs, nbuildswps, napplyswps, threadchunksize,
-		 getFactInitFromString(factinittype), getApplyInitFromString(applyinittype), false, false);
+		(move_to_const<double,int>(getSRMatrixFromCOO<double,int,1>(coom, storageorder)), &rs, params);
 
 	// prec->wrap(mat.getSRStorage().nbrows, &mat.getSRStorage().browptr[0], &mat.getSRStorage().bcolind[0],
 	//            &mat.getSRStorage().vals[0], &mat.getSRStorage().diagind[0]);

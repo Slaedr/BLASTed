@@ -62,25 +62,27 @@ int testSolve(const std::string solvertype, const std::string precontype,
 	SRFactory<double,int> fctry;
 	SRPreconditioner<double,int>* prec = nullptr;
 	// For async preconditioners
-	AsyncSolverSettings params;
-	params.scale = false;
-	params.nbuildsweeps = nbuildswps;
-	params.napplysweeps = napplyswps;
-	params.thread_chunk_size = threadchunksize;
-	params.bs = bs;
-	params.prectype = fctry.solverTypeFromString(precontype);
-	params.fact_inittype = getFactInitFromString(factinittype);
-	params.apply_inittype = getApplyInitFromString(applyinittype);
+	SolverSettings pars;
+	pars.params.usescaling = false;
+	pars.params.nbuildsweeps = nbuildswps;
+	pars.params.napplysweeps = napplyswps;
+	pars.params.thread_chunk_size = threadchunksize;
+	pars.bs = bs;
+	pars.prectype = fctry.solverTypeFromString(precontype);
+	pars.params.factinittype = getFactInitFromString(factinittype);
+	pars.params.applyinittype = getApplyInitFromString(applyinittype);
+	pars.params.buildtype = BLASTED_ITER_ASYNC;
+	pars.params.applytype = BLASTED_ITER_ASYNC;
 	if(storageorder == "rowmajor")
-		params.blockstorage = RowMajor;
+		pars.blockstorage = RowMajor;
 	else
-		params.blockstorage = ColMajor;
-	params.relax = false;
+		pars.blockstorage = ColMajor;
+	pars.relax = false;
 
 	// prec = fctry.create_preconditioner(move_to_const<double,int>
 	//                                    (getSRMatrixFromCOO<double,int,bs>(coom, storageorder)),
 	//                                    params);
-	prec = fctry.create_preconditioner(std::move(cmat), params);
+	prec = fctry.create_preconditioner(std::move(cmat), pars);
 
 	// prec->wrap(mat->getSRStorage().nbrows, &mat->getSRStorage().browptr[0], &mat->getSRStorage().bcolind[0],
 	//            &mat->getSRStorage().vals[0], &mat->getSRStorage().diagind[0]);
