@@ -1,16 +1,18 @@
-/** \file utils_cmdoptions.hpp
+/** \file petsc_cmdoptions.hpp
  * \brief Some helper functions for parsing options from PETSc's options database
  * \author Aditya Kashi
  * \date 2017-10
  */
 
-#ifndef BLASTED_OPTIONPARSER_H
-#define BLASTED_OPTIONPARSER_H
+#ifndef BLASTED_PETSC_OPTIONPARSER_H
+#define BLASTED_PETSC_OPTIONPARSER_H
 
 #include <stdexcept>
 #include <vector>
 #include <string>
 #include <petscsys.h>
+
+#include "../error_handling.hpp"
 
 namespace blasted {
 

@@ -11,7 +11,7 @@
 #include "ilu_pattern.hpp"
 #include "device_container.hpp"
 #include "../poisson3d-fd/poisson_setup.h"
-#include "utils/cmdoptions.hpp"
+#include "../../src/utils/petsc_cmdoptions.hpp"
 #include "utils/mpiutils.hpp"
 #include "../testutils.hpp"
 

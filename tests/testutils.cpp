@@ -18,7 +18,7 @@
 #include <../src/mat/impls/baij/mpi/mpibaij.h>
 
 #include "utils/mpiutils.hpp"
-#include "utils/cmdoptions.hpp"
+#include "../src/utils/petsc_cmdoptions.hpp"
 #include "preconditioner_diagnostics.hpp"
 #include "blasted_petsc.h"
 #include "testutils.h"

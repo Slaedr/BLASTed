@@ -31,8 +31,7 @@ FactoryBase<scalar,index>::~FactoryBase()
 
 template class FactoryBase<double,int>;
 
-template <typename scalar, typename index>
-BlastedSolverType SRFactory<scalar,index>::solverTypeFromString(const std::string precstr2) const
+BlastedSolverType solverTypeFromString(const std::string precstr2)
 {
 	BlastedSolverType ptype;
 	if(precstr2 == jacobistr)
@@ -61,6 +60,12 @@ BlastedSolverType SRFactory<scalar,index>::solverTypeFromString(const std::strin
 		throw std::invalid_argument("BLASTed: Preconditioner type not available!");
 	}
 	return ptype;
+}
+
+template <typename scalar, typename index>
+BlastedSolverType SRFactory<scalar,index>::solverTypeFromString(const std::string precstr2) const
+{
+	return solverTypeFromString(precstr2);
 }
 
 /// Creates the correct preconditioner or relaxation from the arguments for the template

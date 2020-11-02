@@ -68,6 +68,9 @@ struct SolverSettings {
 // 	ApplyInit apply_inittype;             ///< Initialization type for asynchronous triangular solves
 // };
 
+/// Convert a string into a preconditioner type if possible. Throws a invalid_argument if not possible.
+BlastedSolverType solverTypeFromString(const std::string precstr);
+
 template <typename scalar, typename index>
 class FactoryBase
 {

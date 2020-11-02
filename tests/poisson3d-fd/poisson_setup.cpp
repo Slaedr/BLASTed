@@ -12,7 +12,7 @@
 
 #include "poisson3d_fd.hpp"
 #include "poisson_utils.hpp"
-#include "utils/cmdoptions.hpp"
+#include "../../src/utils/petsc_cmdoptions.hpp"
 #include "poisson_setup.h"
 
 #define PETSCOPTION_STR_LEN 30

@@ -21,7 +21,7 @@
 
 #include <stdexcept>
 #include <string>
-#include "utils/cmdoptions.hpp"
+#include "../../src/utils/petsc_cmdoptions.hpp"
 #include "../../src/kernels/kernels_ilu0_factorize.hpp"
 #include "../../src/async_blockilu_factor.hpp"
 #include "../../src/async_ilu_factor.hpp"

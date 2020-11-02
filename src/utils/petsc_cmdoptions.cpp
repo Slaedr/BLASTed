@@ -1,10 +1,10 @@
-/** \file util_cmdoptions.cpp
+/** \file petsc_cmdoptions.cpp
  * \brief Parse options from different sources.
  * \author Aditya Kashi
  * \date 2017-10
  */
 
-#include "utils/cmdoptions.hpp"
+#include "petsc_cmdoptions.hpp"
 #include "utils/mpiutils.hpp"
 #include <iostream>
 #include <cstdlib>

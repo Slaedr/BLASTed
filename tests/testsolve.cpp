@@ -84,8 +84,6 @@ int testSolve(const std::string solvertype, const std::string precontype,
 	//                                    params);
 	prec = fctry.create_preconditioner(std::move(cmat), pars);
 
-	// prec->wrap(mat->getSRStorage().nbrows, &mat->getSRStorage().browptr[0], &mat->getSRStorage().bcolind[0],
-	//            &mat->getSRStorage().vals[0], &mat->getSRStorage().diagind[0]);
 	prec->compute();
 
 	IterativeSolver* solver = nullptr;
