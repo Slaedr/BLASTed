@@ -101,6 +101,18 @@ if(WITH_PETSC)
 	-blasted_use_symmetric_scaling 0
 	-test_type issame -error_tolerance 1e-6 -num_runs 3)
 
+  add_test(NAME ThreadedPoissonCSRPetscJacobiSAPILU0 COMMAND ${MPIEXEC} -n 1 ./testcsr_poisson
+	${CMAKE_CURRENT_SOURCE_DIR}/input/poisson.control
+	-options_file  ${CMAKE_CURRENT_SOURCE_DIR}/input/thread_poisson_csr.perc -blasted_async_sweeps 30,1
+	-ref_sub_pc_type ilu -blasted_pc_type sapilu0 -blasted_pc_build_iter_type jacobi
+	-blasted_use_symmetric_scaling false -test_type issame -error_tolerance 1e-6)
+
+  add_test(NAME ThreadedPoissonCSRPetscJacobiSFILU0 COMMAND ${MPIEXEC} -n 1 ./testcsr_poisson
+	${CMAKE_CURRENT_SOURCE_DIR}/input/poisson.control
+	-options_file  ${CMAKE_CURRENT_SOURCE_DIR}/input/thread_poisson_csr.perc -blasted_async_sweeps 1,30
+	-ref_sub_pc_type ilu -blasted_pc_type sfilu0 -blasted_pc_apply_iter_type jacobi
+	-blasted_use_symmetric_scaling false -test_type issame -error_tolerance 1e-6)
+
   add_test(NAME ThreadedPoissonCSRPetsc-LevelSGS
 	COMMAND ${SEQEXEC} ${THREADOPTS} ${CMAKE_CURRENT_BINARY_DIR}/testcsr_poisson
 	${CMAKE_CURRENT_SOURCE_DIR}/input/poisson.control 
