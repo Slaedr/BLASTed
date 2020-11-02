@@ -162,10 +162,18 @@ static PetscErrorCode setupDataFromOptions(PC pc)
 			abort();
 		}
 
+		char applyitertype[100];
+		get_string_petscoptions("-blasted_pc_apply_iter_type", applyitertype);
+		ctx->aplitertype = getIterTypeFromString(applyitertype);
+
 		if(ptype == BLASTED_ILU0 || ptype == BLASTED_SAPILU0 || ptype == BLASTED_ASYNC_LEVEL_ILU0)
 		{
 			ctx->scale = get_bool_petscoptions("-blasted_use_symmetric_scaling");
 			get_string_petscoptions("-blasted_async_fact_init_type", ctx->factinittype);
+
+			char builditertype[100];
+			get_string_petscoptions("-blasted_pc_build_iter_type", builditertype);
+			ctx->blditertype = getIterTypeFromString(builditertype);
 		}
 		else {
 			ctx->scale = false;
@@ -176,6 +184,7 @@ static PetscErrorCode setupDataFromOptions(PC pc)
 #ifdef DEBUG
 		printf("BLASTed: setupDataFromOptions:\n");
 		printf(" fact init type = %s, apply init type = %s", ctx->factinittype, ctx->applyinittype);
+		printf(" Fact iter type = %d, apply iter type = %d, ", ctx->blditertype, ctx->aplitertype);
 		printf(" Thread chunk size = %d.\n", ctx->threadchunksize); fflush(stdout);
 #endif
 	}
@@ -255,6 +264,8 @@ PetscErrorCode createNewPreconditioner(PC pc)
 	settings.bs = ctx->bs;                         // set in setup_localpreconditioner_blasted below
 	settings.blockstorage = ColMajor;              // required for PETSc
 	settings.scale = ctx->scale;
+	settings.buildtype = ctx->blditertype;
+	settings.applytype = ctx->aplitertype;
 
 	// Check if sequential factorization or application was requested and set build/apply sweeps
 	setSweeps_checkSeq(ctx, settings);

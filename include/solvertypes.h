@@ -26,6 +26,13 @@ extern "C" {
 	              BLASTED_EXTERNAL
 	} BlastedSolverType;
 
+	typedef enum {
+	               BLASTED_ITER_JACOBI,
+	               BLASTED_ITER_GAUSS_SEIDEL,
+	               BLASTED_ITER_ASYNC
+	} BlastedIterType;
+
+
 /// Integer that can be used for sweep counts to request a sequential operation
 #define BLASTED_SEQUENTIAL_SYMBOL -1
 

@@ -10,6 +10,7 @@
 #include "reorderingscaling.hpp"
 #include "async_initialization_decl.hpp"
 #include "ilu_pattern.hpp"
+#include "solvertypes.h"
 
 namespace blasted {
 

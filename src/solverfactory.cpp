@@ -90,7 +90,7 @@ SRFactory<scalar,index>
 	else if(opts.prectype == BLASTED_ILU0) {
 		return new AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>
 			(std::move(mat), opts.nbuildsweeps, opts.napplysweeps, opts.scale, opts.thread_chunk_size,
-			 opts.fact_inittype, opts.apply_inittype, true, true, opts.compute_precinfo);
+			 opts.fact_inittype, opts.apply_inittype, true, true, opts.compute_precinfo, opts.buildtype);
 	}
 	else if(opts.prectype == BLASTED_SEQILU0) {
 		return new AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>
@@ -107,11 +107,11 @@ SRFactory<scalar,index>
 			(std::move(mat), opts.nbuildsweeps, opts.napplysweeps, opts.scale, opts.thread_chunk_size,
 			 opts.fact_inittype, opts.apply_inittype, true, false, opts.compute_precinfo);
 	}
-	else if(opts.prectype == BLASTED_JAC_ILU0) {
-		return new AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>
-			(std::move(mat), opts.nbuildsweeps, opts.napplysweeps, opts.scale, opts.thread_chunk_size,
-			 opts.fact_inittype, opts.apply_inittype, true, true, opts.compute_precinfo, true);
-	}
+	// else if(opts.prectype == BLASTED_JAC_ILU0) {
+	// 	return new AsyncBlockILU0_SRPreconditioner<scalar,index,bs,stor>
+	// 		(std::move(mat), opts.nbuildsweeps, opts.napplysweeps, opts.scale, opts.thread_chunk_size,
+	// 		 opts.fact_inittype, opts.apply_inittype, true, true, opts.compute_precinfo, true);
+	// }
 	else if(opts.prectype == BLASTED_LEVEL_SGS) {
 		return new Level_BSGS<scalar,index,bs,stor>(std::move(mat));
 	}
@@ -165,7 +165,8 @@ SRFactory<scalar,index>::create_preconditioner(SRMatrixStorage<const scalar, con
 			p = new AsyncILU0_SRPreconditioner<scalar,index>
 				(std::move(mat), opts.nbuildsweeps, opts.napplysweeps,
 				 opts.scale, opts.thread_chunk_size,
-				 opts.fact_inittype, opts.apply_inittype, opts.compute_precinfo, true,true);
+				 opts.fact_inittype, opts.apply_inittype, opts.compute_precinfo, true,true,
+				 (set.buildtype == BLASTED_ITER_JACOBI));
 		}
 		else if(opts.prectype == BLASTED_SEQILU0) {
 			p = new AsyncILU0_SRPreconditioner<scalar,index>
@@ -185,12 +186,12 @@ SRFactory<scalar,index>::create_preconditioner(SRMatrixStorage<const scalar, con
 				 opts.scale, opts.thread_chunk_size,
 				 opts.fact_inittype, opts.apply_inittype, opts.compute_precinfo, true,false);
 		}
-		else if(opts.prectype == BLASTED_JAC_ILU0) {
-			p = new AsyncILU0_SRPreconditioner<scalar,index>
-				(std::move(mat), opts.nbuildsweeps, opts.napplysweeps,
-				 opts.scale, opts.thread_chunk_size,
-				 opts.fact_inittype, opts.apply_inittype, opts.compute_precinfo, true,true,false);
-		}
+		// else if(opts.prectype == BLASTED_JAC_ILU0) {
+		// 	p = new AsyncILU0_SRPreconditioner<scalar,index>
+		// 		(std::move(mat), opts.nbuildsweeps, opts.napplysweeps,
+		// 		 opts.scale, opts.thread_chunk_size,
+		// 		 opts.fact_inittype, opts.apply_inittype, opts.compute_precinfo, true,true,false);
+		// }
 		else if(opts.prectype == BLASTED_ASYNC_LEVEL_ILU0) {
 			p = new Async_Level_ILU0<scalar,index>(std::move(mat), opts.nbuildsweeps, opts.scale,
 			                                       opts.thread_chunk_size, opts.fact_inittype, true,
@@ -243,5 +244,17 @@ SRFactory<scalar,index>::create_preconditioner(SRMatrixStorage<const scalar, con
 }
 
 template class SRFactory<double,int>;
+
+BlastedIterType getIterTypeFromString(const char iter_type[])
+{
+	BlastedIterType bit;
+	if(!strcmp(iter_type, "jacobi"))
+		bit = BLASTED_ITER_JACOBI;
+	else if(!strcmp("gauss_seidel"))
+		bit = BLASTED_ITER_GAUSS_SEIDEL;
+	else
+		bit = BLASTED_ITER_ASYNC;
+	return bit;
+}
 
 }

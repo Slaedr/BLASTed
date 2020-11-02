@@ -11,6 +11,7 @@
 
 #include "solvertypes.h"
 #include "async_initialization_decl.hpp"
+#include "iterative_preconditioner.hpp"
 #include "solverops_base.hpp"
 
 namespace blasted {
@@ -54,6 +55,7 @@ struct SolverSettings {
 	 */
 	bool relax;
 	int thread_chunk_size;                ///< Number of work-items (iterations) in each thread chunk
+	bool compute_precinfo;                ///< Set to true if extra information is needed
 
 	/// Default destructor
 	virtual ~SolverSettings() = default;
@@ -61,12 +63,13 @@ struct SolverSettings {
 
 /// Settings needed for most asynchronous iterations
 struct AsyncSolverSettings : public SolverSettings {
+	IterType buildtype;                   ///< Type of iteration used for building the preconditioner
+	IterType applytype;                   ///< Type of iteration used for applying the preconditioner
 	bool scale;                           ///< Use the symmetrically scaled matrix instead of the original
 	int nbuildsweeps;                     ///< Number of build sweeps
 	int napplysweeps;                     ///< Number of apply sweeps
 	FactInit fact_inittype;               ///< Initialization type for asynchronous factorization
 	ApplyInit apply_inittype;             ///< Initialization type for asynchronous triangular solves
-	bool compute_precinfo;                ///< Set to true if extra information is needed
 };
 
 template <typename scalar, typename index>
@@ -112,6 +115,11 @@ private:
 	create_srpreconditioner_of_type(SRMatrixStorage<const scalar, const index>&& prec_matrix,
 	                                const AsyncSolverSettings& opts) const;
 };
+
+/// Converts string to preconditioner iteration type
+/** Defaults to BLASTED_ITER_ASYNC, unless the parameter is "jacobi" or "gauss_seidel".
+ */
+BlastedIterType getIterTypeFromString(const char iter_type[]);
 
 }
 #endif

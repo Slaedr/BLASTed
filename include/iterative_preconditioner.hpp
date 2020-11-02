@@ -8,14 +8,9 @@
 
 #include "async_initialization_decl.hpp"
 #include "solverops_base.hpp"
+#include "solvertypes.h"
 
 namespace blasted {
-
-enum IterType {
-               ITER_JACOBI,
-               ITER_GAUSS_SEIDEL,
-               ITER_ASYNC
-};
 
 /// Parameters controlling iterative preconditioner generation (build/factorization) and application
 struct IterPrecParams {

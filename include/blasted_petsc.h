@@ -35,7 +35,9 @@ struct Blasted_node
 
 	int bs;                     ///< Block size of dense blocks
 	char prectypestr[BLASTED_OPT_STRLEN];     ///< String identifier of the preconditioner type to use
-	BlastedSolverType prectype; ///< The preconditioner/iteration to use
+	BlastedSolverType prectype;   ///< The preconditioner/iteration to use
+	BlastedIterType blditertype;  ///< Type of iteration for building iterative preconditioners
+	BlastedIterType aplitertype;  ///< Type of iteration for applying iterative preconditioners
 
 	bool scale;                 ///< Symmetrically scale the matrix before preconditioning
 	int threadchunksize;        ///< Number of work-items assigned to a thread at a time
