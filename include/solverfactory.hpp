@@ -82,10 +82,6 @@ public:
 	virtual SRPreconditioner<scalar,index>*
 	create_preconditioner(SRMatrixStorage<const scalar, const index>&& prec_matrix,
 	                      const SolverSettings& settings) const = 0;
-
-	/// Convert a string into a preconditioner type if possible.
-	/// Should throw a invalid_argument if not possible.
-	virtual BlastedSolverType solverTypeFromString(const std::string precstr) const = 0;
 };
 
 template <typename scalar, typename index>
@@ -105,8 +101,8 @@ public:
 	create_preconditioner(SRMatrixStorage<const scalar, const index>&& prec_matrix,
 	                      const SolverSettings& settings) const;
 
-	/// Convert a string into a preconditioner type if possible. Throws a invalid_argument if not possible.
-	BlastedSolverType solverTypeFromString(const std::string precstr) const;
+	// Convert a string into a preconditioner type if possible. Throws a invalid_argument if not possible.
+	//BlastedSolverType solverTypeFromString(const std::string precstr) const;
 
 private:
 	template <int bs, StorageOptions stor>

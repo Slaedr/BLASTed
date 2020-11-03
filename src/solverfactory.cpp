@@ -62,12 +62,6 @@ BlastedSolverType solverTypeFromString(const std::string precstr2)
 	return ptype;
 }
 
-template <typename scalar, typename index>
-BlastedSolverType SRFactory<scalar,index>::solverTypeFromString(const std::string precstr2) const
-{
-	return solverTypeFromString(precstr2);
-}
-
 /// Creates the correct preconditioner or relaxation from the arguments for the template
 /** Note that if a relaxation is requested for an algorithm got which relaxation is not implemented,
  * the corresponding preconditioner is returned instead after printing a warning.

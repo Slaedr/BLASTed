@@ -141,12 +141,9 @@ static PetscErrorCode setupDataFromOptions(PC pc)
 	Blasted_data* ctx;
 	ierr = PCShellGetContext(pc, (void**)&ctx); CHKERRQ(ierr);
 
-	const FactoryBase<PetscReal,PetscInt> *const factory
-		= (const FactoryBase<PetscReal,PetscInt>*)ctx->bfactory;
-
 	// Prec type
 	get_string_petscoptions("-blasted_pc_type", ctx->prectypestr);
-	const BlastedSolverType ptype = factory->solverTypeFromString(ctx->prectypestr);
+	const BlastedSolverType ptype = solverTypeFromString(ctx->prectypestr);
 
 	PetscInt sweeps[2];
 
@@ -276,7 +273,7 @@ PetscErrorCode createNewPreconditioner(PC pc)
 
 	// create appropriate preconditioner and relaxation objects
 	SolverSettings settings;
-	settings.prectype = factory->solverTypeFromString(ctx->prectypestr);
+	settings.prectype = solverTypeFromString(ctx->prectypestr);
 	settings.bs = ctx->bs;                         // set in setup_localpreconditioner_blasted below
 	settings.blockstorage = ColMajor;              // required for PETSc
 	settings.params.usescaling = ctx->scale;

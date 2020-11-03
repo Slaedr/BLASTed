@@ -360,6 +360,17 @@ if(WITH_PETSC)
 	-test_type compare_its -error_tolerance 0.01
 	)
 
+  add_test(NAME ThreadedPreconditioning-Petsc-BSR4-Jacobi-SAPILU0
+	COMMAND ${SEQEXEC} ${THREADOPTS} ${SEQTASKS} ${CMAKE_CURRENT_BINARY_DIR}/testpetscsolver
+	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.pmat
+	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.pmat 
+	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.pmat
+	-options_file ${CMAKE_CURRENT_SOURCE_DIR}/input/asyncpreconditioning.perc -mat_type baij
+	-ref_sub_pc_type ilu -blasted_pc_type ilu0 -blasted_async_sweeps 10,1 -blasted_use_symmetric_scaling 0
+	-blasted_pc_build_iter_type jacobi
+	-test_type compare_its -error_tolerance 0.01
+	)
+
   add_test(NAME ThreadedPreconditioning-Petsc-BSR4-Async-ILU0-Scaled
 	COMMAND ${SEQEXEC} ${THREADOPTS} ${SEQTASKS} ${CMAKE_CURRENT_BINARY_DIR}/testpetscsolver
 	${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.pmat

@@ -68,7 +68,7 @@ int testSolve(const std::string solvertype, const std::string precontype,
 	pars.params.napplysweeps = napplyswps;
 	pars.params.thread_chunk_size = threadchunksize;
 	pars.bs = bs;
-	pars.prectype = fctry.solverTypeFromString(precontype);
+	pars.prectype = solverTypeFromString(precontype);
 	pars.params.factinittype = getFactInitFromString(factinittype);
 	pars.params.applyinittype = getApplyInitFromString(applyinittype);
 	pars.params.buildtype = BLASTED_ITER_ASYNC;
