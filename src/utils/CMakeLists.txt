@@ -1,3 +1,4 @@
+add_library(blasted_utils prefix_sum.cpp)
 
 if(WITH_PETSC)
   add_library(utils cmdoptions.cpp)

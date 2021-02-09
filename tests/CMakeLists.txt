@@ -22,6 +22,7 @@ target_link_libraries(testunstructsaipattern solverops rawmatrixutils)
 
 add_subdirectory(helper_algs)
 add_subdirectory(mat_ops)
+add_subdirectory(utils)
 add_subdirectory(perftest)
 
 set(TCS 300)
