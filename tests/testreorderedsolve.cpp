@@ -90,8 +90,8 @@ int testSolve(const std::string solvertype,
 	}
 
 	solver->setParams(tol,maxiter);
-	const int refiters = solver->solve(b.data(), x.data());
-	std::cout << " Ref num iters = " << refiters << std::endl;
+	const auto refinfo = solver->solve(b.data(), x.data());
+	std::cout << " Ref num iters = " << refinfo.iters << std::endl;
 
 	double refl2norm = 0;
 	for(int i = 0; i < mat.dim(); i++) {
@@ -128,8 +128,8 @@ int testSolve(const std::string solvertype,
 	}
 
 	solver->setParams(tol,maxiter);
-	const int iters = solver->solve(b.data(), x.data());
-	std::cout << " Num iters = " << iters << std::endl;
+	const auto info = solver->solve(b.data(), x.data());
+	std::cout << " Num iters = " << info.iters << std::endl;
 
 	double l2norm = 0;
 	for(int i = 0; i < mat.dim(); i++) {

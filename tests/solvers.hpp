@@ -15,6 +15,17 @@ namespace blasted {
 typedef int a_int;
 typedef double a_real;
 
+/// Information about a solve that was performed
+struct SolveInfo {
+	bool converged{};                 ///< Whether the solve converged to required tolerance
+	int iters{};                      ///< Number of iterations performed
+	a_real resnorm{};                 ///< 2-norm of the final residual vector
+	a_real bnorm{};                   ///< 2-Norm of RHS
+	double walltime{};                ///< Total wall-time taken by the solver
+	double cputime{};                 ///< Total CPU time taken by the solver
+	double precapplywtime{};          ///< Total wall time taken by preconditioner application
+};
+
 /// Abstract preconditioned iterative solver
 class IterativeSolverBase
 {
@@ -53,15 +64,14 @@ protected:
 public:
 	IterativeSolver(const SRMatrixView<a_real,a_int>& mat, const Preconditioner<a_real,a_int>& precond);
 
-	/// Solves the linear system A du = -r
+	/// Solves the linear system A x = b
 	/** Note that usually, the two arguments cannot alias each other.
-	 * \param[in] res The residual vector stored as a 2D array of size nelem x nvars 
-	 * (nelem x 4 for 2D Euler)
-	 * \param [in|out] du Contains the solution in the same format as res on exit.
-	 * \return Returns the number of solver iterations performed
+	 * \param[in] b  Right-hand side vector.
+	 * \param [in|out] x Contains the solution in the same format as res on exit.
+	 * \return Returns some metadata about the solver iterations performed
 	 */
-	virtual int solve(const a_real *const res, 
-	                  a_real *const __restrict du) const = 0;
+	virtual SolveInfo solve(const a_real *const b,
+							a_real *const __restrict x) const = 0;
 };
 
 /// A solver that just applies the preconditioner repeatedly
@@ -70,19 +80,13 @@ class RichardsonSolver : public IterativeSolver
 	using IterativeSolver::A;
 	using IterativeSolver::maxiter;
 	using IterativeSolver::tol;
-	using IterativeSolver::walltime;
-	using IterativeSolver::cputime;
 	using IterativeSolver::prec;
 
 public:
-	RichardsonSolver(const SRMatrixView<a_real,a_int>& mat, const Preconditioner<a_real,a_int>& precond);
+	RichardsonSolver(const SRMatrixView<a_real,a_int>& mat,
+					 const Preconditioner<a_real,a_int>& precond);
 
-	/** \param[in] res The right hand side vector
-	 * \param[in] du The solution vector which is assumed to contain an initial solution
-	 *
-	 * \warning The two arguments must not alias each other.
-	 */
-	int solve(const a_real *const res, a_real *const __restrict du) const;
+	SolveInfo solve(const a_real *const res, a_real *const __restrict du) const;
 };
 
 /// H.A. Van der Vorst's stabilized biconjugate gradient solver
@@ -93,16 +97,33 @@ class BiCGSTAB : public IterativeSolver
 	using IterativeSolver::A;
 	using IterativeSolver::maxiter;
 	using IterativeSolver::tol;
-	using IterativeSolver::walltime;
-	using IterativeSolver::cputime;
 	using IterativeSolver::prec;
 
 public:
 	BiCGSTAB(const SRMatrixView<a_real,a_int>& mat, const Preconditioner<a_real,a_int>& precond);
 
-	int solve(const a_real *const res, a_real *const __restrict du) const;
+	SolveInfo solve(const a_real *const res, a_real *const __restrict du) const;
 };
 
+/// Generalized Conjugate Residual solver
+/** In exact arithmetic, this should be the same as a flexible GMRES.
+ */
+class GCR : public IterativeSolver
+{
+	using IterativeSolver::A;
+	using IterativeSolver::maxiter;
+	using IterativeSolver::tol;
+	using IterativeSolver::walltime;
+	using IterativeSolver::cputime;
+	using IterativeSolver::prec;
+	int nrestart;
+
+public:
+	GCR(const SRMatrixView<a_real,a_int>& mat, const Preconditioner<a_real,a_int>& precond,
+		int n_restart);
+
+	SolveInfo solve(const a_real *const res, a_real *const __restrict du) const;
+};
 
 }
 #endif

@@ -50,6 +50,15 @@ inline a_real dot(const a_int N, const a_real *const a,
 	return sum;
 }
 
+inline void vecassign(const a_int N, const a_real *const __restrict__ a,
+					  a_real *const __restrict__ b)
+{
+#pragma omp parallel for simd default(shared)
+	for(a_int i = 0; i < N; i++) {
+		b[i] = a[i];
+	}
+}
+
 IterativeSolverBase::IterativeSolverBase() {
 	resetRunTimes();
 }
@@ -78,8 +87,9 @@ RichardsonSolver::RichardsonSolver(const SRMatrixView<a_real,a_int>& mat,
 	: IterativeSolver(mat, precond)
 { }
 
-int RichardsonSolver::solve(const a_real *const res, a_real *const __restrict du) const
+SolveInfo RichardsonSolver::solve(const a_real *const res, a_real *const __restrict du) const
 {
+	SolveInfo info;
 	struct timeval time1, time2;
 	gettimeofday(&time1, NULL);
 	double initialwtime = (double)time1.tv_sec + (double)time1.tv_usec * 1.0e-6;
@@ -113,20 +123,32 @@ int RichardsonSolver::solve(const a_real *const res, a_real *const __restrict du
 	gettimeofday(&time2, NULL);
 	double finalwtime = (double)time2.tv_sec + (double)time2.tv_usec * 1.0e-6;
 	double finalctime = (double)clock() / (double)CLOCKS_PER_SEC;
-	walltime += (finalwtime-initialwtime); cputime += (finalctime-initialctime);
+	info.walltime += (finalwtime-initialwtime);
+	info.cputime += (finalctime-initialctime);
+	info.iters = step;
+	info.resnorm = resnorm;
+	info.bnorm = bnorm;
 	std::cout << "  Final rel res norm = " << resnorm/bnorm << std::endl;
-	return step;
+	return info;
 }
 
-BiCGSTAB::BiCGSTAB(const SRMatrixView<a_real,a_int>& mat, const Preconditioner<a_real,a_int>& precond)
+BiCGSTAB::BiCGSTAB(const SRMatrixView<a_real,a_int>& mat,
+				   const Preconditioner<a_real,a_int>& precond)
 	: IterativeSolver(mat, precond)
 { }
 
-int BiCGSTAB::solve(const a_real *const res, a_real *const __restrict du) const
+SolveInfo BiCGSTAB::solve(const a_real *const res, a_real *const __restrict du) const
 {
 	a_real resnorm = 100.0, bnorm = 0;
 	int step = 0;
 	const a_int N = A.dim();
+
+	SolveInfo info;
+
+	struct timeval time1, time2;
+	gettimeofday(&time1, NULL);
+	double initialwtime = (double)time1.tv_sec + (double)time1.tv_usec * 1.0e-6;
+	double initialctime = (double)clock() / (double)CLOCKS_PER_SEC;
 
 	a_real omega = 1.0, rho, rhoold = 1.0, alpha = 1.0, beta;
 	device_vector<a_real> rhat(N);
@@ -144,11 +166,6 @@ int BiCGSTAB::solve(const a_real *const res, a_real *const __restrict du) const
 		v[i] = 0;
 	}
 
-	struct timeval time1, time2;
-	gettimeofday(&time1, NULL);
-	double initialwtime = (double)time1.tv_sec + (double)time1.tv_usec * 1.0e-6;
-	double initialctime = (double)clock() / (double)CLOCKS_PER_SEC;
-	
 	// r := res - A du
 	A.gemv3(-1.0,du, 1.0,res, r.data());
 
@@ -214,12 +231,124 @@ int BiCGSTAB::solve(const a_real *const res, a_real *const __restrict du) const
 	/*if(step == maxiter)
 		std::cout << " ! BiCGSTAB: Hit max iterations!\n";*/
 	std::cout << "  Final rel res norm = " << resnorm/bnorm << std::endl;
+	info.iters = step+1;
+	info.resnorm = resnorm;
+	info.bnorm = bnorm;
 	
 	gettimeofday(&time2, NULL);
 	const double finalwtime = (double)time2.tv_sec + (double)time2.tv_usec * 1.0e-6;
 	const double finalctime = (double)clock() / (double)CLOCKS_PER_SEC;
-	walltime += (finalwtime-initialwtime); cputime += (finalctime-initialctime);
-	return step+1;
+	info.walltime += (finalwtime-initialwtime);
+	info.cputime += (finalctime-initialctime);
+	return info;
+}
+
+
+GCR::GCR(const SRMatrixView<a_real,a_int>& mat,
+		 const Preconditioner<a_real,a_int>& precond, const int n_restart)
+	: IterativeSolver(mat, precond), nrestart{n_restart}
+{ }
+
+SolveInfo GCR::solve(const a_real *const b, a_real *const __restrict x) const
+{
+	SolveInfo info;
+	assert(info.precapplywtime == 0);
+
+	struct timeval time1, time2;
+	gettimeofday(&time1, NULL);
+	double initialwtime = (double)time1.tv_sec + (double)time1.tv_usec * 1.0e-6;
+	double initialctime = (double)clock() / (double)CLOCKS_PER_SEC;
+
+	const a_int N = A.dim();
+
+	device_vector<a_real> res(N);
+	device_vector<a_real> z(N);
+
+	device_vector<a_real> beta(nrestart+1);
+	std::vector<device_vector<a_real>> p(nrestart), q(nrestart);
+	for(int i = 0; i < nrestart; i++) {
+		p[i].resize(N);
+		q[i].resize(N);
+	}
+
+	// norm of RHS
+	const a_real bnorm = sqrt(dot(N, b, b));
+	std::cout << "   GCR: RHS norm = " << bnorm << std::endl;
+
+	a_real resnorm = 1.0;
+	int step = 0;
+
+	while(step < maxiter)
+	{
+		// r := b - A x
+		A.gemv3(-1.0,x, 1.0,b, res.data());
+		resnorm = dot(N, res.data(), res.data());
+
+		prec.apply(res.data(), p[0].data());
+
+		A.apply(p[0].data(), q[0].data());
+
+		for(int k = 0; k < nrestart; k++)
+		{
+			const a_real alpha = dot(N, res.data() ,q[k].data())
+				/ dot(N, q[k].data() ,q[k].data() );
+			// x <- x + alpha p
+			axpby(N, 1.0,x, alpha, p[k].data());
+			// res <- res - alpha q
+			axpby(N, 1.0,res.data(), -alpha, q[k].data());
+
+			//resnorm = norm_vector_l2(res);
+			resnorm = sqrt(dot(N, res.data(), res.data()));
+			if(step % 10 == 0) {
+				printf("      Step %d: Rel res = %g\n", step, resnorm/bnorm);
+				fflush(stdout);
+			}
+			step++;
+
+			if(resnorm/bnorm < tol)
+				break;
+			if(k == nrestart-1)
+				break;
+			if(step >= maxiter)
+				break;
+
+			prec.apply(res.data(), z.data());
+
+			A.apply(z.data(), q[k+1].data());
+			vecassign(N, z.data(), p[k+1].data());
+
+			// optimize this witha multi-dot
+			for(int i = 0; i < k+1; i++) {
+				beta[i] = -dot(N, q[k+1].data(), q[i].data()) / dot(N, q[i].data(), q[i].data());
+			}
+
+			for(int l = 0; l < k+1; l++) {
+#pragma omp parallel for simd default(shared)
+				for(int i = 0; i < N; i++) {
+					p[k+1][i] += beta[l] * p[l][i];
+					q[k+1][i] += beta[l] * q[l][i];
+				}
+			}
+		}
+
+		if(resnorm/bnorm < tol) {
+			break;
+		}
+	}
+
+	info.converged = resnorm/bnorm <= tol ? true : false;
+	info.iters = step;
+	info.resnorm = resnorm;
+	info.bnorm = bnorm;
+
+	std::cout << "  Final rel res norm = " << resnorm/bnorm << std::endl;
+
+	gettimeofday(&time2, NULL);
+	const double finalwtime = (double)time2.tv_sec + (double)time2.tv_usec * 1.0e-6;
+	const double finalctime = (double)clock() / (double)CLOCKS_PER_SEC;
+	info.walltime += (finalwtime-initialwtime);
+	info.cputime += (finalctime-initialctime);
+	return info;
 }
 
 

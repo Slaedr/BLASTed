@@ -64,7 +64,6 @@ int test_solve(const Params params)
 	// construct preconditioner context
 
 	SRFactory<double,int> fctry;
-	SRPreconditioner<double,int>* prec = nullptr;
 	// For async preconditioners
 	AsyncSolverSettings aparams;
 	aparams.scale = false;
@@ -81,7 +80,7 @@ int test_solve(const Params params)
 		aparams.blockstorage = ColMajor;
 	aparams.relax = false;
 
-	prec = fctry.create_preconditioner(std::move(cmat), aparams);
+	const auto prec = fctry.create_preconditioner(std::move(cmat), aparams);
 
 	prec->compute();
 
@@ -90,6 +89,8 @@ int test_solve(const Params params)
 		solver = new RichardsonSolver(*mat,*prec);
 	else if(params.solvertype == "bcgs")
 		solver = new BiCGSTAB(*mat,*prec);
+	else if(params.solvertype == "gcr")
+		solver = new GCR(*mat,*prec, params.solver_restart);
 	else {
 		std::cout << " ! Invalid solver option!\n";
 		std::abort();
@@ -97,8 +98,8 @@ int test_solve(const Params params)
 
 	solver->setParams(params.tol,params.maxiter);
 	std::cout << "Starting solve " << std::endl;
-	int iters = solver->solve(b.data(), x.data());
-	std::cout << " Num iters = " << iters << std::endl;
+	const auto info = solver->solve(b.data(), x.data());
+	std::cout << " Num iters = " << info.iters << std::endl;
 
 	double l2norm = 0;
 	for(int i = 0; i < mat->dim(); i++) {
@@ -149,6 +150,8 @@ Params read_from_cmd(const int argc, const char *const argv[])
 		("solver_tol", po::value<double>(&p.tol)->default_value(1e-6),
 		     "Relative residual tolerance for solver convergence")
 		("max_iter", po::value<int>(&p.maxiter)->default_value(1000), "Maximum solver iteratons")
+		("solver_restart", po::value<int>(&p.solver_restart)->default_value(30),
+		 "For certain solvers, number of subspace vectors to build before restarting")
 		("build_sweeps", po::value<int>(&p.nbuildsweeps)->default_value(1),
 		     "Number of sweeps for iterative factorization of preconditioner")
 		("apply_sweeps", po::value<int>(&p.napplysweeps)->default_value(1),

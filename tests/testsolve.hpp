@@ -24,7 +24,8 @@ struct Params {
   std::string storageorder;
   double testtol;            ///< Tolerance for solution vector
   double tol;                ///< Residual tolerance
-  int maxiter;
+  int maxiter;               ///< Max no. of solver iterations
+  int solver_restart;        ///< For some solvers, number of subspace vectors before restart
   int threadchunksize;
   int nbuildsweeps;
   int napplysweeps;
