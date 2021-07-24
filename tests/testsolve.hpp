@@ -4,29 +4,45 @@
  * \date 2017-11-29
  */
 
-#ifndef TESTSOLVE_H
-#define TESTSOLVE_H
+#ifndef BLASTED_TESTSOLVE_H
+#define BLASTED_TESTSOLVE_H
+
+#include <string>
+
+namespace blasted_testsolve {
+
+struct Params {
+  std::string solvertype;    ///< The iterative solver to use: "richardson", "bcgs"
+  std::string precontype;    ///< The preconditioner to test: "jacobi", "sgs", "ilu0", "none"
+  std::string factinittype;  ///< Initial guess method for asynchronous factorizations
+  std::string applyinittype; ///< Initial guess method for asynchronous preconditioner applications
+  std::string mattype;       ///< The type of matrix to test the preconditioner with: "csr" or "bsr"
+  int blocksize;             ///< Block size in the case of BSR matris format
+  /** Matters only for BSR matrices - whether the entries within blocks
+   * are stored "rowmajor" or "colmajor".
+   */
+  std::string storageorder;
+  double testtol;            ///< Tolerance for solution vector
+  double tol;                ///< Residual tolerance
+  int maxiter;
+  int threadchunksize;
+  int nbuildsweeps;
+  int napplysweeps;
+  std::string mat_file;
+  std::string x_file;
+  std::string b_file;
+};
+
+/// Reads test solve parameters from command line
+Params read_from_cmd(int argc, const char *const argv[]);
 
 /// Tests preconditioning operations using a linear solve
 /** NOTE: For ILU-type preconditioners, only tests un-scaled variants.
- * \param solvertype The iterative solver to use: "richardson", "bcgs"
- * \param precontype The preconditioner to test: "jacobi", "sgs", "ilu0" or "none"
- * \param factinittype Initial guess method for asynchronous factorizations
- * \param applyinittype Initial guess method for asynchronous preconditioner applications
- * \param mattype The type of matrix to test the preconditioner with: "csr" or "bsr"
- * \param storageorder Matters only for BSR matrices - whether the entries within blocks
- *   are stored "rowmajor" or "colmajor"
- * \param matfile The mtx file containing the matrix
- * \param xfile The mtx file containing the true solution
- * \param bfile The mtx file containing the RHS
- * \param threadchunksize Number of iterations assigned to a thread at a time
+ * \param params  List of parameters to use for solver and preconditioner.
  */
 template<int bs>
-int testSolve(const std::string solvertype, const std::string precontype,
-              const std::string factinittype, const std::string applyinittype,
-              const std::string mattype, const std::string storageorder, const double testtol,
-              const std::string matfile, const std::string xfile, const std::string bfile,
-              const double tol, const int maxiter, const int nbuildswps, const int napplyswps,
-              const int threadchunksize);
+int test_solve(const Params params);
+
+}
 
 #endif

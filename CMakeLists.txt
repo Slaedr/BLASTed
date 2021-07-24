@@ -251,8 +251,9 @@ if(PROFILE)
 endif()
 
 # Boost
-find_package(Boost 1.57 REQUIRED)
+find_package(Boost 1.57 REQUIRED COMPONENTS program_options)
 include_directories(${Boost_INCLUDE_DIRS})
+message(STATUS "Found Boost libraries ${Boost_LIBRARIES}")
 
 # Eigen
 find_path(EIGEN3_INCLUDE_DIR signature_of_eigen3_matrix_library
@@ -325,6 +326,10 @@ endif(WITH_MC64)
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG=1")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -UDEBUG -DNDEBUG")
 include_directories("${PROJECT_SOURCE_DIR}/include")
+
+if(BUILD_BLOCK_SIZE)
+  add_definitions(-DBUILD_BLOCK_SIZE=${BUILD_BLOCK_SIZE})
+endif()
 
 if(CMAKE_BUILD_TYPE MATCHES "Debug")
   message(STATUS "Debug mode")

@@ -15,7 +15,6 @@
 #include <solverops_sgs.hpp>
 #include <solverops_ilu0.hpp>
 
-#include "testsolve.hpp"
 #include "solvers.hpp"
 
 using namespace blasted;

@@ -8,7 +8,7 @@ if(CXX_COMPILER_CLANG)
 endif()
 
 add_executable(testsolve runsolvetest.cpp testsolve.cpp)
-target_link_libraries(testsolve solvers solverops coomatrix )
+target_link_libraries(testsolve solvers solverops coomatrix ${Boost_LIBRARIES})
 set_property(TARGET testsolve PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 add_executable(testreorderedsolve testreorderedsolve.cpp)
@@ -32,105 +32,126 @@ set(TCS 300)
 add_test(NAME SAIAndIncompleteSAIPatternsUnstructured COMMAND testunstructsaipattern)
 
 add_test(NAME SPDCSRJacobi COMMAND ${SEQEXEC} ${SEQTASKS}
-  ${CMAKE_CURRENT_BINARY_DIR}/testsolve bcgs jacobi init_none init_none csr rowmajor
-  ${CMAKE_CURRENT_SOURCE_DIR}/input/boeing-msc00726/msc00726.mtx 
-  ${CMAKE_CURRENT_SOURCE_DIR}/input/boeing-msc00726/msc00726_x.mtx 
-  ${CMAKE_CURRENT_SOURCE_DIR}/input/boeing-msc00726/msc00726_b.mtx
-  1e-10 1e-9 200  ${TCS}
+  ${CMAKE_CURRENT_BINARY_DIR}/testsolve --solver_type bcgs --preconditioner_type jacobi
+  --fact_init_type init_none --apply_init_type init_none --mat_type csr --storage_order rowmajor
+  --mat_file ${CMAKE_CURRENT_SOURCE_DIR}/input/boeing-msc00726/msc00726.mtx
+  --x_file ${CMAKE_CURRENT_SOURCE_DIR}/input/boeing-msc00726/msc00726_x.mtx
+  --b_file ${CMAKE_CURRENT_SOURCE_DIR}/input/boeing-msc00726/msc00726_b.mtx
+  --solver_tol 1e-10 --test_tol 1e-9 --max_iter 200
 )
 
 add_test(NAME SPDCSRSGS COMMAND env OMP_NUM_THREADS=1 ${SEQEXEC} ${SEQTASKS}
-  ${CMAKE_CURRENT_BINARY_DIR}/testsolve bcgs sgs init_zero init_zero csr rowmajor
-  ${CMAKE_CURRENT_SOURCE_DIR}/input/boeing-msc00726/msc00726.mtx 
-  ${CMAKE_CURRENT_SOURCE_DIR}/input/boeing-msc00726/msc00726_x.mtx 
-  ${CMAKE_CURRENT_SOURCE_DIR}/input/boeing-msc00726/msc00726_b.mtx
-  1e-10 1e-10 200 ${TCS}
+  ${CMAKE_CURRENT_BINARY_DIR}/testsolve --solver_type bcgs --preconditioner_type sgs
+  --fact_init_type init_zero --apply_init_type init_zero --mat_type csr --storage_order rowmajor
+  --mat_file ${CMAKE_CURRENT_SOURCE_DIR}/input/boeing-msc00726/msc00726.mtx
+  --x_file ${CMAKE_CURRENT_SOURCE_DIR}/input/boeing-msc00726/msc00726_x.mtx
+  --b_file ${CMAKE_CURRENT_SOURCE_DIR}/input/boeing-msc00726/msc00726_b.mtx
+  --solver_tol 1e-10 --test_tol 1e-10 --max_iter 200
 )
 
 add_test(NAME SPDCSRILU0 COMMAND env OMP_NUM_THREADS=1 ${SEQEXEC} ${SEQTASKS}
-  ${CMAKE_CURRENT_BINARY_DIR}/testsolve bcgs ilu0 init_zero init_zero csr rowmajor
-  ${CMAKE_CURRENT_SOURCE_DIR}/input/boeing-msc00726/msc00726.mtx 
-  ${CMAKE_CURRENT_SOURCE_DIR}/input/boeing-msc00726/msc00726_x.mtx 
-  ${CMAKE_CURRENT_SOURCE_DIR}/input/boeing-msc00726/msc00726_b.mtx
-  1e-10 1e-10 200 ${TCS}
+  ${CMAKE_CURRENT_BINARY_DIR}/testsolve --preconditioner_type ilu0
+  --fact_init_type init_zero
+  --mat_file ${CMAKE_CURRENT_SOURCE_DIR}/input/boeing-msc00726/msc00726.mtx
+  --x_file ${CMAKE_CURRENT_SOURCE_DIR}/input/boeing-msc00726/msc00726_x.mtx
+  --b_file ${CMAKE_CURRENT_SOURCE_DIR}/input/boeing-msc00726/msc00726_b.mtx
+  --solver_tol 1e-10 --test_tol 1e-10 --max_iter 200
 )
 
 add_test(NAME CSRJacobi COMMAND ${SEQEXEC} ${SEQTASKS}
-  ${CMAKE_CURRENT_BINARY_DIR}/testsolve bcgs jacobi init_none init_none csr rowmajor
-  ${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.mtx 
-  ${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.mtx 
-  ${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.mtx
-  1e-10 1e-8 200  ${TCS}
+  ${CMAKE_CURRENT_BINARY_DIR}/testsolve --preconditioner_type jacobi
+  --fact_init_type init_none --apply_init_type init_none
+  --mat_file ${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.mtx
+  --x_file ${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.mtx
+  --b_file ${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.mtx
+  --solver_tol 1e-10 --test_tol 1e-8 --max_iter 200
 )
 add_test(NAME CSRSGS COMMAND env OMP_NUM_THREADS=1 ${SEQEXEC} ${SEQTASKS}
-  ${CMAKE_CURRENT_BINARY_DIR}/testsolve bcgs sgs init_zero init_zero csr rowmajor
-  ${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.mtx 
-  ${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.mtx 
-  ${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.mtx
-  1e-10 1e-8 200 ${TCS}
+  ${CMAKE_CURRENT_BINARY_DIR}/testsolve --preconditioner_type sgs
+  --fact_init_type init_zero
+  --mat_file ${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.mtx
+  --x_file ${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.mtx
+  --b_file ${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.mtx
+  --solver_tol 1e-10 --test_tol 1e-8 --max_iter 200
 )
 add_test(NAME CSRILU0 COMMAND env OMP_NUM_THREADS=1 ${SEQEXEC} ${SEQTASKS}
-  ${CMAKE_CURRENT_BINARY_DIR}/testsolve bcgs ilu0 init_zero init_zero csr rowmajor
-  ${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.mtx 
-  ${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.mtx 
-  ${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.mtx
-  1e-10 1e-8 200 ${TCS}
+  ${CMAKE_CURRENT_BINARY_DIR}/testsolve --preconditioner_type ilu0
+  --fact_init_type init_zero
+  --mat_file ${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.mtx
+  --x_file ${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.mtx
+  --b_file ${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.mtx
+  --solver_tol 1e-10 --test_tol 1e-8 --max_iter 200
 )
 
 add_test(NAME BSR4JacobiRowmajor COMMAND ${SEQEXEC} ${SEQTASKS}
-  ${CMAKE_CURRENT_BINARY_DIR}/testsolve bcgs jacobi init_zero init_zero bsr rowmajor
-  ${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.mtx 
-  ${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.mtx 
-  ${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.mtx
-  1e-10 1e-8 200 ${TCS}
+  ${CMAKE_CURRENT_BINARY_DIR}/testsolve --solver_type bcgs --preconditioner_type jacobi
+  --fact_init_type init_zero --apply_init_type init_zero --mat_type bsr --storage_order rowmajor
+  --mat_file ${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.mtx
+  --x_file ${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.mtx
+  --b_file ${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.mtx
+  --solver_tol 1e-10 --test_tol 1e-8 --max_iter 200
 )
 
 add_test(NAME BSR4SGSRowmajor COMMAND env OMP_NUM_THREADS=1 ${SEQEXEC} ${SEQTASKS}
-  ${CMAKE_CURRENT_BINARY_DIR}/testsolve bcgs sgs init_zero init_zero bsr rowmajor
-  ${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.mtx 
-  ${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.mtx 
-  ${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.mtx
-  1e-10 1e-8 200 ${TCS}
+  ${CMAKE_CURRENT_BINARY_DIR}/testsolve --preconditioner_type sgs
+  --fact_init_type init_zero --mat_type bsr --storage_order rowmajor
+  --mat_file ${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.mtx
+  --x_file ${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.mtx
+  --b_file ${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.mtx
+  --solver_tol 1e-10 --test_tol 1e-8 --max_iter 200
 )
 
 add_test(NAME BSR4ILU0Rowmajor COMMAND env OMP_NUM_THREADS=1 ${SEQEXEC} ${SEQTASKS}
-  ${CMAKE_CURRENT_BINARY_DIR}/testsolve bcgs ilu0 init_zero init_zero bsr rowmajor
-  ${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.mtx 
-  ${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.mtx 
-  ${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.mtx
-  1e-10 1e-8 200 ${TCS}
+  ${CMAKE_CURRENT_BINARY_DIR}/testsolve --preconditioner_type ilu0
+  --fact_init_type init_zero --mat_type bsr --storage_order rowmajor
+  --mat_file ${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.mtx
+  --x_file ${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.mtx
+  --b_file ${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.mtx
+  --solver_tol 1e-10 --test_tol 1e-8 --max_iter 200
   )
 
 add_test(NAME BSR4NoneColmajor COMMAND ${SEQEXEC} ${SEQTASKS}
-  ${CMAKE_CURRENT_BINARY_DIR}/testsolve bcgs none init_zero init_zero bsr colmajor
-  ${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.mtx 
-  ${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.mtx 
-  ${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.mtx
-  1e-11 1e-8 1000 ${TCS}
+  ${CMAKE_CURRENT_BINARY_DIR}/testsolve --preconditioner_type none
+  --fact_init_type init_zero --mat_type bsr
+  --mat_file ${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.mtx
+  --x_file ${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.mtx
+  --b_file ${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.mtx
+  --solver_tol 1e-11 --test_tol 1e-8 --max_iter 1000
 )
 
 add_test(NAME BSR4JacobiColmajor COMMAND ${SEQEXEC} ${SEQTASKS}
-  ${CMAKE_CURRENT_BINARY_DIR}/testsolve bcgs jacobi init_zero init_zero bsr colmajor
-  ${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.mtx 
-  ${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.mtx 
-  ${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.mtx
-  1e-10 1e-8 200 ${TCS}
+  ${CMAKE_CURRENT_BINARY_DIR}/testsolve --fact_init_type init_zero --mat_type bsr
+  --mat_file ${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.mtx
+  --x_file ${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.mtx
+  --b_file ${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.mtx
+  --solver_tol 1e-10 --test_tol 1e-8 --max_iter 200
 )
 
 add_test(NAME BSR4SGSColmajor COMMAND env OMP_NUM_THREADS=1 ${SEQEXEC} ${SEQTASKS}
-  ${CMAKE_CURRENT_BINARY_DIR}/testsolve bcgs sgs init_zero init_zero bsr colmajor
-  ${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.mtx 
-  ${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.mtx 
-  ${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.mtx
-  1e-10 1e-8 200 ${TCS}
+  ${CMAKE_CURRENT_BINARY_DIR}/testsolve --preconditioner_type sgs
+  --fact_init_type init_zero --mat_type bsr
+  --mat_file ${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.mtx
+  --x_file ${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.mtx
+  --b_file ${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.mtx
+  --solver_tol 1e-10 --test_tol 1e-8 --max_iter 200
 )
 
 add_test(NAME BSR4ILU0Colmajor COMMAND env OMP_NUM_THREADS=1 ${SEQEXEC} ${SEQTASKS}
-  ${CMAKE_CURRENT_BINARY_DIR}/testsolve bcgs ilu0 init_zero init_zero bsr colmajor
-  ${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.mtx 
-  ${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.mtx 
-  ${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.mtx
-  1e-10 1e-8 200 ${TCS}
+  ${CMAKE_CURRENT_BINARY_DIR}/testsolve --preconditioner_type ilu0
+  --fact_init_type init_zero --mat_type bsr
+  --mat_file ${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.mtx
+  --x_file ${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.mtx
+  --b_file ${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.mtx
+  --solver_tol 1e-10 --test_tol 1e-8 --max_iter 200
+)
+
+add_test(NAME ThreadedBSR4ILU0Colmajor COMMAND ${SEQEXEC} ${SEQTASKS}
+  ${CMAKE_CURRENT_BINARY_DIR}/testsolve --preconditioner_type ilu0
+  --fact_init_type init_zero --mat_type bsr --build_sweeps 10 --apply_sweeps 15
+  --mat_file ${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.mtx
+  --x_file ${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.mtx
+  --b_file ${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.mtx
+  --solver_tol 1e-10 --test_tol 1e-8 --max_iter 200
 )
 
 # add_test(NAME Reorder_CSRILU0_msc00726 COMMAND env OMP_NUM_THREADS=1 ${SEQEXEC} ${SEQTASKS}

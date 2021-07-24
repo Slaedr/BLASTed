@@ -7,6 +7,9 @@
 #undef NDEBUG
 
 #include <iostream>
+#include <boost/program_options/variables_map.hpp>
+#include <boost/program_options/cmdline.hpp>
+#include <boost/program_options/parsers.hpp>
 
 #include <blockmatrices.hpp>
 #include <coomatrix.hpp>
@@ -20,40 +23,41 @@
 
 using namespace blasted;
 
+namespace blasted_testsolve {
+
 template<int bs>
-int testSolve(const std::string solvertype, const std::string precontype,
-              const std::string factinittype, const std::string applyinittype,
-              const std::string mattype, const std::string storageorder, const double testtol,
-              const std::string matfile, const std::string xfile, const std::string bfile,
-              const double tol, const int maxiter, const int nbuildswps, const int napplyswps,
-              const int threadchunksize)
+int test_solve(const Params params)
 {
-	std::cout << "Inputs: Solver = " <<solvertype 
-		<< ", Prec = " << precontype
-		<< ", order = " << storageorder << ", test tol = " << testtol 
-		<< ", tolerance = " << tol << " maxiter = " << maxiter
-		<< ",\n  Num build sweeps = " << nbuildswps << ", num apply sweeps = " << napplyswps << '\n';
+	std::cout << "Inputs: Solver = " << params.solvertype
+		<< ", Prec = " <<  params.precontype
+		<< ", order = " <<  params.storageorder << ", test tol = " <<  params.testtol
+		<< ", tolerance = " <<  params.tol << " maxiter = " <<  params.maxiter
+		<< ",\n  Num build sweeps = " <<  params.nbuildsweeps
+			  << ", num apply sweeps = " << params.napplysweeps << '\n';
 
 	COOMatrix<double,int> coom;
-	coom.readMatrixMarket(matfile);
+	coom.readMatrixMarket(params.mat_file);
 
-	const device_vector<double> ans = readDenseMatrixMarket<double>(xfile);
-	const device_vector<double> b = readDenseMatrixMarket<double>(bfile);
+	const device_vector<double> ans = readDenseMatrixMarket<double>(params.x_file);
+	const device_vector<double> b = readDenseMatrixMarket<double>(params.b_file);
 
 	SRMatrixView<double,int>* mat = nullptr;
 	if (bs==1)
-		mat = new CSRMatrixView<double,int>(move_to_const<double,int>
-		                                    (getSRMatrixFromCOO<double,int,bs>(coom, storageorder)));
+		mat = new CSRMatrixView<double,int>(
+			move_to_const<double,int>(getSRMatrixFromCOO<double,int,bs>(
+										coom, params.storageorder)));
 	else
-		if(storageorder == "rowmajor")
-			mat = new BSRMatrixView<double,int,bs,RowMajor>
-				(move_to_const<double,int>(getSRMatrixFromCOO<double,int,bs>(coom, storageorder)));
+		if(params.storageorder == "rowmajor")
+			mat = new BSRMatrixView<double,int,bs,RowMajor>(
+			    move_to_const<double,int>(getSRMatrixFromCOO<double,int,bs>(
+											coom, params.storageorder)));
 		else
-			mat = new BSRMatrixView<double,int,bs,ColMajor>
-				(move_to_const<double,int>(getSRMatrixFromCOO<double,int,bs>(coom, storageorder)));
+			mat = new BSRMatrixView<double,int,bs,ColMajor>(
+				move_to_const<double,int>(getSRMatrixFromCOO<double,int,bs>(
+											coom, params.storageorder)));
 
 	SRMatrixStorage<const double, const int> cmat = move_to_const<double,int>
-		(getSRMatrixFromCOO<double,int,bs>(coom, storageorder));
+		(getSRMatrixFromCOO<double,int,bs>(coom, params.storageorder));
 
 	device_vector<double> x(mat->dim(),0.0);
 
@@ -62,41 +66,36 @@ int testSolve(const std::string solvertype, const std::string precontype,
 	SRFactory<double,int> fctry;
 	SRPreconditioner<double,int>* prec = nullptr;
 	// For async preconditioners
-	AsyncSolverSettings params;
-	params.scale = false;
-	params.nbuildsweeps = nbuildswps;
-	params.napplysweeps = napplyswps;
-	params.thread_chunk_size = threadchunksize;
-	params.bs = bs;
-	params.prectype = fctry.solverTypeFromString(precontype);
-	params.fact_inittype = getFactInitFromString(factinittype);
-	params.apply_inittype = getApplyInitFromString(applyinittype);
-	if(storageorder == "rowmajor")
-		params.blockstorage = RowMajor;
+	AsyncSolverSettings aparams;
+	aparams.scale = false;
+	aparams.nbuildsweeps = params.nbuildsweeps;
+	aparams.napplysweeps = params.napplysweeps;
+	aparams.thread_chunk_size = params.threadchunksize;
+	aparams.bs = bs;
+	aparams.prectype = fctry.solverTypeFromString(params.precontype);
+	aparams.fact_inittype = getFactInitFromString(params.factinittype);
+	aparams.apply_inittype = getApplyInitFromString(params.applyinittype);
+	if(params.storageorder == "rowmajor")
+		aparams.blockstorage = RowMajor;
 	else
-		params.blockstorage = ColMajor;
-	params.relax = false;
+		aparams.blockstorage = ColMajor;
+	aparams.relax = false;
 
-	// prec = fctry.create_preconditioner(move_to_const<double,int>
-	//                                    (getSRMatrixFromCOO<double,int,bs>(coom, storageorder)),
-	//                                    params);
-	prec = fctry.create_preconditioner(std::move(cmat), params);
+	prec = fctry.create_preconditioner(std::move(cmat), aparams);
 
-	// prec->wrap(mat->getSRStorage().nbrows, &mat->getSRStorage().browptr[0], &mat->getSRStorage().bcolind[0],
-	//            &mat->getSRStorage().vals[0], &mat->getSRStorage().diagind[0]);
 	prec->compute();
 
 	IterativeSolver* solver = nullptr;
-	if(solvertype == "richardson")
+	if(params.solvertype == "richardson")
 		solver = new RichardsonSolver(*mat,*prec);
-	else if(solvertype == "bcgs")
+	else if(params.solvertype == "bcgs")
 		solver = new BiCGSTAB(*mat,*prec);
 	else {
 		std::cout << " ! Invalid solver option!\n";
 		std::abort();
 	}
 
-	solver->setParams(tol,maxiter);
+	solver->setParams(params.tol,params.maxiter);
 	std::cout << "Starting solve " << std::endl;
 	int iters = solver->solve(b.data(), x.data());
 	std::cout << " Num iters = " << iters << std::endl;
@@ -107,7 +106,7 @@ int testSolve(const std::string solvertype, const std::string precontype,
 	}
 	l2norm = std::sqrt(l2norm);
 	std::cout << " L2 norm of error = " << l2norm << '\n';
-	assert(l2norm < testtol);
+	assert(l2norm < params.testtol);
 
 	delete solver;
 	delete prec;
@@ -116,19 +115,64 @@ int testSolve(const std::string solvertype, const std::string precontype,
 	return 0;
 }
 
-template
-int testSolve<1>(const std::string solvertype, const std::string precontype,
-                 const std::string factinittype, const std::string applyinittype,
-                 const std::string mattype, const std::string storageorder, const double testtol,
-                 const std::string matfile, const std::string xfile, const std::string bfile,
-                 const double tol, const int maxiter, const int nbuildswps, const int napplyswps,
-                 const int threadchunksize);
+template int test_solve<1>(const Params params);
+template int test_solve<4>(const Params params);
+#ifdef BUILD_BLOCK_SIZE
+template int test_solve<BUILD_BLOCK_SIZE>(const Params params);
+#endif
 
-template
-int testSolve<4>(const std::string solvertype, const std::string precontype,
-                 const std::string factinittype, const std::string applyinittype,
-                 const std::string mattype, const std::string storageorder, const double testtol,
-                 const std::string matfile, const std::string xfile, const std::string bfile,
-                 const double tol, const int maxiter, const int nbuildswps, const int napplyswps,
-                 const int threadchunksize);
+namespace po = boost::program_options;
 
+Params read_from_cmd(const int argc, const char *const argv[])
+{
+	Params p;
+	po::options_description desc("Options available for test solve with inbuilt solvers");
+    desc.add_options()
+        ("help", "Print help message")
+		("solver_type", po::value<std::string>(&p.solvertype)->default_value("bcgs"),
+		     "Solver to use")
+		("preconditioner_type", po::value<std::string>(&p.precontype)->default_value("jacobi"),
+		     "Preconditioner to use")
+		("fact_init_type",
+		     po::value<std::string>(&p.factinittype)->default_value("init_original"),
+		     "Type of initial values for iterative preconditioner factorization")
+		("apply_init_type",
+		     po::value<std::string>(&p.applyinittype)->default_value("init_zero"),
+		     "Type of initial values for iterative preconditioner application")
+		("mat_type", po::value<std::string>(&p.mattype)->default_value("csr"),
+		     "Type (format) of matrix for the solver/preconditioner to be given")
+		("block_size", po::value<int>(&p.blocksize)->default_value(4),
+		     "Block size to use in the case of BSR format")
+		("storage_order", po::value<std::string>(&p.storageorder)->default_value("colmajor"),
+		     "Block layout to use in case of bsr matrix type")
+		("test_tol", po::value<double>(&p.testtol)->default_value(1e-4), "Tolerance on solution")
+		("solver_tol", po::value<double>(&p.tol)->default_value(1e-6),
+		     "Relative residual tolerance for solver convergence")
+		("max_iter", po::value<int>(&p.maxiter)->default_value(1000), "Maximum solver iteratons")
+		("build_sweeps", po::value<int>(&p.nbuildsweeps)->default_value(1),
+		     "Number of sweeps for iterative factorization of preconditioner")
+		("apply_sweeps", po::value<int>(&p.napplysweeps)->default_value(1),
+		     "Number of sweeps for iterative application of preconditioner within the solver")
+		("thread_chunk_size", po::value<int>(&p.threadchunksize)->default_value(256),
+		     "Number of work-items in each chunk of work given to a thread")
+		("mat_file", po::value<std::string>(&p.mat_file),
+		     "Path to matrix-market file for system matrix")
+		("b_file", po::value<std::string>(&p.b_file),
+		     "Path to matrix-market file for right-hand-side vector")
+		("x_file", po::value<std::string>(&p.x_file),
+		     "Path to matrix-market file for reference solution vector")
+    ;
+
+    po::variables_map vm;
+    po::store(po::parse_command_line(argc, argv, desc), vm);
+    po::notify(vm);
+
+    if (vm.count("help")) {
+        std::cout << desc << "\n";
+		p.maxiter = -1;
+    }
+
+	return p;
+}
+
+}
