@@ -131,22 +131,24 @@ Params read_from_cmd(const int argc, const char *const argv[])
     desc.add_options()
         ("help", "Print help message")
 		("solver_type", po::value<std::string>(&p.solvertype)->default_value("bcgs"),
-		     "Solver to use")
+		     "Solver to use [bcgs/richardson/gcr]")
 		("preconditioner_type", po::value<std::string>(&p.precontype)->default_value("jacobi"),
-		     "Preconditioner to use")
+		     "Preconditioner to use [none/jacobi/gs/sgs/level_sgs/ilu0]")
 		("fact_init_type",
 		     po::value<std::string>(&p.factinittype)->default_value("init_original"),
-		     "Type of initial values for iterative preconditioner factorization")
+		     "Type of initial values for iterative preconditioner factorization \
+[init_original, init_zero]")
 		("apply_init_type",
 		     po::value<std::string>(&p.applyinittype)->default_value("init_zero"),
 		     "Type of initial values for iterative preconditioner application")
 		("mat_type", po::value<std::string>(&p.mattype)->default_value("csr"),
-		     "Type (format) of matrix for the solver/preconditioner to be given")
+		     "Type (format) of matrix for the solver/preconditioner to be given [csr/bsr]")
 		("block_size", po::value<int>(&p.blocksize)->default_value(4),
 		     "Block size to use in the case of BSR format")
 		("storage_order", po::value<std::string>(&p.storageorder)->default_value("colmajor"),
-		     "Block layout to use in case of bsr matrix type")
-		("test_tol", po::value<double>(&p.testtol)->default_value(1e-4), "Tolerance on solution")
+		     "Block layout to use in case of bsr matrix type [rowmajor/colmajor]")
+		("test_tol", po::value<double>(&p.testtol)->default_value(1e-4),
+		 "Tolerance on solution (only relevant for the test assertion; does not affect solver behaviour)")
 		("solver_tol", po::value<double>(&p.tol)->default_value(1e-6),
 		     "Relative residual tolerance for solver convergence")
 		("max_iter", po::value<int>(&p.maxiter)->default_value(1000), "Maximum solver iteratons")
