@@ -128,6 +128,15 @@ add_test(NAME BSR4GCRNoneColmajor COMMAND ${SEQEXEC} ${SEQTASKS}
   --solver_tol 1e-12 --test_tol 1e-8 --max_iter 1500 --solver_restart 200
 )
 
+add_test(NAME BSR4BiCGStabNoneColmajor COMMAND ${SEQEXEC} ${SEQTASKS}
+  ${CMAKE_CURRENT_BINARY_DIR}/testsolve --solver_type bcgs --preconditioner_type none
+  --fact_init_type init_zero --mat_type bsr
+  --mat_file ${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.mtx
+  --x_file ${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_x.mtx
+  --b_file ${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1_b.mtx
+  --solver_tol 1e-12 --test_tol 1e-8 --max_iter 1000
+)
+
 add_test(NAME BSR4JacobiColmajor COMMAND ${SEQEXEC} ${SEQTASKS}
   ${CMAKE_CURRENT_BINARY_DIR}/testsolve --fact_init_type init_zero --mat_type bsr
   --mat_file ${CMAKE_CURRENT_SOURCE_DIR}/input/fvens-2dcyl1/2dcyl1.mtx

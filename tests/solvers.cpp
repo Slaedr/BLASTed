@@ -137,7 +137,7 @@ BiCGSTAB::BiCGSTAB(const SRMatrixView<a_real,a_int>& mat,
 	: IterativeSolver(mat, precond)
 { }
 
-SolveInfo BiCGSTAB::solve(const a_real *const res, a_real *const __restrict du) const
+SolveInfo BiCGSTAB::solve(const a_real *const rhs, a_real *const __restrict xsol) const
 {
 	a_real resnorm = 100.0, bnorm = 0;
 	int step = 0;
@@ -166,14 +166,14 @@ SolveInfo BiCGSTAB::solve(const a_real *const res, a_real *const __restrict du) 
 		v[i] = 0;
 	}
 
-	// r := res - A du
-	A.gemv3(-1.0,du, 1.0,res, r.data());
+	// r := rhs - A xsol
+	A.gemv3(-1.0,xsol, 1.0,rhs, r.data());
 
 	// norm of RHS
 #pragma omp parallel for simd reduction(+:bnorm) default(shared)
 	for(a_int iel = 0; iel < N; iel++)
 	{
-		bnorm += res[iel];
+		bnorm += rhs[iel]*rhs[iel];
 		rhat[iel] = r[iel];
 	}
 	bnorm = std::sqrt(bnorm);
@@ -211,8 +211,8 @@ SolveInfo BiCGSTAB::solve(const a_real *const res, a_real *const __restrict du) 
 
 		omega = dot(N, t.data(),r.data()) / dot(N, t.data(),t.data());
 
-		// du <- du + alpha y + omega z
-		axpbypcz(N, 1.0,du, alpha,y.data(), omega,z.data());
+		// xsol <- xsol + alpha y + omega z
+		axpbypcz(N, 1.0,xsol, alpha,y.data(), omega,z.data());
 
 		// r <- r - omega t
 		axpby(N, 1.0,r.data(), -omega,t.data());

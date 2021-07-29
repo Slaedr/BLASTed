@@ -38,7 +38,6 @@ int test_solve(const Params params)
 	COOMatrix<double,int> coom;
 	coom.readMatrixMarket(params.mat_file);
 
-	const device_vector<double> ans = readDenseMatrixMarket<double>(params.x_file);
 	const device_vector<double> b = readDenseMatrixMarket<double>(params.b_file);
 
 	SRMatrixView<double,int>* mat = nullptr;
@@ -58,6 +57,10 @@ int test_solve(const Params params)
 
 	SRMatrixStorage<const double, const int> cmat = move_to_const<double,int>
 		(getSRMatrixFromCOO<double,int,bs>(coom, params.storageorder));
+
+	std::cout << "Read matrix with " << cmat.nbrows << " (block-)rows, and "
+			  << cmat.nnzb << " nonzero blocks, with block size " << bs << std::endl;
+	std::cout << "Read RHS vector with " << b.size() << " rows" << std::endl;
 
 	device_vector<double> x(mat->dim(),0.0);
 
@@ -101,13 +104,16 @@ int test_solve(const Params params)
 	const auto info = solver->solve(b.data(), x.data());
 	std::cout << " Num iters = " << info.iters << std::endl;
 
-	double l2norm = 0;
-	for(int i = 0; i < mat->dim(); i++) {
-		l2norm += (x[i]-ans[i])*(x[i]-ans[i]);
+	if(params.x_file != "NONE") {
+	    double l2norm = 0;
+	    const device_vector<double> ans = readDenseMatrixMarket<double>(params.x_file);
+	    for(int i = 0; i < mat->dim(); i++) {
+	    	l2norm += (x[i]-ans[i])*(x[i]-ans[i]);
+	    }
+	    l2norm = std::sqrt(l2norm);
+	    std::cout << " L2 norm of error = " << l2norm << '\n';
+	    assert(l2norm < params.testtol);
 	}
-	l2norm = std::sqrt(l2norm);
-	std::cout << " L2 norm of error = " << l2norm << '\n';
-	assert(l2norm < params.testtol);
 
 	delete solver;
 	delete prec;
@@ -164,7 +170,7 @@ Params read_from_cmd(const int argc, const char *const argv[])
 		     "Path to matrix-market file for system matrix")
 		("b_file", po::value<std::string>(&p.b_file),
 		     "Path to matrix-market file for right-hand-side vector")
-		("x_file", po::value<std::string>(&p.x_file),
+		("x_file", po::value<std::string>(&p.x_file)->default_value("NONE"),
 		     "Path to matrix-market file for reference solution vector")
     ;
 
